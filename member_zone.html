@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會員專區 | 築心讀書會</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; color: #2C3E50; }
+        .member-card { background: white; border: 1px solid #ECF2F0; border-radius: 2rem; transition: all 0.3s ease; }
+        .admin-btn { background: linear-gradient(135deg, #B45309 0%, #D97706 100%); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <nav class="p-6 flex justify-between items-center bg-white shadow-sm">
+        <div class="text-emerald-900 font-bold text-xl">築心會員專區</div>
+        <button onclick="handleLogout()" class="text-gray-400 hover:text-red-500 text-sm transition">
+            <i class="fas fa-sign-out-alt"></i> 安全登出
+        </button>
+    </nav>
+
+    <main class="flex-1 max-w-4xl mx-auto w-full py-12 px-6">
+        <header class="mb-12">
+            <h1 class="text-4xl font-bold text-emerald-900 mb-2">
+                <span id="displayName">載入中...</span>
+            </h1>
+            <p class="text-gray-400">很高興今天見到您，讓我們開始共讀之旅。</p>
+        </header>
+
+        <div id="adminSection" class="hidden mb-12">
+            <div class="bg-amber-50 border border-amber-100 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between shadow-sm">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-amber-900 font-bold text-lg">幹部專屬權限</h3>
+                    <p class="text-amber-700/70 text-sm">您可以存取會員通訊錄與財務記錄。</p>
+                </div>
+                <a href="staff_page.html" class="admin-btn text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:scale-105 transition transform">
+                    <i class="fas fa-user-shield mr-2"></i> 進入幹部工作區
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="member-card p-8 hover:shadow-md">
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-700 mb-6">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h4 class="font-bold text-xl mb-2">本期導讀講義</h4>
+                <p class="text-gray-400 text-sm">下載本週讀書會的重點筆記與討論題綱。</p>
+                <button class="mt-6 text-emerald-700 font-bold text-sm opacity-50 cursor-not-allowed">尚未開放</button>
+            </div>
+
+            <div class="member-card p-8 hover:shadow-md">
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-700 mb-6">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h4 class="font-bold text-xl mb-2">我的學習存摺</h4>
+                <p class="text-gray-400 text-sm">查看您的出席紀錄與參與的活動統計。</p>
+                <button class="mt-6 text-emerald-700 font-bold text-sm opacity-50 cursor-not-allowed">模組開發中</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-10 text-center text-gray-300 text-xs">
+        &copy; 2026 築心讀書會 ‧ 會員管理系統
+    </footer>
+
+    <script>
+        // 1. 初始化頁面：讀取 Session
+        function initMemberZone() {
+            const userDataStr = sessionStorage.getItem('userInfo');
+            
+            // 如果沒登入，踢回首頁
+            if (!userDataStr) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const user = JSON.parse(userDataStr);
+            
+            // 2. 顯示歡迎語：[姓名] [稱謂]
+            const name = user.name || '親愛的會員';
+            const title = user.title || '';
+            document.getElementById('displayName').innerText = `${name} ${title}，您好`;
+
+            // 3. 判斷幹部身分 (只要 title 有值且不是一般會員)
+            // 建議檢查條件：title 不為空且不是 "一般會員" 或 "Member"
+            if (title && title.trim() !== "" && title !== "一般會員" && title !== "會員") {
+                document.getElementById('adminSection').classList.remove('hidden');
+            }
+        }
+
+        // 登出
+        function handleLogout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        window.onload = initMemberZone;
+    </script>
+</body>
+</html>

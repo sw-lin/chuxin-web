@@ -3,86 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>關於我們 | 築心讀書會</title>
+    <title>加入築心 | 報名表單</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; color: #2C3E50; }
-        .content-fade { line-height: 1.8; letter-spacing: 0.05em; }
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
     </style>
 </head>
-<body>
+<body class="min-h-screen flex items-center justify-center p-6">
 
-    <nav class="sticky top-0 bg-white/90 backdrop-blur-md z-50 shadow-sm px-6 py-4 flex justify-between items-center">
-        <a href="index.html" class="text-2xl font-bold text-emerald-900 tracking-tighter">築心讀書會</a>
-        <div class="space-x-4">
-            <a href="index.html" class="text-sm text-gray-600 hover:text-emerald-800 font-bold">返回首頁</a>
-        </div>
-    </nav>
-
-    <div class="w-full h-[40vh] bg-emerald-900 flex items-center justify-center relative overflow-hidden">
-        <img src="1.jpg" class="absolute inset-0 w-full h-full object-cover opacity-30">
-        <h1 class="relative text-white text-4xl md:text-5xl font-bold tracking-[0.4em]">關於築心</h1>
-    </div>
-
-    <main class="max-w-3xl mx-auto py-20 px-6">
-        <div class="flex items-center space-x-4 mb-12">
-            <div class="h-8 w-2 bg-emerald-800"></div>
-            <h2 class="text-3xl font-bold text-emerald-900">讀書會簡介</h2>
-        </div>
-
-        <div id="aboutContent" class="content-fade text-gray-700 space-y-6 text-lg">
-            <div class="animate-pulse text-gray-300">正在開啟心靈文字...</div>
-        </div>
-
-        <div class="mt-20 p-12 bg-emerald-50 rounded-[3rem] text-center">
-            <h3 class="text-2xl font-bold text-emerald-900 mb-4">想與我們一同築心嗎？</h3>
-            <p class="text-emerald-700/70 mb-8">歡迎各界愛書人加入，開啟您的共讀之旅。</p>
-            <button onclick="toggleModal('joinModal', true)" class="bg-emerald-800 text-white px-10 py-4 rounded-full font-bold shadow-xl hover:bg-emerald-700 transition transform hover:scale-105">
-                我要報名 / 聯絡我們
-            </button>
-        </div>
-    </main>
-
-    <div id="joinModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative">
-            <button onclick="toggleModal('joinModal', false)" class="absolute top-6 right-8 text-gray-300 hover:text-gray-500 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold text-emerald-900 mb-4 text-center">加入築心</h3>
-            <p class="text-gray-500 text-center mb-6 text-sm">請聯絡本學期幹部，或親至活動現場報名。</p>
-            <div class="space-y-4 text-center">
-                <div class="p-4 bg-gray-50 rounded-2xl">
-                    <p class="text-xs text-gray-400">聯絡信箱</p>
-                    <p class="font-bold text-emerald-800">buildingheart@example.com</p>
+    <div class="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-emerald-50">
+        <div id="formContainer" class="p-10">
+            <h2 class="text-3xl font-bold text-emerald-900 mb-2 text-center">加入築心</h2>
+            <p class="text-gray-500 text-center mb-8 text-sm">請填寫下方資訊，開啟您的共讀之旅</p>
+            
+            <form id="enrollForm" action="https://formspree.io/f/xpqjvblg" method="POST" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 uppercase tracking-widest mb-2">真實姓名</label>
+                    <input type="text" name="name" required placeholder="您的姓名" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500 transition">
                 </div>
-                <button onclick="toggleModal('joinModal', false)" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 transition">我知道了</button>
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 uppercase tracking-widest mb-2">聯絡電話</label>
+                    <input type="tel" name="phone" required placeholder="手機號碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 uppercase tracking-widest mb-2">電子郵件</label>
+                    <input type="email" name="email" required placeholder="email@example.com" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500 transition">
+                </div>
+                <button type="submit" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition shadow-lg shadow-emerald-900/20">
+                    送出報名資料
+                </button>
+            </form>
+            <div class="mt-6 text-center">
+                <a href="index.html" class="text-sm text-gray-400 hover:text-emerald-800 font-bold">暫不報名，回主頁</a>
             </div>
         </div>
+
+        <div id="successMessage" class="hidden p-10 text-center animate-fade-in">
+            <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-check text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-emerald-900 mb-4">報名資料已送出！</h3>
+            <p class="text-gray-600 mb-8 leading-relaxed">我們已收到您的申請，<br><span class="font-bold text-emerald-700">我們會儘速與您聯絡。</span></p>
+            <a href="index.html" class="inline-block bg-emerald-900 text-white px-10 py-4 rounded-2xl font-bold hover:bg-emerald-800 transition">
+                回主頁
+            </a>
+        </div>
     </div>
 
-    <footer class="py-12 text-center text-gray-300 text-xs">
-        &copy; 2026 築心讀書會
-    </footer>
-
     <script>
-        function toggleModal(id, show) {
-            document.getElementById(id).classList.toggle('hidden', !show);
-        }
+        const form = document.getElementById('enrollForm');
+        const formContainer = document.getElementById('formContainer');
+        const successMessage = document.getElementById('successMessage');
 
-        // 讀取 about.txt
-        async function loadAboutTxt() {
+        form.onsubmit = async (e) => {
+            e.preventDefault(); // 防止頁面跳轉到 Formspree 的醜網頁
+            const formData = new FormData(form);
+            
+            // 改變按鈕狀態
+            const btn = form.querySelector('button');
+            btn.disabled = true;
+            btn.innerText = "傳送中...";
+
             try {
-                const response = await fetch('about.txt?v=' + Date.now());
-                const text = await response.text();
-                // 將換行符號轉為 HTML 的 <p> 標籤
-                const formattedText = text.split('\n').filter(p => p.trim() !== "").map(p => `<p>${p}</p>`).join('');
-                document.getElementById('aboutContent').innerHTML = formattedText || '文字編輯中...';
-            } catch (err) {
-                document.getElementById('aboutContent').innerHTML = '簡介內容暫時無法讀取。';
-            }
-        }
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
 
-        window.onload = loadAboutTxt;
+                if (response.ok) {
+                    formContainer.classList.add('hidden');
+                    successMessage.classList.remove('hidden');
+                } else {
+                    alert('抱歉，送出失敗，請稍後再試。');
+                    btn.disabled = false;
+                    btn.innerText = "送出報名資料";
+                }
+            } catch (error) {
+                alert('網路連線異常，請檢查網路。');
+                btn.disabled = false;
+                btn.innerText = "送出報名資料";
+            }
+        };
     </script>
 </body>
 </html>

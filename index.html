@@ -29,11 +29,11 @@
     </nav>
 
     <div class="relative w-full h-[500px] overflow-hidden bg-emerald-900">
-        <img class="slide" src="1.jpg" onerror="this.src='https://images.unsplash.com/photo-1512820790803-83ca734da794?w=1200'">
-        <img class="slide" src="2.jpg" onerror="this.src='https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200'">
-        <img class="slide" src="3.jpg" onerror="this.src='https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200'">
-        <img class="slide" src="4.jpg" onerror="this.src='https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1200'">
-        <img class="slide" src="5.jpg" onerror="this.src='https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200'">
+        <img class="slide" src="./1.jpg" onerror="this.src='https://images.unsplash.com/photo-1512820790803-83ca734da794?w=1200'">
+        <img class="slide" src="./2.jpg" onerror="this.src='https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200'">
+        <img class="slide" src="./3.jpg" onerror="this.src='https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200'">
+        <img class="slide" src="./4.jpg" onerror="this.src='https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1200'">
+        <img class="slide" src="./5.jpg" onerror="this.src='https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200'">
         <div class="absolute inset-0 hero-gradient flex flex-col items-center justify-center text-white text-center px-6">
             <h1 class="text-4xl md:text-6xl font-bold tracking-[0.3em] mb-4">在共讀中築心</h1>
             <p class="text-emerald-100 text-lg md:text-xl tracking-widest font-light italic">Building the heart through shared reading.</p>
@@ -75,18 +75,19 @@
 
     <script>
         // --- 1. 配置與初始化 ---
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxezoV6EWpubQlZCtdeHPWrNowTz7gZhErkKUwzuiOOlTsI-G5a63gYXR7YADNKyyfAfw/exec;
+        // 修正了漏掉的引號
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxezoV6EWpubQlZCtdeHPWrNowTz7gZhErkKUwzuiOOlTsI-G5a63gYXR7YADNKyyfAfw/exec";
         
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
+            if (slides.length === 0) return;
             for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
             slideIndex++;
             if (slideIndex > slides.length) slideIndex = 1;
             slides[slideIndex-1].style.display = "block";
             setTimeout(showSlides, 5000);
         }
-        showSlides();
 
         function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
 
@@ -98,7 +99,7 @@
             today.setHours(0, 0, 0, 0);
 
             try {
-                const response = await fetch('calendar.csv?v=' + Date.now());
+                const response = await fetch('./calendar.csv?v=' + Date.now());
                 const data = await response.text();
                 const rows = data.split('\n').map(r => r.trim()).filter(r => r !== "" && !r.toLowerCase().startsWith('date'));
                 
@@ -109,7 +110,6 @@
 
                 allEvents.sort((a, b) => a.date - b.date);
 
-                // Coming Soon: 未來的前四項
                 const futureEvents = allEvents.filter(e => e.date >= today).slice(0, 4);
                 comingSoonContainer.innerHTML = futureEvents.map(e => `
                     <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition">
@@ -118,7 +118,6 @@
                     </div>
                 `).join('') || '<p class="text-gray-400">目前暫無未來活動</p>';
 
-                // 完整名單: 過去的暗掉
                 fullCalendarContainer.innerHTML = allEvents.map(e => {
                     const isPast = e.date < today;
                     return `
@@ -134,7 +133,7 @@
             } catch (e) { console.error('Calendar error:', e); }
         }
 
-        // --- 3. 雲端登入邏輯 (Google Sheets API) ---
+        // --- 3. 雲端登入邏輯 ---
         async function handleLogin() {
             const u = document.getElementById('u').value;
             const p = document.getElementById('p').value;
@@ -151,7 +150,6 @@
                 const response = await fetch(GAS_URL);
                 const users = await response.json();
                 
-                // 比對帳密 (phone 與 password)
                 const foundUser = users.find(user => 
                     String(user.phone).trim() === String(u).trim() && 
                     String(user.password).trim() === String(p).trim()
@@ -174,7 +172,10 @@
             }
         }
 
-        window.onload = loadCalendar;
+        window.onload = function() {
+            showSlides();
+            loadCalendar();
+        };
     </script>
 </body>
 </html>

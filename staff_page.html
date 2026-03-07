@@ -3,194 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幹部管理後台 | 築心讀書會</title>
+    <title>築心管理後台 | 專業版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #F3F4F6; }
-        .sidebar-item.active { background-color: #064E3B; color: white; }
+        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAFC; }
+        .sidebar-item.active { background-color: #064E3B; color: white; box-shadow: 0 4px 12px rgba(6,78,59,0.2); }
+        .tab-content { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="flex min-h-screen">
 
-    <aside class="w-64 bg-white shadow-lg flex flex-col">
-        <div class="p-6 border-b">
-            <h1 class="text-xl font-bold text-emerald-900">築心管理系統</h1>
-            <p class="text-xs text-gray-400 mt-1">v4.5 管理員專用</p>
+    <aside class="w-64 bg-white shadow-xl flex flex-col z-50">
+        <div class="p-8 border-b">
+            <h1 class="text-2xl font-bold text-emerald-900 tracking-tighter">築心管理</h1>
+            <div class="text-[10px] text-emerald-600 font-bold tracking-widest uppercase mt-1 text-center bg-emerald-50 py-1 rounded">Staff Only</div>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <button onclick="showTab('members')" id="btn-members" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center active"><i class="fas fa-users mr-3 w-5 text-center"></i> 會員名冊/繳費</button>
-            <button onclick="showTab('news')" id="btn-news" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center"><i class="fas fa-bullhorn mr-3 w-5 text-center"></i> 發佈公告</button>
-            <button onclick="showTab('calendar')" id="btn-calendar" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center"><i class="fas fa-calendar-plus mr-3 w-5 text-center"></i> 行事曆更新</button>
-            <button onclick="showTab('config')" id="btn-config" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center"><i class="fas fa-link mr-3 w-5 text-center"></i> 雲端位置管理</button>
+            <button onclick="showTab('members')" id="btn-members" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center active"><i class="fas fa-users mr-3"></i> 會員/繳費</button>
+            <button onclick="showTab('news')" id="btn-news" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-bullhorn mr-3"></i> 公告更新</button>
+            <button onclick="showTab('calendar')" id="btn-calendar" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-calendar-alt mr-3"></i> 行事曆管理</button>
+            <button onclick="showTab('config')" id="btn-config" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-cog mr-3"></i> 系統連結</button>
         </nav>
-        <div class="p-4 border-t">
-            <a href="member_zone.html" class="block w-full text-center py-2 text-sm text-emerald-700 font-bold border border-emerald-700 rounded-lg hover:bg-emerald-50 transition">返回會員中心</a>
+        <div class="p-6 border-t">
+            <a href="member_zone.html" class="flex items-center justify-center w-full py-3 text-sm font-bold text-gray-500 hover:text-emerald-800 transition"><i class="fas fa-sign-out-alt mr-2"></i> 返回專區</a>
         </div>
     </aside>
 
-    <main class="flex-1 p-10 overflow-y-auto">
+    <main class="flex-1 p-12 overflow-y-auto">
         
         <div id="tab-members" class="tab-content">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-emerald-900 italic">Membership List.</h2>
-                <button onclick="openAddMemberModal()" class="bg-emerald-800 text-white px-4 py-2 rounded-xl text-sm shadow-md hover:bg-emerald-700 transition">
-                    <i class="fas fa-user-plus mr-2"></i> 新增會員
-                </button>
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold text-emerald-900">會員名冊 <span class="text-sm font-normal text-gray-400 ml-2">Member Directory</span></h2>
+                <button onclick="toggleModal('addMemberModal', true)" class="bg-emerald-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition">新增會員</button>
             </div>
-            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b">
-                        <tr>
-                            <th class="p-4 text-sm font-bold text-gray-500">姓名</th>
-                            <th class="p-4 text-sm font-bold text-gray-500">手機 (帳號)</th>
-                            <th class="p-4 text-sm font-bold text-gray-500">Email</th>
-                            <th class="p-4 text-sm font-bold text-gray-500">繳費狀況</th>
-                            <th class="p-4 text-sm font-bold text-gray-500">操作</th>
+                    <thead class="bg-gray-50/50 border-b">
+                        <tr class="text-gray-400 text-xs uppercase tracking-wider">
+                            <th class="p-6">姓名</th><th class="p-6">手機</th><th class="p-6">Email</th><th class="p-6 text-center">繳費</th><th class="p-6 text-right">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="memberListTable" class="divide-y divide-gray-100">
-                        <tr><td colspan="5" class="p-10 text-center text-gray-400">正在連線資料庫...</td></tr>
-                    </tbody>
+                    <tbody id="memberListTable" class="divide-y divide-gray-50 text-emerald-900"></tbody>
                 </table>
             </div>
         </div>
 
-        <div id="tab-news" class="tab-content hidden">
-            <h2 class="text-2xl font-bold text-emerald-900 mb-6 italic">Announcement.</h2>
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl">
-                <label class="block text-sm font-bold text-gray-700 mb-2">最新公告內容</label>
-                <textarea id="newsContent" rows="4" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-emerald-500 mb-4" placeholder="輸入要顯示在首頁的公告..."></textarea>
-                <button onclick="updateNews()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">發佈並更新</button>
-            </div>
-        </div>
-
         <div id="tab-calendar" class="tab-content hidden">
-            <h2 class="text-2xl font-bold text-emerald-900 mb-6 italic">Events Schedule.</h2>
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl">
-                <div class="space-y-4">
-                    <input id="calDate" type="date" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                    <input id="calTitle" type="text" placeholder="活動標題 (如：3月導讀會)" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                    <input id="calDesc" type="text" placeholder="備註 (可選)" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                    <button onclick="updateCalendar()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">新增至行事曆</button>
+            <h2 class="text-3xl font-bold text-emerald-900 mb-8">行事曆管理</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-lg mb-6 flex items-center"><i class="fas fa-plus-circle mr-2 text-emerald-600"></i> 新增活動行程</h3>
+                    <div class="space-y-4">
+                        <input id="calDate" type="date" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
+                        <input id="calTitle" type="text" placeholder="活動名稱 (例如：4月讀書會)" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
+                        <input id="calDesc" type="text" placeholder="活動地點或備註" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
+                        <button onclick="updateCalendar()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold">儲存並發佈</button>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-lg mb-6">目前行程清單</h3>
+                    <div id="calendarList" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        </div>
                 </div>
             </div>
         </div>
 
         <div id="tab-config" class="tab-content hidden">
-            <h2 class="text-2xl font-bold text-emerald-900 mb-6 italic">Cloud Resources.</h2>
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl space-y-8">
-                <div>
-                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase">導讀資料夾網址</label>
-                    <input id="cfg_reading" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-2 text-sm">
-                    <button onclick="saveConfig('reading_folder_url', 'cfg_reading')" class="text-emerald-700 font-bold text-sm hover:underline">儲存導讀連結</button>
+            <h2 class="text-3xl font-bold text-emerald-900 mb-8">系統連結管理</h2>
+            <div class="max-w-xl space-y-6">
+                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
+                    <label class="block text-xs font-black text-emerald-800 mb-4 uppercase tracking-widest">導讀資料夾 (Google Drive)</label>
+                    <input id="cfg_reading" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-4 text-sm font-mono">
+                    <button onclick="confirmConfig('reading_folder_url', 'cfg_reading')" class="bg-emerald-100 text-emerald-800 px-6 py-2 rounded-xl font-bold hover:bg-emerald-200 transition">確認修改導讀連結</button>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-orange-800 mb-2 uppercase">活動相簿網址</label>
-                    <input id="cfg_photo" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-2 text-sm">
-                    <button onclick="saveConfig('photo_gallery_url', 'cfg_photo')" class="text-orange-700 font-bold text-sm hover:underline">儲存相簿連結</button>
+                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
+                    <label class="block text-xs font-black text-orange-800 mb-4 uppercase tracking-widest">活動剪影 (Google Photos/Drive)</label>
+                    <input id="cfg_photo" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-4 text-sm font-mono">
+                    <button onclick="confirmConfig('photo_gallery_url', 'cfg_photo')" class="bg-orange-100 text-orange-800 px-6 py-2 rounded-xl font-bold hover:bg-orange-200 transition">確認修改照片連結</button>
                 </div>
+            </div>
+        </div>
+
+        <div id="tab-news" class="tab-content hidden">
+            <h2 class="text-3xl font-bold text-emerald-900 mb-8">首頁公告更新</h2>
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 max-w-2xl">
+                <textarea id="newsContent" rows="5" class="w-full p-6 bg-gray-50 border rounded-[1.5rem] outline-none mb-6" placeholder="請輸入新公告內容..."></textarea>
+                <button onclick="updateNews()" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-bold shadow-xl">立即更新公告</button>
             </div>
         </div>
 
     </main>
 
+    <div id="addMemberModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl">
+            <h3 class="text-2xl font-bold text-emerald-900 mb-6">手動新增會員</h3>
+            <div class="space-y-4">
+                <input id="addName" type="text" placeholder="姓名" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                <input id="addPhone" type="text" placeholder="手機 (將作為登入帳號)" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                <input id="addEmail" type="email" placeholder="Email (可選)" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                <input id="addPwd" type="text" placeholder="預設密碼" class="w-full p-4 bg-gray-50 border rounded-2xl" value="1234">
+                <button onclick="submitNewMember()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg mt-4">確認新增</button>
+                <button onclick="toggleModal('addMemberModal', false)" class="w-full text-gray-400 text-sm">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-        let allMembers = [];
+        let cacheData = { users: [], config: {}, calendar: [] };
 
-        // 1. 分頁切換
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-' + tabName).classList.remove('hidden');
-            document.getElementById('btn-' + tabName).classList.add('active');
-            if(tabName === 'members') fetchMembers();
+        async function syncAll() {
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+            cacheData = await res.json();
+            renderMembers();
+            renderCalendar();
+            document.getElementById('cfg_reading').value = cacheData.config.reading_folder_url || '';
+            document.getElementById('cfg_photo').value = cacheData.config.photo_gallery_url || '';
         }
 
-        // 2. 獲取資料
-        async function fetchMembers() {
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                allMembers = data.users;
-                renderMembers();
-                // 預填 Config 連結
-                document.getElementById('cfg_reading').value = data.config.reading_folder_url || '';
-                document.getElementById('cfg_photo').value = data.config.photo_gallery_url || '';
-            } catch (e) { alert("連線失敗"); }
-        }
-
+        // --- 會員功能 ---
         function renderMembers() {
             const tbody = document.getElementById('memberListTable');
-            tbody.innerHTML = allMembers.map(m => `
-                <tr>
-                    <td class="p-4 font-bold text-emerald-900">${m.name}</td>
-                    <td class="p-4 text-gray-500 font-mono text-sm">${m.phone}</td>
-                    <td class="p-4 text-gray-500 text-sm">${m.email || '--'}</td>
-                    <td class="p-4">
-                        <button onclick="togglePayment('${m.phone}', '${m.paid}')" 
-                            class="px-3 py-1 rounded-full text-xs font-bold ${m.paid === 'Y' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}">
-                            ${m.paid === 'Y' ? '已繳費' : '未繳費'}
+            tbody.innerHTML = cacheData.users.map(m => `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="p-6 font-bold">${m.name}</td>
+                    <td class="p-6 font-mono text-sm">${m.phone}</td>
+                    <td class="p-6 text-sm text-gray-400">${m.email || '--'}</td>
+                    <td class="p-6 text-center">
+                        <button onclick="togglePaid('${m.phone}', '${m.paid}')" class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${m.paid === 'Y' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-500'}">
+                            ${m.paid === 'Y' ? 'Paid' : 'Unpaid'}
                         </button>
                     </td>
-                    <td class="p-4 text-red-400 hover:text-red-600 cursor-pointer" onclick="deleteUser('${m.phone}', '${m.name}')">
-                        <i class="far fa-trash-alt"></i>
+                    <td class="p-6 text-right">
+                        <button onclick="deleteMember('${m.phone}', '${m.name}')" class="text-gray-300 hover:text-red-500 transition"><i class="far fa-trash-alt"></i></button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // 3. 繳費狀況更新 (切換 Y/N)
-        async function togglePayment(phone, currentStatus) {
-            const nextStatus = currentStatus === 'Y' ? 'N' : 'Y';
-            if(!confirm(`確定要將狀態改為 ${nextStatus === 'Y' ? '已繳費' : '未繳費'} 嗎？`)) return;
-
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    currentPhone: phone,
-                    newData: { paid: nextStatus }
-                })
-            });
-            fetchMembers(); // 重新整理清單
-        }
-
-        // 4. 更新雲端網址
-        async function saveConfig(key, inputId) {
-            const val = document.getElementById(inputId).value.trim();
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: "updateConfig", key: key, value: val })
-            });
-            alert("連結更新成功！");
-        }
-
-        // 5. 更新公告
-        async function updateNews() {
-            const content = document.getElementById('newsContent').value;
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: "updateNews", content: content })
-            });
-            alert("公告發佈成功！");
-        }
-
-        // 6. 新增行事曆
-        async function updateCalendar() {
-            const date = document.getElementById('calDate').value;
-            const title = document.getElementById('calTitle').value;
-            const desc = document.getElementById('calDesc').value;
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: "updateCalendar", date: date, title: title, desc: desc })
-            });
-            alert("行程已加入！");
-        }
-
-        // 初始化
-        window.onload = () => fetchMembers();
-    </script>
-</body>
-</html>
+        async function submitNewMember() {
+            const name = document.getElementById('addName').value;
+            const phone = document.getElementById('addPhone').value;
+            if(!name || !phone) return alert("請填寫姓名與電話

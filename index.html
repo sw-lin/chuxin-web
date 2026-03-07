@@ -23,7 +23,6 @@
             <button onclick="toggleModal('fullCalendarModal', true)" class="text-sm text-gray-600 hover:text-emerald-800 font-bold border-r pr-4 border-gray-200">
                 <i class="far fa-calendar-alt mr-1"></i> 完整行事曆
             </button>
-            <a href="about.html" class="text-sm text-gray-600 hover:text-emerald-800 font-bold">關於我們</a>
             <button onclick="toggleModal('loginModal', true)" class="bg-emerald-800 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-emerald-700 transition">會員登入</button>
         </div>
     </nav>
@@ -45,8 +44,9 @@
             <div class="h-8 w-2 bg-emerald-800"></div>
             <h2 class="text-3xl font-bold text-emerald-900 italic tracking-tight">Coming soon.</h2>
         </div>
-        <div id="comingSoonList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            </div>
+        <div id="comingSoonList" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-400">
+            正在連線雲端行事曆...
+        </div>
     </main>
 
     <div id="fullCalendarModal" class="fixed inset-0 bg-black/70 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -55,8 +55,9 @@
                 <h3 class="text-2xl font-bold tracking-widest">本學期完整行事曆</h3>
                 <button onclick="toggleModal('fullCalendarModal', false)" class="text-white/50 hover:text-white text-4xl">&times;</button>
             </div>
-            <div id="fullCalendarList" class="flex-1 overflow-y-auto p-8 space-y-3 no-scrollbar">
-                </div>
+            <div id="fullCalendarList" class="flex-1 overflow-y-auto p-8 space-y-3 no-scrollbar text-gray-400">
+                載入行程中...
+            </div>
         </div>
     </div>
 
@@ -65,18 +66,18 @@
             <button onclick="toggleModal('loginModal', false)" class="absolute top-6 right-8 text-gray-300 hover:text-gray-500 text-2xl">&times;</button>
             <h3 class="text-2xl font-bold text-emerald-900 mb-6 text-center">會員專區登入</h3>
             <div class="space-y-4">
-                <input id="u" type="text" placeholder="手機號碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500">
-                <input id="p" type="password" placeholder="登入密碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500">
-                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition">進入專區</button>
+                <input id="u" type="tel" placeholder="手機號碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500 text-gray-900">
+                <input id="p" type="password" placeholder="登入密碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500 text-gray-900">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition shadow-lg shadow-emerald-900/10">進入專區</button>
             </div>
             <p id="loginStatus" class="text-xs text-center mt-4 text-gray-400"></p>
         </div>
     </div>
 
     <script>
-        // --- 1. 配置與初始化 ---
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyRUgtVGJ35KbidWjwFfFbt5AMHOenisHtXw-84k0RsPvonY3ASqsWGSE0eWLMAjLgJVw/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxCen_SH5WnDQV-zbiAreKHcMWUVg6i0M8SNzJWqq6vbEHAYJQ7UxnByBkY9A5lGmx5sg/exec";
         
+        // 1. 照片輪播邏輯
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
@@ -90,38 +91,35 @@
 
         function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
 
-        // --- 2. 行事曆邏輯 (載入 calendar.csv) ---
-        async function loadCalendar() {
+        // 2. 核心資料載入 (行事曆)
+        async function initPage() {
             const comingSoonContainer = document.getElementById('comingSoonList');
             const fullCalendarContainer = document.getElementById('fullCalendarList');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const today = new Date().setHours(0, 0, 0, 0);
 
             try {
-                const response = await fetch('calendar.csv?v=' + Date.now());
-                const data = await response.text();
-                const rows = data.split('\n').map(r => r.trim()).filter(r => r !== "" && !r.toLowerCase().startsWith('date'));
-                
-                let allEvents = rows.map(row => {
-                    const [dateStr, title, desc] = row.split(',');
-                    return { date: new Date(dateStr), dateText: dateStr, title, desc: desc || '' };
-                }).filter(e => !isNaN(e.date.getTime()));
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                const allEvents = data.calendar;
 
-                allEvents.sort((a, b) => a.date - b.date);
+                // 排序並過濾
+                allEvents.sort((a, b) => a.dateObj - b.dateObj);
+                const futureEvents = allEvents.filter(e => e.dateObj >= today).slice(0, 4);
 
-                const futureEvents = allEvents.filter(e => e.date >= today).slice(0, 4);
+                // 更新首頁 Coming Soon
                 comingSoonContainer.innerHTML = futureEvents.map(e => `
                     <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition">
                         <div class="text-emerald-700 font-bold text-sm mb-1">${e.dateText}</div>
                         <h4 class="font-bold text-gray-800">${e.title}</h4>
                     </div>
-                `).join('') || '<p class="text-gray-400">目前暫無未來活動</p>';
+                `).join('') || '<p class="text-gray-400 italic">目前暫無預定行程</p>';
 
+                // 更新完整行事曆彈窗
                 fullCalendarContainer.innerHTML = allEvents.map(e => {
-                    const isPast = e.date < today;
+                    const isPast = e.dateObj < today;
                     return `
                         <div class="flex items-center space-x-6 p-4 rounded-2xl ${isPast ? 'opacity-30' : 'bg-emerald-50/50'}">
-                            <div class="min-w-[100px] font-mono text-sm ${isPast ? 'line-through' : 'font-bold text-emerald-800'}">${e.dateText}</div>
+                            <div class="min-w-[100px] font-mono text-sm ${isPast ? 'line-through text-gray-400' : 'font-bold text-emerald-800'}">${e.dateText}</div>
                             <div class="flex-1">
                                 <div class="font-bold ${isPast ? 'text-gray-400' : 'text-gray-800'}">${e.title}</div>
                                 <div class="text-xs text-gray-400">${e.desc}</div>
@@ -129,10 +127,14 @@
                         </div>
                     `;
                 }).join('');
-            } catch (e) { console.error('Calendar error:', e); }
+
+            } catch (e) {
+                console.error('Data error:', e);
+                comingSoonContainer.innerText = "無法載入雲端行程";
+            }
         }
 
-        // --- 3. 雲端登入邏輯 (已對齊最新 GAS 格式) ---
+        // 3. 雲端驗證登入
         async function handleLogin() {
             const u = document.getElementById('u').value.trim();
             const p = document.getElementById('p').value.trim();
@@ -142,19 +144,17 @@
             if(!u || !p) { alert("請輸入手機號碼與密碼"); return; }
 
             btn.disabled = true;
-            btn.innerText = "驗證中...";
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 驗證中...';
             status.innerText = "正在連線至築心資料庫...";
 
             try {
                 const response = await fetch(GAS_URL);
                 const data = await response.json();
-                
-                // 關鍵修正：從 data.users 提取陣列進行比對
                 const users = data.users;
-                
+
                 const foundUser = users.find(user => 
-                    String(user.phone).trim() === String(u) && 
-                    String(user.password).trim() === String(p)
+                    String(user.phone).trim() === u && 
+                    String(user.password).trim() === p
                 );
 
                 if (foundUser) {
@@ -167,14 +167,13 @@
                     status.innerText = "";
                 }
             } catch (err) {
-                console.error(err);
-                alert('連線失敗，請檢查網路後重新整理頁面');
+                alert('連線逾時，請檢查網路後重新整理。');
                 btn.disabled = false;
                 btn.innerText = "進入專區";
             }
         }
 
-        window.onload = loadCalendar;
+        window.onload = initPage;
     </script>
 </body>
 </html>

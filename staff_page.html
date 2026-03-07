@@ -3,119 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幹部專區 | 築心讀書會</title>
+    <title>幹部管理後台 | 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAF9; }
-        .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        body { font-family: 'Noto Serif TC', serif; background-color: #F3F4F6; }
+        .sidebar-item.active { background-color: #064E3B; color: white; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="flex min-h-screen">
 
-    <nav class="admin-gradient text-white px-6 py-4 shadow-lg">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-user-shield text-orange-400"></i>
-                <span class="text-xl font-bold tracking-widest">幹部管理後台</span>
-            </div>
-            <a href="member_zone.html" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition">
-                <i class="fas fa-arrow-left mr-1"></i> 返回會員中心
-            </a>
+    <aside class="w-64 bg-white shadow-lg flex flex-col">
+        <div class="p-6 border-b">
+            <h1 class="text-xl font-bold text-emerald-900">築心管理系統</h1>
+            <p class="text-xs text-gray-400 mt-1">v4.5 管理員專用</p>
         </div>
-    </nav>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="showTab('members')" id="btn-members" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center active"><i class="fas fa-users mr-3 w-5 text-center"></i> 會員名冊/繳費</button>
+            <button onclick="showTab('news')" id="btn-news" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center"><i class="fas fa-bullhorn mr-3 w-5 text-center"></i> 發佈公告</button>
+            <button onclick="showTab('calendar')" id="btn-calendar" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center"><i class="fas fa-calendar-plus mr-3 w-5 text-center"></i> 行事曆更新</button>
+            <button onclick="showTab('config')" id="btn-config" class="sidebar-item w-full text-left p-3 rounded-xl transition flex items-center"><i class="fas fa-link mr-3 w-5 text-center"></i> 雲端位置管理</button>
+        </nav>
+        <div class="p-4 border-t">
+            <a href="member_zone.html" class="block w-full text-center py-2 text-sm text-emerald-700 font-bold border border-emerald-700 rounded-lg hover:bg-emerald-50 transition">返回會員中心</a>
+        </div>
+    </aside>
 
-    <main class="max-w-4xl mx-auto px-6 py-10">
+    <main class="flex-1 p-10 overflow-y-auto">
         
-        <header class="mb-10">
-            <h1 class="text-3xl font-bold text-emerald-900">公告排程管理</h1>
-            <p class="text-gray-500 mt-2">在這裡發布的消息將會自動同步至所有會員的「最新消息」欄位。</p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            <div class="md:col-span-2 space-y-6">
-                <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-50">
-                    <h3 class="text-lg font-bold text-emerald-900 mb-6 flex items-center">
-                        <i class="fas fa-edit mr-2 text-emerald-700"></i> 撰寫新公告
-                    </h3>
-                    
-                    <div class="space-y-5">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-2">公告內容</label>
-                            <textarea id="newsContent" rows="5" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition" placeholder="請輸入要對全體會員說的話..."></textarea>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">開始顯示時間</label>
-                                <input type="datetime-local" id="startTime" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">結束隱藏時間 (不填則永久發布)</label>
-                                <input type="datetime-local" id="endTime" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                            </div>
-                        </div>
-
-                        <button id="submitBtn" onclick="publishNews()" class="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-orange-700 transition shadow-lg shadow-orange-900/20">
-                            立即發布公告
-                        </button>
-                    </div>
-                </div>
+        <div id="tab-members" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-emerald-900 italic">Membership List.</h2>
+                <button onclick="openAddMemberModal()" class="bg-emerald-800 text-white px-4 py-2 rounded-xl text-sm shadow-md hover:bg-emerald-700 transition">
+                    <i class="fas fa-user-plus mr-2"></i> 新增會員
+                </button>
             </div>
-<section class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-50 mb-8">
-    <h3 class="text-lg font-bold text-emerald-900 mb-6"><i class="fas fa-calendar-plus mr-2"></i> 新增行事曆行程</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input type="date" id="calDate" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
-        <input type="text" id="calTitle" placeholder="行程名稱 (例：三月導讀會)" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
-        <input type="text" id="calDesc" placeholder="備註 (例：地點 築心會館)" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
-    </div>
-    <button onclick="addEvent()" class="mt-4 bg-emerald-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700">新增行程</button>
-</section>
-
-<script>
-async function addEvent() {
-    const date = document.getElementById('calDate').value;
-    const title = document.getElementById('calTitle').value;
-    const desc = document.getElementById('calDesc').value;
-    if(!date || !title) return alert("請填寫日期與標題");
-
-    await fetch(GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({
-            type: "updateCalendar",
-            date: date,
-            title: title,
-            desc: desc
-        })
-    });
-    alert("行程已新增至雲端！");
-    location.reload();
-}
-</script>            <div class="space-y-6">
-                <div class="bg-emerald-900 text-white p-8 rounded-[2.5rem] shadow-xl">
-                    <h3 class="font-bold mb-4">💡 使用小貼士</h3>
-                    <ul class="text-sm space-y-4 opacity-90">
-                        <li class="flex items-start">
-                            <i class="fas fa-check-circle mt-1 mr-2 text-emerald-400"></i>
-                            <span>設定<b>開始時間</b>後，公告會在該時刻準時出現。</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fas fa-clock mt-1 mr-2 text-emerald-400"></i>
-                            <span>設定<b>結束時間</b>，活動結束後公告會自動從會員頁面消失。</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fas fa-magic mt-1 mr-2 text-emerald-400"></i>
-                            <span>若不設定時間，公告將會立即顯示且永不過期。</span>
-                        </li>
-                    </ul>
-                </div>
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-4 text-sm font-bold text-gray-500">姓名</th>
+                            <th class="p-4 text-sm font-bold text-gray-500">手機 (帳號)</th>
+                            <th class="p-4 text-sm font-bold text-gray-500">Email</th>
+                            <th class="p-4 text-sm font-bold text-gray-500">繳費狀況</th>
+                            <th class="p-4 text-sm font-bold text-gray-500">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="memberListTable" class="divide-y divide-gray-100">
+                        <tr><td colspan="5" class="p-10 text-center text-gray-400">正在連線資料庫...</td></tr>
+                    </tbody>
+                </table>
             </div>
-
         </div>
+
+        <div id="tab-news" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-emerald-900 mb-6 italic">Announcement.</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl">
+                <label class="block text-sm font-bold text-gray-700 mb-2">最新公告內容</label>
+                <textarea id="newsContent" rows="4" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-emerald-500 mb-4" placeholder="輸入要顯示在首頁的公告..."></textarea>
+                <button onclick="updateNews()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">發佈並更新</button>
+            </div>
+        </div>
+
+        <div id="tab-calendar" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-emerald-900 mb-6 italic">Events Schedule.</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl">
+                <div class="space-y-4">
+                    <input id="calDate" type="date" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                    <input id="calTitle" type="text" placeholder="活動標題 (如：3月導讀會)" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                    <input id="calDesc" type="text" placeholder="備註 (可選)" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                    <button onclick="updateCalendar()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">新增至行事曆</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-config" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-emerald-900 mb-6 italic">Cloud Resources.</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl space-y-8">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase">導讀資料夾網址</label>
+                    <input id="cfg_reading" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-2 text-sm">
+                    <button onclick="saveConfig('reading_folder_url', 'cfg_reading')" class="text-emerald-700 font-bold text-sm hover:underline">儲存導讀連結</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-orange-800 mb-2 uppercase">活動相簿網址</label>
+                    <input id="cfg_photo" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-2 text-sm">
+                    <button onclick="saveConfig('photo_gallery_url', 'cfg_photo')" class="text-orange-700 font-bold text-sm hover:underline">儲存相簿連結</button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <script>
-        const GAS_URL = "
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
+        let allMembers = [];
+
+        // 1. 分頁切換
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            document.getElementById('btn-' + tabName).classList.add('active');
+            if(tabName === 'members') fetchMembers();
+        }
+
+        // 2. 獲取資料
+        async function fetchMembers() {
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                allMembers = data.users;
+                renderMembers();
+                // 預填 Config 連結
+                document.getElementById('cfg_reading').value = data.config.reading_folder_url || '';
+                document.getElementById('cfg_photo').value = data.config.photo_gallery_url || '';
+            } catch (e) { alert("連線失敗"); }
+        }
+
+        function renderMembers() {
+            const tbody = document.getElementById('memberListTable');
+            tbody.innerHTML = allMembers.map(m => `
+                <tr>
+                    <td class="p-4 font-bold text-emerald-900">${m.name}</td>
+                    <td class="p-4 text-gray-500 font-mono text-sm">${m.phone}</td>
+                    <td class="p-4 text-gray-500 text-sm">${m.email || '--'}</td>
+                    <td class="p-4">
+                        <button onclick="togglePayment('${m.phone}', '${m.paid}')" 
+                            class="px-3 py-1 rounded-full text-xs font-bold ${m.paid === 'Y' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}">
+                            ${m.paid === 'Y' ? '已繳費' : '未繳費'}
+                        </button>
+                    </td>
+                    <td class="p-4 text-red-400 hover:text-red-600 cursor-pointer" onclick="deleteUser('${m.phone}', '${m.name}')">
+                        <i class="far fa-trash-alt"></i>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 3. 繳費狀況更新 (切換 Y/N)
+        async function togglePayment(phone, currentStatus) {
+            const nextStatus = currentStatus === 'Y' ? 'N' : 'Y';
+            if(!confirm(`確定要將狀態改為 ${nextStatus === 'Y' ? '已繳費' : '未繳費'} 嗎？`)) return;
+
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    currentPhone: phone,
+                    newData: { paid: nextStatus }
+                })
+            });
+            fetchMembers(); // 重新整理清單
+        }
+
+        // 4. 更新雲端網址
+        async function saveConfig(key, inputId) {
+            const val = document.getElementById(inputId).value.trim();
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: "updateConfig", key: key, value: val })
+            });
+            alert("連結更新成功！");
+        }
+
+        // 5. 更新公告
+        async function updateNews() {
+            const content = document.getElementById('newsContent').value;
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: "updateNews", content: content })
+            });
+            alert("公告發佈成功！");
+        }
+
+        // 6. 新增行事曆
+        async function updateCalendar() {
+            const date = document.getElementById('calDate').value;
+            const title = document.getElementById('calTitle').value;
+            const desc = document.getElementById('calDesc').value;
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: "updateCalendar", date: date, title: title, desc: desc })
+            });
+            alert("行程已加入！");
+        }
+
+        // 初始化
+        window.onload = () => fetchMembers();
+    </script>
+</body>
+</html>

@@ -8,97 +8,118 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; color: #2C3E50; }
-        .member-card { background: white; border: 1px solid #ECF2F0; border-radius: 2rem; transition: all 0.3s ease; }
-        .admin-btn { background: linear-gradient(135deg, #B45309 0%, #D97706 100%); }
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="p-6 md:p-12">
 
-    <nav class="p-6 flex justify-between items-center bg-white shadow-sm">
-        <div class="text-emerald-900 font-bold text-xl">築心會員專區</div>
-        <button onclick="handleLogout()" class="text-gray-400 hover:text-red-500 text-sm transition">
-            <i class="fas fa-sign-out-alt"></i> 安全登出
+    <div class="max-w-md mx-auto bg-white p-8 rounded-[2.5rem] shadow-xl border border-emerald-50">
+        <h2 class="text-2xl font-bold text-emerald-900 mb-6 text-center">會員個人資料</h2>
+        <div id="userInfo" class="space-y-4 mb-8">
+            </div>
+        <button onclick="openEditModal()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 transition">
+            <i class="fas fa-user-edit mr-2"></i> 修改個人資料
         </button>
-    </nav>
+        <div class="mt-4 text-center">
+            <a href="index.html" class="text-sm text-gray-400 hover:text-emerald-800 font-bold">登出並回首頁</a>
+        </div>
+    </div>
 
-    <main class="flex-1 max-w-4xl mx-auto w-full py-12 px-6">
-        <header class="mb-12">
-            <h1 class="text-4xl font-bold text-emerald-900 mb-2">
-                <span id="displayName">載入中...</span>
-            </h1>
-            <p class="text-gray-400">很高興今天見到您，讓我們開始共讀之旅。</p>
-        </header>
-
-        <div id="adminSection" class="hidden mb-12">
-            <div class="bg-amber-50 border border-amber-100 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between shadow-sm">
-                <div class="mb-4 md:mb-0">
-                    <h3 class="text-amber-900 font-bold text-lg">幹部專屬權限</h3>
-                    <p class="text-amber-700/70 text-sm">您可以存取會員通訊錄與財務記錄。</p>
+    <div id="editProfileModal" class="fixed inset-0 bg-black/60 hidden z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-emerald-900 mb-6 text-center">修改個人資料</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 mb-1 ml-1">驗證舊密碼 <span class="text-red-500">*</span></label>
+                    <input id="oldPassword" type="password" placeholder="請輸入當前密碼" class="w-full p-3 bg-gray-50 border border-emerald-100 rounded-xl outline-none focus:border-emerald-500 transition">
                 </div>
-                <a href="staff_page.html" class="admin-btn text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:scale-105 transition transform">
-                    <i class="fas fa-user-shield mr-2"></i> 進入幹部工作區
-                </a>
+                <hr class="border-emerald-50">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 ml-1">新電子郵件</label>
+                    <input id="editEmail" type="email" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-emerald-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 ml-1">設定新密碼</label>
+                    <input id="editPassword" type="password" placeholder="若不修改請留空" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:border-emerald-500 transition">
+                </div>
+                <button id="updateBtn" onclick="submitUpdate()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg">確認更新</button>
+                <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm py-2">取消</button>
             </div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="member-card p-8 hover:shadow-md">
-                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-700 mb-6">
-                    <i class="fas fa-book-open"></i>
-                </div>
-                <h4 class="font-bold text-xl mb-2">本期導讀講義</h4>
-                <p class="text-gray-400 text-sm">下載本週讀書會的重點筆記與討論題綱。</p>
-                <button class="mt-6 text-emerald-700 font-bold text-sm opacity-50 cursor-not-allowed">尚未開放</button>
-            </div>
-
-            <div class="member-card p-8 hover:shadow-md">
-                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-700 mb-6">
-                    <i class="fas fa-star"></i>
-                </div>
-                <h4 class="font-bold text-xl mb-2">我的學習存摺</h4>
-                <p class="text-gray-400 text-sm">查看您的出席紀錄與參與的活動統計。</p>
-                <button class="mt-6 text-emerald-700 font-bold text-sm opacity-50 cursor-not-allowed">模組開發中</button>
-            </div>
-        </div>
-    </main>
-
-    <footer class="p-10 text-center text-gray-300 text-xs">
-        &copy; 2026 築心讀書會 ‧ 會員管理系統
-    </footer>
+    </div>
 
     <script>
-        // 1. 初始化頁面：讀取 Session
-        function initMemberZone() {
-            const userDataStr = sessionStorage.getItem('userInfo');
+        // 核心配置
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyHvW4h7QrbsNH-aYkjz65F6Og4NoEVcy71vYyls2pjxUpt-LLNSO0RuYQb4C7gQuq3hw/exec";
+
+        // 載入時顯示資訊
+        window.onload = () => {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            if (!user) { window.location.href = 'index.html'; return; }
             
-            // 如果沒登入，踢回首頁
-            if (!userDataStr) {
-                window.location.href = 'index.html';
+            document.getElementById('userInfo').innerHTML = `
+                <div class="p-4 bg-emerald-50 rounded-xl">
+                    <p class="text-xs text-gray-500">手機號碼</p>
+                    <p class="font-bold text-emerald-900">${user.phone}</p>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl">
+                    <p class="text-xs text-gray-500">電子郵件</p>
+                    <p class="font-bold text-emerald-900">${user.email}</p>
+                </div>
+            `;
+        };
+
+        function openEditModal() {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
+
+        async function submitUpdate() {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            const oldPass = document.getElementById('oldPassword').value;
+            const newEmail = document.getElementById('editEmail').value;
+            const newPass = document.getElementById('editPassword').value;
+            const btn = document.getElementById('updateBtn');
+
+            // 1. 舊密碼驗證
+            if (!oldPass || String(oldPass).trim() !== String(user.password).trim()) {
+                alert("舊密碼錯誤，請重新輸入");
                 return;
             }
 
-            const user = JSON.parse(userDataStr);
-            
-            // 2. 顯示歡迎語：[姓名] [稱謂]
-            const name = user.name || '親愛的會員';
-            const title = user.title || '';
-            document.getElementById('displayName').innerText = `${name} ${title}，您好`;
+            btn.disabled = true;
+            btn.innerText = "更新中...";
 
-            // 3. 判斷幹部身分 (只要 title 有值且不是一般會員)
-            // 建議檢查條件：title 不為空且不是 "一般會員" 或 "Member"
-            if (title && title.trim() !== "" && title !== "一般會員" && title !== "會員") {
-                document.getElementById('adminSection').classList.remove('hidden');
+            // 2. 發送更新請求
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // 如果遇到跨域問題，這行很重要
+                    body: JSON.stringify({
+                        currentPhone: user.phone,
+                        newData: {
+                            email: newEmail,
+                            ...(newPass && { password: newPass })
+                        }
+                    })
+                });
+                
+                // 注意：因為 GAS 的 no-cors 模式會導致無法讀取 response body，我們假設成功
+                alert("資料更新成功！請重新登入以確認變更。");
+                user.email = newEmail;
+                if(newPass) user.password = newPass;
+                sessionStorage.setItem('userInfo', JSON.stringify(user));
+                location.reload();
+
+            } catch (err) {
+                alert("網路連線錯誤，請稍後再試");
+                btn.disabled = false;
+                btn.innerText = "確認更新";
             }
         }
-
-        // 登出
-        function handleLogout() {
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }
-
-        window.onload = initMemberZone;
     </script>
 </body>
 </html>

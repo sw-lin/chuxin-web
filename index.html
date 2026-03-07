@@ -3,156 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>築心讀書會 | 築夢踏實 · 從心開始</title>
+    <title>築心讀書會 | 在共讀中築心</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; }
-        
-        /* 背景照片設定 */
-        .hero-bg {
-            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
-                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
-
-        .emerald-gradient {
-            background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
-        }
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; color: #2C3E50; }
+        .hero-gradient { background: linear-gradient(to bottom, rgba(6,78,59,0.8), rgba(6,78,59,0.4)); }
+        .slide { display: none; width: 100%; height: 500px; object-fit: cover; animation: fade 1.5s; }
+        @keyframes fade { from {opacity: .4} to {opacity: 1} }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="hero-bg min-h-screen flex flex-col text-white">
+<body>
 
-    <nav class="p-8 flex justify-between items-center max-w-6xl mx-auto w-full">
-        <div class="flex items-center space-x-3">
-            <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md">
-                <i class="fas fa-heart text-emerald-300 text-xl"></i>
-            </div>
-            <span class="text-2xl font-bold tracking-[0.3em]">築心讀書會</span>
+    <nav class="sticky top-0 bg-white/90 backdrop-blur-md z-50 shadow-sm px-6 py-4 flex justify-between items-center">
+        <div class="text-2xl font-bold text-emerald-900 tracking-tighter">築心讀書會</div>
+        <div class="space-x-4 flex items-center">
+            <button onclick="toggleModal('fullCalendarModal', true)" class="text-sm text-gray-600 hover:text-emerald-800 font-bold border-r pr-4 border-gray-200">
+                <i class="far fa-calendar-alt mr-1"></i> 完整行事曆
+            </button>
+            <a href="about.html" class="text-sm text-gray-600 hover:text-emerald-800 font-bold">關於我們</a>
+            <button onclick="toggleModal('loginModal', true)" class="bg-emerald-800 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-emerald-700 transition">會員登入</button>
         </div>
-        <button onclick="openLoginModal()" class="bg-white/10 hover:bg-white/20 border border-white/30 px-6 py-2 rounded-full font-bold transition-all backdrop-blur-md">
-            會員登入
-        </button>
     </nav>
 
-    <main class="flex-grow flex flex-col items-center justify-center px-6 text-center">
-        <div class="space-y-6 animate-fade-in">
-            <h2 class="text-emerald-300 text-sm tracking-[0.6em] font-bold uppercase">Zhu Xin Reading Club</h2>
-            <h1 class="text-5xl md:text-7xl font-bold leading-tight">
-                築夢踏實 <span class="text-emerald-300">·</span> 從心開始
-            </h1>
-            <div class="h-1 w-24 bg-emerald-400 mx-auto rounded-full"></div>
-            <p class="text-xl md:text-2xl text-gray-200 font-light tracking-widest max-w-2xl mx-auto">
-                Coming Soon <span class="mx-2">|</span> 敬請期待
-            </p>
-            <p class="text-gray-300 max-w-lg mx-auto leading-relaxed opacity-80">
-                我們正在準備一場心靈的饗宴，<br>邀請您在繁忙的生活中，找回閱讀的寧靜。
-            </p>
-            <div class="pt-8">
-                <button onclick="openLoginModal()" class="bg-white text-emerald-900 px-10 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:bg-emerald-50 transform hover:-translate-y-1 transition-all">
-                    進入會館 <i class="fas fa-sign-in-alt ml-2"></i>
-                </button>
-            </div>
+    <div class="relative w-full h-[500px] overflow-hidden bg-emerald-900">
+        <img class="slide" src="1.jpg" onerror="this.src='https://images.unsplash.com/photo-1512820790803-83ca734da794?w=1200'">
+        <img class="slide" src="2.jpg" onerror="this.src='https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200'">
+        <img class="slide" src="3.jpg" onerror="this.src='https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200'">
+        <img class="slide" src="4.jpg" onerror="this.src='https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1200'">
+        <img class="slide" src="5.jpg" onerror="this.src='https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200'">
+        <div class="absolute inset-0 hero-gradient flex flex-col items-center justify-center text-white text-center px-6">
+            <h1 class="text-4xl md:text-6xl font-bold tracking-[0.3em] mb-4">在共讀中築心</h1>
+            <p class="text-emerald-100 text-lg md:text-xl tracking-widest font-light italic">Building the heart through shared reading.</p>
         </div>
+    </div>
+
+    <main class="max-w-4xl mx-auto py-20 px-6">
+        <div class="flex items-center space-x-4 mb-10">
+            <div class="h-8 w-2 bg-emerald-800"></div>
+            <h2 class="text-3xl font-bold text-emerald-900 italic tracking-tight">Coming soon.</h2>
+        </div>
+        <div id="comingSoonList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            </div>
     </main>
 
-    <footer class="py-10 text-center text-white/40 text-xs tracking-widest">
-        <p>© 2026 築心讀書會 · ESTABLISHED IN HSINCHU</p>
-    </footer>
-
-    <div id="loginModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
-        <div class="glass-card w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden relative">
-            <button onclick="closeLoginModal()" class="absolute right-6 top-6 text-gray-400 hover:text-emerald-900 transition-colors">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-
-            <div class="emerald-gradient p-10 text-center text-white">
-                <h3 class="text-2xl font-bold tracking-widest mb-1">會員登入</h3>
-                <p class="text-emerald-100/70 text-xs italic">Zhu Xin Member Access</p>
+    <div id="fullCalendarModal" class="fixed inset-0 bg-black/70 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-3xl max-h-[85vh] rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-8 bg-emerald-900 text-white flex justify-between items-center">
+                <h3 class="text-2xl font-bold tracking-widest">本學期完整行事曆</h3>
+                <button onclick="toggleModal('fullCalendarModal', false)" class="text-white/50 hover:text-white text-4xl">&times;</button>
             </div>
-
-            <div class="p-10 space-y-6">
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-emerald-900 ml-1 mb-1 block uppercase tracking-tighter">Phone Number</label>
-                        <input id="phone" type="tel" placeholder="請輸入手機號碼" 
-                               class="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:bg-white text-gray-900 outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-emerald-900 ml-1 mb-1 block uppercase tracking-tighter">Password</label>
-                        <input id="password" type="password" placeholder="請輸入密碼" 
-                               class="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:bg-white text-gray-900 outline-none transition-all">
-                    </div>
+            <div id="fullCalendarList" class="flex-1 overflow-y-auto p-8 space-y-3 no-scrollbar">
                 </div>
+        </div>
+    </div>
 
-                <button id="loginBtn" onclick="login()" 
-                        class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:brightness-110 transition-all">
-                    確認登入
-                </button>
+    <div id="loginModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl relative">
+            <button onclick="toggleModal('loginModal', false)" class="absolute top-6 right-8 text-gray-300 hover:text-gray-500 text-2xl">&times;</button>
+            <h3 class="text-2xl font-bold text-emerald-900 mb-6 text-center">會員專區登入</h3>
+            <div class="space-y-4">
+                <input id="u" type="text" placeholder="手機號碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500">
+                <input id="p" type="password" placeholder="登入密碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition">進入專區</button>
             </div>
+            <p id="loginStatus" class="text-xs text-center mt-4 text-gray-400"></p>
         </div>
     </div>
 
     <script>
+        // --- 1. 配置與初始化 ---
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyRUgtVGJ35KbidWjwFfFbt5AMHOenisHtXw-84k0RsPvonY3ASqsWGSE0eWLMAjLgJVw/exec";
+        
+        let slideIndex = 0;
+        function showSlides() {
+            let slides = document.getElementsByClassName("slide");
+            for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
+            slideIndex++;
+            if (slideIndex > slides.length) slideIndex = 1;
+            slides[slideIndex-1].style.display = "block";
+            setTimeout(showSlides, 5000);
+        }
+        showSlides();
 
-        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
-        function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+        function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
 
-        async function login() {
-            const phoneInput = document.getElementById('phone').value.trim();
-            const passwordInput = document.getElementById('password').value.trim();
-            const btn = document.getElementById('loginBtn');
-
-            if (!phoneInput || !passwordInput) {
-                alert("請完整輸入手機與密碼");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 驗證中...';
+        // --- 2. 行事曆邏輯 (載入 calendar.csv) ---
+        async function loadCalendar() {
+            const comingSoonContainer = document.getElementById('comingSoonList');
+            const fullCalendarContainer = document.getElementById('fullCalendarList');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
             try {
-                const res = await fetch(GAS_URL);
-                const data = await res.json();
-                const users = data.users;
+                const response = await fetch('calendar.csv?v=' + Date.now());
+                const data = await response.text();
+                const rows = data.split('\n').map(r => r.trim()).filter(r => r !== "" && !r.toLowerCase().startsWith('date'));
+                
+                let allEvents = rows.map(row => {
+                    const [dateStr, title, desc] = row.split(',');
+                    return { date: new Date(dateStr), dateText: dateStr, title, desc: desc || '' };
+                }).filter(e => !isNaN(e.date.getTime()));
 
-                const user = users.find(u => 
-                    String(u.phone).trim() === phoneInput && 
-                    String(u.password).trim() === passwordInput
+                allEvents.sort((a, b) => a.date - b.date);
+
+                const futureEvents = allEvents.filter(e => e.date >= today).slice(0, 4);
+                comingSoonContainer.innerHTML = futureEvents.map(e => `
+                    <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition">
+                        <div class="text-emerald-700 font-bold text-sm mb-1">${e.dateText}</div>
+                        <h4 class="font-bold text-gray-800">${e.title}</h4>
+                    </div>
+                `).join('') || '<p class="text-gray-400">目前暫無未來活動</p>';
+
+                fullCalendarContainer.innerHTML = allEvents.map(e => {
+                    const isPast = e.date < today;
+                    return `
+                        <div class="flex items-center space-x-6 p-4 rounded-2xl ${isPast ? 'opacity-30' : 'bg-emerald-50/50'}">
+                            <div class="min-w-[100px] font-mono text-sm ${isPast ? 'line-through' : 'font-bold text-emerald-800'}">${e.dateText}</div>
+                            <div class="flex-1">
+                                <div class="font-bold ${isPast ? 'text-gray-400' : 'text-gray-800'}">${e.title}</div>
+                                <div class="text-xs text-gray-400">${e.desc}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) { console.error('Calendar error:', e); }
+        }
+
+        // --- 3. 雲端登入邏輯 (已對齊最新 GAS 格式) ---
+        async function handleLogin() {
+            const u = document.getElementById('u').value.trim();
+            const p = document.getElementById('p').value.trim();
+            const btn = document.getElementById('loginBtn');
+            const status = document.getElementById('loginStatus');
+
+            if(!u || !p) { alert("請輸入手機號碼與密碼"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "驗證中...";
+            status.innerText = "正在連線至築心資料庫...";
+
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                
+                // 關鍵修正：從 data.users 提取陣列進行比對
+                const users = data.users;
+                
+                const foundUser = users.find(user => 
+                    String(user.phone).trim() === String(u) && 
+                    String(user.password).trim() === String(p)
                 );
 
-                if (user) {
-                    sessionStorage.setItem('userInfo', JSON.stringify(user));
-                    location.href = 'member_zone.html';
+                if (foundUser) {
+                    sessionStorage.setItem('userInfo', JSON.stringify(foundUser));
+                    window.location.href = 'member_zone.html';
                 } else {
-                    alert("手機或密碼有誤，請再試一次。");
+                    alert('手機號碼或密碼錯誤');
                     btn.disabled = false;
-                    btn.innerText = "確認登入";
+                    btn.innerText = "進入專區";
+                    status.innerText = "";
                 }
-            } catch (error) {
-                alert("伺服器連線繁忙，請重新整理頁面。");
+            } catch (err) {
+                console.error(err);
+                alert('連線失敗，請檢查網路後重新整理頁面');
                 btn.disabled = false;
-                btn.innerText = "確認登入";
+                btn.innerText = "進入專區";
             }
         }
 
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !document.getElementById('loginModal').classList.contains('hidden')) login();
-        });
+        window.onload = loadCalendar;
     </script>
-
-    <style>
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 1.2s ease-out forwards; }
-    </style>
 </body>
 </html>

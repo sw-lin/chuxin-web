@@ -3,61 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>築心讀書會 | 會員登入</title>
+    <title>築心讀書會 | 築夢踏實 · 從心開始</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        body { font-family: 'Noto Serif TC', serif; }
+        
+        /* 背景照片設定 */
+        .hero-bg {
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
+                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .emerald-gradient {
+            background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
+        }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="hero-bg min-h-screen flex flex-col text-white">
 
-    <div class="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-emerald-50">
-        <div class="emerald-gradient p-10 text-center text-white">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-4 border border-white/20">
-                <i class="fas fa-heart text-2xl text-emerald-200"></i>
+    <nav class="p-8 flex justify-between items-center max-w-6xl mx-auto w-full">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white/20 p-2 rounded-lg backdrop-blur-md">
+                <i class="fas fa-heart text-emerald-300 text-xl"></i>
             </div>
-            <h1 class="text-2xl font-bold tracking-widest mb-2">築心會館</h1>
-            <p class="text-emerald-100/70 text-sm">築夢踏實 · 從心開始</p>
+            <span class="text-2xl font-bold tracking-[0.3em]">築心讀書會</span>
         </div>
+        <button onclick="openLoginModal()" class="bg-white/10 hover:bg-white/20 border border-white/30 px-6 py-2 rounded-full font-bold transition-all backdrop-blur-md">
+            會員登入
+        </button>
+    </nav>
 
-        <div class="p-10 space-y-6">
-            <div class="space-y-4">
-                <div class="relative">
-                    <label class="text-xs font-bold text-emerald-900 ml-1 mb-1 block">手機號碼</label>
-                    <div class="absolute left-4 top-[2.4rem] text-gray-400">
-                        <i class="fas fa-phone-alt"></i>
-                    </div>
-                    <input id="phone" type="tel" placeholder="請輸入註冊手機" 
-                           class="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:bg-white outline-none transition-all">
-                </div>
-
-                <div class="relative">
-                    <label class="text-xs font-bold text-emerald-900 ml-1 mb-1 block">會員密碼</label>
-                    <div class="absolute left-4 top-[2.4rem] text-gray-400">
-                        <i class="fas fa-lock"></i>
-                    </div>
-                    <input id="password" type="password" placeholder="請輸入密碼" 
-                           class="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:bg-white outline-none transition-all">
-                </div>
+    <main class="flex-grow flex flex-col items-center justify-center px-6 text-center">
+        <div class="space-y-6 animate-fade-in">
+            <h2 class="text-emerald-300 text-sm tracking-[0.6em] font-bold uppercase">Zhu Xin Reading Club</h2>
+            <h1 class="text-5xl md:text-7xl font-bold leading-tight">
+                築夢踏實 <span class="text-emerald-300">·</span> 從心開始
+            </h1>
+            <div class="h-1 w-24 bg-emerald-400 mx-auto rounded-full"></div>
+            <p class="text-xl md:text-2xl text-gray-200 font-light tracking-widest max-w-2xl mx-auto">
+                Coming Soon <span class="mx-2">|</span> 敬請期待
+            </p>
+            <p class="text-gray-300 max-w-lg mx-auto leading-relaxed opacity-80">
+                我們正在準備一場心靈的饗宴，<br>邀請您在繁忙的生活中，找回閱讀的寧靜。
+            </p>
+            <div class="pt-8">
+                <button onclick="openLoginModal()" class="bg-white text-emerald-900 px-10 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:bg-emerald-50 transform hover:-translate-y-1 transition-all">
+                    進入會館 <i class="fas fa-sign-in-alt ml-2"></i>
+                </button>
             </div>
+        </div>
+    </main>
 
-            <button id="loginBtn" onclick="login()" 
-                    class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-emerald-900/20 transform hover:-translate-y-0.5 transition-all">
-                登入會員專區
+    <footer class="py-10 text-center text-white/40 text-xs tracking-widest">
+        <p>© 2026 築心讀書會 · ESTABLISHED IN HSINCHU</p>
+    </footer>
+
+    <div id="loginModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="glass-card w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden relative">
+            <button onclick="closeLoginModal()" class="absolute right-6 top-6 text-gray-400 hover:text-emerald-900 transition-colors">
+                <i class="fas fa-times text-xl"></i>
             </button>
 
-            <div class="text-center">
-                <p class="text-gray-400 text-sm italic italic">「書中自有黃金屋，心中自有一片天。」</p>
+            <div class="emerald-gradient p-10 text-center text-white">
+                <h3 class="text-2xl font-bold tracking-widest mb-1">會員登入</h3>
+                <p class="text-emerald-100/70 text-xs italic">Zhu Xin Member Access</p>
+            </div>
+
+            <div class="p-10 space-y-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-emerald-900 ml-1 mb-1 block uppercase tracking-tighter">Phone Number</label>
+                        <input id="phone" type="tel" placeholder="請輸入手機號碼" 
+                               class="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:bg-white text-gray-900 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-emerald-900 ml-1 mb-1 block uppercase tracking-tighter">Password</label>
+                        <input id="password" type="password" placeholder="請輸入密碼" 
+                               class="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:bg-white text-gray-900 outline-none transition-all">
+                    </div>
+                </div>
+
+                <button id="loginBtn" onclick="login()" 
+                        class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:brightness-110 transition-all">
+                    確認登入
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        // 更新為您最新的 GAS 部署網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyRUgtVGJ35KbidWjwFfFbt5AMHOenisHtXw-84k0RsPvonY3ASqsWGSE0eWLMAjLgJVw/exec";
+
+        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+        function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
 
         async function login() {
             const phoneInput = document.getElementById('phone').value.trim();
@@ -65,25 +113,17 @@
             const btn = document.getElementById('loginBtn');
 
             if (!phoneInput || !passwordInput) {
-                alert("請填寫完整手機與密碼");
+                alert("請完整輸入手機與密碼");
                 return;
             }
 
-            // 鎖定按鈕防止重複點擊
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 驗證身分中...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 驗證中...';
 
             try {
-                // 向 GAS 請求資料
                 const res = await fetch(GAS_URL);
                 const data = await res.json();
-                
-                // --- 關鍵修正：從新版資料結構的 .users 屬性中尋找資料 ---
                 const users = data.users;
-
-                if (!users || !Array.isArray(users)) {
-                    throw new Error("資料格式異常");
-                }
 
                 const user = users.find(u => 
                     String(u.phone).trim() === phoneInput && 
@@ -91,27 +131,28 @@
                 );
 
                 if (user) {
-                    // 登入成功：將使用者資訊存入 Session (注意：這包含了解碼後的明文密碼)
                     sessionStorage.setItem('userInfo', JSON.stringify(user));
                     location.href = 'member_zone.html';
                 } else {
-                    alert("手機號碼或密碼錯誤，請重新確認。");
+                    alert("手機或密碼有誤，請再試一次。");
                     btn.disabled = false;
-                    btn.innerText = "登入會員專區";
+                    btn.innerText = "確認登入";
                 }
-
             } catch (error) {
-                console.error("Login Error:", error);
-                alert("連線失敗，請檢查網路或確認 GAS 網址是否正確部署。");
+                alert("伺服器連線繁忙，請重新整理頁面。");
                 btn.disabled = false;
-                btn.innerText = "登入會員專區";
+                btn.innerText = "確認登入";
             }
         }
 
-        // 支援按下 Enter 鍵登入
-        document.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') login();
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('loginModal').classList.contains('hidden')) login();
         });
     </script>
+
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 1.2s ease-out forwards; }
+    </style>
 </body>
 </html>

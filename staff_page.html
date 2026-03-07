@@ -64,8 +64,37 @@
                     </div>
                 </div>
             </div>
+<section class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-50 mb-8">
+    <h3 class="text-lg font-bold text-emerald-900 mb-6"><i class="fas fa-calendar-plus mr-2"></i> 新增行事曆行程</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input type="date" id="calDate" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
+        <input type="text" id="calTitle" placeholder="行程名稱 (例：三月導讀會)" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
+        <input type="text" id="calDesc" placeholder="備註 (例：地點 築心會館)" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
+    </div>
+    <button onclick="addEvent()" class="mt-4 bg-emerald-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700">新增行程</button>
+</section>
 
-            <div class="space-y-6">
+<script>
+async function addEvent() {
+    const date = document.getElementById('calDate').value;
+    const title = document.getElementById('calTitle').value;
+    const desc = document.getElementById('calDesc').value;
+    if(!date || !title) return alert("請填寫日期與標題");
+
+    await fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({
+            type: "updateCalendar",
+            date: date,
+            title: title,
+            desc: desc
+        })
+    });
+    alert("行程已新增至雲端！");
+    location.reload();
+}
+</script>            <div class="space-y-6">
                 <div class="bg-emerald-900 text-white p-8 rounded-[2.5rem] shadow-xl">
                     <h3 class="font-bold mb-4">💡 使用小貼士</h3>
                     <ul class="text-sm space-y-4 opacity-90">

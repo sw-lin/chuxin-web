@@ -15,67 +15,43 @@
 </head>
 <body>
 
-    <nav class="sticky top-0 bg-white/90 backdrop-blur-md z-50 shadow-sm px-6 py-4 flex justify-between items-center">
+    <nav class="sticky top-0 bg-white/90 backdrop-blur-md z-50 shadow-sm px-6 py-4 flex justify-between items-center border-b">
         <a href="index.html" class="text-2xl font-bold text-emerald-900 tracking-tighter italic">築心讀書會</a>
-        <div class="space-x-6">
-            <a href="index.html" class="text-sm text-gray-600 hover:text-emerald-800 font-bold">返回首頁</a>
-            <button onclick="toggleModal('joinModal', true)" class="text-sm bg-emerald-800 text-white px-4 py-2 rounded-full">入會報名</button>
+        <div class="space-x-4">
+            <a href="index.html" class="text-sm text-gray-600 font-bold">返回首頁</a>
         </div>
     </nav>
 
-    <header class="bg-emerald-900 text-white py-24 text-center">
-        <h1 class="text-4xl font-bold tracking-widest mb-2">關於築心</h1>
-        <p class="text-emerald-200/50 text-xs uppercase tracking-[0.3em]">Our Story & Vision</p>
-    </header>
-
     <main class="max-w-3xl mx-auto py-20 px-8">
-        <div id="textContent" class="content-fade text-gray-700 text-lg">
-            <p class="text-center text-gray-300">正在加載內容...</p>
-        </div>
+        <div id="textContent" class="content-fade text-gray-700 text-lg mb-20">
+            </div>
 
-        <div id="join" class="mt-20 p-12 bg-emerald-50 rounded-[3rem] text-center border border-emerald-100">
-            <h3 class="text-2xl font-bold text-emerald-900 mb-4">想與我們一同築心嗎？</h3>
-            <button onclick="toggleModal('joinModal', true)" class="bg-emerald-800 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-emerald-700 transition">
-                查看入會報名資訊
-            </button>
-        </div>
+        <section id="join" class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
+            <h3 class="text-2xl font-bold text-emerald-900 mb-6 text-center">入會報名表單</h3>
+            <form action="https://formspree.io/f/https://formspree.io/f/xpqjvblg" method="POST" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" name="name" placeholder="姓名" required class="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-emerald-500">
+                    <input type="tel" name="phone" placeholder="電話" required class="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-emerald-500">
+                </div>
+                <input type="email" name="email" placeholder="電子信箱" required class="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-emerald-500">
+                <textarea name="message" rows="4" placeholder="想對我們說的話..." class="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-emerald-500"></textarea>
+                <button type="submit" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg">提交報名資訊</button>
+            </form>
+        </section>
     </main>
 
-    <div id="joinModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative text-center">
-            <button onclick="toggleModal('joinModal', false)" class="absolute top-6 right-8 text-gray-300 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold text-emerald-900 mb-6">入會報名說明</h3>
-            <p class="text-gray-500 mb-8 text-sm">請聯絡本學期幹部，或點擊下方連結填寫表單。</p>
-            <div class="space-y-4">
-                <a href="https://forms.gle/xxxx" target="_blank" class="block w-full bg-emerald-100 text-emerald-800 py-4 rounded-2xl font-bold">前往 Google 報名表單</a>
-                <div class="p-4 bg-gray-50 rounded-2xl text-xs text-gray-400">
-                    聯絡信箱：buildingheart@example.com
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
-
         async function loadAboutTxt() {
             try {
-                // 使用絕對路徑或確保 about.txt 在同資料夾
                 const response = await fetch('about.txt?v=' + Date.now());
                 const text = await response.text();
                 const formatted = text.split('\n').filter(p => p.trim() !== "").map(p => `<p>${p}</p>`).join('');
                 document.getElementById('textContent').innerHTML = formatted;
             } catch (err) {
-                document.getElementById('textContent').innerHTML = "暫時無法加載內容。";
+                document.getElementById('textContent').innerHTML = "暫時無法讀取內容。";
             }
         }
-
         window.onload = loadAboutTxt;
-        
-        // 處理從首頁跳轉過來自動開啟彈窗 (如果網址有 #join)
-        if(window.location.hash === "#join") {
-            setTimeout(() => toggleModal('joinModal', true), 500);
-        }
     </script>
 </body>
 </html>

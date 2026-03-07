@@ -3,149 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幹部工作區 | 築心讀書會雲端管理</title>
+    <title>幹部專區 | 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #022c22; color: #ffffff; min-height: 100vh; }
-        .admin-panel { background: rgba(6, 78, 59, 0.4); border: 1px solid rgba(16, 185, 129, 0.2); backdrop-filter: blur(10px); }
-        .tab-active { color: #f59e0b; border-bottom: 3px solid #f59e0b; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAF9; }
+        .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="min-h-screen">
 
-    <div class="max-w-6xl mx-auto">
-        <header class="flex justify-between items-center mb-10">
-            <div class="flex items-center space-x-4">
-                <button onclick="location.href='member_zone.html'" class="text-emerald-500 hover:text-white transition">
-                    <i class="fas fa-chevron-left"></i> 返回會員區
-                </button>
-                <h1 class="text-xl font-bold border-l pl-4 border-emerald-800 tracking-widest">幹部工作區</h1>
+    <nav class="admin-gradient text-white px-6 py-4 shadow-lg">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-user-shield text-orange-400"></i>
+                <span class="text-xl font-bold tracking-widest">幹部管理後台</span>
             </div>
-            <div id="staffInfo" class="text-sm text-emerald-400 font-bold bg-emerald-900/50 px-4 py-2 rounded-full">
-                驗證中...
-            </div>
+            <a href="member_zone.html" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 transition">
+                <i class="fas fa-arrow-left mr-1"></i> 返回會員中心
+            </a>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-6 py-10">
+        
+        <header class="mb-10">
+            <h1 class="text-3xl font-bold text-emerald-900">公告排程管理</h1>
+            <p class="text-gray-500 mt-2">在這裡發布的消息將會自動同步至所有會員的「最新消息」欄位。</p>
         </header>
 
-        <div class="flex space-x-8 mb-8 border-b border-emerald-900">
-            <button onclick="switchTab(1)" id="btnTab1" class="py-4 font-bold transition tab-active">1. 會員通訊錄</button>
-            <button onclick="switchTab(2)" id="btnTab2" class="py-4 font-bold text-emerald-700 hover:text-emerald-500 transition">2. 活動統計</button>
-            <button onclick="switchTab(3)" id="btnTab3" class="py-4 font-bold text-emerald-700 hover:text-emerald-500 transition">3. 繳費管理</button>
-        </div>
-
-        <div class="admin-panel rounded-[2.5rem] p-6 md:p-10 shadow-2xl">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             
-            <div id="content1">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h3 class="text-2xl font-bold text-white">正式會員名單</h3>
-                        <p class="text-emerald-500 text-xs mt-1">數據已與 Google Sheets 雲端同步</p>
+            <div class="md:col-span-2 space-y-6">
+                <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-50">
+                    <h3 class="text-lg font-bold text-emerald-900 mb-6 flex items-center">
+                        <i class="fas fa-edit mr-2 text-emerald-700"></i> 撰寫新公告
+                    </h3>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">公告內容</label>
+                            <textarea id="newsContent" rows="5" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition" placeholder="請輸入要對全體會員說的話..."></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">開始顯示時間</label>
+                                <input type="datetime-local" id="startTime" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">結束隱藏時間 (不填則永久發布)</label>
+                                <input type="datetime-local" id="endTime" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                            </div>
+                        </div>
+
+                        <button id="submitBtn" onclick="publishNews()" class="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-orange-700 transition shadow-lg shadow-orange-900/20">
+                            立即發布公告
+                        </button>
                     </div>
-                    <button onclick="loadMemberData()" class="text-emerald-400 hover:text-white text-sm">
-                        <i class="fas fa-sync-alt mr-1"></i> 重新整理
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto no-scrollbar">
-                    <table class="w-full text-left">
-                        <thead class="text-emerald-500 text-xs uppercase tracking-widest border-b border-emerald-900">
-                            <tr>
-                                <th class="py-4 px-2">姓名</th>
-                                <th class="py-4 px-2">職稱</th>
-                                <th class="py-4 px-2">電話 (帳號)</th>
-                                <th class="py-4 px-2">Email</th>
-                            </tr>
-                        </thead>
-                        <tbody id="memberTableBody" class="divide-y divide-emerald-900/30">
-                            <tr>
-                                <td colspan="4" class="text-center py-20 text-emerald-700">正在連接雲端大腦...</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
 
-            <div id="content2" class="hidden py-20 text-center">
-                <i class="fas fa-chart-pie text-5xl text-emerald-800 mb-6"></i>
-                <p class="text-emerald-600 font-bold">出席率統計模組開發中...</p>
-            </div>
-
-            <div id="content3" class="hidden py-20 text-center">
-                <i class="fas fa-coins text-5xl text-emerald-800 mb-6"></i>
-                <p class="text-emerald-600 font-bold">財務核銷功能開發中...</p>
+            <div class="space-y-6">
+                <div class="bg-emerald-900 text-white p-8 rounded-[2.5rem] shadow-xl">
+                    <h3 class="font-bold mb-4">💡 使用小貼士</h3>
+                    <ul class="text-sm space-y-4 opacity-90">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle mt-1 mr-2 text-emerald-400"></i>
+                            <span>設定<b>開始時間</b>後，公告會在該時刻準時出現。</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-clock mt-1 mr-2 text-emerald-400"></i>
+                            <span>設定<b>結束時間</b>，活動結束後公告會自動從會員頁面消失。</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-magic mt-1 mr-2 text-emerald-400"></i>
+                            <span>若不設定時間，公告將會立即顯示且永不過期。</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
         </div>
-    </div>
+    </main>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxezoV6EWpubQlZCtdeHPWrNowTz7gZhErkKUwzuiOOlTsI-G5a63gYXR7YADNKyyfAfw/exec";
-
-        // 1. 權限守門員：檢查是否為幹部
-        window.onload = function() {
-            const userDataStr = sessionStorage.getItem('userInfo');
-            if (!userDataStr) { window.location.href = 'index.html'; return; }
-
-            const user = JSON.parse(userDataStr);
-            // 判斷 title 是否有值且不是一般會員
-            const t = user.title ? user.title.trim() : "";
-            if (!t || t === "一般會員" || t === "會員") {
-                alert('抱歉，此區域僅限讀書會幹部進入。');
-                window.location.href = 'member_zone.html';
-                return;
-            }
-
-            document.getElementById('staffInfo').innerHTML = `<i class="fas fa-user-tie mr-2"></i>${user.name} (${t})`;
-            loadMemberData();
-        };
-
-        // 2. 分頁切換邏輯
-        function switchTab(num) {
-            for (let i = 1; i <= 3; i++) {
-                document.getElementById('content' + i).classList.add('hidden');
-                document.getElementById('btnTab' + i).classList.remove('tab-active');
-                document.getElementById('btnTab' + i).classList.add('text-emerald-700');
-            }
-            document.getElementById('content' + num).classList.remove('hidden');
-            document.getElementById('btnTab' + num).classList.add('tab-active');
-            document.getElementById('btnTab' + num).classList.remove('text-emerald-700');
-        }
-
-        // 3. 雲端數據讀取 (AJAX)
-        async function loadMemberData() {
-            const tbody = document.getElementById('memberTableBody');
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-20 text-emerald-700 animate-pulse">正在同步 Google Sheets 數據...</td></tr>';
-
-            try {
-                // 加上時間戳記防止快取
-                const response = await fetch(GAS_URL + "?v=" + Date.now());
-                const users = await response.json();
-
-                let html = "";
-                users.forEach(user => {
-                    // 對應 Google Sheets 的欄位名稱
-                    const name = user.name || '未提供';
-                    const title = user.title || '一般會員';
-                    const phone = user.phone || '-';
-                    const email = user.email || '未提供';
-
-                    html += `
-                        <tr class="hover:bg-emerald-800/20 transition">
-                            <td class="py-5 px-2 font-bold text-white">${name}</td>
-                            <td class="py-5 px-2 text-xs text-amber-500">${title}</td>
-                            <td class="py-5 px-2 text-emerald-400 font-mono text-sm">${phone}</td>
-                            <td class="py-5 px-2 text-gray-400 text-xs break-all max-w-[120px] md:max-w-none">${email}</td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = html || '<tr><td colspan="4" class="text-center py-10">資料庫內尚無資料</td></tr>';
-            } catch (err) {
-                console.error(err);
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-500">雲端讀取失敗，請確認 API 部署設定。</td></tr>';
-            }
-        }
-    </script>
-</body>
-</html>
+        const GAS_URL = "

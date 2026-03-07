@@ -23,16 +23,18 @@
             <a href="about.html#join" class="hover:text-emerald-800 transition">入會報名</a>
             <button onclick="toggleModal('loginModal', true)" class="hover:text-emerald-800 transition">會員登入</button>
         </div>
-        <button onclick="toggleModal('loginModal', true)" class="md:hidden text-emerald-900 px-4 py-2 border border-emerald-900 rounded-full text-xs">登入</button>
+        <button onclick="toggleModal('loginModal', true)" class="md:hidden bg-emerald-800 text-white px-4 py-2 rounded-full text-xs">登入</button>
     </nav>
 
-    <div class="relative w-full h-[500px] overflow-hidden">
-        <img class="slide" src="https://images.unsplash.com/photo-1512820790803-83ca734da794?w=1200">
-        <img class="slide" src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200">
+    <div class="relative w-full h-[500px] overflow-hidden bg-emerald-900">
+        <img class="slide" src="1.jpg">
+        <img class="slide" src="2.jpg">
+        <img class="slide" src="3.jpg">
+        <img class="slide" src="4.jpg">
+        <img class="slide" src="5.jpg">
         <div class="absolute inset-0 hero-gradient flex flex-col items-center justify-center text-white text-center px-6">
             <h1 class="text-5xl md:text-7xl font-bold tracking-[0.2em] mb-4">在共讀中築心</h1>
-            <p class="text-emerald-100 text-lg md:text-2xl font-light italic">Building the heart through shared reading.</p>
-        </div>
+            <p class="text-emerald-100 text-lg md:text-2xl font-light italic">Coming Soon...</p> </div>
     </div>
 
     <div id="loginModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -50,7 +52,6 @@
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-
         function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
 
         async function handleLogin() {
@@ -58,21 +59,16 @@
             const p = document.getElementById('p').value.trim();
             const btn = document.getElementById('loginBtn');
             const status = document.getElementById('loginStatus');
-
             if(!u || !p) { alert("請輸入手機與密碼"); return; }
             btn.disabled = true;
             status.innerText = "驗證中...";
-
             try {
                 const response = await fetch(GAS_URL + "?t=" + Date.now());
                 const data = await response.json();
                 const encryptedInputP = btoa(p); 
-
                 const foundUser = data.users.find(user => 
-                    String(user.phone).trim() === u && 
-                    String(user.password).trim() === encryptedInputP
+                    String(user.phone).trim() === u && String(user.password).trim() === encryptedInputP
                 );
-
                 if (foundUser) {
                     sessionStorage.setItem('userInfo', JSON.stringify({ ...foundUser, password: p }));
                     window.location.href = 'member_zone.html';
@@ -81,20 +77,16 @@
                     btn.disabled = false;
                     status.innerText = "";
                 }
-            } catch (err) {
-                alert('連線失敗');
-                btn.disabled = false;
-            }
+            } catch (err) { alert('連線失敗'); btn.disabled = false; }
         }
 
-        // 輪播邏輯
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
             for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
             slideIndex++;
             if (slideIndex > slides.length) slideIndex = 1;
-            slides[slideIndex-1].style.display = "block";
+            if(slides[slideIndex-1]) slides[slideIndex-1].style.display = "block";
             setTimeout(showSlides, 5000);
         }
         window.onload = showSlides;

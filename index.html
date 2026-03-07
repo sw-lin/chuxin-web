@@ -28,11 +28,11 @@
     </nav>
 
     <div class="relative w-full h-[500px] overflow-hidden bg-emerald-900">
-        <img class="slide" src="1.jpg">
-        <img class="slide" src="2.jpg">
-        <img class="slide" src="3.jpg">
-        <img class="slide" src="4.jpg">
-        <img class="slide" src="5.jpg">
+        <img class="slide" src="1.jpg" alt="Slide 1">
+        <img class="slide" src="2.jpg" alt="Slide 2">
+        <img class="slide" src="3.jpg" alt="Slide 3">
+        <img class="slide" src="4.jpg" alt="Slide 4">
+        <img class="slide" src="5.jpg" alt="Slide 5">
         <div class="absolute inset-0 hero-gradient flex flex-col items-center justify-center text-white text-center px-6">
             <h1 class="text-5xl md:text-7xl font-bold tracking-[0.2em] mb-4">在共讀中築心</h1>
             <p class="text-emerald-100 text-lg md:text-2xl font-light italic tracking-widest">Coming Soon...</p>
@@ -43,23 +43,20 @@
         <div class="flex justify-between items-end mb-10">
             <div>
                 <h2 class="text-3xl font-bold text-emerald-900 mb-2 italic">Coming Soon.</h2>
-                <p class="text-gray-400 text-sm tracking-widest uppercase">Upcoming Events</p>
+                <p class="text-gray-400 text-sm tracking-widest uppercase">近期活動行程</p>
             </div>
             <button onclick="toggleModal('calendarModal', true)" class="text-emerald-700 font-bold hover:underline">查看完整行事曆 →</button>
         </div>
         
         <div id="comingSoonList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="animate-pulse bg-gray-100 h-32 rounded-3xl"></div>
-            <div class="animate-pulse bg-gray-100 h-32 rounded-3xl"></div>
-            <div class="animate-pulse bg-gray-100 h-32 rounded-3xl"></div>
-            <div class="animate-pulse bg-gray-100 h-32 rounded-3xl"></div>
+            <p class="text-gray-400 italic">正在載入行程...</p>
         </div>
     </section>
 
     <div id="loginModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl relative">
+        <div class="bg-white w-full max-sm rounded-[2.5rem] p-10 shadow-2xl relative">
             <button onclick="toggleModal('loginModal', false)" class="absolute top-6 right-8 text-gray-400 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold text-emerald-900 text-center mb-8">會員專區登入</h3>
+            <h3 class="text-2xl font-bold text-emerald-900 text-center mb-8 font-serif">會員專區登入</h3>
             <div class="space-y-4">
                 <input id="u" type="tel" placeholder="手機號碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500">
                 <input id="p" type="password" placeholder="登入密碼" class="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-emerald-500">
@@ -72,7 +69,7 @@
     <div id="calendarModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-2xl rounded-[2.5rem] p-10 shadow-2xl relative max-h-[80vh] flex flex-col">
             <button onclick="toggleModal('calendarModal', false)" class="absolute top-6 right-8 text-gray-400 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold text-emerald-900 mb-8 italic">Full Calendar</h3>
+            <h3 class="text-2xl font-bold text-emerald-900 mb-8 italic font-serif">完整行事曆</h3>
             <div id="fullCalendarList" class="overflow-y-auto pr-4 space-y-4 no-scrollbar">
                 </div>
         </div>
@@ -81,18 +78,20 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
 
-        // 1. 輪播功能
+        // 1. 照片輪播邏輯
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
-            for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
+            for (let i = 0; i < slides.length; i++) { slides[i].style.display = "none"; }
             slideIndex++;
-            if (slideIndex > slides.length) slideIndex = 1;
-            if(slides[slideIndex-1]) slides[slideIndex-1].style.display = "block";
+            if (slideIndex > slides.length) { slideIndex = 1; }
+            if(slides[slideIndex-1]) { slides[slideIndex-1].style.display = "block"; }
             setTimeout(showSlides, 5000);
         }
 
-        function toggleModal(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+        function toggleModal(id, show) {
+            document.getElementById(id).classList.toggle('hidden', !show);
+        }
 
         // 2. 載入雲端資料 (行事曆)
         async function initPage() {
@@ -106,6 +105,81 @@
                 const data = await response.json();
                 const allEvents = data.calendar || [];
 
-                // 解析並排序日期
+                // 解析日期文字並排序
                 allEvents.forEach(e => {
-                    e.parsedDate = new Date
+                    // 兼容斜線或橫線格式
+                    e.parsedDate = new Date(e.dateText.replace(/\//g, '-'));
+                });
+                
+                const sortedEvents = allEvents.sort((a, b) => a.parsedDate - b.parsedDate);
+                const futureEvents = sortedEvents.filter(e => e.parsedDate >= today).slice(0, 4);
+
+                // 渲染 Coming Soon (首頁 4 格)
+                comingSoonContainer.innerHTML = futureEvents.map(e => `
+                    <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition">
+                        <div class="text-emerald-700 font-bold text-xs mb-1 uppercase tracking-widest">${e.dateText}</div>
+                        <h4 class="font-bold text-gray-800 leading-tight">${e.title}</h4>
+                    </div>
+                `).join('') || '<p class="text-gray-400 italic">目前暫無預定行程</p>';
+
+                // 渲染完整行事曆彈窗
+                fullCalendarContainer.innerHTML = sortedEvents.map(e => {
+                    const isPast = e.parsedDate < today;
+                    return `
+                        <div class="flex items-center space-x-6 p-4 rounded-2xl ${isPast ? 'opacity-40 grayscale' : 'bg-emerald-50/50'}">
+                            <div class="min-w-[100px] font-mono text-sm ${isPast ? 'text-gray-400' : 'font-bold text-emerald-800'}">${e.dateText}</div>
+                            <div class="flex-1">
+                                <div class="font-bold ${isPast ? 'text-gray-400' : 'text-gray-800'}">${e.title}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Fetch error:', err);
+                comingSoonContainer.innerText = "資料連線中，請稍候...";
+            }
+        }
+
+        // 3. 會員登入 (Base64 加密比對)
+        async function handleLogin() {
+            const u = document.getElementById('u').value.trim();
+            const p = document.getElementById('p').value.trim();
+            const btn = document.getElementById('loginBtn');
+            const status = document.getElementById('loginStatus');
+
+            if(!u || !p) { alert("請輸入手機與密碼"); return; }
+            btn.disabled = true;
+            status.innerText = "驗證中...";
+
+            try {
+                const response = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await response.json();
+                const encryptedInputP = btoa(p); // 輸入轉 Base64 比對
+
+                const foundUser = data.users.find(user => 
+                    String(user.phone).trim() === u && 
+                    String(user.password).trim() === encryptedInputP
+                );
+
+                if (foundUser) {
+                    sessionStorage.setItem('userInfo', JSON.stringify({ ...foundUser, password: p }));
+                    window.location.href = 'member_zone.html';
+                } else {
+                    alert('❌ 手機號碼或密碼錯誤');
+                    btn.disabled = false;
+                    status.innerText = "";
+                }
+            } catch (err) {
+                alert('伺服器連線失敗，請稍後再試。');
+                btn.disabled = false;
+            }
+        }
+
+        window.onload = () => {
+            showSlides();
+            initPage();
+        };
+    </script>
+</body>
+</html>

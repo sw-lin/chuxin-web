@@ -37,7 +37,7 @@
                 <span class="text-xs text-gray-400">NEWS</span>
             </div>
             <div id="dynamicNews" class="text-gray-600 leading-relaxed italic min-h-[50px]">
-                正在從雲端同步公告...
+                正在同步最新公告...
             </div>
         </section>
 
@@ -78,7 +78,7 @@
             <h3 class="text-2xl font-bold text-emerald-900 mb-6 text-center">帳號設定</h3>
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-emerald-800 ml-1">驗證舊密碼 (必填)</label>
+                    <label class="text-xs font-bold text-emerald-800 ml-1">驗證舊密碼</label>
                     <input id="oldPassword" type="password" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 outline-none">
                 </div>
                 <div>
@@ -89,48 +89,49 @@
                     <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不改請留空)</label>
                     <input id="editPassword" type="password" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-emerald-500 outline-none">
                 </div>
-                <button id="updateBtn" onclick="submitUpdate()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold text-lg shadow-lg mt-2">儲存變更</button>
-                <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm mt-2 hover:text-gray-600">取消</button>
+                <button id="updateBtn" onclick="submitUpdate()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold text-lg shadow-lg mt-2 transition">儲存變更</button>
+                <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm mt-2">取消</button>
             </div>
         </div>
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzO-IostS9f1SpI9V8gHU0FanANmG92jQGIefhBb41fL15PhySHX4CSHVWV0zzu8TXZWA/exec";
+        // 確保使用最新的 GAS 網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyRUgtVGJ35KbidWjwFfFbt5AMHOenisHtXw-84k0RsPvonY3ASqsWGSE0eWLMAjLgJVw/exec";
 
         window.onload = async () => {
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
             if (!user) { location.href = 'index.html'; return; }
 
-            // 1. 介面基礎顯示
+            // 1. 初始化介面顯示
             document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
             document.getElementById('welcomeName').innerText = user.name;
 
-            // 2. 幹部權限判定：只要有 Title 且不為空
+            // 2. 判定職稱與幹部按鈕
             const title = String(user.title || '').trim();
             if (title !== "" && title !== "undefined") {
                 document.getElementById('userTitleTag').innerText = `職稱：${title}`;
                 document.getElementById('adminEntry').classList.remove('hidden');
             }
 
-            // 3. 抓取公告 (直接連線 GAS 讀取 System 分頁)
-            fetchNewsFromGAS();
+            // 3. 直接從 GAS 抓取最新公告
+            fetchNews();
         };
 
-        async function fetchNewsFromGAS() {
+        async function fetchNews() {
             try {
-                const res = await fetch(GAS_URL);
+                // 加上時間戳防止瀏覽器快取舊資料
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                // 讀取回傳物件中的 news 屬性
                 document.getElementById('dynamicNews').innerText = data.news || "目前暫無有效公告。";
             } catch (e) {
-                document.getElementById('dynamicNews').innerText = "公告同步中...";
+                console.error("公告同步失敗:", e);
+                document.getElementById('dynamicNews').innerText = "公告同步暫時失聯...";
             }
         }
 
         function openEditModal() {
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
-            // 預填 Email 以免被清空
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editProfileModal').classList.remove('hidden');
         }
@@ -143,38 +144,39 @@
 
         async function submitUpdate() {
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
-            const oldPass = document.getElementById('oldPassword').value;
-            const newEmail = document.getElementById('editEmail').value;
-            const newPass = document.getElementById('editPassword').value;
+            const oldPass = document.getElementById('oldPassword').value.trim();
+            const newEmail = document.getElementById('editEmail').value.trim();
+            const newPass = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 驗證舊密碼 (此時 user.password 為 GAS 已還原的明文)
-            if (String(oldPass).trim() !== String(user.password).trim()) {
+            // 驗證舊密碼是否與 Session 存的一致 (Session 存的是解碼後的明文)
+            if (oldPass !== String(user.password).trim()) {
                 alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
             }
 
             btn.disabled = true;
-            btn.innerText = "加密同步中...";
+            btn.innerText = "同步加密中...";
 
             try {
+                // 發送 POST 請求給 GAS
                 await fetch(GAS_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify({
-                        currentPhone: user.phone,
+                        currentPhone: user.phone, // 必須確保手機號碼正確，GAS 才能找到列
                         newData: { 
                             email: newEmail, 
-                            ...(newPass.trim() !== "" && { password: newPass }) 
+                            ...(newPass !== "" && { password: newPass }) 
                         }
                     })
                 });
 
-                alert("✅ 修改成功！\n資料已安全加密，請使用新狀態重新登入。");
+                alert("✅ 資料修改成功！為了安全，請使用新狀態重新登入。");
                 sessionStorage.clear();
                 location.href = 'index.html';
             } catch (e) {
-                alert("網路連線不穩定，請重試。");
+                alert("連線失敗，請稍後重試");
                 btn.disabled = false;
                 btn.innerText = "儲存變更";
             }

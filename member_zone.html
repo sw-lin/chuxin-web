@@ -26,8 +26,20 @@
             </div>
         </div>
     </nav>
-
-    <main class="max-w-4xl mx-auto px-6 py-8">
+<nav class="bg-[#064E3B] text-white px-6 py-4 shadow-xl sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <a href="index.html" class="hover:text-emerald-300 transition-all">
+                <i class="fas fa-home text-lg"></i>
+            </a>
+            <span class="text-xl font-bold border-l border-white/20 pl-4">會員專區</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span id="userNameDisplay" class="text-sm">載入中...</span>
+            <button onclick="logout()" class="text-xs bg-white/10 px-3 py-1 rounded-full border border-white/20">登出</button>
+        </div>
+    </div>
+</nav>    <main class="max-w-4xl mx-auto px-6 py-8">
         
         <section class="bg-white rounded-[2rem] p-8 border border-emerald-100 shadow-sm mb-10">
             <div class="flex items-center justify-between mb-4">

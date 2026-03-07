@@ -10,15 +10,16 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .glass-nav { background: #064E3B; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
     </style>
 </head>
 <body class="min-h-screen">
 
     <nav class="glass-nav text-white px-6 py-4 shadow-xl sticky top-0 z-40">
         <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-heart text-emerald-200"></i>
-                <span class="text-xl font-bold tracking-widest">築心會館</span>
+            <div class="flex items-center space-x-4">
+                <a href="index.html" class="hover:text-emerald-200 transition-all text-xl"><i class="fas fa-home"></i></a>
+                <span class="text-xl font-bold tracking-widest border-l border-white/20 pl-4">築心會館</span>
             </div>
             <div class="flex items-center space-x-4 text-sm">
                 <span id="userNameDisplay">載入中...</span>
@@ -28,11 +29,12 @@
     </nav>
 
     <main class="max-w-4xl mx-auto px-6 py-8">
-        <section class="bg-white rounded-[2rem] p-8 border border-emerald-100 shadow-sm mb-10">
+        <section class="bg-white rounded-[2rem] p-8 border border-emerald-100 shadow-sm mb-10 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-orange-500"></div>
             <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
-                <span class="w-1 h-6 bg-emerald-800 mr-3 rounded-full"></span> 最新消息
+                <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
             </h2>
-            <div id="dynamicNews" class="text-gray-600 italic">正在同步公告...</div>
+            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在同步雲端公告...</div>
         </section>
 
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -48,48 +50,56 @@
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm">
-                <div class="text-emerald-800 text-2xl mb-4"><i class="fas fa-book-open"></i></div>
-                <h3 class="font-bold text-lg text-emerald-900">本月共讀</h3>
-                <p class="text-gray-400 text-sm mt-2">導讀資料夾連結</p>
+            
+            <div onclick="openRemoteLink('reading_folder_url')" class="group bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm hover:border-emerald-200 transition cursor-pointer">
+                <div class="text-emerald-800 text-3xl mb-4 group-hover:scale-110 transition"><i class="fas fa-book-reader"></i></div>
+                <h3 class="font-bold text-lg text-emerald-900">導讀資料庫</h3>
+                <p class="text-gray-400 text-sm mt-2">歷年手冊、簡報與書單</p>
+                <div class="mt-4 text-emerald-700 text-xs font-bold">點擊進入 <i class="fas fa-external-link-alt ml-1"></i></div>
             </div>
-            <div class="bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm">
-                <div class="text-orange-600 text-2xl mb-4"><i class="fas fa-images"></i></div>
+
+            <div onclick="openRemoteLink('photo_gallery_url')" class="group bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm hover:border-emerald-200 transition cursor-pointer">
+                <div class="text-orange-600 text-3xl mb-4 group-hover:scale-110 transition"><i class="fas fa-camera-retro"></i></div>
                 <h3 class="font-bold text-lg text-emerald-900">活動剪影</h3>
-                <p class="text-gray-400 text-sm mt-2">瀏覽精采照片</p>
+                <p class="text-gray-400 text-sm mt-2">紀錄聚會的美好瞬間</p>
+                <div class="mt-4 text-orange-600 text-xs font-bold">瀏覽相簿 <i class="fas fa-external-link-alt ml-1"></i></div>
             </div>
-            <div onclick="openEditModal()" class="bg-emerald-900 p-8 rounded-[2rem] shadow-xl text-white hover:bg-emerald-800 transition cursor-pointer">
-                <div class="text-emerald-200 text-2xl mb-4"><i class="fas fa-user-cog"></i></div>
-                <h3 class="font-bold text-lg">帳號設定</h3>
+
+            <div onclick="openEditModal()" class="emerald-gradient p-8 rounded-[2rem] shadow-xl text-white hover:brightness-110 transition cursor-pointer">
+                <div class="text-emerald-200 text-3xl mb-4"><i class="fas fa-user-cog"></i></div>
+                <h3 class="font-bold text-lg">帳號安全性</h3>
                 <p class="text-emerald-100/60 text-sm mt-2">修改密碼與聯絡信箱</p>
+                <div class="mt-4 text-white/80 text-xs font-bold">變更設定 <i class="fas fa-chevron-right ml-1"></i></div>
             </div>
+
         </div>
     </main>
 
     <div id="editProfileModal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl relative">
+            <button onclick="closeEditModal()" class="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             <h3 class="text-2xl font-bold text-emerald-900 mb-6 text-center">修改基本資料</h3>
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-emerald-800 ml-1">驗證舊密碼</label>
-                    <input id="oldPassword" type="password" placeholder="請輸入目前使用的密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
+                    <label class="text-xs font-bold text-emerald-800 ml-1">驗證舊密碼 <span class="text-red-500">*</span></label>
+                    <input id="oldPassword" type="password" placeholder="請輸入目前使用的密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-400 ml-1">新電子郵件 (不改請留空)</label>
-                    <input id="editEmail" type="email" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
+                    <label class="text-xs font-bold text-gray-400 ml-1">電子郵件</label>
+                    <input id="editEmail" type="email" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不改請留空)</label>
-                    <input id="editPassword" type="password" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none">
+                    <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不填則不修改)</label>
+                    <input id="editPassword" type="password" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
-                <button id="updateBtn" onclick="submitUpdate()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold text-lg mt-2">儲存變更</button>
-                <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm mt-2">取消</button>
+                <button id="updateBtn" onclick="submitUpdate()" class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg mt-2 shadow-lg">儲存變更</button>
             </div>
         </div>
     </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
+        let remoteConfig = {}; // 存放從 GAS 抓回來的連結
 
         window.onload = async () => {
             const userStr = sessionStorage.getItem('userInfo');
@@ -99,22 +109,41 @@
             document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
             document.getElementById('welcomeName').innerText = user.name;
 
-            // --- 職稱判定：只要 title 欄位不是空的，就顯示幹部專區 ---
+            // 幹部判定：title 非空即顯示
             const titleStr = String(user.title || '').trim();
             if (titleStr !== "" && titleStr !== "undefined") {
                 document.getElementById('userTitleTag').innerText = `職稱：${titleStr}`;
                 document.getElementById('adminEntry').classList.remove('hidden');
             }
             
-            fetchNews();
+            // 初始化數據
+            syncCloudData();
         };
 
-        async function fetchNews() {
+        // 同步雲端配置 (公告與連結)
+        async function syncCloudData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                document.getElementById('dynamicNews').innerText = data.news || "歡迎參加 觀霧行";
-            } catch (e) { document.getElementById('dynamicNews').innerText = "公告同步失敗"; }
+                
+                // 更新公告
+                document.getElementById('dynamicNews').innerText = data.news || "目前暫無公告";
+                
+                // 儲存 Config 連結 (reading_folder_url, photo_gallery_url)
+                remoteConfig = data.config || {};
+            } catch (e) { 
+                document.getElementById('dynamicNews').innerText = "雲端同步失敗，請檢查網路。"; 
+            }
+        }
+
+        // 開啟遠端連結功能
+        function openRemoteLink(key) {
+            const url = remoteConfig[key];
+            if (url && url.startsWith('http')) {
+                window.open(url, '_blank');
+            } else {
+                alert("幹部尚未設定此連結，或連結格式錯誤。");
+            }
         }
 
         function openEditModal() {
@@ -132,14 +161,13 @@
             const newPass = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 前端比對：舊密碼必須與目前登入的 session 密碼一致
             if (oldPassInput !== String(user.password).trim()) {
                 alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
             }
 
             btn.disabled = true;
-            btn.innerText = "更新中...";
+            btn.innerText = "同步更新中...";
 
             const updateFields = { email: newEmail };
             if (newPass !== "") updateFields.password = newPass;
@@ -147,16 +175,16 @@
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // 解決 CORS
+                    mode: 'no-cors',
                     body: JSON.stringify({
                         currentPhone: user.phone,
                         newData: updateFields
                     })
                 });
-                alert("✅ 資料修改成功！請重新登入。");
+                alert("✅ 資料修改成功！請重新登入以確保安全。");
                 logout();
             } catch (e) {
-                alert("更新失敗");
+                alert("系統連線超時");
                 btn.disabled = false;
                 btn.innerText = "儲存變更";
             }

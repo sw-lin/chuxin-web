@@ -10,16 +10,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .glass-nav { background: rgba(6, 78, 59, 0.95); backdrop-filter: blur(8px); }
-        .news-scroll { max-height: 150px; overflow-y: auto; }
     </style>
 </head>
 <body class="min-h-screen">
 
     <nav class="glass-nav text-white sticky top-0 z-40 px-6 py-4 shadow-xl">
         <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <span class="text-xl font-bold tracking-widest">築心會館</span>
-            </div>
+            <span class="text-xl font-bold tracking-widest">築心會館</span>
             <div class="flex items-center space-x-4">
                 <span id="userNameDisplay" class="text-sm opacity-90">載入中...</span>
                 <button onclick="logout()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full border border-white/20">登出</button>
@@ -36,54 +33,55 @@
                 </h2>
                 <span class="text-xs text-gray-400">NEWS</span>
             </div>
-            <div id="dynamicNews" class="news-scroll text-gray-600 text-sm leading-relaxed italic">
-                正在同步雲端公告...
-            </div>
+            <div id="dynamicNews" class="text-gray-600 text-sm leading-relaxed italic">載入中...</div>
         </section>
 
         <header class="mb-10">
             <h1 class="text-2xl font-bold text-emerald-900">您好，<span id="welcomeName">會員</span></h1>
+            <p id="userTitleTag" class="text-emerald-700 text-sm font-bold"></p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition cursor-pointer">
-                <div class="text-emerald-800 text-xl mb-3"><i class="fas fa-book"></i></div>
-                <h3 class="font-bold text-emerald-900">本月共讀</h3>
-                <p class="text-gray-400 text-xs mt-1">查看導讀資料</p>
+            <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition">
+                <i class="fas fa-book text-emerald-800 text-xl mb-3"></i>
+                <h3 class="font-bold">本月共讀</h3>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition cursor-pointer">
-                <div class="text-orange-600 text-xl mb-3"><i class="fas fa-calendar-check"></i></div>
-                <h3 class="font-bold text-emerald-900">活動預約</h3>
-                <p class="text-gray-400 text-xs mt-1">出席狀況管理</p>
+            <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm hover:shadow-md transition">
+                <i class="fas fa-calendar-check text-orange-600 text-xl mb-3"></i>
+                <h3 class="font-bold">活動預約</h3>
             </div>
             <div onclick="openEditModal()" class="bg-emerald-800 p-6 rounded-3xl shadow-lg text-white hover:bg-emerald-700 transition cursor-pointer">
-                <div class="text-white/80 text-xl mb-3"><i class="fas fa-cog"></i></div>
+                <i class="fas fa-cog text-white/80 text-xl mb-3"></i>
                 <h3 class="font-bold">帳號設定</h3>
-                <p class="text-white/60 text-xs mt-1">修改密碼與信箱</p>
             </div>
         </div>
 
         <section id="adminPanel" class="hidden mt-12 bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100">
-            <h2 class="text-xl font-bold text-orange-900 mb-4 flex items-center">
-                <i class="fas fa-user-shield mr-2"></i> 幹部管理後台
-            </h2>
-            <p class="text-sm text-orange-800 mb-4">更新「最新公告」內容：</p>
-            <textarea id="newsInput" class="w-full h-32 p-4 rounded-2xl border-none outline-none focus:ring-2 focus:ring-orange-300 mb-4" placeholder="輸入新的公告內容..."></textarea>
-            <button onclick="updateNews()" id="newsBtn" class="bg-orange-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-800 transition">
-                發布公告
-            </button>
+            <h2 class="text-xl font-bold text-orange-900 mb-4 italic"><i class="fas fa-user-shield mr-2"></i> 幹部公告管理</h2>
+            <p class="text-sm mb-4">修改 news.txt 內容 (目前請透過 GitHub 編輯，此處為預覽)：</p>
+            <textarea id="newsInput" class="w-full h-32 p-4 rounded-2xl border-none mb-4" readonly></textarea>
+            <p class="text-xs text-orange-700 italic">* 幹部功能持續擴充中...</p>
         </section>
     </main>
 
     <div id="editProfileModal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="text-xl font-bold text-emerald-900 mb-6 text-center">修改帳號資料</h3>
+            <h3 class="text-xl font-bold text-emerald-900 mb-6 text-center">帳號安全設定</h3>
             <div class="space-y-4">
-                <input id="oldPassword" type="password" placeholder="驗證舊密碼" class="w-full p-4 bg-gray-50 rounded-2xl outline-none border border-gray-100 focus:border-emerald-500">
-                <input id="editEmail" type="email" placeholder="新電子郵件" class="w-full p-4 bg-gray-50 rounded-2xl outline-none border border-gray-100 focus:border-emerald-500">
-                <input id="editPassword" type="password" placeholder="設定新密碼 (選填)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none border border-gray-100 focus:border-emerald-500">
-                <button id="updateBtn" onclick="submitUpdate()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold">儲存變更</button>
-                <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm py-2">取消</button>
+                <div>
+                    <label class="text-xs font-bold text-emerald-800">驗證舊密碼 *</label>
+                    <input id="oldPassword" type="password" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">電子郵件</label>
+                    <input id="editEmail" type="email" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">新密碼 (不改請留空)</label>
+                    <input id="editPassword" type="password" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100">
+                </div>
+                <button id="updateBtn" onclick="submitUpdate()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold">儲存修改</button>
+                <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm">取消</button>
             </div>
         </div>
     </div>
@@ -95,34 +93,36 @@
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
             if (!user) { location.href = 'index.html'; return; }
 
-            // 1. 顯示姓名
-            const name = user.name || '會員';
-            document.getElementById('userNameDisplay').innerText = `你好，${name}`;
-            document.getElementById('welcomeName').innerText = name;
+            // 顯示基本資訊
+            document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
+            document.getElementById('welcomeName').innerText = user.name;
 
-            // 2. 判斷幹部權限 (假設 Excel 中有一欄位標題為 role，值為 'admin' 或 '幹部')
-            if (user.role === 'admin' || user.role === '幹部') {
+            // 修正 3：幹部權限判定 (只要有 Title 且不為空字串)
+            const title = String(user.title || '').trim();
+            if (title !== "" && title !== "undefined") {
+                document.getElementById('userTitleTag').innerText = `職稱：${title}`;
                 document.getElementById('adminPanel').classList.remove('hidden');
             }
 
-            // 3. 讀取動態公告
             loadNews();
         };
 
         async function loadNews() {
             try {
-                // 這裡我們讀取 news.txt，之後您可以改為從 GAS 讀取更即時的資料
-                const res = await fetch('news.txt?t=' + new Date().getTime());
+                const res = await fetch('news.txt?t=' + Date.now());
                 const text = await res.text();
                 document.getElementById('dynamicNews').innerText = text;
                 document.getElementById('newsInput').value = text;
-            } catch (e) {
-                document.getElementById('dynamicNews').innerText = "暫無最新公告。";
-            }
+            } catch (e) { document.getElementById('dynamicNews').innerText = "暫無公告"; }
         }
 
-        // 修改資料邏輯
-        function openEditModal() { document.getElementById('editProfileModal').classList.remove('hidden'); }
+        // 修正 1：預填 Email
+        function openEditModal() {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            document.getElementById('editEmail').value = user.email || ''; // 預填舊 Email
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+
         function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
 
         async function submitUpdate() {
@@ -132,7 +132,11 @@
             const newPass = document.getElementById('editPassword').value;
             const btn = document.getElementById('updateBtn');
 
-            if (String(oldPass).trim() !== String(user.password).trim()) { alert("舊密碼錯誤"); return; }
+            // 密碼比對 (sessionStorage 存的是 GAS 解碼後的明文)
+            if (String(oldPass).trim() !== String(user.password).trim()) {
+                alert("舊密碼驗證錯誤！"); return;
+            }
+
             btn.disabled = true; btn.innerText = "更新中...";
 
             try {
@@ -141,20 +145,16 @@
                     mode: 'no-cors',
                     body: JSON.stringify({
                         currentPhone: user.phone,
-                        newData: { email: newEmail, ...(newPass && { password: newPass }) }
+                        newData: { 
+                            email: newEmail, 
+                            ...(newPass.trim() !== "" && { password: newPass }) 
+                        }
                     })
                 });
-                alert("修改成功！下次登入生效。");
-                user.email = newEmail;
-                if(newPass) user.password = newPass;
-                sessionStorage.setItem('userInfo', JSON.stringify(user));
-                location.reload();
+                alert("修改成功！請重新登入。");
+                sessionStorage.clear();
+                location.href = 'index.html';
             } catch (e) { alert("更新失敗"); btn.disabled = false; }
-        }
-
-        // 幹部更新公告 (這需要您在 GAS 增加一個處理公告的邏輯，目前我們先模擬)
-        async function updateNews() {
-            alert("公告功能開發中：目前您可以手動修改 GitHub 上的 news.txt 來達成同步效果！");
         }
 
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }

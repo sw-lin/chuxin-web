@@ -3,23 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>築心管理後台 | 專業版</title>
+    <title>築心管理後台 | 系統修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #F8FAFC; }
-        .sidebar-item.active { background-color: #064E3B; color: white; box-shadow: 0 4px 12px rgba(6,78,59,0.2); }
-        .tab-content { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .sidebar-item.active { background-color: #064E3B; color: white; }
+        .loading-overlay { background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="flex min-h-screen">
 
-    <aside class="w-64 bg-white shadow-xl flex flex-col z-50">
+    <aside class="w-64 bg-white shadow-xl flex flex-col z-50 border-r">
         <div class="p-8 border-b">
             <h1 class="text-2xl font-bold text-emerald-900 tracking-tighter">築心管理</h1>
-            <div class="text-[10px] text-emerald-600 font-bold tracking-widest uppercase mt-1 text-center bg-emerald-50 py-1 rounded">Staff Only</div>
+            <div class="text-[10px] text-emerald-600 font-bold tracking-widest uppercase mt-1 text-center bg-emerald-50 py-1 rounded">System Admin</div>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <button onclick="showTab('members')" id="btn-members" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center active"><i class="fas fa-users mr-3"></i> 會員/繳費</button>
@@ -28,25 +27,29 @@
             <button onclick="showTab('config')" id="btn-config" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-cog mr-3"></i> 系統連結</button>
         </nav>
         <div class="p-6 border-t">
-            <a href="member_zone.html" class="flex items-center justify-center w-full py-3 text-sm font-bold text-gray-500 hover:text-emerald-800 transition"><i class="fas fa-sign-out-alt mr-2"></i> 返回專區</a>
+            <a href="member_zone.html" class="flex items-center justify-center w-full py-3 text-sm font-bold text-gray-500 hover:text-emerald-800 transition"><i class="fas fa-arrow-left mr-2"></i> 返回專區</a>
         </div>
     </aside>
 
-    <main class="flex-1 p-12 overflow-y-auto">
-        
+    <main class="flex-1 p-12 relative">
+        <div id="loader" class="loading-overlay absolute inset-0 z-10 flex items-center justify-center hidden">
+            <div class="text-emerald-800 font-bold flex flex-col items-center">
+                <i class="fas fa-circle-notch fa-spin text-4xl mb-2"></i>
+                同步雲端資料中...
+            </div>
+        </div>
+
         <div id="tab-members" class="tab-content">
             <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-bold text-emerald-900">會員名冊 <span class="text-sm font-normal text-gray-400 ml-2">Member Directory</span></h2>
-                <button onclick="toggleModal('addMemberModal', true)" class="bg-emerald-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition">新增會員</button>
+                <h2 class="text-3xl font-bold text-emerald-900">會員名冊</h2>
+                <button onclick="toggleModal('addMemberModal', true)" class="bg-emerald-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg">新增會員</button>
             </div>
             <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50/50 border-b">
-                        <tr class="text-gray-400 text-xs uppercase tracking-wider">
-                            <th class="p-6">姓名</th><th class="p-6">手機</th><th class="p-6">Email</th><th class="p-6 text-center">繳費</th><th class="p-6 text-right">操作</th>
-                        </tr>
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 border-b">
+                        <tr><th class="p-6">姓名</th><th class="p-6">手機</th><th class="p-6 text-center">繳費</th><th class="p-6 text-right">操作</th></tr>
                     </thead>
-                    <tbody id="memberListTable" class="divide-y divide-gray-50 text-emerald-900"></tbody>
+                    <tbody id="memberListTable" class="divide-y divide-gray-50"></tbody>
                 </table>
             </div>
         </div>
@@ -55,34 +58,32 @@
             <h2 class="text-3xl font-bold text-emerald-900 mb-8">行事曆管理</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-lg mb-6 flex items-center"><i class="fas fa-plus-circle mr-2 text-emerald-600"></i> 新增活動行程</h3>
+                    <h3 class="font-bold mb-6">新增活動</h3>
                     <div class="space-y-4">
-                        <input id="calDate" type="date" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
-                        <input id="calTitle" type="text" placeholder="活動名稱 (例如：4月讀書會)" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
-                        <input id="calDesc" type="text" placeholder="活動地點或備註" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
-                        <button onclick="updateCalendar()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold">儲存並發佈</button>
+                        <input id="calDate" type="date" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                        <input id="calTitle" type="text" placeholder="活動標題" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                        <button onclick="handleCalendarSubmit()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold">確認新增</button>
                     </div>
                 </div>
                 <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-lg mb-6">目前行程清單</h3>
-                    <div id="calendarList" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                        </div>
+                    <h3 class="font-bold mb-6 text-emerald-800">目前行程清單</h3>
+                    <div id="calendarList" class="space-y-3 overflow-y-auto max-h-[400px]"></div>
                 </div>
             </div>
         </div>
 
         <div id="tab-config" class="tab-content hidden">
             <h2 class="text-3xl font-bold text-emerald-900 mb-8">系統連結管理</h2>
-            <div class="max-w-xl space-y-6">
-                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                    <label class="block text-xs font-black text-emerald-800 mb-4 uppercase tracking-widest">導讀資料夾 (Google Drive)</label>
+            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 max-w-xl space-y-8">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase">導讀資料夾網址</label>
                     <input id="cfg_reading" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-4 text-sm font-mono">
-                    <button onclick="confirmConfig('reading_folder_url', 'cfg_reading')" class="bg-emerald-100 text-emerald-800 px-6 py-2 rounded-xl font-bold hover:bg-emerald-200 transition">確認修改導讀連結</button>
+                    <button onclick="handleConfigSave('reading_folder_url', 'cfg_reading')" class="bg-emerald-100 text-emerald-800 px-6 py-2 rounded-xl font-bold">確認修改導讀連結</button>
                 </div>
-                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                    <label class="block text-xs font-black text-orange-800 mb-4 uppercase tracking-widest">活動剪影 (Google Photos/Drive)</label>
+                <div>
+                    <label class="block text-xs font-bold text-orange-800 mb-2 uppercase">活動相簿網址</label>
                     <input id="cfg_photo" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-4 text-sm font-mono">
-                    <button onclick="confirmConfig('photo_gallery_url', 'cfg_photo')" class="bg-orange-100 text-orange-800 px-6 py-2 rounded-xl font-bold hover:bg-orange-200 transition">確認修改照片連結</button>
+                    <button onclick="handleConfigSave('photo_gallery_url', 'cfg_photo')" class="bg-orange-100 text-orange-800 px-6 py-2 rounded-xl font-bold">確認修改照片連結</button>
                 </div>
             </div>
         </div>
@@ -90,61 +91,142 @@
         <div id="tab-news" class="tab-content hidden">
             <h2 class="text-3xl font-bold text-emerald-900 mb-8">首頁公告更新</h2>
             <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 max-w-2xl">
-                <textarea id="newsContent" rows="5" class="w-full p-6 bg-gray-50 border rounded-[1.5rem] outline-none mb-6" placeholder="請輸入新公告內容..."></textarea>
-                <button onclick="updateNews()" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-bold shadow-xl">立即更新公告</button>
+                <textarea id="newsContent" rows="5" class="w-full p-6 bg-gray-50 border rounded-2xl outline-none mb-6" placeholder="輸入公告內容..."></textarea>
+                <button onclick="handleNewsSubmit()" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-bold shadow-xl">立即更新公告</button>
             </div>
         </div>
-
     </main>
 
     <div id="addMemberModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl">
-            <h3 class="text-2xl font-bold text-emerald-900 mb-6">手動新增會員</h3>
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10">
+            <h3 class="text-2xl font-bold text-emerald-900 mb-6">新增會員資料</h3>
             <div class="space-y-4">
                 <input id="addName" type="text" placeholder="姓名" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                <input id="addPhone" type="text" placeholder="手機 (將作為登入帳號)" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                <input id="addEmail" type="email" placeholder="Email (可選)" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                <input id="addPwd" type="text" placeholder="預設密碼" class="w-full p-4 bg-gray-50 border rounded-2xl" value="1234">
-                <button onclick="submitNewMember()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg mt-4">確認新增</button>
-                <button onclick="toggleModal('addMemberModal', false)" class="w-full text-gray-400 text-sm">取消</button>
+                <input id="addPhone" type="text" placeholder="手機 (帳號)" class="w-full p-4 bg-gray-50 border rounded-2xl">
+                <button onclick="handleAddMember()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold">確認新增</button>
+                <button onclick="toggleModal('addMemberModal', false)" class="w-full text-gray-400 text-sm">關閉</button>
             </div>
         </div>
     </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-        let cacheData = { users: [], config: {}, calendar: [] };
+        let localData = { users: [], calendar: [], config: {} };
+
+        // 初始化
+        window.onload = () => syncAll();
 
         async function syncAll() {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            cacheData = await res.json();
-            renderMembers();
-            renderCalendar();
-            document.getElementById('cfg_reading').value = cacheData.config.reading_folder_url || '';
-            document.getElementById('cfg_photo').value = cacheData.config.photo_gallery_url || '';
+            showLoader(true);
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                localData = await res.json();
+                renderMembers();
+                renderCalendar();
+                document.getElementById('cfg_reading').value = localData.config.reading_folder_url || '';
+                document.getElementById('cfg_photo').value = localData.config.photo_gallery_url || '';
+            } catch (e) {
+                console.error(e);
+                alert("資料同步失敗，請檢查網路或 GAS 權限。");
+            }
+            showLoader(false);
         }
 
-        // --- 會員功能 ---
         function renderMembers() {
             const tbody = document.getElementById('memberListTable');
-            tbody.innerHTML = cacheData.users.map(m => `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="p-6 font-bold">${m.name}</td>
-                    <td class="p-6 font-mono text-sm">${m.phone}</td>
-                    <td class="p-6 text-sm text-gray-400">${m.email || '--'}</td>
+            tbody.innerHTML = localData.users.map(u => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-6 font-bold text-emerald-900">${u.name}</td>
+                    <td class="p-6 font-mono">${u.phone}</td>
                     <td class="p-6 text-center">
-                        <button onclick="togglePaid('${m.phone}', '${m.paid}')" class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${m.paid === 'Y' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-500'}">
-                            ${m.paid === 'Y' ? 'Paid' : 'Unpaid'}
+                        <button onclick="handlePaidToggle('${u.phone}', '${u.paid}')" class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${u.paid === 'Y' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-500'}">
+                            ${u.paid === 'Y' ? 'Paid' : 'Unpaid'}
                         </button>
                     </td>
                     <td class="p-6 text-right">
-                        <button onclick="deleteMember('${m.phone}', '${m.name}')" class="text-gray-300 hover:text-red-500 transition"><i class="far fa-trash-alt"></i></button>
+                        <button onclick="handleMemberDelete('${u.phone}', '${u.name}')" class="text-gray-300 hover:text-red-500"><i class="far fa-trash-alt"></i></button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        async function submitNewMember() {
-            const name = document.getElementById('addName').value;
-            const phone = document.getElementById('addPhone').value;
-            if(!name || !phone) return alert("請填寫姓名與電話
+        function renderCalendar() {
+            const list = document.getElementById('calendarList');
+            list.innerHTML = localData.calendar.map(item => `
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div>
+                        <div class="text-xs font-bold text-emerald-600">${item.dateText}</div>
+                        <div class="font-bold text-emerald-900">${item.title}</div>
+                    </div>
+                    <button onclick="handleEventDelete('${item.dateObj}', '${item.title}')" class="text-red-300 hover:text-red-500 p-2"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+        }
+
+        // --- 功能執行函式 (均加入確認機制與防死機) ---
+        async function apiPost(payload) {
+            showLoader(true);
+            try {
+                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                // 因為 no-cors 無法取得回傳值，我們直接延遲 1 秒後重新同步
+                setTimeout(syncAll, 1200);
+            } catch (e) {
+                alert("操作失敗");
+                showLoader(false);
+            }
+        }
+
+        function handleAddMember() {
+            const name = document.getElementById('addName').value.trim();
+            const phone = document.getElementById('addPhone').value.trim();
+            if(!name || !phone) return alert("請填寫姓名與電話");
+            apiPost({ type: "addMember", name, phone, password: "1234", email: "" });
+            toggleModal('addMemberModal', false);
+        }
+
+        function handleMemberDelete(phone, name) {
+            if(!confirm(`確定刪除「${name}」？此操作無法撤回且後續資料將自動遞補。`)) return;
+            apiPost({ type: "deleteMember", phone });
+        }
+
+        function handlePaidToggle(phone, current) {
+            const next = current === 'Y' ? 'N' : 'Y';
+            apiPost({ currentPhone: phone, newData: { paid: next } });
+        }
+
+        function handleCalendarSubmit() {
+            const date = document.getElementById('calDate').value;
+            const title = document.getElementById('calTitle').value;
+            if(!date || !title) return alert("請輸入完整行程資訊");
+            apiPost({ type: "updateCalendar", date, title, desc: "" });
+        }
+
+        function handleEventDelete(dateObj, title) {
+            if(!confirm(`確定刪除行程「${title}」？`)) return;
+            apiPost({ type: "deleteCalendar", dateObj });
+        }
+
+        function handleConfigSave(key, inputId) {
+            const val = document.getElementById(inputId).value.trim();
+            if(!confirm("確定要更新雲端連結？這將立即改變全體會員的存取位置。")) return;
+            apiPost({ type: "updateConfig", key, value: val });
+        }
+
+        function handleNewsSubmit() {
+            const content = document.getElementById('newsContent').value.trim();
+            if(!content) return alert("請輸入公告內容");
+            apiPost({ type: "updateNews", content });
+        }
+
+        // 基礎切換函式
+        function showTab(t) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-'+t).classList.remove('hidden');
+            document.getElementById('btn-'+t).classList.add('active');
+        }
+        function toggleModal(id, s) { document.getElementById(id).classList.toggle('hidden', !s); }
+        function showLoader(s) { document.getElementById('loader').classList.toggle('hidden', !s); }
+    </script>
+</body>
+</html>

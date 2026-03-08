@@ -34,7 +34,7 @@
             <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
                 <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
             </h2>
-            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在從雲端抓取公告...</div>
+            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在連線雲端公告...</div>
         </section>
 
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -115,24 +115,19 @@
             syncCloudData();
         };
 
-        // 【重點修正】：公告讀取邏輯
+        // 【關鍵修正】：對應 GAS 回傳的 JSON 結構
         async function syncCloudData() {
-            const newsDisplay = document.getElementById('dynamicNews');
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // 這裡會嘗試多種可能的路徑，直到抓到內容為止
-                const announcement = 
-                    (data.system && data.system.latest_news) || // 優先檢查 System 物件
-                    data.latest_news ||                         // 檢查最外層
-                    data.news ||                                // 備用名稱
-                    "歡迎參加築心讀書會。";
-
-                newsDisplay.innerText = announcement;
-                remoteConfig = data.config || (data.system ? data.system : {}); 
+                // GAS 端回傳的是 { news: "內容" }
+                document.getElementById('dynamicNews').innerText = data.news || "歡迎參加築心讀書會。";
+                
+                // 儲存 ConfigMap 用於跳轉連結
+                remoteConfig = data.config || {};
             } catch (e) { 
-                newsDisplay.innerText = "目前無公告。"; 
+                document.getElementById('dynamicNews').innerText = "歡迎參加築心讀書會。"; 
             }
         }
 
@@ -141,7 +136,7 @@
             if (url && url.startsWith('http')) {
                 window.open(url, '_blank');
             } else {
-                alert("幹部尚未設定此連結。");
+                alert("幹部尚未設定此連結，或請確認 Config 表中的名稱。");
             }
         }
 
@@ -158,9 +153,9 @@
             const oldPassInput = document.getElementById('oldPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 驗證比對 (Base64)
+            // 密碼比對 (注意：index.html 存入時是 MTIz... 這種格式)
             if (btoa(oldPassInput) !== String(user.password).trim()) {
-                alert("❌ 驗證失敗：舊密碼錯誤");
+                alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
             }
 
@@ -176,7 +171,7 @@
                     method: 'POST',
                     body: JSON.stringify({ currentPhone: user.phone, newData: updateFields })
                 });
-                alert("✅ 資料修改成功！");
+                alert("✅ 修改成功！請重新登入。");
                 logout();
             } catch (e) {
                 alert("指令已送出，請嘗試重新登入。");

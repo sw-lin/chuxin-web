@@ -31,13 +31,19 @@
     </nav>
 
     <main class="max-w-4xl mx-auto px-6 py-8">
-        <section class="bg-white rounded-[2rem] p-8 border border-emerald-100 shadow-sm mb-10 relative overflow-hidden">
+        <section class="bg-white rounded-[2rem] p-8 border border-emerald-100 shadow-sm mb-8 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-2 h-full bg-orange-500"></div>
             <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
                 <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
             </h2>
             <div id="dynamicNews" class="text-gray-600 italic">同步雲端公告中...</div>
         </section>
+
+        <div id="adminEntry" class="hidden mb-8">
+            <a href="staff_page.html" class="w-full inline-flex items-center justify-center bg-orange-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-700 transition shadow-lg text-lg">
+                <i class="fas fa-user-shield mr-3"></i> 進入幹部專區
+            </a>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
             
@@ -129,6 +135,13 @@
             if (!userStr) { location.href = 'index.html'; return; }
             const user = JSON.parse(userStr);
             document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
+
+            // 幹部按鈕顯示邏輯
+            const titleStr = String(user.title || '').trim();
+            if (titleStr !== "" && titleStr !== "undefined") {
+                document.getElementById('adminEntry').classList.remove('hidden');
+            }
+
             syncCloudData();
         };
 
@@ -140,19 +153,19 @@
 
                 document.getElementById('dynamicNews').innerText = data.news || "歡迎參加讀書會。";
                 
-                // 動態統計邏輯：僅計算到「今天」為止已過期的活動
                 const now = new Date().getTime();
                 const passedEvents = (data.calendar || []).filter(c => c.dateObj <= now).length;
-                
                 const currentUser = (data.users || []).find(u => String(u.phone) === String(user.phone));
                 const myCount = currentUser ? (currentUser.attCount || 0) : 0;
-                
                 const denominator = passedEvents || 0;
                 const percent = denominator > 0 ? Math.min(100, Math.round((myCount / denominator) * 100)) : 0;
 
                 document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerText = `(${myCount} / ${denominator} 次)`;
-                setTimeout(() => { document.getElementById('attBar').style.width = percent + "%"; }, 300);
+                document.getElementById('attCountDisplay').innerText = `(${myCount} / ${denominator})`;
+                setTimeout(() => { 
+                    const bar = document.getElementById('attBar');
+                    if(bar) bar.style.width = percent + "%"; 
+                }, 300);
 
                 remoteConfig = data.config || {};
             } catch (e) { console.error(e); }
@@ -202,7 +215,6 @@
                 alert("❌ 驗證失敗：舊密碼錯誤");
                 return;
             }
-            // ...維持原本 POST 邏輯...
             document.getElementById('updateBtn').innerText = "處理中...";
             try {
                 await fetch(GAS_URL, {

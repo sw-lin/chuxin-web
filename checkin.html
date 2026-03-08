@@ -10,6 +10,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .orange-gradient { background: linear-gradient(135deg, #EA580C 0%, #F97316 100%); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-6">
@@ -35,18 +36,17 @@
 
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const eventDate = urlParams.get('event'); // 從網址獲取活動日期
+            const eventDate = urlParams.get('event'); 
             const userStr = sessionStorage.getItem('userInfo');
 
             const contentDiv = document.getElementById('content');
 
-            // 1. 檢查是否登入
             if (!userStr) {
                 contentDiv.innerHTML = `
                     <div class="text-center space-y-4">
                         <div class="text-orange-600 text-5xl"><i class="fas fa-exclamation-circle"></i></div>
                         <p class="text-emerald-900 font-bold">請先登入後再進行報到</p>
-                        <button onclick="location.href='index.html'" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold">前往登入</button>
+                        <button onclick="location.href='index.html'" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">前往登入</button>
                     </div>
                 `;
                 return;
@@ -54,7 +54,6 @@
 
             const user = JSON.parse(userStr);
 
-            // 2. 顯示報到確認畫面
             contentDiv.innerHTML = `
                 <div class="space-y-4">
                     <div class="bg-stone-50 p-6 rounded-2xl border border-stone-100">
@@ -69,19 +68,19 @@
                         class="w-full emerald-gradient text-white py-5 rounded-2xl font-bold text-xl shadow-lg hover:brightness-110 transition">
                         確認報到
                     </button>
-                    <button onclick="location.href='member_zone.html'" class="w-full text-gray-400 text-sm py-2">取消</button>
+                    <button onclick="location.href='member_zone.html'" class="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">取消</button>
                 </div>
             `;
         };
 
         async function doCheckin(phone, date) {
             const btn = document.getElementById('checkinBtn');
+            const originalContent = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 紀錄中...`;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 處理中...`;
 
             try {
-                // 發送簽到請求到 GAS
-                await fetch(GAS_URL, {
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({
                         type: "checkin",
@@ -89,20 +88,41 @@
                         date: date
                     })
                 });
+                
+                const result = await response.text();
 
-                // 成功畫面
-                document.getElementById('content').innerHTML = `
-                    <div class="text-center py-10 space-y-6">
-                        <div class="text-emerald-500 text-7xl"><i class="fas fa-check-circle"></i></div>
-                        <h2 class="text-2xl font-bold text-emerald-900">報到成功！</h2>
-                        <p class="text-gray-500 italic">勤學如春起之苗，日有所長。</p>
-                        <button onclick="location.href='member_zone.html'" class="w-full bg-emerald-100 text-emerald-800 py-4 rounded-2xl font-bold">回會員頁面</button>
-                    </div>
-                `;
+                if (result === "ALREADY_DONE") {
+                    // 1. 重複報到處理
+                    document.getElementById('content').innerHTML = `
+                        <div class="text-center py-6 space-y-6">
+                            <div class="text-orange-500 text-7xl"><i class="fas fa-info-circle"></i></div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-emerald-900">您已完成報到</h2>
+                                <p class="text-gray-500 mt-2">不需重複操作囉！😊</p>
+                            </div>
+                            <button onclick="location.href='member_zone.html'" class="w-full bg-gray-100 text-emerald-800 py-4 rounded-2xl font-bold hover:bg-gray-200 transition">回個人專區</button>
+                        </div>
+                    `;
+                } else if (result === "SUCCESS" || result === "OK") {
+                    // 2. 簽到成功處理
+                    document.getElementById('content').innerHTML = `
+                        <div class="text-center py-6 space-y-6">
+                            <div class="text-emerald-500 text-7xl"><i class="fas fa-check-circle"></i></div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-emerald-900">報到成功！</h2>
+                                <p class="text-gray-500 mt-2 italic">勤學如春起之苗，日有所長。</p>
+                            </div>
+                            <button onclick="location.href='member_zone.html'" class="w-full bg-emerald-100 text-emerald-800 py-4 rounded-2xl font-bold hover:bg-emerald-200 transition">回個人專區</button>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result);
+                }
             } catch (err) {
-                alert("通訊失敗，請稍後再試。");
+                console.error(err);
+                alert("通訊失敗，請檢查網路連線後再試。");
                 btn.disabled = false;
-                btn.innerText = "確認報到";
+                btn.innerHTML = originalContent;
             }
         }
     </script>

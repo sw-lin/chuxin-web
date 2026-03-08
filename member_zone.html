@@ -78,7 +78,9 @@
         </section>
 
         <section id="adminSection" class="hidden space-y-4">
-            <h3 class="text-lg font-bold text-emerald-900 px-2">幹部管理工具</h3>
+            <h3 class="text-lg font-bold text-emerald-900 px-2 flex items-center">
+                <i class="fas fa-user-shield mr-2 text-amber-500"></i> 幹部管理工具
+            </h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button onclick="location.href='admin_news.html'" class="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md transition text-center border border-amber-100 group">
                     <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
@@ -141,7 +143,7 @@
                 </div>
                 <div class="flex space-x-3 pt-4">
                     <button onclick="closeEditModal()" class="flex-1 py-3 text-gray-400 font-bold">取消</button>
-                    <button id="updateBtn" onclick="submitUpdate()" class="flex-[2] bg-emerald-800 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-900 transition">確認修改</button>
+                    <button id="updateBtn" onclick="submitUpdate()" class="flex-[2] bg-emerald-800 text-white py-3 rounded-xl font-bold shadow-lg">確認修改</button>
                 </div>
             </div>
         </div>
@@ -161,8 +163,9 @@
             document.getElementById('userTitle').innerText = user.title || '學員';
             document.getElementById('attCount').innerText = user.attCount || 0;
 
-            // 幹部權限檢查
-            if (user.title && (user.title.includes('幹部') || user.title.includes('管理'))) {
+            // --- 關鍵修正：只要 title 欄位不是空白且不是學員，就視為幹部 ---
+            const titleValue = String(user.title || "").trim();
+            if (titleValue !== "" && titleValue !== "學員") {
                 document.getElementById('adminSection').classList.remove('hidden');
             }
 
@@ -176,62 +179,65 @@
                 remoteConfig = data.config;
                 document.getElementById('news').innerText = data.news || '歡迎回到讀書會';
                 
-                // 修正分母邏輯：只計算「已發生」且「需報到」的活動
+                // --- 學習狀況分母邏輯修正：需報到且日期小於等於今天 ---
                 const user = JSON.parse(sessionStorage.getItem('userInfo'));
-                const now = new Date();
+                const todayStr = new Date().toISOString().split('T')[0];
                 const validEvents = data.calendar.filter(ev => {
-                    const evDate = new Date(ev.dateText);
-                    return evDate <= now && ev.description && ev.description.includes('需報到');
+                    // 檢查標題或描述中是否包含「需報到」
+                    const isRequired = (ev.title && ev.title.includes('需報到')) || (ev.description && ev.description.includes('需報到'));
+                    return ev.dateText <= todayStr && isRequired;
                 });
 
-                const total = validEvents.length || 1; // 避免分母為0
+                const total = validEvents.length || 0; 
                 const count = user.attCount || 0;
-                const percent = Math.min(Math.round((count / total) * 100), 100);
+                // 分母若為0則進度為0，否則計算百分比
+                const percent = total > 0 ? Math.min(Math.round((count / total) * 100), 100) : 0;
                 
                 document.getElementById('totalEvents').innerText = `/ ${total}`;
                 document.getElementById('progressBar').style.width = percent + '%';
-                document.getElementById('progressTips').innerText = percent >= 80 ? "卓越的學習態度！繼續保持！" : "每一次共讀都是成長的養分。";
+                document.getElementById('progressTips').innerText = total === 0 ? "尚未開始計算學習進度。" : (percent >= 80 ? "表現卓越！" : "繼續加油！");
             } catch (e) { console.error("資料載入失敗"); }
         }
 
-        function openEditModal() {
-            const user = JSON.parse(sessionStorage.getItem('userInfo'));
-            document.getElementById('editEmail').value = user.email || '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('oldPassword').value = '';
-            document.getElementById('editProfileModal').classList.remove('hidden');
-        }
-
-        function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
-
         async function submitUpdate() {
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
-            const oldPassInput = document.getElementById('oldPassword').value.trim();
-            const newPassInput = document.getElementById('newPassword').value.trim();
+            const oldPass = document.getElementById('oldPassword').value.trim();
+            const newPass = document.getElementById('newPassword').value.trim();
             const newEmail = document.getElementById('editEmail').value.trim();
 
-            if (btoa(oldPassInput) !== String(user.password).trim()) {
-                alert("❌ 驗證失敗：原密碼輸入錯誤");
-                return;
+            if (btoa(oldPass) !== String(user.password).trim()) {
+                alert("❌ 原密碼驗證錯誤"); return;
             }
 
             const btn = document.getElementById('updateBtn');
-            btn.disabled = true; btn.innerText = "更新中...";
+            btn.disabled = true; btn.innerText = "處理中...";
 
             let updatePayload = { email: newEmail };
-            if (newPassInput !== "") updatePayload.password = btoa(newPassInput);
+            if (newPass !== "") updatePayload.password = btoa(newPass);
 
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ currentPhone: user.phone, newData: updatePayload })
                 });
-                alert("✅ 修改成功！請重新登入。");
+                alert("✅ 修改成功，請重新登入。");
                 logout();
             } catch (e) {
-                alert("連線失敗");
-                btn.disabled = false; btn.innerText = "確認修改";
+                alert("連線失敗"); btn.disabled = false; btn.innerText = "確認修改";
             }
+        }
+
+        function openEditModal() {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+        function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
+        function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+        function openRemoteLink(key) {
+            const url = remoteConfig[key];
+            if (url && url.startsWith('http')) window.open(url, '_blank');
+            else alert("連結尚未設定");
         }
 
         function startScanner() {
@@ -241,19 +247,20 @@
                 stopScanner(); window.location.href = text;
             }).catch(() => stopScanner());
         }
-
         function stopScanner() {
             if (html5QrCode) html5QrCode.stop().then(() => document.getElementById('scannerModal').classList.add('hidden'));
             else document.getElementById('scannerModal').classList.add('hidden');
         }
-
-        function openRemoteLink(key) {
-            const url = remoteConfig[key];
-            if (url && url.startsWith('http')) window.open(url, '_blank');
-            else alert("管理員尚未設定此連結。");
-        }
-
-        function logout() { sessionStorage.clear(); location.href = 'index.html'; }
     </script>
+    
+    <div id="scannerModal" class="fixed inset-0 bg-black/90 hidden z-50 flex flex-col items-center justify-center p-6 backdrop-blur-md">
+        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div id="reader" class="w-full"></div>
+            <div class="p-8 text-center">
+                <h4 class="text-xl font-bold text-emerald-900 mb-2">準備掃描</h4>
+                <button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">取消</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -11,6 +11,7 @@
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .glass-nav { background: #064E3B; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .progress-animation { transition: width 1.5s cubic-bezier(0.1, 0.5, 0.1, 1); }
     </style>
 </head>
 <body class="min-h-screen">
@@ -34,7 +35,7 @@
             <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
                 <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
             </h2>
-            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">同步雲端公告中...</div>
+            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在同步雲端公告...</div>
         </section>
 
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -50,25 +51,45 @@
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <div class="emerald-gradient p-8 rounded-[2rem] shadow-xl text-white relative overflow-hidden group">
+                <div class="absolute -right-4 -top-4 opacity-10 text-8xl group-hover:scale-110 transition-transform"><i class="fas fa-medal"></i></div>
+                <h3 class="font-bold text-lg mb-2 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i> 學習參與率
+                </h3>
+                <div class="flex items-end space-x-2">
+                    <span id="attPercent" class="text-5xl font-extrabold text-orange-300">0%</span>
+                    <span id="attCountDisplay" class="text-emerald-100/80 text-sm mb-1">(0 / 0 次)</span>
+                </div>
+                <div class="w-full bg-white/20 h-2.5 rounded-full mt-5 overflow-hidden">
+                    <div id="attBar" class="bg-orange-400 h-full progress-animation" style="width: 0%"></div>
+                </div>
+                <p class="text-emerald-100/60 text-xs mt-5 italic">勤學如春起之苗，不見其增，日有所長。</p>
+            </div>
+
             <div onclick="openRemoteLink('reading_folder_url')" class="group bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm hover:border-emerald-200 transition cursor-pointer">
                 <div class="text-emerald-800 text-3xl mb-4 group-hover:scale-110 transition"><i class="fas fa-book-reader"></i></div>
                 <h3 class="font-bold text-lg text-emerald-900">導讀資料庫</h3>
                 <p class="text-gray-400 text-sm mt-2">歷年手冊、簡報與書單</p>
-                <div class="mt-4 text-emerald-700 text-xs font-bold">點擊進入 <i class="fas fa-external-link-alt ml-1"></i></div>
+                <div class="mt-6 text-emerald-700 text-xs font-bold">點擊進入 <i class="fas fa-external-link-alt ml-1"></i></div>
             </div>
 
             <div onclick="openRemoteLink('photo_gallery_url')" class="group bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm hover:border-emerald-200 transition cursor-pointer">
                 <div class="text-orange-600 text-3xl mb-4 group-hover:scale-110 transition"><i class="fas fa-camera-retro"></i></div>
                 <h3 class="font-bold text-lg text-emerald-900">活動剪影</h3>
                 <p class="text-gray-400 text-sm mt-2">紀錄聚會的美好瞬間</p>
-                <div class="mt-4 text-orange-600 text-xs font-bold">瀏覽相簿 <i class="fas fa-external-link-alt ml-1"></i></div>
+                <div class="mt-6 text-orange-600 text-xs font-bold">瀏覽相簿 <i class="fas fa-external-link-alt ml-1"></i></div>
             </div>
 
-            <div onclick="openEditModal()" class="emerald-gradient p-8 rounded-[2rem] shadow-xl text-white hover:brightness-110 transition cursor-pointer">
-                <div class="text-emerald-200 text-3xl mb-4"><i class="fas fa-user-cog"></i></div>
-                <h3 class="font-bold text-lg">帳號安全性</h3>
-                <p class="text-emerald-100/60 text-sm mt-2">修改密碼與聯絡信箱</p>
-                <div class="mt-4 text-white/80 text-xs font-bold">變更設定 <i class="fas fa-chevron-right ml-1"></i></div>
+            <div onclick="openEditModal()" class="bg-stone-800 p-8 rounded-[2rem] shadow-xl text-white hover:brightness-110 transition cursor-pointer md:col-span-3 flex items-center justify-between mt-4">
+                <div class="flex items-center space-x-6">
+                    <div class="text-stone-400 text-3xl"><i class="fas fa-user-cog"></i></div>
+                    <div>
+                        <h3 class="font-bold text-lg">帳號安全性設定</h3>
+                        <p class="text-stone-500 text-sm">修改個人電子郵件與登入密碼</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-stone-600"></i>
             </div>
         </div>
     </main>
@@ -88,7 +109,7 @@
                 </div>
                 <div>
                     <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不改則留空)</label>
-                    <input id="editPassword" type="password" placeholder="若要修改請輸入新密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
+                    <input id="editPassword" type="password" placeholder="欲修改請輸入新密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <button id="updateBtn" onclick="submitUpdate()" class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg mt-2 shadow-lg">確認儲存</button>
             </div>
@@ -119,13 +140,31 @@
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                
-                // 這裡會對應 GAS 整合後的 news 欄位
+                const user = JSON.parse(sessionStorage.getItem('userInfo'));
+
+                // 1. 公告更新
                 document.getElementById('dynamicNews').innerText = data.news || "歡迎參加築心讀書會。";
                 
-                // 儲存 Config 供連結使用
+                // 2. 統計參與率邏輯
+                // 從回傳的 users 陣列中找到目前的用戶
+                const currentUser = data.users.find(u => String(u.phone) === String(user.phone));
+                const myCount = currentUser ? (currentUser.attCount || 0) : 0;
+                const total = data.totalEvents || 0;
+                const percent = total > 0 ? Math.round((myCount / total) * 100) : 0;
+
+                // 更新 UI
+                document.getElementById('attPercent').innerText = percent + "%";
+                document.getElementById('attCountDisplay').innerText = `(${myCount} / ${total} 次)`;
+                
+                // 延遲一下讓動畫更順暢
+                setTimeout(() => {
+                    document.getElementById('attBar').style.width = percent + "%";
+                }, 300);
+
+                // 3. 儲存設定
                 remoteConfig = data.config || {};
             } catch (e) { 
+                console.error("同步失敗:", e);
                 document.getElementById('dynamicNews').innerText = "連線失敗，請檢查網路。"; 
             }
         }
@@ -157,7 +196,7 @@
             const newPass = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 關鍵：將輸入轉為 Base64 與 sessionStorage 中的加密碼進行比對
+            // 驗證舊密碼 (Base64)
             if (btoa(oldPassInput) !== String(user.password).trim()) {
                 alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
@@ -180,7 +219,7 @@
                 alert("✅ 修改成功！下次登入請使用新密碼。");
                 logout();
             } catch (e) {
-                alert("指令已送出，請重新登入確認結果。");
+                alert("指令已送出，請重新登入確認。");
                 logout();
             }
         }

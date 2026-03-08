@@ -13,7 +13,6 @@
         .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none; }
-        .btn-disabled { background-color: #E5E7EB !important; color: #9CA3AF !important; cursor: not-allowed; }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -29,10 +28,11 @@
     </nav>
 
     <div class="bg-white border-b sticky top-[68px] z-40">
-        <div class="max-w-6xl mx-auto flex space-x-8 px-6">
-            <button onclick="switchTab('news')" id="tab-news" class="py-4 font-bold tab-active text-emerald-900">公告與連結</button>
-            <button onclick="switchTab('members')" id="tab-members" class="py-4 font-bold text-gray-400">會員名單</button>
-            <button onclick="switchTab('calendar')" id="tab-calendar" class="py-4 font-bold text-gray-400">行事曆管理</button>
+        <div class="max-w-6xl mx-auto flex space-x-8 px-6 overflow-x-auto">
+            <button onclick="switchTab('news')" id="tab-news" class="py-4 font-bold tab-active text-emerald-900 whitespace-nowrap">公告與連結</button>
+            <button onclick="switchTab('members')" id="tab-members" class="py-4 font-bold text-gray-400 whitespace-nowrap">會員名單</button>
+            <button onclick="switchTab('calendar')" id="tab-calendar" class="py-4 font-bold text-gray-400 whitespace-nowrap">行事曆管理</button>
+            <button onclick="switchTab('rank')" id="tab-rank" class="py-4 font-bold text-gray-400 whitespace-nowrap">數據排行榜</button>
         </div>
     </div>
 
@@ -111,6 +111,19 @@
             <div id="calendarGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
+        <div id="section-rank" class="hidden space-y-6">
+            <div class="bg-white rounded-[2rem] p-8 shadow-sm border">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-xl font-bold text-emerald-900"><i class="fas fa-award mr-2"></i> 出勤參與度排行榜</h3>
+                    <button onclick="resetAttendance()" class="text-xs text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg border border-red-100 transition">
+                        <i class="fas fa-redo-alt mr-1"></i> 期末清除報到紀錄
+                    </button>
+                </div>
+                <div id="rankList" class="space-y-4">
+                    </div>
+            </div>
+        </div>
+
     </main>
 
     <div id="qrModal" class="fixed inset-0 bg-black/80 hidden z-[60] flex items-center justify-center p-6 backdrop-blur-md">
@@ -138,11 +151,12 @@
                 document.getElementById('link-photo').value = allData.config.photo_gallery_url || '';
                 renderMembers();
                 renderCalendar();
+                renderRank();
             } catch (e) { console.error(e); alert("連線失敗"); }
         }
 
         function switchTab(tab) {
-            ['news', 'members', 'calendar'].forEach(t => {
+            ['news', 'members', 'calendar', 'rank'].forEach(t => {
                 document.getElementById(`section-${t}`).classList.add('hidden');
                 document.getElementById(`tab-${t}`).classList.replace('text-emerald-900', 'text-gray-400');
                 document.getElementById(`tab-${t}`).classList.remove('tab-active');
@@ -196,7 +210,7 @@
                     <div class="flex items-center space-x-3">
                         ${needsQR ? 
                             `<button onclick="generateQR('${c.dateText}','${c.title}')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-700"><i class="fas fa-qrcode mr-1"></i>簽到碼</button>` : 
-                            `<span class="text-gray-300 text-xs italic pr-2">純記錄</span>`
+                            `<span class="text-gray-300 text-[10px] italic pr-2">純記錄</span>`
                         }
                         <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-500 px-2 transition"><i class="fas fa-times text-lg"></i></button>
                     </div>
@@ -205,11 +219,32 @@
             }).join('');
         }
 
+        function renderRank() {
+            const list = document.getElementById('rankList');
+            // 按出席次數排序
+            const sorted = [...allData.users].sort((a, b) => b.attCount - a.attCount);
+            list.innerHTML = sorted.map((u, index) => `
+                <div class="flex items-center justify-between p-5 ${index < 3 ? 'bg-orange-50/50' : 'bg-gray-50'} rounded-2xl border border-transparent hover:border-emerald-100 transition">
+                    <div class="flex items-center space-x-4">
+                        <span class="font-bold w-6 text-center ${index < 3 ? 'text-orange-500' : 'text-gray-400'}">${index + 1}</span>
+                        <div>
+                            <div class="font-bold text-emerald-900 text-sm">${u.name}</div>
+                            <div class="text-[10px] text-gray-400">${u.title || '一般會員'}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-emerald-600">${u.attCount} <span class="text-[10px] text-gray-400">次簽到</span></div>
+                        <div class="text-[10px] text-gray-400">出席率 ${Math.round((u.attCount / (allData.totalEvents || 1)) * 100)}%</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         async function apiPost(payload) {
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const txt = await res.text();
-                if(txt.includes("OK") || txt.includes("DELETED")) {
+                if(txt.includes("OK") || txt.includes("DELETED") || txt.includes("SUCCESS")) {
                     alert("操作成功！");
                     location.reload();
                 } else { alert("系統回應: " + txt); }
@@ -223,11 +258,10 @@
             const n = document.getElementById('add-name').value;
             const p = document.getElementById('add-phone').value;
             const s = document.getElementById('add-pass').value;
-            if(!n || !p || !s) return alert("請完整填寫姓名、手機與密碼");
+            if(!n || !p || !s) return alert("請完整填寫");
             apiPost({ type: "add_member", name: n, phone: p, password: s });
         }
         function deleteMember(phone) { if(confirm("確定刪除此成員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
-        
         function addEvent() {
             const d = document.getElementById('newDate').value;
             const t = document.getElementById('newTitle').value;
@@ -235,9 +269,14 @@
             if(!d || !t) return alert("請填寫日期與標題");
             apiPost({ type: "add_event", date: d, title: t, needCheckin: c });
         }
-        
         function deleteEvent(date) { if(confirm(`確定刪除 ${date} 的活動？`)) apiPost({ type: "delete_event", date: date }); }
         
+        function resetAttendance() {
+            if(confirm("【危險操作】這將永久清空所有人的報到次數，僅限新學期開始時使用。確定執行？")) {
+                apiPost({ type: "reset_attendance" });
+            }
+        }
+
         function generateQR(date, title) {
             document.getElementById('qrTitle').innerText = title;
             document.getElementById('qrDate').innerText = date;

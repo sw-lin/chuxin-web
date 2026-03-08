@@ -64,7 +64,7 @@
             <div class="flex justify-between items-end mb-6">
                 <div>
                     <h3 class="text-xl font-bold text-emerald-900">學習狀況</h3>
-                    <p class="text-gray-400 text-sm">本學期共學歷程</p>
+                    <p class="text-gray-400 text-sm">本學期有效共學歷程</p>
                 </div>
                 <div class="text-right">
                     <span id="attCount" class="text-4xl font-black text-emerald-800">0</span>
@@ -75,6 +75,36 @@
                 <div id="progressBar" class="progress-animation h-full emerald-gradient shadow-lg" style="width: 0%"></div>
             </div>
             <p id="progressTips" class="mt-4 text-center text-gray-400 text-sm font-medium italic">正在計算學習進度...</p>
+        </section>
+
+        <section id="adminSection" class="hidden space-y-4">
+            <h3 class="text-lg font-bold text-emerald-900 px-2">幹部管理工具</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onclick="location.href='admin_news.html'" class="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md transition text-center border border-amber-100 group">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
+                        <i class="fas fa-bullhorn text-xl"></i>
+                    </div>
+                    <div class="text-sm font-bold text-gray-700">公告管理</div>
+                </button>
+                <button onclick="location.href='admin_events.html'" class="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md transition text-center border border-amber-100 group">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
+                        <i class="fas fa-calendar-check text-xl"></i>
+                    </div>
+                    <div class="text-sm font-bold text-gray-700">活動管理</div>
+                </button>
+                <button onclick="location.href='admin_members.html'" class="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md transition text-center border border-amber-100 group">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
+                        <i class="fas fa-users-cog text-xl"></i>
+                    </div>
+                    <div class="text-sm font-bold text-gray-700">會員審核</div>
+                </button>
+                <button onclick="location.href='admin_config.html'" class="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md transition text-center border border-amber-100 group">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition">
+                        <i class="fas fa-tools text-xl"></i>
+                    </div>
+                    <div class="text-sm font-bold text-gray-700">系統設定</div>
+                </button>
+            </div>
         </section>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pb-10">
@@ -92,17 +122,6 @@
             </button>
         </div>
     </main>
-
-    <div id="scannerModal" class="fixed inset-0 bg-black/90 hidden z-50 flex flex-col items-center justify-center p-6 backdrop-blur-md">
-        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div id="reader" class="w-full"></div>
-            <div class="p-8 text-center">
-                <h4 class="text-xl font-bold text-emerald-900 mb-2">準備掃描</h4>
-                <p class="text-gray-400 text-sm mb-6">請對準活動現場的 QR Code</p>
-                <button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-500 hover:bg-gray-200 transition">取消掃描</button>
-            </div>
-        </div>
-    </div>
 
     <div id="editProfileModal" class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 shadow-2xl relative">
@@ -141,6 +160,12 @@
             document.getElementById('userEmail').innerText = user.email || '尚未設定電子郵件';
             document.getElementById('userTitle').innerText = user.title || '學員';
             document.getElementById('attCount').innerText = user.attCount || 0;
+
+            // 幹部權限檢查
+            if (user.title && (user.title.includes('幹部') || user.title.includes('管理'))) {
+                document.getElementById('adminSection').classList.remove('hidden');
+            }
+
             loadData();
         };
 
@@ -151,9 +176,15 @@
                 remoteConfig = data.config;
                 document.getElementById('news').innerText = data.news || '歡迎回到讀書會';
                 
-                // 更新進度條
+                // 修正分母邏輯：只計算「已發生」且「需報到」的活動
                 const user = JSON.parse(sessionStorage.getItem('userInfo'));
-                const total = data.totalEvents || 1;
+                const now = new Date();
+                const validEvents = data.calendar.filter(ev => {
+                    const evDate = new Date(ev.dateText);
+                    return evDate <= now && ev.description && ev.description.includes('需報到');
+                });
+
+                const total = validEvents.length || 1; // 避免分母為0
                 const count = user.attCount || 0;
                 const percent = Math.min(Math.round((count / total) * 100), 100);
                 

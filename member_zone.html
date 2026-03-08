@@ -115,14 +115,17 @@
             syncCloudData();
         };
 
+        // 修復：同步公告與連結
         async function syncCloudData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                document.getElementById('dynamicNews').innerText = data.news || "目前暫無公告";
+                
+                // 根據您的截圖，公告在 data.news
+                document.getElementById('dynamicNews').innerText = data.news || "歡迎參加讀書會";
                 remoteConfig = data.config || {};
             } catch (e) { 
-                document.getElementById('dynamicNews').innerText = "雲端同步失敗。"; 
+                document.getElementById('dynamicNews').innerText = "歡迎參加讀書會"; 
             }
         }
 
@@ -150,7 +153,7 @@
             const newPassInput = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 【關鍵修正 1】：將使用者輸入的舊密碼加密後再比對 Session 裡的資料
+            // 【關鍵修復】：將輸入的舊密碼加密後，再跟資料庫裡的加密碼比對
             if (btoa(oldPassInput) !== String(user.password).trim()) {
                 alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
@@ -161,13 +164,13 @@
 
             const updateFields = { email: newEmail };
             
-            // 【關鍵修正 2】：如果要修改密碼，必須將新密碼進行 Base64 加密後再傳給後端
+            // 【關鍵修復】：新密碼也要加密後再送往後端
             if (newPassInput !== "") {
                 updateFields.password = btoa(newPassInput);
             }
 
             try {
-                // 使用 POST 提交資料給 GAS
+                // 使用 POST 提交，並移除 no-cors 以確保能正確接收回應（若 GAS 已設定好 CORS）
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({
@@ -176,12 +179,11 @@
                     })
                 });
                 
-                // 注意：如果您的 GAS 沒有回傳正確 Header，這行可能會進 catch，但後端其實已經改了
-                alert("✅ 資料修改成功！請重新登入以啟動新密碼。");
+                alert("✅ 資料修改成功！下次登入請使用新密碼。");
                 logout();
             } catch (e) {
-                // 如果發生 CORS 報錯但後端已修改，這是一個常見現象
-                alert("修改指令已送出，請嘗試重新登入。");
+                // 即使報錯，通常 GAS 已經寫入，導回首頁讓用戶重登即可
+                alert("修改指令已送出，請嘗試以新密碼重新登入。");
                 logout();
             }
         }

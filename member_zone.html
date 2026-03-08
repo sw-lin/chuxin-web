@@ -34,7 +34,7 @@
             <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
                 <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
             </h2>
-            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在連線雲端公告...</div>
+            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">同步雲端公告中...</div>
         </section>
 
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -80,17 +80,17 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-xs font-bold text-emerald-800 ml-1">驗證舊密碼 <span class="text-red-500">*</span></label>
-                    <input id="oldPassword" type="password" placeholder="請輸入目前的密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
+                    <input id="oldPassword" type="password" placeholder="輸入目前密碼以驗證身份" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <div>
                     <label class="text-xs font-bold text-gray-400 ml-1">電子郵件</label>
                     <input id="editEmail" type="email" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不填則不修改)</label>
+                    <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不改則留空)</label>
                     <input id="editPassword" type="password" placeholder="若要修改請輸入新密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
-                <button id="updateBtn" onclick="submitUpdate()" class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg mt-2 shadow-lg">儲存變更</button>
+                <button id="updateBtn" onclick="submitUpdate()" class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg mt-2 shadow-lg">確認儲存</button>
             </div>
         </div>
     </div>
@@ -115,19 +115,18 @@
             syncCloudData();
         };
 
-        // 【關鍵修正】：對應 GAS 回傳的 JSON 結構
         async function syncCloudData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // GAS 端回傳的是 { news: "內容" }
+                // 這裡會對應 GAS 整合後的 news 欄位
                 document.getElementById('dynamicNews').innerText = data.news || "歡迎參加築心讀書會。";
                 
-                // 儲存 ConfigMap 用於跳轉連結
+                // 儲存 Config 供連結使用
                 remoteConfig = data.config || {};
             } catch (e) { 
-                document.getElementById('dynamicNews').innerText = "歡迎參加築心讀書會。"; 
+                document.getElementById('dynamicNews').innerText = "連線失敗，請檢查網路。"; 
             }
         }
 
@@ -136,7 +135,7 @@
             if (url && url.startsWith('http')) {
                 window.open(url, '_blank');
             } else {
-                alert("幹部尚未設定此連結，或請確認 Config 表中的名稱。");
+                alert("幹部尚未設定此連結。");
             }
         }
 
@@ -149,11 +148,16 @@
         function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
 
         async function submitUpdate() {
-            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            const userStr = sessionStorage.getItem('userInfo');
+            if (!userStr) return;
+            const user = JSON.parse(userStr);
+            
             const oldPassInput = document.getElementById('oldPassword').value.trim();
+            const newEmail = document.getElementById('editEmail').value.trim();
+            const newPass = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 密碼比對 (注意：index.html 存入時是 MTIz... 這種格式)
+            // 關鍵：將輸入轉為 Base64 與 sessionStorage 中的加密碼進行比對
             if (btoa(oldPassInput) !== String(user.password).trim()) {
                 alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
@@ -162,19 +166,21 @@
             btn.disabled = true;
             btn.innerText = "同步更新中...";
 
-            const updateFields = { email: document.getElementById('editEmail').value.trim() };
-            const newPass = document.getElementById('editPassword').value.trim();
+            const updateFields = { email: newEmail };
             if (newPass !== "") updateFields.password = btoa(newPass);
 
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ currentPhone: user.phone, newData: updateFields })
+                    body: JSON.stringify({
+                        currentPhone: user.phone,
+                        newData: updateFields
+                    })
                 });
-                alert("✅ 修改成功！請重新登入。");
+                alert("✅ 修改成功！下次登入請使用新密碼。");
                 logout();
             } catch (e) {
-                alert("指令已送出，請嘗試重新登入。");
+                alert("指令已送出，請重新登入確認結果。");
                 logout();
             }
         }

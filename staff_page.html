@@ -14,8 +14,7 @@
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none; }
         .btn-disabled { background-color: #F3F4F6 !important; color: #D1D5DB !important; cursor: not-allowed; border: 1px solid #E5E7EB; }
-        /* 載入動畫樣式 */
-        .loading-spinner { border: 2px solid #f3f3f3; border-top: 2px solid #065F46; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; margin-right: 8px; }
+        .loading-spinner { border: 2px solid #f3f3f3; border-top: 2px solid #065F46; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; margin-right: 6px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -82,7 +81,7 @@
                         <thead class="bg-gray-50 text-gray-600 text-sm">
                             <tr>
                                 <th class="p-4">姓名 / 職稱</th>
-                                <th class="p-4">手機與電子郵件</th>
+                                <th class="p-4">手機號碼</th>
                                 <th class="p-4">繳費</th>
                                 <th class="p-4 text-center">操作</th>
                             </tr>
@@ -145,11 +144,10 @@
 
         window.onload = fetchData;
 
-        // 全型轉半型輔助函式
-        function toHalfWidth(str) {
-            return str.replace(/[\uFF01-\uFF5E]/g, function(ch) {
-                return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
-            }).replace(/\u3000/g, " "); // 處理全型空格
+        // 全型轉半型輔助函式並過濾非數字
+        function cleanPhoneInput(str) {
+            let half = str.replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, " ");
+            return half.replace(/\D/g, ''); // 只保留數字
         }
 
         async function fetchData() {
@@ -178,7 +176,6 @@
             document.getElementById(`section-${tab}`).classList.remove('hidden');
             document.getElementById(`tab-${tab}`).classList.replace('text-gray-400', 'text-emerald-900');
             document.getElementById(`tab-${tab}`).classList.add('tab-active');
-            renderAll(); // 切換時確保同步渲染
         }
 
         function renderMembers() {
@@ -206,13 +203,10 @@
 
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid');
-            const today = new Date();
-            today.setHours(0,0,0,0);
+            const today = new Date().toISOString().split('T')[0];
             grid.innerHTML = allData.calendar.map(c => {
                 const needsQR = (c.description === "需報到");
-                const eventDate = new Date(c.dateText);
-                eventDate.setHours(0,0,0,0);
-                const isFuture = eventDate > today;
+                const isFuture = c.dateText > today;
                 return `
                 <div class="bg-white p-6 rounded-2xl border shadow-sm flex justify-between items-center hover:shadow-md transition">
                     <div>
@@ -222,10 +216,10 @@
                     </div>
                     <div class="flex items-center space-x-3">
                         ${needsQR ? 
-                            `<button onclick="${isFuture ? "alert('活動日期未到，無法提早產生簽到碼')" : `generateQR('${c.dateText}','${c.title}')`}" 
+                            `<button onclick="${isFuture ? "alert('活動日期未到')" : `generateQR('${c.dateText}','${c.title}')`}" 
                                 class="px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition ${isFuture ? 'btn-disabled' : 'bg-emerald-600 text-white hover:bg-emerald-700'}">
                                 <i class="fas fa-qrcode mr-1"></i>${isFuture ? '未開啟' : '簽到碼'}
-                            </button>` : `<span class="text-gray-300 text-[10px] italic pr-2">純記錄</span>`
+                            </button>` : `<span class="text-gray-300 text-xs italic">純記錄</span>`
                         }
                         <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-500 px-2 transition"><i class="fas fa-times text-lg"></i></button>
                     </div>
@@ -246,7 +240,6 @@
                 </div>`).join('');
         }
 
-        // 核心 API 通訊函式 (加入按鈕鎖定功能)
         async function apiPost(payload, btnId, successCallback) {
             const btn = document.getElementById(btnId);
             const originalText = btn ? btn.innerHTML : "";
@@ -259,43 +252,34 @@
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const txt = await res.text();
-                if(txt.includes("OK") || txt.includes("SUCCESS") || txt.includes("DELETED")) {
+                if(txt.includes("OK") || txt.includes("SUCCESS")) {
                     alert("操作成功！");
-                    if (successCallback) successCallback();
-                    else location.reload();
-                } else { alert("錯誤回應: " + txt); }
-            } catch (e) { 
-                alert("連線失敗，請檢查網路狀態"); 
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.classList.remove('btn-disabled');
-                    btn.innerHTML = originalText;
-                }
-            }
+                    if (successCallback) successCallback(); else location.reload();
+                } else { alert("回應: " + txt); }
+            } catch (e) { alert("連線失敗"); }
+            finally { if(btn) { btn.disabled = false; btn.classList.remove('btn-disabled'); btn.innerHTML = originalText; } }
         }
 
         function addMember() {
             let n = document.getElementById('add-name').value.trim();
-            let p = document.getElementById('add-phone').value.trim();
+            let p = cleanPhoneInput(document.getElementById('add-phone').value);
             let s = document.getElementById('add-pass').value.trim();
 
-            // 1. 自動轉換全型到半型
-            p = toHalfWidth(p);
-            s = toHalfWidth(s);
+            if(!n || !p || !s) return alert("請填寫姓名、手機與密碼");
+            if(p.length < 10) return alert("手機號碼格式不全");
 
-            // 2. 基本校驗
-            if(!n || !p || !s) return alert("請完整填寫姓名、手機與密碼");
-            if(p.length < 10) return alert("手機號碼格式不正確，請檢查是否有漏字");
+            // --- 重複檢查邏輯 ---
+            const isExist = allData.users.some(user => user.phone === p);
+            if(isExist) {
+                return alert(`⚠️ 錯誤：手機號碼 [${p}] 已存在於名單中，無法重複新增！`);
+            }
 
-            // 3. 送出資料
             apiPost({ type: "add_member", name: n, phone: `'${p}`, password: btoa(s) }, "btn-addMember");
         }
 
         function deleteMember(phone) {
             if(confirm("確定刪除此成員？")) {
                 apiPost({ type: "delete_member", currentPhone: phone }, null, () => {
-                    // 靜默刪除：直接過濾本地陣列，重新渲染
                     allData.users = allData.users.filter(u => u.phone !== phone);
                     renderAll();
                 });

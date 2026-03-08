@@ -34,7 +34,7 @@
             <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
                 <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
             </h2>
-            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在同步最新公告...</div>
+            <div id="dynamicNews" class="text-gray-600 italic leading-relaxed">正在從雲端抓取公告...</div>
         </section>
 
         <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -107,7 +107,6 @@
             document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
             document.getElementById('welcomeName').innerText = user.name;
 
-            // 顯示職稱與幹部入口
             const titleStr = String(user.title || '').trim();
             if (titleStr !== "" && titleStr !== "undefined") {
                 document.getElementById('userTitleTag').innerText = `職稱：${titleStr}`;
@@ -116,22 +115,24 @@
             syncCloudData();
         };
 
-        // 修正公告與連結同步邏輯
+        // 【重點修正】：公告讀取邏輯
         async function syncCloudData() {
+            const newsDisplay = document.getElementById('dynamicNews');
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // 對應 System 工作表中的 latest_news 鍵值
-                if (data.system && data.system.latest_news) {
-                    document.getElementById('dynamicNews').innerText = data.system.latest_news;
-                } else {
-                    document.getElementById('dynamicNews').innerText = data.news || "歡迎參加讀書會";
-                }
-                
-                remoteConfig = data.config || {};
+                // 這裡會嘗試多種可能的路徑，直到抓到內容為止
+                const announcement = 
+                    (data.system && data.system.latest_news) || // 優先檢查 System 物件
+                    data.latest_news ||                         // 檢查最外層
+                    data.news ||                                // 備用名稱
+                    "歡迎參加築心讀書會。";
+
+                newsDisplay.innerText = announcement;
+                remoteConfig = data.config || (data.system ? data.system : {}); 
             } catch (e) { 
-                document.getElementById('dynamicNews').innerText = "歡迎參加築心讀書會。"; 
+                newsDisplay.innerText = "目前無公告。"; 
             }
         }
 
@@ -145,9 +146,7 @@
         }
 
         function openEditModal() {
-            const userStr = sessionStorage.getItem('userInfo');
-            if(!userStr) return;
-            const user = JSON.parse(userStr);
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editProfileModal').classList.remove('hidden');
         }
@@ -155,46 +154,32 @@
         function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
 
         async function submitUpdate() {
-            const userStr = sessionStorage.getItem('userInfo');
-            if (!userStr) { alert("會話過期，請重新登入"); logout(); return; }
-            
-            const user = JSON.parse(userStr);
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
             const oldPassInput = document.getElementById('oldPassword').value.trim();
-            const newEmail = document.getElementById('editEmail').value.trim();
-            const newPassInput = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 【修正 1】：將輸入的舊密碼轉為 Base64 後，比對 Session 裡的加密碼
+            // 驗證比對 (Base64)
             if (btoa(oldPassInput) !== String(user.password).trim()) {
-                alert("❌ 驗證失敗：舊密碼輸入錯誤");
+                alert("❌ 驗證失敗：舊密碼錯誤");
                 return;
             }
 
             btn.disabled = true;
             btn.innerText = "同步更新中...";
 
-            const updateFields = { email: newEmail };
-            
-            // 【修正 2】：新密碼也必須加密後再送回後端
-            if (newPassInput !== "") {
-                updateFields.password = btoa(newPassInput);
-            }
+            const updateFields = { email: document.getElementById('editEmail').value.trim() };
+            const newPass = document.getElementById('editPassword').value.trim();
+            if (newPass !== "") updateFields.password = btoa(newPass);
 
             try {
-                // 使用 POST 提交更新
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        currentPhone: user.phone,
-                        newData: updateFields
-                    })
+                    body: JSON.stringify({ currentPhone: user.phone, newData: updateFields })
                 });
-                
-                alert("✅ 資料修改成功！請重新登入以啟動新設定。");
+                alert("✅ 資料修改成功！");
                 logout();
             } catch (e) {
-                // 通常 GAS 會因跨域報錯，但後端其實已經更新成功，故同樣執行登出
-                alert("修改指令已送出，請嘗試重新登入。");
+                alert("指令已送出，請嘗試重新登入。");
                 logout();
             }
         }

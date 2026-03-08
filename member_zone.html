@@ -53,21 +53,21 @@
             <div onclick="openRemoteLink('reading_folder_url')" class="group bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm hover:border-emerald-200 transition cursor-pointer">
                 <div class="text-emerald-800 text-3xl mb-4 group-hover:scale-110 transition"><i class="fas fa-book-reader"></i></div>
                 <h3 class="font-bold text-lg text-emerald-900">導讀資料庫</h3>
-                <p class="text-gray-400 text-sm mt-2">歷年手冊與書單</p>
+                <p class="text-gray-400 text-sm mt-2">歷年手冊、簡報與書單</p>
                 <div class="mt-4 text-emerald-700 text-xs font-bold">點擊進入 <i class="fas fa-external-link-alt ml-1"></i></div>
             </div>
 
             <div onclick="openRemoteLink('photo_gallery_url')" class="group bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm hover:border-emerald-200 transition cursor-pointer">
                 <div class="text-orange-600 text-3xl mb-4 group-hover:scale-110 transition"><i class="fas fa-camera-retro"></i></div>
                 <h3 class="font-bold text-lg text-emerald-900">活動剪影</h3>
-                <p class="text-gray-400 text-sm mt-2">紀錄聚會美好瞬間</p>
+                <p class="text-gray-400 text-sm mt-2">紀錄聚會的美好瞬間</p>
                 <div class="mt-4 text-orange-600 text-xs font-bold">瀏覽相簿 <i class="fas fa-external-link-alt ml-1"></i></div>
             </div>
 
             <div onclick="openEditModal()" class="emerald-gradient p-8 rounded-[2rem] shadow-xl text-white hover:brightness-110 transition cursor-pointer">
                 <div class="text-emerald-200 text-3xl mb-4"><i class="fas fa-user-cog"></i></div>
                 <h3 class="font-bold text-lg">帳號安全性</h3>
-                <p class="text-emerald-100/60 text-sm mt-2">修改密碼與信箱</p>
+                <p class="text-emerald-100/60 text-sm mt-2">修改密碼與聯絡信箱</p>
                 <div class="mt-4 text-white/80 text-xs font-bold">變更設定 <i class="fas fa-chevron-right ml-1"></i></div>
             </div>
         </div>
@@ -80,17 +80,17 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-xs font-bold text-emerald-800 ml-1">驗證舊密碼 <span class="text-red-500">*</span></label>
-                    <input id="oldPassword" type="password" placeholder="輸入目前登入密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
+                    <input id="oldPassword" type="password" placeholder="請輸入目前的密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <div>
                     <label class="text-xs font-bold text-gray-400 ml-1">電子郵件</label>
                     <input id="editEmail" type="email" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不改則留空)</label>
-                    <input id="editPassword" type="password" placeholder="請輸入新密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
+                    <label class="text-xs font-bold text-gray-400 ml-1">新密碼 (不填則不修改)</label>
+                    <input id="editPassword" type="password" placeholder="若要修改請輸入新密碼" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500">
                 </div>
-                <button id="updateBtn" onclick="submitUpdate()" class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg mt-2 shadow-lg">確認儲存</button>
+                <button id="updateBtn" onclick="submitUpdate()" class="w-full emerald-gradient text-white py-4 rounded-2xl font-bold text-lg mt-2 shadow-lg">儲存變更</button>
             </div>
         </div>
     </div>
@@ -107,6 +107,7 @@
             document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
             document.getElementById('welcomeName').innerText = user.name;
 
+            // 顯示職稱與幹部入口
             const titleStr = String(user.title || '').trim();
             if (titleStr !== "" && titleStr !== "undefined") {
                 document.getElementById('userTitleTag').innerText = `職稱：${titleStr}`;
@@ -115,18 +116,17 @@
             syncCloudData();
         };
 
+        // 修正公告與連結同步邏輯
         async function syncCloudData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // 讀取公告邏輯
-                if (data.news) {
-                    document.getElementById('dynamicNews').innerText = data.news;
-                } else if (data.system && data.system.news) {
-                    document.getElementById('dynamicNews').innerText = data.system.news;
+                // 對應 System 工作表中的 latest_news 鍵值
+                if (data.system && data.system.latest_news) {
+                    document.getElementById('dynamicNews').innerText = data.system.latest_news;
                 } else {
-                    document.getElementById('dynamicNews').innerText = "歡迎參加築心讀書會。";
+                    document.getElementById('dynamicNews').innerText = data.news || "歡迎參加讀書會";
                 }
                 
                 remoteConfig = data.config || {};
@@ -145,7 +145,9 @@
         }
 
         function openEditModal() {
-            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            const userStr = sessionStorage.getItem('userInfo');
+            if(!userStr) return;
+            const user = JSON.parse(userStr);
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editProfileModal').classList.remove('hidden');
         }
@@ -153,30 +155,33 @@
         function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
 
         async function submitUpdate() {
-            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            const userStr = sessionStorage.getItem('userInfo');
+            if (!userStr) { alert("會話過期，請重新登入"); logout(); return; }
+            
+            const user = JSON.parse(userStr);
             const oldPassInput = document.getElementById('oldPassword').value.trim();
             const newEmail = document.getElementById('editEmail').value.trim();
             const newPassInput = document.getElementById('editPassword').value.trim();
             const btn = document.getElementById('updateBtn');
 
-            // 【關鍵調試】
-            const encryptedInput = btoa(oldPassInput);
-            const savedPassword = String(user.password).trim();
-
-            if (encryptedInput !== savedPassword) {
-                alert(`❌ 驗證失敗：舊密碼錯誤`);
+            // 【修正 1】：將輸入的舊密碼轉為 Base64 後，比對 Session 裡的加密碼
+            if (btoa(oldPassInput) !== String(user.password).trim()) {
+                alert("❌ 驗證失敗：舊密碼輸入錯誤");
                 return;
             }
 
             btn.disabled = true;
-            btn.innerText = "連線中...";
+            btn.innerText = "同步更新中...";
 
             const updateFields = { email: newEmail };
+            
+            // 【修正 2】：新密碼也必須加密後再送回後端
             if (newPassInput !== "") {
                 updateFields.password = btoa(newPassInput);
             }
 
             try {
+                // 使用 POST 提交更新
                 await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({
@@ -185,10 +190,11 @@
                     })
                 });
                 
-                alert("✅ 修改成功！下次請使用新密碼登入。");
+                alert("✅ 資料修改成功！請重新登入以啟動新設定。");
                 logout();
             } catch (e) {
-                alert("指令已送出，請嘗試重新登入。");
+                // 通常 GAS 會因跨域報錯，但後端其實已經更新成功，故同樣執行登出
+                alert("修改指令已送出，請嘗試重新登入。");
                 logout();
             }
         }

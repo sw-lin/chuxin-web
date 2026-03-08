@@ -14,12 +14,8 @@
         @keyframes fade { from {opacity: .4} to {opacity: 1} }
         @media (max-width: 640px) { .slide { height: 350px; } }
         
-        /* 彈窗內容樣式優化 */
-        #about-text-container p { margin-bottom: 1.5rem; line-height: 1.9; text-align: justify; }
-        #about-text-container h5 { 
-            color: #064E3B; font-weight: bold; font-size: 1.25rem; margin-top: 2rem; margin-bottom: 1rem;
-            border-left: 4px solid #059669; padding-left: 1rem;
-        }
+        #about-text-container p { margin-bottom: 1.2rem; line-height: 1.8; text-align: justify; }
+        #about-text-container strong { color: #064E3B; display: block; margin-top: 1.5rem; font-size: 1.2rem; border-left: 4px solid #059669; padding-left: 0.8rem; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -28,156 +24,119 @@
     <nav class="sticky top-0 bg-white/90 backdrop-blur-md z-50 shadow-sm px-4 md:px-6 py-4 flex justify-between items-center">
         <div class="flex items-center space-x-2">
             <i class="fas fa-leaf text-emerald-700 text-xl"></i>
-            <span class="text-lg md:text-xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
+            <span class="text-lg md:text-xl font-bold text-emerald-900">築心讀書會</span>
         </div>
-        <div class="flex items-center space-x-4 md:space-x-8">
-            <button onclick="window.loadAndShowAbout()" class="text-gray-600 hover:text-emerald-700 flex flex-col md:flex-row items-center transition">
-                <i class="fas fa-info-circle text-lg md:mr-1"></i>
+        <div class="flex items-center space-x-4">
+            <button onclick="window.loadAndShowAbout()" class="text-gray-600 hover:text-emerald-700 flex flex-col items-center">
+                <i class="fas fa-info-circle text-lg"></i>
                 <span class="text-[10px] md:text-base font-medium">關於我們</span>
             </button>
-            <a href="#register" class="text-gray-600 hover:text-emerald-700 flex flex-col md:flex-row items-center transition">
-                <i class="fas fa-edit text-lg md:mr-1"></i>
-                <span class="text-[10px] md:text-base font-medium">報名表</span>
-            </a>
             <button onclick="document.getElementById('login-modal').classList.remove('hidden')" 
-                    class="bg-emerald-800 text-white px-3 py-1.5 md:px-6 md:py-2 rounded-full text-xs md:text-sm font-bold hover:bg-emerald-900 transition shadow-md">
+                    class="bg-emerald-800 text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-md">
                 登入會館
             </button>
         </div>
     </nav>
 
     <div class="relative overflow-hidden bg-emerald-900">
-        <div class="hero-gradient absolute inset-0 z-10"></div>
-        <img class="slide" src="1.jpg" alt="Slide 1">
-        <img class="slide" src="2.jpg" alt="Slide 2">
-        <img class="slide" src="3.jpg" alt="Slide 3">
-        <img class="slide" src="4.jpg" alt="Slide 4">
-        <img class="slide" src="5.jpg" alt="Slide 5">
+        <img class="slide" src="1.jpg" style="display:block;">
+        <img class="slide" src="2.jpg">
+        <img class="slide" src="3.jpg">
         <div class="absolute inset-0 z-20 flex flex-col items-center justify-center text-white p-6 text-center">
             <h2 class="text-3xl md:text-5xl font-bold mb-4 tracking-widest">在共讀中築心</h2>
-            <p class="text-lg md:text-xl opacity-90 max-w-xl italic">於陪伴中成長 ... </p>
         </div>
     </div>
 
     <section class="max-w-6xl mx-auto px-6 py-16">
         <div class="flex items-center justify-center space-x-4 mb-12">
-            <div class="h-px bg-emerald-200 w-12"></div>
-            <h3 class="text-2xl font-bold text-emerald-900 tracking-widest uppercase">Coming Soon</h3>
-            <div class="h-px bg-emerald-200 w-12"></div>
+            <h3 class="text-2xl font-bold text-emerald-900 tracking-widest">COMING SOON</h3>
         </div>
         <div id="event-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="animate-pulse bg-gray-100 h-40 rounded-3xl text-center flex items-center justify-center text-gray-400">載入中...</div>
+            <div class="text-center text-gray-400 py-10 w-full col-span-full">正在連線至資料庫...</div>
         </div>
     </section>
 
-    <section id="register" class="bg-emerald-50 py-16 px-6">
-        <div class="max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-emerald-100">
-            <h3 class="text-2xl font-bold text-emerald-900 mb-8 text-center">加入讀書會</h3>
-            <form action="https://formspree.io/f/xpqjvblg" method="POST" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">真實姓名</label>
-                    <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">手機號碼</label>
-                    <input type="tel" name="phone" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">電子郵件</label>
-                    <input type="email" name="_replyto" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white outline-none">
-                </div>
-                <button type="submit" class="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-900 transition shadow-lg">提交申請</button>
-            </form>
-        </div>
-    </section>
-
-    <div id="about-modal" class="fixed inset-0 bg-emerald-900/80 backdrop-blur-md hidden z-[70] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl relative flex flex-col">
-            <div class="p-6 md:p-8 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/30">
-                <h4 class="text-2xl font-bold text-emerald-900">關於築心讀書會</h4>
-                <button onclick="window.toggleAbout(false)" class="text-gray-400 hover:text-emerald-700 text-3xl">
-                    <i class="fas fa-times-circle"></i>
-                </button>
+    <div id="about-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-emerald-50">
+                <h4 class="text-xl font-bold text-emerald-900">築心讀書會緣起</h4>
+                <button onclick="window.toggleAbout(false)" class="text-gray-400 text-2xl"><i class="fas fa-times-circle"></i></button>
             </div>
-            <div id="about-text-container" class="flex-1 overflow-y-auto p-8 md:p-12 text-gray-600 text-lg no-scrollbar">
-                正在讀取緣起故事...
-            </div>
-            <div class="p-6 bg-gray-50 text-center">
-                <button onclick="window.toggleAbout(false)" class="bg-emerald-800 text-white px-12 py-3 rounded-full font-bold shadow-md hover:bg-emerald-900 transition">已閱閉</button>
+            <div id="about-text-container" class="flex-1 overflow-y-auto p-8 text-gray-600 no-scrollbar">
+                讀取中...
             </div>
         </div>
     </div>
 
-    <div id="login-modal" class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 shadow-2xl relative">
-            <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="absolute top-6 right-6 text-gray-300 hover:text-gray-500 text-xl"><i class="fas fa-times"></i></button>
-            <div class="text-center mb-8"><h4 class="text-2xl font-bold text-emerald-900">會員登入</h4></div>
-            <div class="space-y-4">
-                <input id="userPhone" type="text" placeholder="手機號碼" class="w-full px-6 py-4 bg-stone-50 rounded-2xl outline-none">
-                <input id="userPass" type="password" placeholder="登入密碼" class="w-full px-6 py-4 bg-stone-50 rounded-2xl outline-none">
-                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg">進入會館</button>
-            </div>
+    <div id="login-modal" class="fixed inset-0 bg-black/60 hidden z-[110] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-sm p-8 shadow-2xl relative">
+            <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="absolute top-6 right-6 text-gray-300"><i class="fas fa-times"></i></button>
+            <h4 class="text-xl font-bold text-emerald-900 mb-6 text-center">會員登入</h4>
+            <input id="userPhone" type="text" placeholder="手機號碼" class="w-full px-4 py-3 bg-gray-50 rounded-xl mb-4 outline-none">
+            <input id="userPass" type="password" placeholder="登入密碼" class="w-full px-4 py-3 bg-gray-50 rounded-xl mb-6 outline-none">
+            <button id="loginBtn" onclick="window.handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold">進入會館</button>
         </div>
     </div>
 
     <script>
-        // 確保所有函數都掛載在 window 上，解決 "not defined" 報錯
+        // 設定全域變數與函數
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
+
         window.toggleAbout = function(show) {
-            const modal = document.getElementById('about-modal');
-            if (modal) {
-                modal.classList.toggle('hidden', !show);
-                document.body.style.overflow = show ? 'hidden' : 'auto';
-            }
+            document.getElementById('about-modal').classList.toggle('hidden', !show);
         };
 
         window.loadAndShowAbout = async function() {
-            const container = document.getElementById('about-text-container');
             window.toggleAbout(true);
+            const container = document.getElementById('about-text-container');
             try {
-                const response = await fetch('about.txt?v=' + Date.now()); // 加上 v=Date.now 避免快取舊內容
-                if (!response.ok) throw new Error();
-                const text = await response.text();
-                
-                // 自動優化格式邏輯
-                const formattedHtml = text.split(/\n\s*\n/).map(para => {
-                    const trimmed = para.trim();
-                    if (!trimmed) return '';
-                    if (trimmed.includes(':') || trimmed.includes('：') || trimmed.length < 15) {
-                        return `<h5>${trimmed}</h5>`;
-                    }
-                    return `<p>${trimmed.replace(/\n/g, '')}</p>`;
+                const res = await fetch('about.txt?t=' + new Date().getTime());
+                const text = await res.text();
+                // 簡易排版轉換
+                container.innerHTML = text.split('\n').map(l => {
+                    let line = l.trim();
+                    if(!line) return '';
+                    return (line.length < 10 || line.includes(':')) ? `<strong>${line}</strong>` : `<p>${line}</p>`;
                 }).join('');
-
-                container.innerHTML = formattedHtml || text;
-            } catch (err) {
-                container.innerHTML = `<p class="text-center text-red-500">無法讀取 about.txt，請確認檔案與 index.html 放在同一目錄中。</p>`;
-            }
+            } catch (e) { container.innerText = "讀取失敗，請確認 about.txt 是否上傳。"; }
         };
 
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-
-        async function initPage() {
+        window.handleLogin = async function() {
+            const u = document.getElementById('userPhone').value.trim();
+            const p = document.getElementById('userPass').value.trim();
+            if(!u || !p) return alert('請填寫完整資訊');
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.innerText = '驗證中...';
             try {
-                const response = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await response.json();
-                const now = new Date();
-                const comingSoon = data.calendar
-                    .filter(ev => new Date(ev.dateText) >= now)
-                    .slice(0, 4);
+                const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
+                const data = await res.json();
+                const found = data.users.find(user => user.phone == u && user.password == btoa(p));
+                if (found) {
+                    sessionStorage.setItem('userInfo', JSON.stringify(found));
+                    window.location.href = 'member_zone.html';
+                } else { alert('手機或密碼有誤'); btn.disabled = false; btn.innerText = '進入會館'; }
+            } catch (e) { alert('連線失敗'); btn.disabled = false; btn.innerText = '進入會館'; }
+        };
 
+        // 頁面初始化
+        async function init() {
+            try {
+                const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
+                const data = await res.json();
                 const grid = document.getElementById('event-grid');
-                if (comingSoon.length > 0) {
-                    grid.innerHTML = comingSoon.map(ev => `
-                        <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
-                            <div class="text-emerald-600 font-bold mb-2">${ev.dateText}</div>
-                            <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
-                            <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-3 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
+                if (data.calendar && data.calendar.length > 0) {
+                    grid.innerHTML = data.calendar.slice(0, 4).map(ev => `
+                        <div class="bg-white p-6 rounded-3xl border border-emerald-50 shadow-sm text-center">
+                            <div class="text-emerald-600 font-bold mb-1">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold">${ev.title}</div>
                         </div>
                     `).join('');
                 } else {
-                    grid.innerHTML = `<p class="col-span-full text-center text-gray-400 italic">目前暫無近期活動規劃</p>`;
+                    document.getElementById('event-grid').innerHTML = '<div class="col-span-full text-center text-gray-400">目前沒有進行中的活動</div>';
                 }
-            } catch (err) { console.error("載入失敗", err); }
+            } catch (e) { 
+                document.getElementById('event-grid').innerHTML = '<div class="col-span-full text-center text-gray-400">暫時無法連線至活動列表</div>';
+            }
         }
 
         let slideIndex = 0;
@@ -186,9 +145,11 @@
             for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
             slideIndex++;
             if (slideIndex > slides.length) slideIndex = 1;
-            if (slides[slideIndex-1]) slides[slideIndex-1].style.display = "block";
-            setTimeout(showSlides, 4000);
+            if(slides[slideIndex-1]) slides[slideIndex-1].style.display = "block";
+            setTimeout(showSlides, 3000);
         }
 
-        window.handleLogin = async function() {
-            let u = document.getElementById('userPhone').value.
+        window.onload = () => { showSlides(); init(); };
+    </script>
+</body>
+</html>

@@ -3,230 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>築心管理後台 | 系統修復版</title>
+    <title>幹部專區 | 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAFC; }
-        .sidebar-item.active { background-color: #064E3B; color: white; }
-        .loading-overlay { background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); }
+        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAF9; }
+        .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body class="min-h-screen">
 
-    <aside class="w-64 bg-white shadow-xl flex flex-col z-50 border-r">
-        <div class="p-8 border-b">
-            <h1 class="text-2xl font-bold text-emerald-900 tracking-tighter">築心管理</h1>
-            <div class="text-[10px] text-emerald-600 font-bold tracking-widest uppercase mt-1 text-center bg-emerald-50 py-1 rounded">System Admin</div>
-        </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <button onclick="showTab('members')" id="btn-members" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center active"><i class="fas fa-users mr-3"></i> 會員/繳費</button>
-            <button onclick="showTab('news')" id="btn-news" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-bullhorn mr-3"></i> 公告更新</button>
-            <button onclick="showTab('calendar')" id="btn-calendar" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-calendar-alt mr-3"></i> 行事曆管理</button>
-            <button onclick="showTab('config')" id="btn-config" class="sidebar-item w-full text-left p-4 rounded-2xl transition flex items-center"><i class="fas fa-cog mr-3"></i> 系統連結</button>
-        </nav>
-        <div class="p-6 border-t">
-            <a href="member_zone.html" class="flex items-center justify-center w-full py-3 text-sm font-bold text-gray-500 hover:text-emerald-800 transition"><i class="fas fa-arrow-left mr-2"></i> 返回專區</a>
-        </div>
-    </aside>
-
-    <main class="flex-1 p-12 relative">
-        <div id="loader" class="loading-overlay absolute inset-0 z-10 flex items-center justify-center hidden">
-            <div class="text-emerald-800 font-bold flex flex-col items-center">
-                <i class="fas fa-circle-notch fa-spin text-4xl mb-2"></i>
-                同步雲端資料中...
+    <nav class="admin-gradient text-white px-6 py-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-user-shield text-orange-400 text-xl"></i>
+                <span class="text-xl font-bold tracking-widest">幹部管理中樞</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="member_zone.html" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition border border-white/20">回會員頁</a>
             </div>
         </div>
+    </nav>
 
-        <div id="tab-members" class="tab-content">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-bold text-emerald-900">會員名冊</h2>
-                <button onclick="toggleModal('addMemberModal', true)" class="bg-emerald-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg">新增會員</button>
-            </div>
-            <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-50 border-b">
-                        <tr><th class="p-6">姓名</th><th class="p-6">手機</th><th class="p-6 text-center">繳費</th><th class="p-6 text-right">操作</th></tr>
-                    </thead>
-                    <tbody id="memberListTable" class="divide-y divide-gray-50"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="tab-calendar" class="tab-content hidden">
-            <h2 class="text-3xl font-bold text-emerald-900 mb-8">行事曆管理</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                    <h3 class="font-bold mb-6">新增活動</h3>
-                    <div class="space-y-4">
-                        <input id="calDate" type="date" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                        <input id="calTitle" type="text" placeholder="活動標題" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                        <button onclick="handleCalendarSubmit()" class="w-full bg-emerald-900 text-white py-4 rounded-2xl font-bold">確認新增</button>
+    <main class="max-w-6xl mx-auto px-6 py-10">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            
+            <div class="lg:col-span-2 space-y-10">
+                
+                <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-emerald-50">
+                    <h2 class="text-2xl font-bold text-emerald-900 mb-6 flex items-center">
+                        <i class="fas fa-edit mr-3 text-orange-500"></i> 發布最新公告
+                    </h2>
+                    <div class="space-y-6">
+                        <textarea id="newsContent" rows="4" class="w-full p-6 bg-stone-50 rounded-[1.5rem] border border-stone-100 outline-none focus:border-emerald-500 transition text-lg" placeholder="請在此輸入公告內容..."></textarea>
+                        <button onclick="publishNews()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-900 transition shadow-lg">發布公告</button>
                     </div>
                 </div>
-                <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                    <h3 class="font-bold mb-6 text-emerald-800">目前行程清單</h3>
-                    <div id="calendarList" class="space-y-3 overflow-y-auto max-h-[400px]"></div>
+
+                <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-emerald-50">
+                    <h2 class="text-2xl font-bold text-emerald-900 mb-6 flex items-center">
+                        <i class="fas fa-calendar-alt mr-3 text-emerald-600"></i> 行事曆與簽到 QR Code
+                    </h2>
+                    <div id="calendarList" class="space-y-4">
+                        <p class="text-gray-400 animate-pulse">正在讀取行事曆...</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="tab-config" class="tab-content hidden">
-            <h2 class="text-3xl font-bold text-emerald-900 mb-8">系統連結管理</h2>
-            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 max-w-xl space-y-8">
-                <div>
-                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase">導讀資料夾網址</label>
-                    <input id="cfg_reading" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-4 text-sm font-mono">
-                    <button onclick="handleConfigSave('reading_folder_url', 'cfg_reading')" class="bg-emerald-100 text-emerald-800 px-6 py-2 rounded-xl font-bold">確認修改導讀連結</button>
+            <div class="space-y-10">
+                <div class="bg-emerald-900 text-white p-8 rounded-[2.5rem] shadow-xl">
+                    <h3 class="font-bold text-xl mb-6 flex items-center">
+                        <i class="fas fa-users mr-2 text-orange-400"></i> 勤學排行榜
+                    </h3>
+                    <div id="rankingList" class="space-y-4">
+                        <p class="text-emerald-100/50 text-sm italic text-center">計算中...</p>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-orange-800 mb-2 uppercase">活動相簿網址</label>
-                    <input id="cfg_photo" type="text" class="w-full p-4 bg-gray-50 border rounded-2xl mb-4 text-sm font-mono">
-                    <button onclick="handleConfigSave('photo_gallery_url', 'cfg_photo')" class="bg-orange-100 text-orange-800 px-6 py-2 rounded-xl font-bold">確認修改照片連結</button>
-                </div>
-            </div>
-        </div>
 
-        <div id="tab-news" class="tab-content hidden">
-            <h2 class="text-3xl font-bold text-emerald-900 mb-8">首頁公告更新</h2>
-            <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 max-w-2xl">
-                <textarea id="newsContent" rows="5" class="w-full p-6 bg-gray-50 border rounded-2xl outline-none mb-6" placeholder="輸入公告內容..."></textarea>
-                <button onclick="handleNewsSubmit()" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-bold shadow-xl">立即更新公告</button>
+                <div class="bg-stone-100 p-8 rounded-[2.5rem] border border-stone-200">
+                    <h3 class="font-bold text-emerald-900 mb-4">使用說明</h3>
+                    <ul class="text-sm text-stone-600 space-y-3">
+                        <li>• <b>公告：</b> 會立即更新於會員首頁。</li>
+                        <li>• <b>QR Code：</b> 點擊行事曆旁的按鈕即可下載該活動的報到碼。</li>
+                        <li>• <b>報到碼網址：</b> 自動指向您的 checkin.html 頁面。</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </main>
 
-    <div id="addMemberModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10">
-            <h3 class="text-2xl font-bold text-emerald-900 mb-6">新增會員資料</h3>
-            <div class="space-y-4">
-                <input id="addName" type="text" placeholder="姓名" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                <input id="addPhone" type="text" placeholder="手機 (帳號)" class="w-full p-4 bg-gray-50 border rounded-2xl">
-                <button onclick="handleAddMember()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold">確認新增</button>
-                <button onclick="toggleModal('addMemberModal', false)" class="w-full text-gray-400 text-sm">關閉</button>
+    <div id="qrModal" class="fixed inset-0 bg-black/80 hidden z-[60] flex items-center justify-center p-6 backdrop-blur-md">
+        <div class="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center">
+            <h3 id="qrTitle" class="text-xl font-bold text-emerald-900 mb-4">活動簽到碼</h3>
+            <div id="qrcode" class="flex justify-center mb-6"></div>
+            <p id="qrDate" class="text-gray-500 mb-6 font-mono"></p>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="closeQR()" class="bg-gray-100 text-gray-600 py-3 rounded-xl font-bold">關閉</button>
+                <button onclick="downloadQR()" class="bg-orange-600 text-white py-3 rounded-xl font-bold">下載圖片</button>
             </div>
         </div>
     </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-        let localData = { users: [], calendar: [], config: {} };
+        const CHECKIN_PAGE_URL = "https://您的網址.github.io/checkin.html"; // <--- 這裡請填入您的 checkin.html 完整網址
 
-        // 初始化
-        window.onload = () => syncAll();
+        let allData = {};
 
-        async function syncAll() {
-            showLoader(true);
+        window.onload = () => {
+            fetchData();
+        };
+
+        async function fetchData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                localData = await res.json();
-                renderMembers();
+                allData = await res.json();
                 renderCalendar();
-                document.getElementById('cfg_reading').value = localData.config.reading_folder_url || '';
-                document.getElementById('cfg_photo').value = localData.config.photo_gallery_url || '';
-            } catch (e) {
-                console.error(e);
-                alert("資料同步失敗，請檢查網路或 GAS 權限。");
-            }
-            showLoader(false);
+                renderRanking();
+            } catch (e) { console.error("資料讀取失敗", e); }
         }
 
-        function renderMembers() {
-            const tbody = document.getElementById('memberListTable');
-            tbody.innerHTML = localData.users.map(u => `
-                <tr class="hover:bg-gray-50">
-                    <td class="p-6 font-bold text-emerald-900">${u.name}</td>
-                    <td class="p-6 font-mono">${u.phone}</td>
-                    <td class="p-6 text-center">
-                        <button onclick="handlePaidToggle('${u.phone}', '${u.paid}')" class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${u.paid === 'Y' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-500'}">
-                            ${u.paid === 'Y' ? 'Paid' : 'Unpaid'}
-                        </button>
-                    </td>
-                    <td class="p-6 text-right">
-                        <button onclick="handleMemberDelete('${u.phone}', '${u.name}')" class="text-gray-300 hover:text-red-500"><i class="far fa-trash-alt"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
+        // 渲染行事曆並提供 QR Code 按鈕
         function renderCalendar() {
-            const list = document.getElementById('calendarList');
-            list.innerHTML = localData.calendar.map(item => `
-                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <div>
-                        <div class="text-xs font-bold text-emerald-600">${item.dateText}</div>
-                        <div class="font-bold text-emerald-900">${item.title}</div>
+            const container = document.getElementById('calendarList');
+            if (!allData.calendar || allData.calendar.length === 0) {
+                container.innerHTML = "<p class='text-gray-400'>目前無活動紀錄。</p>";
+                return;
+            }
+
+            container.innerHTML = allData.calendar.map(item => `
+                <div class="flex items-center justify-between p-5 bg-stone-50 rounded-2xl border border-stone-100 card-hover">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-center bg-white px-3 py-1 rounded-lg border shadow-sm">
+                            <div class="text-[10px] text-gray-400 font-bold uppercase">${item.dateText.split('-')[1]}月</div>
+                            <div class="text-lg font-bold text-emerald-800">${item.dateText.split('-')[2]}</div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-emerald-900">${item.title}</div>
+                            <div class="text-xs text-gray-400 font-mono">${item.dateText}</div>
+                        </div>
                     </div>
-                    <button onclick="handleEventDelete('${item.dateObj}', '${item.title}')" class="text-red-300 hover:text-red-500 p-2"><i class="fas fa-times"></i></button>
+                    <button onclick="generateQR('${item.dateText}', '${item.title}')" class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-200 transition">
+                        <i class="fas fa-qrcode mr-1"></i> 報到碼
+                    </button>
                 </div>
             `).join('');
         }
 
-        // --- 功能執行函式 (均加入確認機制與防死機) ---
-        async function apiPost(payload) {
-            showLoader(true);
-            try {
-                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                // 因為 no-cors 無法取得回傳值，我們直接延遲 1 秒後重新同步
-                setTimeout(syncAll, 1200);
-            } catch (e) {
-                alert("操作失敗");
-                showLoader(false);
+        // 渲染勤學排行榜 (出席次數前 5 名)
+        function renderRanking() {
+            const container = document.getElementById('rankingList');
+            const sortedUsers = [...allData.users]
+                .sort((a, b) => b.attCount - a.attCount)
+                .slice(0, 5);
+
+            container.innerHTML = sortedUsers.map((u, index) => `
+                <div class="flex items-center justify-between bg-white/10 p-4 rounded-xl">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-orange-400 font-bold w-5">#${index+1}</span>
+                        <span class="font-bold">${u.name}</span>
+                    </div>
+                    <div class="text-xs bg-emerald-700 px-2 py-1 rounded-md">出席 ${u.attCount} 次</div>
+                </div>
+            `).join('');
+        }
+
+        // 產生 QR Code
+        function generateQR(date, title) {
+            document.getElementById('qrTitle').innerText = title;
+            document.getElementById('qrDate').innerText = date;
+            document.getElementById('qrcode').innerHTML = ""; // 清空舊的
+            
+            // 構建報到網址，例如: checkin.html?event=2026-03-20
+            const fullUrl = `${CHECKIN_PAGE_URL}?event=${date}`;
+            
+            new QRCode(document.getElementById("qrcode"), {
+                text: fullUrl,
+                width: 200,
+                height: 200,
+                colorDark : "#064E3B",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }
+
+        function downloadQR() {
+            const img = document.querySelector('#qrcode img');
+            if (img) {
+                const link = document.createElement('a');
+                link.download = `簽到碼-${document.getElementById('qrDate').innerText}.png`;
+                link.href = img.src;
+                link.click();
             }
         }
 
-        function handleAddMember() {
-            const name = document.getElementById('addName').value.trim();
-            const phone = document.getElementById('addPhone').value.trim();
-            if(!name || !phone) return alert("請填寫姓名與電話");
-            apiPost({ type: "addMember", name, phone, password: "1234", email: "" });
-            toggleModal('addMemberModal', false);
-        }
-
-        function handleMemberDelete(phone, name) {
-            if(!confirm(`確定刪除「${name}」？此操作無法撤回且後續資料將自動遞補。`)) return;
-            apiPost({ type: "deleteMember", phone });
-        }
-
-        function handlePaidToggle(phone, current) {
-            const next = current === 'Y' ? 'N' : 'Y';
-            apiPost({ currentPhone: phone, newData: { paid: next } });
-        }
-
-        function handleCalendarSubmit() {
-            const date = document.getElementById('calDate').value;
-            const title = document.getElementById('calTitle').value;
-            if(!date || !title) return alert("請輸入完整行程資訊");
-            apiPost({ type: "updateCalendar", date, title, desc: "" });
-        }
-
-        function handleEventDelete(dateObj, title) {
-            if(!confirm(`確定刪除行程「${title}」？`)) return;
-            apiPost({ type: "deleteCalendar", dateObj });
-        }
-
-        function handleConfigSave(key, inputId) {
-            const val = document.getElementById(inputId).value.trim();
-            if(!confirm("確定要更新雲端連結？這將立即改變全體會員的存取位置。")) return;
-            apiPost({ type: "updateConfig", key, value: val });
-        }
-
-        function handleNewsSubmit() {
+        // 原有的發布公告功能
+        async function publishNews() {
             const content = document.getElementById('newsContent').value.trim();
-            if(!content) return alert("請輸入公告內容");
-            apiPost({ type: "updateNews", content });
-        }
+            if(!content) { alert("請輸入內容"); return; }
+            
+            const btn = document.querySelector('button[onclick="publishNews()"]');
+            btn.disabled = true;
+            btn.innerText = "發布中...";
 
-        // 基礎切換函式
-        function showTab(t) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-'+t).classList.remove('hidden');
-            document.getElementById('btn-'+t).classList.add('active');
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: "publish_news", content: content })
+                });
+                alert("公告已成功更新！");
+                location.reload();
+            } catch (e) {
+                alert("發布失敗，請再試一次。");
+                btn.disabled = false;
+                btn.innerText = "立即發布公告";
+            }
         }
-        function toggleModal(id, s) { document.getElementById(id).classList.toggle('hidden', !s); }
-        function showLoader(s) { document.getElementById('loader').classList.toggle('hidden', !s); }
     </script>
 </body>
 </html>

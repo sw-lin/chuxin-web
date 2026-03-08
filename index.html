@@ -14,9 +14,12 @@
         @keyframes fade { from {opacity: .4} to {opacity: 1} }
         @media (max-width: 640px) { .slide { height: 350px; } }
         
-        /* 關於我們內容樣式優化 */
-        #about-text-container p { margin-bottom: 1.2rem; line-height: 1.8; text-align: justify; }
-        #about-text-container strong { color: #064E3B; display: block; margin-top: 1.5rem; font-size: 1.2rem; border-left: 4px solid #059669; padding-left: 0.8rem; }
+        /* 彈窗內容樣式優化 */
+        #about-text-container p { margin-bottom: 1.5rem; line-height: 1.9; text-align: justify; }
+        #about-text-container h5 { 
+            color: #064E3B; font-weight: bold; font-size: 1.25rem; margin-top: 2rem; margin-bottom: 1rem;
+            border-left: 4px solid #059669; padding-left: 1rem;
+        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -28,7 +31,7 @@
             <span class="text-lg md:text-xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
         </div>
         <div class="flex items-center space-x-4 md:space-x-8">
-            <button onclick="loadAndShowAbout()" class="text-gray-600 hover:text-emerald-700 flex flex-col md:flex-row items-center transition">
+            <button onclick="window.loadAndShowAbout()" class="text-gray-600 hover:text-emerald-700 flex flex-col md:flex-row items-center transition">
                 <i class="fas fa-info-circle text-lg md:mr-1"></i>
                 <span class="text-[10px] md:text-base font-medium">關於我們</span>
             </button>
@@ -52,18 +55,19 @@
         <img class="slide" src="5.jpg" alt="Slide 5">
         <div class="absolute inset-0 z-20 flex flex-col items-center justify-center text-white p-6 text-center">
             <h2 class="text-3xl md:text-5xl font-bold mb-4 tracking-widest">在共讀中築心</h2>
-            <p class="text-lg md:text-xl opacity-90 max-w-xl italic">「文字如藥，可醫心靈之疾」</p>
+            <p class="text-lg md:text-xl opacity-90 max-w-xl italic">於陪伴中成長 ... </p>
         </div>
     </div>
 
     <section class="max-w-6xl mx-auto px-6 py-16">
         <div class="flex items-center justify-center space-x-4 mb-12">
             <div class="h-px bg-emerald-200 w-12"></div>
-            <h3 class="text-2xl font-bold text-emerald-900 tracking-widest">COMING SOON</h3>
+            <h3 class="text-2xl font-bold text-emerald-900 tracking-widest uppercase">Coming Soon</h3>
             <div class="h-px bg-emerald-200 w-12"></div>
         </div>
         <div id="event-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            </div>
+            <div class="animate-pulse bg-gray-100 h-40 rounded-3xl text-center flex items-center justify-center text-gray-400">載入中...</div>
+        </div>
     </section>
 
     <section id="register" class="bg-emerald-50 py-16 px-6">
@@ -72,15 +76,15 @@
             <form action="https://formspree.io/f/xpqjvblg" method="POST" class="space-y-6">
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">真實姓名</label>
-                    <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                    <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">手機號碼</label>
-                    <input type="tel" name="phone" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                    <input type="tel" name="phone" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">電子郵件</label>
-                    <input type="email" name="_replyto" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                    <input type="email" name="_replyto" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-stone-50 focus:bg-white outline-none">
                 </div>
                 <button type="submit" class="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-900 transition shadow-lg">提交申請</button>
             </form>
@@ -89,26 +93,26 @@
 
     <div id="about-modal" class="fixed inset-0 bg-emerald-900/80 backdrop-blur-md hidden z-[70] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl relative flex flex-col">
-            <div class="p-6 md:p-8 border-b border-emerald-50 flex justify-between items-center">
-                <h4 class="text-2xl font-bold text-emerald-900">關於我們</h4>
-                <button onclick="toggleAbout(false)" class="text-gray-400 hover:text-emerald-700 text-3xl transition">
+            <div class="p-6 md:p-8 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/30">
+                <h4 class="text-2xl font-bold text-emerald-900">關於築心讀書會</h4>
+                <button onclick="window.toggleAbout(false)" class="text-gray-400 hover:text-emerald-700 text-3xl">
                     <i class="fas fa-times-circle"></i>
                 </button>
             </div>
             <div id="about-text-container" class="flex-1 overflow-y-auto p-8 md:p-12 text-gray-600 text-lg no-scrollbar">
-                載入中...
+                正在讀取緣起故事...
             </div>
             <div class="p-6 bg-gray-50 text-center">
-                <button onclick="toggleAbout(false)" class="bg-emerald-800 text-white px-12 py-3 rounded-full font-bold shadow-md hover:bg-emerald-900">已閱閉</button>
+                <button onclick="window.toggleAbout(false)" class="bg-emerald-800 text-white px-12 py-3 rounded-full font-bold shadow-md hover:bg-emerald-900 transition">已閱閉</button>
             </div>
         </div>
     </div>
 
     <div id="login-modal" class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 shadow-2xl relative text-center">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 shadow-2xl relative">
             <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="absolute top-6 right-6 text-gray-300 hover:text-gray-500 text-xl"><i class="fas fa-times"></i></button>
-            <h4 class="text-2xl font-bold text-emerald-900 mb-8">會員登入</h4>
-            <div class="space-y-4 text-left">
+            <div class="text-center mb-8"><h4 class="text-2xl font-bold text-emerald-900">會員登入</h4></div>
+            <div class="space-y-4">
                 <input id="userPhone" type="text" placeholder="手機號碼" class="w-full px-6 py-4 bg-stone-50 rounded-2xl outline-none">
                 <input id="userPass" type="password" placeholder="登入密碼" class="w-full px-6 py-4 bg-stone-50 rounded-2xl outline-none">
                 <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg">進入會館</button>
@@ -117,36 +121,40 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-        
-        // 1. 強制確保 loadAndShowAbout 函數全域可讀
-        async function loadAndShowAbout() {
+        // 確保所有函數都掛載在 window 上，解決 "not defined" 報錯
+        window.toggleAbout = function(show) {
+            const modal = document.getElementById('about-modal');
+            if (modal) {
+                modal.classList.toggle('hidden', !show);
+                document.body.style.overflow = show ? 'hidden' : 'auto';
+            }
+        };
+
+        window.loadAndShowAbout = async function() {
             const container = document.getElementById('about-text-container');
-            toggleAbout(true);
+            window.toggleAbout(true);
             try {
-                const response = await fetch('about.txt');
+                const response = await fetch('about.txt?v=' + Date.now()); // 加上 v=Date.now 避免快取舊內容
+                if (!response.ok) throw new Error();
                 const text = await response.text();
                 
-                // 自動優化格式：將帶有冒號的短句視為標題
-                const formatted = text.split('\n').map(line => {
-                    const l = line.trim();
-                    if (!l) return '';
-                    if (l.endsWith(':') || l.endsWith('：') || l.length < 15) {
-                        return `<strong>${l}</strong>`;
+                // 自動優化格式邏輯
+                const formattedHtml = text.split(/\n\s*\n/).map(para => {
+                    const trimmed = para.trim();
+                    if (!trimmed) return '';
+                    if (trimmed.includes(':') || trimmed.includes('：') || trimmed.length < 15) {
+                        return `<h5>${trimmed}</h5>`;
                     }
-                    return `<p>${l}</p>`;
+                    return `<p>${trimmed.replace(/\n/g, '')}</p>`;
                 }).join('');
 
-                container.innerHTML = formatted;
+                container.innerHTML = formattedHtml || text;
             } catch (err) {
-                container.innerHTML = "無法載入簡介檔案，請檢查 about.txt 是否上傳。";
+                container.innerHTML = `<p class="text-center text-red-500">無法讀取 about.txt，請確認檔案與 index.html 放在同一目錄中。</p>`;
             }
-        }
+        };
 
-        function toggleAbout(show) {
-            document.getElementById('about-modal').classList.toggle('hidden', !show);
-            document.body.style.overflow = show ? 'hidden' : 'auto';
-        }
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
 
         async function initPage() {
             try {
@@ -167,7 +175,7 @@
                         </div>
                     `).join('');
                 } else {
-                    grid.innerHTML = `<p class="col-span-full text-center text-gray-400">目前暫無近期活動</p>`;
+                    grid.innerHTML = `<p class="col-span-full text-center text-gray-400 italic">目前暫無近期活動規劃</p>`;
                 }
             } catch (err) { console.error("載入失敗", err); }
         }
@@ -178,32 +186,9 @@
             for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
             slideIndex++;
             if (slideIndex > slides.length) slideIndex = 1;
-            slides[slideIndex-1].style.display = "block";
+            if (slides[slideIndex-1]) slides[slideIndex-1].style.display = "block";
             setTimeout(showSlides, 4000);
         }
 
-        async function handleLogin() {
-            let u = document.getElementById('userPhone').value.trim();
-            let p = document.getElementById('userPass').value.trim();
-            if(!u || !p) return alert('請填寫完整資訊');
-            const btn = document.getElementById('loginBtn');
-            btn.disabled = true; btn.innerHTML = '驗證中...';
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                const encryptedP = btoa(p); 
-                const foundUser = data.users.find(user => String(user.phone).trim() === u && String(user.password).trim() === encryptedP);
-                if (foundUser) {
-                    sessionStorage.setItem('userInfo', JSON.stringify(foundUser));
-                    window.location.href = 'member_zone.html';
-                } else {
-                    alert('帳號或密碼錯誤');
-                    btn.disabled = false; btn.innerHTML = "進入會館";
-                }
-            } catch (err) { alert('連線失敗'); btn.disabled = false; btn.innerHTML = "進入會館"; }
-        }
-
-        window.onload = () => { showSlides(); initPage(); };
-    </script>
-</body>
-</html>
+        window.handleLogin = async function() {
+            let u = document.getElementById('userPhone').value.

@@ -6,135 +6,182 @@
     <title>會員中心 | 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .glass-nav { background: #064E3B; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .progress-animation { transition: width 1.5s cubic-bezier(0.1, 0.5, 0.1, 1); }
     </style>
 </head>
 <body class="min-h-screen">
 
     <nav class="glass-nav text-white px-6 py-4 shadow-xl sticky top-0 z-40">
-        <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-                <a href="index.html" class="hover:text-emerald-200 transition-all text-xl"><i class="fas fa-home"></i></a>
-                <span class="text-xl font-bold tracking-widest border-l border-white/20 pl-4">築心會館</span>
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-leaf text-emerald-300"></i>
+                <span class="font-bold text-lg tracking-wider">築心會員館</span>
             </div>
-            <div class="flex items-center space-x-4 text-sm">
-                <span id="userNameDisplay">載入中...</span>
-                <button onclick="logout()" class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full border border-white/20 transition">登出</button>
-            </div>
+            <button onclick="logout()" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full transition">登出</button>
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        <div id="adminEntry" class="hidden">
-            <a href="staff_page.html" class="w-full inline-flex items-center justify-center bg-orange-600 text-white px-8 py-5 rounded-[2rem] font-bold hover:bg-orange-700 transition shadow-lg text-xl border-2 border-white/20">
-                <i class="fas fa-user-shield mr-3 text-2xl"></i> 進入幹部管理後台
+    <main class="max-w-4xl mx-auto p-6 space-y-8">
+        
+        <div class="bg-emerald-50 border border-emerald-100 rounded-3xl p-5 flex items-center space-x-4">
+            <div class="bg-white w-10 h-10 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                <i class="fas fa-bullhorn"></i>
+            </div>
+            <div class="flex-1 overflow-hidden">
+                <p id="news" class="text-emerald-900 font-medium truncate">正在同步最新公告...</p>
+            </div>
+        </div>
+
+        <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
+            <div class="relative z-10">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span id="userTitle" class="bg-emerald-300/20 px-3 py-1 rounded-full text-xs font-bold tracking-widest">載入中</span>
+                    <h2 id="userName" class="text-3xl font-bold tracking-wider">載入中...</h2>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <div>
+                        <p class="text-emerald-100/70 text-sm">學習參與率</p>
+                        <p id="attPercent" class="text-4xl font-black text-orange-300">0%</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-emerald-100/70 text-sm">已出席次數</p>
+                        <p id="attCountDisplay" class="text-4xl font-black text-white">0 <span class="text-lg text-emerald-100/50">/ 0</span></p>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <div class="w-full bg-white/20 h-2.5 rounded-full overflow-hidden">
+                        <div id="progressBar" class="h-full bg-orange-400 transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-8 rounded-[2rem] border border-emerald-50 hover:shadow-md transition text-center group">
+                <i class="fas fa-book-reader text-blue-600 text-3xl mb-4 block group-hover:scale-110 transition"></i>
+                <h3 class="font-bold text-emerald-900">導讀資料庫</h3>
+            </button>
+
+            <button onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-8 rounded-[2rem] border border-emerald-50 hover:shadow-md transition text-center group">
+                <i class="fas fa-images text-amber-600 text-3xl mb-4 block group-hover:scale-110 transition"></i>
+                <h3 class="font-bold text-emerald-900">活動剪影</h3>
+            </button>
+
+            <button onclick="openEditModal()" class="bg-stone-800 p-8 rounded-[2rem] hover:brightness-110 transition text-center group">
+                <i class="fas fa-user-cog text-stone-400 text-3xl mb-4 block group-hover:rotate-12 transition"></i>
+                <h3 class="font-bold text-white">修改資料</h3>
+            </button>
+        </div>
+
+        <div id="staffSection" class="hidden pt-10 border-t border-dashed border-gray-200 text-center">
+            <a href="staff_page.html" class="inline-flex items-center px-8 py-3 bg-emerald-700 text-white rounded-xl font-bold shadow-lg hover:bg-emerald-800 transition">
+                <i class="fas fa-user-shield mr-2"></i> 進入幹部管理後台
             </a>
         </div>
 
-        <section class="bg-white rounded-[2rem] p-8 border border-emerald-100 shadow-sm relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-2 h-full bg-orange-500"></div>
-            <h2 class="text-xl font-bold text-emerald-900 flex items-center mb-4">
-                <i class="fas fa-bullhorn mr-3 text-orange-500"></i> 最新消息
-            </h2>
-            <div id="dynamicNews" class="text-gray-600 italic">同步雲端公告中...</div>
-        </section>
+    </main>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
-            <div class="emerald-gradient p-8 rounded-[2rem] shadow-xl text-white">
-                <h3 class="font-bold text-lg mb-2">學習參與率</h3>
-                <div class="flex items-end space-x-2">
-                    <span id="attPercent" class="text-5xl font-extrabold text-orange-300">0%</span>
-                    <span id="attCountDisplay" class="text-emerald-100/80 text-sm mb-1">(0 / 0)</span>
+    <div id="editProfileModal" class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 shadow-2xl">
+            <h4 class="text-2xl font-bold text-emerald-900 mb-6">修改個人資料</h4>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">電子郵件</label>
+                    <input id="editEmail" type="email" class="w-full px-4 py-3 bg-stone-50 rounded-xl border outline-none">
                 </div>
-                <div class="w-full bg-white/20 h-2 rounded-full mt-5 overflow-hidden">
-                    <div id="attBar" class="bg-orange-400 h-full progress-animation" style="width: 0%"></div>
+                <div class="pt-4 border-t">
+                    <label class="block text-xs font-bold text-red-500 mb-1">驗證：請輸入原密碼</label>
+                    <input id="oldPassword" type="password" class="w-full px-4 py-3 bg-red-50/50 rounded-xl border border-red-100 outline-none">
                 </div>
-            </div>
-
-            <div onclick="startScanner()" class="bg-orange-500 p-8 rounded-[2rem] shadow-xl text-white hover:bg-orange-600 transition cursor-pointer flex flex-col items-center justify-center text-center group">
-                <i class="fas fa-qrcode text-5xl mb-4 group-hover:scale-110 transition"></i>
-                <h3 class="font-bold text-xl">點擊報到</h3>
-            </div>
-
-            <div onclick="openRemoteLink('reading_folder_url')" class="bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm cursor-pointer hover:border-emerald-200 transition flex flex-col justify-between">
-                <div><i class="fas fa-book-reader text-emerald-800 text-3xl mb-4"></i><h3 class="font-bold text-lg text-emerald-900">導讀資料庫</h3></div>
-                <div class="text-emerald-700 text-xs font-bold mt-4">點擊進入</div>
-            </div>
-            
-            <div onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm cursor-pointer hover:border-emerald-200 transition flex flex-col justify-between">
-                <div><i class="fas fa-camera-retro text-orange-600 text-3xl mb-4"></i><h3 class="font-bold text-lg text-emerald-900">活動剪影</h3></div>
-                <div class="text-orange-600 text-xs font-bold mt-4">瀏覽相簿</div>
-            </div>
-
-            <div onclick="openEditModal()" class="bg-stone-800 p-8 rounded-[2rem] shadow-xl text-white cursor-pointer hover:brightness-110 transition flex flex-col justify-between">
-                <div><i class="fas fa-user-cog text-stone-400 text-3xl mb-4"></i><h3 class="font-bold text-lg text-stone-100">個人資料修改</h3></div>
-                <div class="text-stone-400 text-xs font-bold mt-4">變更設定</div>
+                <div class="flex space-x-3 pt-4">
+                    <button onclick="closeEditModal()" class="flex-1 py-3 text-gray-400 font-bold">取消</button>
+                    <button id="updateBtn" onclick="submitUpdate()" class="flex-[2] bg-emerald-800 text-white py-3 rounded-xl font-bold">確認更新</button>
+                </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-        
-        window.onload = () => {
-            const userStr = sessionStorage.getItem('userInfo');
-            if (!userStr) { location.href = 'index.html'; return; }
-            const user = JSON.parse(userStr);
-            
-            document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
+        let remoteConfig = {};
 
-            // --- 🔒 強效權限邏輯：排除學員、排除空白、排除 undefined 字串 ---
-            const t = String(user.title || "").trim().toLowerCase();
-            if (t !== "" && t !== "undefined" && t !== "學員") {
-                const adminSection = document.getElementById('adminEntry');
-                if (adminSection) adminSection.classList.remove('hidden');
+        window.onload = () => {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            if (!user) { location.href = 'index.html'; return; }
+            
+            document.getElementById('userName').innerText = user.name;
+            document.getElementById('userTitle').innerText = user.title || '學員';
+
+            // --- 🔑 幹部權限檢查：只要有職稱且不是「學員」，就顯示進入 staff_page.html 的按鈕 ---
+            const t = String(user.title || "").trim();
+            if (t !== "" && t !== "學員") {
+                document.getElementById('staffSection').classList.remove('hidden');
             }
 
-            syncCloudData();
+            syncData();
         };
 
-        async function syncCloudData() {
+        async function syncData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 const user = JSON.parse(sessionStorage.getItem('userInfo'));
 
-                document.getElementById('dynamicNews').innerText = data.news || "歡迎參加讀書會";
+                document.getElementById('news').innerText = data.news || "歡迎來到築心會員館";
                 
-                // 學習紀錄計算...
                 const today = new Date().toISOString().split('T')[0];
-                const passedEvents = (data.calendar || []).filter(ev => {
-                    const isRequired = (ev.title + (ev.description || "")).includes('需報到');
-                    return ev.dateText <= today && isRequired;
+                const validEvents = (data.calendar || []).filter(ev => {
+                    return ev.dateText <= today && (ev.title + ev.description).includes('需報到');
                 }).length;
 
-                const currentUser = (data.users || []).find(u => String(u.phone) === String(user.phone));
-                const myCount = currentUser ? (currentUser.attCount || 0) : 0;
-                const percent = passedEvents > 0 ? Math.min(100, Math.round((myCount / passedEvents) * 100)) : 0;
+                const myCount = user.attCount || 0;
+                const percent = validEvents > 0 ? Math.min(100, Math.round((myCount / validEvents) * 100)) : 0;
 
                 document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerText = `(${myCount} / ${passedEvents})`;
-                const bar = document.getElementById('attBar');
-                if (bar) bar.style.width = percent + "%";
+                document.getElementById('attCountDisplay').innerHTML = `${myCount} <span class="text-lg text-emerald-100/50">/ ${validEvents}</span>`;
+                document.getElementById('progressBar').style.width = percent + "%";
                 
-                window.remoteConfig = data.config || {};
-            } catch (e) { console.error("同步失敗"); }
+                remoteConfig = data.config || {};
+            } catch (e) { console.error("同步異常"); }
         }
 
-        // logout, openRemoteLink, openEditModal 等其餘 Function 保持不變...
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
         function openRemoteLink(key) {
-            const url = window.remoteConfig ? window.remoteConfig[key] : null;
+            const url = remoteConfig[key];
             if (url && url.startsWith('http')) window.open(url, '_blank');
-            else alert("尚未設定連結");
+            else alert("連結尚未設定");
         }
-        function openEditModal() { document.getElementById('editProfileModal').classList.remove('hidden'); }
+        function openEditModal() {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+        function closeEditModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
+
+        async function submitUpdate() {
+            const user = JSON.parse(sessionStorage.getItem('userInfo'));
+            const oldP = document.getElementById('oldPassword').value.trim();
+            if (btoa(oldP) !== String(user.password).trim()) { alert("❌ 原密碼驗證錯誤"); return; }
+            
+            document.getElementById('updateBtn').innerText = "處理中...";
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        currentPhone: user.phone, 
+                        newData: { email: document.getElementById('editEmail').value.trim() } 
+                    })
+                });
+                alert("修改成功");
+                logout();
+            } catch (e) { alert("更新失敗"); }
+        }
     </script>
 </body>
 </html>

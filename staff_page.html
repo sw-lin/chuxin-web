@@ -13,6 +13,7 @@
         .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none; }
+        .btn-disabled { background-color: #F3F4F6 !important; color: #D1D5DB !important; cursor: not-allowed; border: 1px solid #E5E7EB; }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -66,7 +67,7 @@
                 <h3 class="text-xl font-bold mb-6 text-emerald-900"><i class="fas fa-user-plus mr-2"></i> 加入新成員</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input id="add-name" type="text" placeholder="姓名" class="p-3 bg-gray-50 rounded-xl border outline-none">
-                    <input id="add-phone" type="text" placeholder="手機 (帳號)" class="p-3 bg-gray-50 rounded-xl border outline-none">
+                    <input id="add-phone" type="text" placeholder="手機 (例: 0912...)" class="p-3 bg-gray-50 rounded-xl border outline-none">
                     <input id="add-pass" type="text" placeholder="初始密碼" class="p-3 bg-gray-50 rounded-xl border outline-none">
                     <button onclick="addMember()" class="bg-emerald-700 text-white rounded-xl font-bold hover:bg-emerald-800 transition">確認新增</button>
                 </div>
@@ -119,8 +120,7 @@
                         <i class="fas fa-redo-alt mr-1"></i> 期末清除報到紀錄
                     </button>
                 </div>
-                <div id="rankList" class="space-y-4">
-                    </div>
+                <div id="rankList" class="space-y-4"></div>
             </div>
         </div>
 
@@ -152,7 +152,7 @@
                 renderMembers();
                 renderCalendar();
                 renderRank();
-            } catch (e) { console.error(e); alert("連線失敗"); }
+            } catch (e) { alert("連線失敗"); }
         }
 
         function switchTab(tab) {
@@ -172,25 +172,18 @@
                 <tr class="border-t hover:bg-emerald-50/30 transition">
                     <td class="p-4">
                         <div class="font-bold text-emerald-900 mb-1">${u.name}</div>
-                        <input type="text" placeholder="職稱" value="${u.title || ''}" 
-                            onchange="updateMember('${u.phone}', 'title', this.value)" 
-                            class="text-xs text-gray-400 bg-transparent border-b border-dashed border-gray-200 focus:border-emerald-400 outline-none w-full">
+                        <input type="text" value="${u.title || ''}" onchange="updateMember('${u.phone}', 'title', this.value)" 
+                            class="text-xs text-gray-400 bg-transparent border-b border-dashed border-gray-200 outline-none w-full">
                     </td>
-                    <td class="p-4 text-sm">
-                        <div class="font-mono text-gray-600 mb-1"><i class="fas fa-phone mr-1"></i>${u.phone}</div>
-                        <input type="text" value="${u.email || ''}" placeholder="輸入 Email" 
-                            onchange="updateMember('${u.phone}', 'email', this.value)" 
-                            class="bg-transparent border-b border-transparent focus:border-emerald-300 outline-none w-full text-xs">
-                    </td>
+                    <td class="p-4 text-sm font-mono text-gray-600">${u.phone}</td>
                     <td class="p-4">
-                        <select onchange="updateMember('${u.phone}', 'paid', this.value)" 
-                            class="text-xs border rounded p-1 font-bold ${u.paid==='是'?'text-emerald-600 border-emerald-200 bg-emerald-50':'text-orange-600 border-orange-200 bg-orange-50'}">
+                        <select onchange="updateMember('${u.phone}', 'paid', this.value)" class="text-xs border rounded p-1 font-bold">
                             <option value="是" ${u.paid==='是'?'selected':''}>已繳費</option>
                             <option value="否" ${u.paid==='否'?'selected':''}>未繳費</option>
                         </select>
                     </td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                        <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -198,8 +191,15 @@
 
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid');
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
             grid.innerHTML = allData.calendar.map(c => {
                 const needsQR = (c.description === "需報到");
+                const eventDate = new Date(c.dateText);
+                eventDate.setHours(0,0,0,0);
+                const isFuture = eventDate > today;
+
                 return `
                 <div class="bg-white p-6 rounded-2xl border shadow-sm flex justify-between items-center hover:shadow-md transition">
                     <div>
@@ -209,7 +209,10 @@
                     </div>
                     <div class="flex items-center space-x-3">
                         ${needsQR ? 
-                            `<button onclick="generateQR('${c.dateText}','${c.title}')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-700"><i class="fas fa-qrcode mr-1"></i>簽到碼</button>` : 
+                            `<button onclick="${isFuture ? "alert('活動日期未到，無法提早產生簽到碼')" : `generateQR('${c.dateText}','${c.title}')`}" 
+                                class="px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition ${isFuture ? 'btn-disabled' : 'bg-emerald-600 text-white hover:bg-emerald-700'}">
+                                <i class="fas fa-qrcode mr-1"></i>${isFuture ? '未開啟' : '簽到碼'}
+                            </button>` : 
                             `<span class="text-gray-300 text-[10px] italic pr-2">純記錄</span>`
                         }
                         <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-500 px-2 transition"><i class="fas fa-times text-lg"></i></button>
@@ -221,21 +224,14 @@
 
         function renderRank() {
             const list = document.getElementById('rankList');
-            // 按出席次數排序
             const sorted = [...allData.users].sort((a, b) => b.attCount - a.attCount);
             list.innerHTML = sorted.map((u, index) => `
-                <div class="flex items-center justify-between p-5 ${index < 3 ? 'bg-orange-50/50' : 'bg-gray-50'} rounded-2xl border border-transparent hover:border-emerald-100 transition">
+                <div class="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-transparent">
                     <div class="flex items-center space-x-4">
-                        <span class="font-bold w-6 text-center ${index < 3 ? 'text-orange-500' : 'text-gray-400'}">${index + 1}</span>
-                        <div>
-                            <div class="font-bold text-emerald-900 text-sm">${u.name}</div>
-                            <div class="text-[10px] text-gray-400">${u.title || '一般會員'}</div>
-                        </div>
+                        <span class="font-bold w-6 text-center text-gray-400">${index + 1}</span>
+                        <div><div class="font-bold text-emerald-900 text-sm">${u.name}</div></div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-lg font-bold text-emerald-600">${u.attCount} <span class="text-[10px] text-gray-400">次簽到</span></div>
-                        <div class="text-[10px] text-gray-400">出席率 ${Math.round((u.attCount / (allData.totalEvents || 1)) * 100)}%</div>
-                    </div>
+                    <div class="text-lg font-bold text-emerald-600">${u.attCount} <span class="text-[10px] text-gray-400">次</span></div>
                 </div>
             `).join('');
         }
@@ -244,23 +240,23 @@
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const txt = await res.text();
-                if(txt.includes("OK") || txt.includes("DELETED") || txt.includes("SUCCESS")) {
-                    alert("操作成功！");
-                    location.reload();
-                } else { alert("系統回應: " + txt); }
+                if(txt.includes("OK") || txt.includes("SUCCESS")) { alert("操作成功！"); location.reload(); }
+                else { alert("回應: " + txt); }
             } catch (e) { alert("連線失敗"); }
         }
 
-        function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }); }
-        function saveLinks() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }); }
-        function updateMember(phone, field, value) { const newData = {}; newData[field] = value; apiPost({ type: "update_member", currentPhone: phone, newData: newData }); }
         function addMember() {
             const n = document.getElementById('add-name').value;
             const p = document.getElementById('add-phone').value;
             const s = document.getElementById('add-pass').value;
             if(!n || !p || !s) return alert("請完整填寫");
-            apiPost({ type: "add_member", name: n, phone: p, password: s });
+            // 關鍵修正：手機強制加引號轉成字串，密碼進行 Base64 加密
+            apiPost({ type: "add_member", name: n, phone: `'${p}`, password: btoa(s) });
         }
+
+        function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }); }
+        function saveLinks() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }); }
+        function updateMember(phone, field, value) { const newData = {}; newData[field] = value; apiPost({ type: "update_member", currentPhone: phone, newData: newData }); }
         function deleteMember(phone) { if(confirm("確定刪除此成員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
         function addEvent() {
             const d = document.getElementById('newDate').value;
@@ -270,21 +266,13 @@
             apiPost({ type: "add_event", date: d, title: t, needCheckin: c });
         }
         function deleteEvent(date) { if(confirm(`確定刪除 ${date} 的活動？`)) apiPost({ type: "delete_event", date: date }); }
-        
-        function resetAttendance() {
-            if(confirm("【危險操作】這將永久清空所有人的報到次數，僅限新學期開始時使用。確定執行？")) {
-                apiPost({ type: "reset_attendance" });
-            }
-        }
+        function resetAttendance() { if(confirm("確定清空所有報到紀錄？")) apiPost({ type: "reset_attendance" }); }
 
         function generateQR(date, title) {
             document.getElementById('qrTitle').innerText = title;
             document.getElementById('qrDate').innerText = date;
             document.getElementById('qrcode').innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { 
-                text: `${CHECKIN_URL}?event=${date}`, 
-                width: 200, height: 200, colorDark : "#064E3B", colorLight : "#ffffff"
-            });
+            new QRCode(document.getElementById("qrcode"), { text: `${CHECKIN_URL}?event=${date}`, width: 200, height: 200, colorDark : "#064E3B", colorLight : "#ffffff" });
             document.getElementById('qrModal').classList.remove('hidden');
         }
         function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }

@@ -241,6 +241,80 @@
                 alert("修改成功，請重新登入"); logout();
             } catch (e) { alert("失敗"); btn.disabled = false; }
         }
-    </script>
+        // --- 優化版：渲染學習歷程 (加入今日即時報到檢查) ---
+function renderHistory(allPastEvents, myLogs) {
+    const list = document.getElementById('historyList');
+    if (!allPastEvents || allPastEvents.length === 0) {
+        list.innerHTML = '<div class="text-center text-gray-400 py-10 italic">尚無歷史活動紀錄</div>';
+        return;
+    }
+
+    // 格式化所有的 Log，確保比對時沒有空格干擾
+    const cleanLogs = myLogs.map(log => String(log).trim());
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    list.innerHTML = allPastEvents.slice().reverse().map(ev => {
+        const evDate = String(ev.dateText).trim();
+        // 比對邏輯：如果在 Log 裡有，或者是今日且剛報到完（GAS還沒寫入成功前的暫時顯示）
+        const isAttended = cleanLogs.includes(evDate);
+        
+        return `
+            <div class="history-item flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100' : 'border-transparent'}">
+                <div class="flex items-center space-x-4">
+                    <div class="text-xs font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${evDate}</div>
+                    <div class="font-bold text-emerald-900">${ev.title}</div>
+                </div>
+                <div>
+                    ${isAttended ? 
+                        '<span class="text-emerald-600 text-sm font-bold bg-emerald-50 px-3 py-1 rounded-full"><i class="fas fa-check-circle mr-1"></i> 已出席</span>' : 
+                        '<span class="text-gray-300 text-sm italic">未出席</span>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// --- 優化版：同步雲端資料 (加入寫入緩衝判斷) ---
+async function syncCloudData() {
+    try {
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        const user = JSON.parse(sessionStorage.getItem('userInfo'));
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // 1. 取得使用者最新狀態
+        const currentUser = (data.users || []).find(u => String(u.phone).trim() === String(user.phone).trim());
+        if (!currentUser) return;
+
+        // 2. 計算參與率
+        const validEvents = (data.calendar || []).filter(ev => 
+            ev.dateText && ev.dateText <= todayStr && (ev.title + (ev.description || "")).includes('需報到')
+        );
+        
+        const myCount = currentUser.attCount || 0;
+        const percent = validEvents.length > 0 ? Math.round((myCount / validEvents.length) * 100) : 0;
+
+        // 3. 更新 UI
+        document.getElementById('attPercent').innerText = percent + "%";
+        document.getElementById('attCountDisplay').innerHTML = `${myCount} <span class="text-lg opacity-40">/ ${validEvents.length}</span>`;
+        
+        // 4. 渲染歷程 (傳入最新的 attendLog)
+        renderHistory(validEvents, currentUser.attendLog || []);
+
+        // 5. 動畫與特效
+        setTimeout(() => {
+            const bar = document.getElementById('attBar');
+            if(bar) bar.style.width = percent + "%";
+            if (percent >= 50) {
+                document.getElementById('cheerMessage').style.opacity = "1";
+                fireConfetti();
+            }
+        }, 500);
+
+        // ... 其餘邏輯 (下次活動、Config)
+        remoteConfig = data.config || {};
+        
+    } catch (e) { console.error("同步失敗", e); }
+}    </script>
 </body>
 </html>

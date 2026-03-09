@@ -195,34 +195,46 @@
 
         // --- 修復版：渲染歷史紀錄 (日期字串強力比對) ---
         function renderHistory(allPastEvents, myLogs) {
-            const list = document.getElementById('historyList');
-            if (!allPastEvents || allPastEvents.length === 0) {
-                list.innerHTML = '<div class="text-center text-gray-400 py-10 italic">尚無歷史活動紀錄</div>';
-                return;
-            }
+    const list = document.getElementById('historyList');
+    if (!allPastEvents || allPastEvents.length === 0) {
+        list.innerHTML = '<div class="text-center text-gray-400 py-10 italic">尚無歷史活動紀錄</div>';
+        return;
+    }
 
-            // 強力比對：移除所有非數字字元 (例如 2026-03-09 變成 20260309)
-            const cleanLogs = (myLogs || []).map(log => String(log).replace(/[^0-9]/g, ""));
+    // --- 強化清洗邏輯 ---
+    // 1. 將用戶的 attendLog 轉換為統一的 YYYY-MM-DD 字串陣列
+    const cleanLogs = (myLogs || []).map(log => {
+        if (!log) return "";
+        // 如果是日期物件字串 (如 2026-03-06T00:00:00Z)，只取前 10 碼
+        const s = String(log).trim();
+        return s.includes('T') ? s.split('T')[0] : s;
+    }).filter(s => s !== "");
 
-            list.innerHTML = allPastEvents.slice().reverse().map(ev => {
-                const evDateClean = String(ev.dateText).replace(/[^0-9]/g, "");
-                const isAttended = cleanLogs.includes(evDateClean);
-                
-                return `
-                    <div class="history-item flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/50' : 'border-transparent'}">
-                        <div class="flex items-center space-x-4">
-                            <div class="text-xs font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</div>
-                            <div class="font-bold text-emerald-900">${ev.title}</div>
-                        </div>
-                        <div>
-                            ${isAttended ? 
-                                '<span class="text-emerald-600 text-xs font-bold bg-emerald-100 px-3 py-1 rounded-full"><i class="fas fa-check-circle mr-1"></i> 已出席</span>' : 
-                                '<span class="text-gray-300 text-xs italic">未出席</span>'}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+    list.innerHTML = allPastEvents.slice().reverse().map(ev => {
+        const evDate = String(ev.dateText).trim();
+        
+        // 2. 進行多重比對：字串直接比對 OR 純數字比對 (20260306)
+        const isAttended = cleanLogs.some(log => {
+            const logClean = log.replace(/[^0-9]/g, "");
+            const evClean = evDate.replace(/[^0-9]/g, "");
+            return log === evDate || (logClean === evClean && logClean !== "");
+        });
+        
+        return `
+            <div class="history-item flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/50 shadow-sm' : 'border-transparent'}">
+                <div class="flex items-center space-x-4">
+                    <div class="text-xs font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${evDate}</div>
+                    <div class="font-bold text-emerald-900">${ev.title}</div>
+                </div>
+                <div>
+                    ${isAttended ? 
+                        '<span class="text-emerald-600 text-xs font-bold bg-emerald-100 px-3 py-1 rounded-full animate-pulse"><i class="fas fa-check-circle mr-1"></i> 已出席</span>' : 
+                        '<span class="text-gray-300 text-xs italic">未出席</span>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
         // --- 公共函數 ---
         window.openEditModal = function() { 

@@ -124,7 +124,51 @@
             }
             syncCloudData(); // 進入頁面後立即重新同步雲端資料，不依賴登入快取
         };
+        
+// --- 核心功能：建立日曆連結 (上午 09:30 - 12:00) ---
+    function createCalendarLink(ev) {
+        if (!ev || !ev.dateText) return;
 
+        const title = "築心讀書會：" + ev.title;
+        const desc = ev.description || "歡迎準時參加導讀分享";
+        const dateText = ev.dateText; // 格式如 2026-03-13
+        const cleanDate = dateText.replace(/-/g, ''); // 變成 20260313
+        
+        // 設定時間：上午 09:30 到 12:00 (格式：YYYYMMDDTHHMMSS)
+        const startStr = cleanDate + "T093000";
+        const endStr = cleanDate + "T120000";
+
+        // 判斷是否為 iPhone 或 iPad
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        if (isIOS) {
+            // --- iPhone 專用：產生 .ics 檔案觸發原生行事曆 ---
+            const icsContent = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "BEGIN:VEVENT",
+                "DTSTART:" + startStr,
+                "DTEND:" + endStr,
+                "SUMMARY:" + title,
+                "DESCRIPTION:" + desc,
+                "LOCATION:築心會館",
+                "END:VEVENT",
+                "END:VCALENDAR"
+            ].join("\r\n");
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.setAttribute('download', 'reading_event.ics');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            // --- Android / PC：開啟 Google 日曆網頁 ---
+            const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(desc)}&sf=true&output=xml`;
+            window.open(googleUrl, '_blank');
+        }
+    }   
         async function syncCloudData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);

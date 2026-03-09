@@ -39,7 +39,7 @@
         <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
             <div class="relative z-10">
                 <div class="flex items-center space-x-3 mb-4">
-                    <span id="userTitle" class="bg-emerald-300/20 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">載入中</span>
+                    <span id="userTitle" class="bg-emerald-300/20 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">學員</span>
                     <h2 id="userName" class="text-3xl font-bold tracking-wider">載入中...</h2>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mt-6">
@@ -75,6 +75,28 @@
                 <i class="fas fa-user-cog text-stone-400 text-2xl mb-2 block"></i>
                 <div class="font-bold">修改資料</div>
             </button>
+        </div>
+
+        <div id="nextEventCard" class="hidden bg-white rounded-[2.5rem] p-6 shadow-xl border border-emerald-50 flex items-center space-x-6">
+            <div class="bg-emerald-900 text-white rounded-3xl p-4 text-center min-w-[80px]">
+                <div id="nextMonth" class="text-xs uppercase opacity-60">MON</div>
+                <div id="nextDay" class="text-3xl font-black">--</div>
+            </div>
+            <div class="flex-1">
+                <p class="text-emerald-600 text-xs font-bold tracking-widest mb-1">NEXT SESSION (09:30-12:00)</p>
+                <h3 id="nextTitle" class="text-xl font-extrabold text-emerald-900">導讀標題</h3>
+                <button id="calBtn" class="mt-2 text-sm text-emerald-700 font-bold flex items-center hover:text-orange-500 transition">
+                    <i class="far fa-calendar-plus mr-2"></i> 加進手機日曆
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-stone-100">
+            <h3 class="text-xl font-bold text-emerald-900 mb-6 flex items-center">
+                <i class="fas fa-history mr-3 text-emerald-500"></i>學習歷程
+            </h3>
+            <div id="historyList" class="space-y-3">
+                </div>
         </div>
 
         <div id="adminEntry" class="hidden pt-6 border-t border-dashed border-gray-200 text-center">
@@ -116,11 +138,10 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let remoteConfig = {};
         let html5QrCode = null;
 
-        // 初始化
         window.onload = () => {
             const userStr = sessionStorage.getItem('userInfo');
             if (!userStr) { location.href = 'index.html'; return; }
@@ -129,7 +150,7 @@
             document.getElementById('userName').innerText = user.name;
             document.getElementById('userTitle').innerText = user.title || '學員';
 
-            // 幹部判斷
+            // 幹部入口顯示邏輯
             const t = String(user.title || "").trim();
             if (t !== "" && t !== "undefined" && t !== "學員") {
                 document.getElementById('adminEntry').classList.remove('hidden');
@@ -137,62 +158,108 @@
             syncData();
         };
 
+        // --- 核心功能：建立日曆連結 (09:30 - 12:00) ---
+        function createCalendarLink(ev) {
+            if (!ev || !ev.dateText) return;
+            const title = "築心讀書會：" + ev.title;
+            const desc = ev.description || "歡迎準時參加導讀分享";
+            const cleanDate = ev.dateText.replace(/-/g, '');
+            const startStr = cleanDate + "T093000";
+            const endStr = cleanDate + "T120000";
+
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (isIOS) {
+                const ics = ["BEGIN:VCALENDAR","VERSION:2.0","BEGIN:VEVENT",
+                             "DTSTART:" + startStr,"DTEND:" + endStr,"SUMMARY:" + title,
+                             "DESCRIPTION:" + desc,"LOCATION:築心會館","END:VEVENT","END:VCALENDAR"].join("\r\n");
+                const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.setAttribute('download', 'event.ics');
+                link.click();
+            } else {
+                const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(desc)}&sf=true&output=xml`;
+                window.open(url, '_blank');
+            }
+        }
+
         async function syncData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                const user = JSON.parse(sessionStorage.getItem('userInfo'));
+                const cachedUser = JSON.parse(sessionStorage.getItem('userInfo'));
+                const liveUser = (data.users || []).find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
+                if (!liveUser) return;
 
+                sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
-                
-                // 統計邏輯 (修正日期報錯)
-                const today = new Date().toISOString().split('T')[0];
-                const validEvents = (data.calendar || []).filter(ev => {
-                    return ev.dateText <= today && (ev.title + (ev.description || "")).includes('需報到');
-                }).length;
 
-                const myCount = user.attCount || 0;
-                const percent = validEvents > 0 ? Math.min(100, Math.round((myCount / validEvents) * 100)) : 0;
+                const todayStr = new Date().toISOString().split('T')[0];
+                const validEvents = (data.calendar || []).filter(ev => 
+                    ev.dateText && ev.dateText <= todayStr && (ev.title + (ev.description || "")).includes('需報到')
+                );
+                
+                const myCount = liveUser.attCount || 0;
+                const percent = validEvents.length > 0 ? Math.round((myCount / validEvents.length) * 100) : 0;
 
                 document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerHTML = `${myCount} <span class="text-lg text-emerald-100/50">/ ${validEvents}</span>`;
+                document.getElementById('attCountDisplay').innerHTML = `${myCount} <span class="text-lg opacity-40">/ ${validEvents.length}</span>`;
                 document.getElementById('progressBar').style.width = percent + "%";
                 
+                renderHistory(validEvents, liveUser.attendLog || []);
+
+                // 處理下次活動預告
+                const futureEvent = (data.calendar || []).find(ev => ev.dateText > todayStr);
+                if (futureEvent) {
+                    const d = new Date(futureEvent.dateText);
+                    document.getElementById('nextEventCard').classList.remove('hidden');
+                    document.getElementById('nextMonth').innerText = d.toLocaleString('en', {month:'short'});
+                    document.getElementById('nextDay').innerText = d.getDate();
+                    document.getElementById('nextTitle').innerText = futureEvent.title;
+                    document.getElementById('calBtn').onclick = () => createCalendarLink(futureEvent);
+                }
+
                 remoteConfig = data.config || {};
-            } catch (e) { console.error("同步失敗"); }
+            } catch (e) { console.error("同步失敗", e); }
         }
 
-        // 修改資料邏輯
+        function renderHistory(allPastEvents, myLogs) {
+            const list = document.getElementById('historyList');
+            const cleanLogs = (myLogs || []).map(log => String(log).trim());
+            list.innerHTML = allPastEvents.slice().reverse().map(ev => {
+                const isAttended = cleanLogs.includes(ev.dateText);
+                return `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/50' : 'border-transparent'}">
+                        <div class="flex items-center space-x-4">
+                            <div class="text-xs font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</div>
+                            <div class="font-bold text-emerald-900">${ev.title}</div>
+                        </div>
+                        <div>
+                            ${isAttended ? '<span class="text-emerald-600 text-xs font-bold bg-emerald-100 px-3 py-1 rounded-full text-nowrap">已出席</span>' : '<span class="text-gray-300 text-xs italic">未出席</span>'}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // 修改資料與掃描邏輯
         async function submitUpdate() {
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
             const oldP = document.getElementById('oldPassword').value.trim();
             const newP = document.getElementById('newPassword').value.trim();
             const email = document.getElementById('editEmail').value.trim();
-
-            if (btoa(oldP) !== String(user.password).trim()) {
-                alert("❌ 原密碼驗證錯誤"); return;
-            }
-
+            if (btoa(oldP) !== String(user.password).trim()) { alert("❌ 原密碼驗證錯誤"); return; }
             const btn = document.getElementById('updateBtn');
             btn.disabled = true; btn.innerText = "處理中...";
-
             let payload = { email: email };
             if (newP !== "") payload.password = btoa(newP);
-
             try {
-                await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ currentPhone: user.phone, newData: payload })
-                });
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ currentPhone: user.phone, newData: payload }) });
                 alert("修改成功，請重新登入");
                 logout();
-            } catch (e) {
-                alert("連線失敗");
-                btn.disabled = false; btn.innerText = "更新";
-            }
+            } catch (e) { alert("連線失敗"); btn.disabled = false; btn.innerText = "更新"; }
         }
 
-        // 掃描功能
         function startScanner() {
             document.getElementById('scannerModal').classList.remove('hidden');
             html5QrCode = new Html5Qrcode("reader");
@@ -207,9 +274,7 @@
                     document.getElementById('scannerModal').classList.add('hidden');
                     html5QrCode = null;
                 });
-            } else {
-                document.getElementById('scannerModal').classList.add('hidden');
-            }
+            } else { document.getElementById('scannerModal').classList.add('hidden'); }
         }
 
         function openRemoteLink(key) {

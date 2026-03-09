@@ -107,7 +107,13 @@
             <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="absolute top-6 right-6 text-gray-300 hover:text-gray-500 text-xl"><i class="fas fa-times"></i></button>
             <h4 class="text-xl font-bold text-emerald-900 mb-8 text-center">會員登入</h4>
             <div class="space-y-4">
-                <input id="userPhone" type="text" placeholder="手機號碼" class="w-full px-4 py-4 bg-gray-50 rounded-2xl outline-none focus:bg-white">
+                <input id="userPhone" 
+       type="tel" 
+       inputmode="numeric" 
+       pattern="[0-9]*"
+       oninput="this.value = this.value.replace(/[^０-９0-9]/g, '')"
+       placeholder="手機號碼 (支援全碼數字)" 
+       class="w-full px-4 py-4 bg-gray-50 rounded-2xl outline-none focus:bg-white shadow-inner">
                 <input id="userPass" type="password" placeholder="登入密碼" class="w-full px-4 py-4 bg-gray-50 rounded-2xl outline-none focus:bg-white">
                 <button id="loginBtn" onclick="window.handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-900 transition shadow-lg">進入會館</button>
             </div>
@@ -115,8 +121,13 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwO1injNbjrxM50Ff3LGdFuW9ZwqL_r5mosreiOotiB9DU1B8iZrhikDzCdq3H5V70Xyw/exec";
-
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+       function toHalfWidth(str) {
+        if (!str) return "";
+        return str.replace(/[０-９]/g, function(s) {
+            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        }).replace(/\s+/g, ""); // 同時移除空格
+       }   
         window.toggleAbout = function(show) {
             document.getElementById('about-modal').classList.toggle('hidden', !show);
             document.body.style.overflow = show ? 'hidden' : 'auto';
@@ -137,22 +148,46 @@
         };
 
         window.handleLogin = async function() {
-            const u = document.getElementById('userPhone').value.trim();
-            const p = document.getElementById('userPass').value.trim();
-            if(!u || !p) return alert('請填寫完整資訊');
-            const btn = document.getElementById('loginBtn');
-            btn.disabled = true; btn.innerText = '正在登入...';
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const encryptedP = btoa(p);
-                const found = data.users.find(user => String(user.phone).trim() === u && String(user.password).trim() === encryptedP);
-                if (found) {
-                    sessionStorage.setItem('userInfo', JSON.stringify(found));
-                    window.location.href = 'member_zone.html';
-                } else { alert('手機或密碼有誤'); btn.disabled = false; btn.innerText = '進入會館'; }
-            } catch (e) { alert('伺服器連線失敗'); btn.disabled = false; btn.innerText = '進入會館'; }
-        };
+        const rawPhone = document.getElementById('userPhone').value;
+        const p = document.getElementById('userPass').value.trim();
+        
+        // 核心優化：將輸入的內容（無論全碼半碼）轉為純半碼數字
+        const u = toHalfWidth(rawPhone);
+
+        if(!u || !p) return alert('請填寫完整資訊');
+        
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true; 
+        btn.innerText = '正在登入...';
+        
+        try {
+            // 使用 t=Date.now() 避免瀏覽器抓到舊的快取資料
+            const res = await fetch(GAS_URL + "?t=" + Date.now());
+            const data = await res.json();
+            const encryptedP = btoa(p);
+            
+            // 比對資料庫
+            const found = data.users.find(user => 
+                String(user.phone).trim() === u && 
+                String(user.password).trim() === encryptedP
+            );
+
+            if (found) {
+                // 登入成功，存入 session 並跳轉
+                sessionStorage.setItem('userInfo', JSON.stringify(found));
+                window.location.href = 'member_zone.html';
+            } else { 
+                alert('手機或密碼有誤'); 
+                btn.disabled = false; 
+                btn.innerText = '進入會館'; 
+            }
+        } catch (e) { 
+            console.error(e);
+            alert('伺服器連線失敗，請檢查網路'); 
+            btn.disabled = false; 
+            btn.innerText = '進入會館'; 
+        }
+    };
 
         async function init() {
             try {

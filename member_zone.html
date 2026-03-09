@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>會員中心 | 築心讀書會 (Dev Final)</title>
+    <title>會員中心 | 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -22,7 +22,7 @@
         <div class="max-w-5xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-4">
                 <a href="index.html" class="hover:text-emerald-200 transition-all text-xl"><i class="fas fa-home"></i></a>
-                <span class="text-xl font-bold tracking-widest border-l border-white/20 pl-4 text-emerald-50">築心會館</span>
+                <span class="text-xl font-bold tracking-widest border-l border-white/20 pl-4">築心會館</span>
             </div>
             <div class="flex items-center space-x-4 text-sm">
                 <span id="userNameDisplay">載入中...</span>
@@ -32,7 +32,6 @@
     </nav>
 
     <main class="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        
         <div class="emerald-gradient p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden">
             <div class="relative z-10">
                 <div class="flex justify-between items-start">
@@ -52,7 +51,6 @@
                     太棒了！感謝您對學習的堅持。
                 </div>
             </div>
-            <div class="absolute -right-10 -bottom-10 text-white/5 text-9xl transform -rotate-12"><i class="fas fa-seedling"></i></div>
         </div>
 
         <div id="nextEventCard" class="bg-orange-50 rounded-[2rem] p-6 border border-orange-100 flex flex-col md:flex-row justify-between items-center hidden shadow-sm">
@@ -66,27 +64,21 @@
                     <div class="text-orange-600/70 text-sm italic">下次導讀預告</div>
                 </div>
             </div>
-            <button id="calBtn" class="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition flex items-center border border-orange-100">
-                <i class="fab fa-google mr-2"></i> 加進日曆
-            </button>
+            <button id="calBtn" class="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold border border-orange-100 shadow-sm hover:shadow-md transition">加進 Google 日曆</button>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button onclick="startScanner()" class="bg-emerald-600 p-6 rounded-[2rem] shadow-lg text-white hover:bg-emerald-700 transition col-span-2 md:col-span-1">
-                <i class="fas fa-qrcode text-3xl mb-2"></i>
-                <div class="font-bold">掃碼報到</div>
+                <i class="fas fa-qrcode text-3xl mb-2"></i><div class="font-bold">掃碼報到</div>
             </button>
             <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-6 rounded-[2rem] border border-emerald-50 hover:shadow-md transition">
-                <i class="fas fa-book-reader text-blue-600 text-2xl mb-2 block"></i>
-                <div class="font-bold text-emerald-900">導讀資料</div>
+                <i class="fas fa-book-reader text-blue-600 text-2xl mb-2 block"></i><div class="font-bold text-emerald-900">導讀資料</div>
             </button>
             <button onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-6 rounded-[2rem] border border-emerald-50 hover:shadow-md transition">
-                <i class="fas fa-images text-amber-600 text-2xl mb-2 block"></i>
-                <div class="font-bold text-emerald-900">活動剪影</div>
+                <i class="fas fa-images text-amber-600 text-2xl mb-2 block"></i><div class="font-bold text-emerald-900">活動剪影</div>
             </button>
             <button onclick="openEditModal()" class="bg-stone-800 p-6 rounded-[2rem] text-white hover:brightness-110 transition">
-                <i class="fas fa-user-cog text-stone-400 text-2xl mb-2 block"></i>
-                <div class="font-bold text-stone-100">修改資料</div>
+                <i class="fas fa-user-cog text-stone-400 text-2xl mb-2 block"></i><div class="font-bold">修改資料</div>
             </button>
         </div>
 
@@ -95,39 +87,30 @@
                 <i class="fas fa-history mr-3 text-emerald-600"></i> 我的學習歷程
             </h3>
             <div id="historyList" class="space-y-4">
-                <div class="text-center text-gray-300 py-10 italic">正在載入紀錄...</div>
+                <div class="text-center text-gray-300 py-10 italic">正在從雲端同步最新紀錄...</div>
             </div>
         </section>
-
-        <div id="adminEntry" class="hidden pt-6 border-t border-dashed border-gray-200 text-center">
-            <a href="staff_page.html" class="inline-flex items-center px-8 py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg hover:bg-emerald-900 transition">
-                <i class="fas fa-user-shield mr-2"></i> 進入幹部專區
-            </a>
-        </div>
     </main>
 
     <div id="scannerModal" class="fixed inset-0 bg-black/90 hidden z-50 flex flex-col items-center justify-center p-6 backdrop-blur-md">
-        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden">
-            <div id="reader"></div>
-            <button onclick="stopScanner()" class="w-full py-4 text-gray-500 font-bold border-t bg-gray-50">關閉相機</button>
-        </div>
+        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden"><div id="reader"></div><button onclick="stopScanner()" class="w-full py-4 text-gray-500 font-bold border-t bg-gray-50">關閉相機</button></div>
     </div>
 
     <div id="editProfileModal" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative">
             <h3 class="text-2xl font-bold mb-6 text-center text-emerald-900">修改個人資料</h3>
             <div class="space-y-4">
-                <input id="oldPassword" type="password" placeholder="驗證：請輸入原密碼" class="w-full p-4 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-100">
+                <input id="oldPassword" type="password" placeholder="驗證：請輸入原密碼" class="w-full p-4 bg-gray-50 rounded-xl outline-none border border-gray-100">
                 <input id="editEmail" type="email" placeholder="新電子郵件" class="w-full p-4 bg-gray-50 rounded-xl outline-none border border-gray-100">
-                <input id="newPassword" type="password" placeholder="新密碼 (不更換請留空)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border border-gray-100">
-                <button onclick="submitUpdate()" id="updateBtn" class="w-full emerald-gradient text-white py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95">確認儲存</button>
+                <input id="newPassword" type="password" placeholder="新密碼 (不換請留空)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border border-gray-100">
+                <button onclick="submitUpdate()" id="updateBtn" class="w-full emerald-gradient text-white py-4 rounded-xl font-bold shadow-lg">確認儲存</button>
                 <button onclick="closeEditModal()" class="w-full text-gray-400 text-sm py-2">取消修改</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 請確保此處為您的副本 GAS URL
+        // 核心設定
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let remoteConfig = {}; 
         let html5QrCode;
@@ -137,38 +120,40 @@
             if (!user) { location.href = 'index.html'; return; }
             document.getElementById('userNameDisplay').innerText = `你好，${user.name}`;
             if (user.title && user.title !== '學員' && user.title !== 'undefined') {
-                document.getElementById('adminEntry').classList.remove('hidden');
+                document.getElementById('adminEntry')?.classList.remove('hidden');
             }
-            syncCloudData();
+            syncCloudData(); // 進入頁面後立即重新同步雲端資料，不依賴登入快取
         };
 
-        // --- 核心同步邏輯 ---
         async function syncCloudData() {
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                const user = JSON.parse(sessionStorage.getItem('userInfo'));
+                const cachedUser = JSON.parse(sessionStorage.getItem('userInfo'));
+                
+                // 從最新的雲端資料中找出該使用者
+                const liveUser = (data.users || []).find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
+                if (!liveUser) return;
+
+                // 更新 sessionStorage 以免下一次進來又是舊的
+                sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
+
                 const todayStr = new Date().toISOString().split('T')[0];
-
-                const currentUser = (data.users || []).find(u => String(u.phone).trim() === String(user.phone).trim());
-                if (!currentUser) return;
-
-                // 1. 計算出席率 (確保格式一致)
                 const validEvents = (data.calendar || []).filter(ev => 
                     ev.dateText && ev.dateText <= todayStr && (ev.title + (ev.description || "")).includes('需報到')
                 );
                 
-                const myCount = currentUser.attCount || 0;
+                const myCount = liveUser.attCount || 0;
                 const percent = validEvents.length > 0 ? Math.round((myCount / validEvents.length) * 100) : 0;
 
-                // 2. 更新 UI
+                // UI 更新
                 document.getElementById('attPercent').innerText = percent + "%";
                 document.getElementById('attCountDisplay').innerHTML = `${myCount} <span class="text-lg opacity-40">/ ${validEvents.length}</span>`;
                 
-                // 3. 渲染歷程 (傳入清洗過後的 Logs)
-                renderHistory(validEvents, currentUser.attendLog || []);
+                // 渲染歷程 - 傳入剛從雲端抓到的 liveUser.attendLog
+                renderHistory(validEvents, liveUser.attendLog || []);
 
-                // 4. 下次活動預告
+                // 下次活動
                 const futureEvent = (data.calendar || []).find(ev => ev.dateText > todayStr);
                 if (futureEvent) {
                     const d = new Date(futureEvent.dateText);
@@ -179,7 +164,7 @@
                     document.getElementById('calBtn').onclick = () => createCalendarLink(futureEvent);
                 }
 
-                // 5. 動畫與噴花
+                // 特效
                 setTimeout(() => {
                     const bar = document.getElementById('attBar');
                     if(bar) bar.style.width = percent + "%";
@@ -193,85 +178,58 @@
             } catch (e) { console.error("同步失敗", e); }
         }
 
-        // --- 修復版：渲染歷史紀錄 (日期字串強力比對) ---
         function renderHistory(allPastEvents, myLogs) {
-    const list = document.getElementById('historyList');
-    if (!allPastEvents || allPastEvents.length === 0) {
-        list.innerHTML = '<div class="text-center text-gray-400 py-10 italic">尚無歷史活動紀錄</div>';
-        return;
-    }
+            const list = document.getElementById('historyList');
+            if (!allPastEvents || allPastEvents.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-10 italic">尚無歷史活動紀錄</div>';
+                return;
+            }
 
-    // --- 強化清洗邏輯 ---
-    // 1. 將用戶的 attendLog 轉換為統一的 YYYY-MM-DD 字串陣列
-    const cleanLogs = (myLogs || []).map(log => {
-        if (!log) return "";
-        // 如果是日期物件字串 (如 2026-03-06T00:00:00Z)，只取前 10 碼
-        const s = String(log).trim();
-        return s.includes('T') ? s.split('T')[0] : s;
-    }).filter(s => s !== "");
+            // 強化清洗：將日期統合成純數字比對 (解決 ISO 字串問題)
+            const cleanLogs = (myLogs || []).map(log => String(log).split('T')[0].replace(/[^0-9]/g, ""));
 
-    list.innerHTML = allPastEvents.slice().reverse().map(ev => {
-        const evDate = String(ev.dateText).trim();
-        
-        // 2. 進行多重比對：字串直接比對 OR 純數字比對 (20260306)
-        const isAttended = cleanLogs.some(log => {
-            const logClean = log.replace(/[^0-9]/g, "");
-            const evClean = evDate.replace(/[^0-9]/g, "");
-            return log === evDate || (logClean === evClean && logClean !== "");
-        });
-        
-        return `
-            <div class="history-item flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/50 shadow-sm' : 'border-transparent'}">
-                <div class="flex items-center space-x-4">
-                    <div class="text-xs font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${evDate}</div>
-                    <div class="font-bold text-emerald-900">${ev.title}</div>
-                </div>
-                <div>
-                    ${isAttended ? 
-                        '<span class="text-emerald-600 text-xs font-bold bg-emerald-100 px-3 py-1 rounded-full animate-pulse"><i class="fas fa-check-circle mr-1"></i> 已出席</span>' : 
-                        '<span class="text-gray-300 text-xs italic">未出席</span>'}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+            list.innerHTML = allPastEvents.slice().reverse().map(ev => {
+                const evDateClean = String(ev.dateText).replace(/[^0-9]/g, "");
+                const isAttended = cleanLogs.includes(evDateClean);
+                
+                return `
+                    <div class="history-item flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/50' : 'border-transparent'}">
+                        <div class="flex items-center space-x-4">
+                            <div class="text-xs font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</div>
+                            <div class="font-bold text-emerald-900">${ev.title}</div>
+                        </div>
+                        <div>
+                            ${isAttended ? 
+                                '<span class="text-emerald-600 text-xs font-bold bg-emerald-100 px-3 py-1 rounded-full"><i class="fas fa-check-circle mr-1"></i> 已出席</span>' : 
+                                '<span class="text-gray-300 text-xs italic text-[10px]">未出席</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-        // --- 公共函數 ---
-        window.openEditModal = function() { 
+        // --- 全域按鈕功能 ---
+        window.openEditModal = () => { 
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editProfileModal').classList.remove('hidden'); 
         };
-        window.closeEditModal = function() { document.getElementById('editProfileModal').classList.add('hidden'); };
-
-        window.openRemoteLink = function(key) {
-            const url = remoteConfig[key];
-            if(url && url.startsWith('http')) window.open(url, '_blank');
-            else alert("連結尚未設定");
-        };
+        window.closeEditModal = () => { document.getElementById('editProfileModal').classList.add('hidden'); };
+        window.openRemoteLink = (key) => { const url = remoteConfig[key]; if(url) window.open(url, '_blank'); else alert("連結尚未設定"); };
+        window.logout = () => { sessionStorage.clear(); location.href = 'index.html'; };
 
         window.submitUpdate = async function() {
             const user = JSON.parse(sessionStorage.getItem('userInfo'));
             const oldP = document.getElementById('oldPassword').value.trim();
             const newP = document.getElementById('newPassword').value.trim();
             const email = document.getElementById('editEmail').value.trim();
-
-            if (btoa(oldP) !== String(user.password).trim()) return alert("❌ 驗證失敗：原密碼不正確");
-
+            if (btoa(oldP) !== String(user.password).trim()) return alert("❌ 原密碼錯誤");
             const btn = document.getElementById('updateBtn');
             btn.disabled = true; btn.innerText = "更新中...";
-
             try {
-                await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        currentPhone: user.phone, 
-                        newData: { email, password: newP ? btoa(newP) : undefined } 
-                    })
-                });
-                alert("修改成功，請重新登入");
-                logout();
-            } catch (e) { alert("更新失敗"); btn.disabled = false; btn.innerText = "確認儲存"; }
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ currentPhone: user.phone, newData: { email, password: newP ? btoa(newP) : undefined } }) });
+                alert("修改成功，請重新登入"); logout();
+            } catch (e) { alert("更新失敗"); btn.disabled = false; }
         };
 
         window.startScanner = function() {
@@ -281,19 +239,12 @@
                 stopScanner(); window.location.href = text;
             }).catch(() => stopScanner());
         };
-
-        window.stopScanner = function() {
-            if(html5QrCode) html5QrCode.stop().finally(() => document.getElementById('scannerModal').classList.add('hidden'));
-            else document.getElementById('scannerModal').classList.add('hidden');
-        };
-
+        window.stopScanner = function() { if(html5QrCode) html5QrCode.stop().finally(() => document.getElementById('scannerModal').classList.add('hidden')); else document.getElementById('scannerModal').classList.add('hidden'); };
         function createCalendarLink(ev) {
             const date = ev.dateText.replace(/-/g, '');
             const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('築心讀書會：'+ev.title)}&dates=${date}T140000/${date}T160000&details=${encodeURIComponent(ev.description || '')}&sf=true&output=xml`;
             window.open(url, '_blank');
         }
-
-        window.logout = function() { sessionStorage.clear(); location.href = 'index.html'; };
     </script>
 </body>
 </html>

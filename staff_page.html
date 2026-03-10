@@ -260,12 +260,40 @@
         function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }, "btn-publishNews"); }
         function saveConfig() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }, "btn-saveConfig"); }
         function renderMembers() {
-            const table = document.getElementById('memberTable');
-            table.innerHTML = `<tr class="text-gray-400 text-sm"><th class="pb-4">會員</th><th class="pb-4">身份</th><th class="pb-4">狀態</th><th class="pb-4 text-right">操作</th></tr>`;
-            allData.users.forEach(u => {
-                table.innerHTML += `<tr class="border-t border-gray-50"><td class="py-5"><b>${u.name}</b><br><small class="text-gray-400">${u.phone}</small></td><td><span class="bg-gray-100 px-2 py-1 rounded text-xs">${u.title}</span></td><td class="text-sm">${u.paid==='是'?'✅已繳':'❌未繳'}</td><td class="text-right"><button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td></tr>`;
-            });
-        }
+    const table = document.getElementById('memberTable');
+    table.innerHTML = `
+        <tr class="text-gray-400 text-sm border-b border-gray-100">
+            <th class="pb-4 font-bold">會員姓名</th>
+            <th class="pb-4 font-bold">聯繫電話</th>
+            <th class="pb-4 font-bold text-center">繳費狀態</th>
+            <th class="pb-4 font-bold text-right">管理</th>
+        </tr>
+    `;
+
+    allData.users.forEach(u => {
+        table.innerHTML += `
+            <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
+                <td class="py-5">
+                    <div class="font-bold text-emerald-900 text-lg">${u.name}</div>
+                    <div class="inline-block bg-emerald-50 text-emerald-600 text-[10px] px-2 py-0.5 rounded-md font-bold mt-1">
+                        ${u.title || '一般會員'}
+                    </div>
+                </td>
+                <td class="py-5 font-mono text-gray-600">${u.phone}</td>
+                <td class="py-5 text-center">
+                    <span class="text-sm px-3 py-1 rounded-full ${u.paid === '是' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} font-bold">
+                        ${u.paid === '是' ? '✅ 已繳' : '❌ 未繳'}
+                    </span>
+                </td>
+                <td class="py-5 text-right">
+                    <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 p-2 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
         function addMember() { apiPost({ type: "add_member", name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, password: document.getElementById('mPass').value }, "btn-addMember"); }
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('newDate').value, title: document.getElementById('newTitle').value, needCheckin: document.getElementById('newNeedCheckin').checked }, "btn-addEvent"); }
         function deleteEvent(date) { if(confirm(`確定刪除 ${date} 活動？`)) apiPost({ type: "delete_event", date: date }); }

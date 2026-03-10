@@ -14,28 +14,28 @@
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none; }
         .btn-loading { opacity: 0.6; pointer-events: none; }
+        .font-mono { font-family: 'Courier New', Courier, monospace; }
     </style>
 </head>
 <body class="pb-12">
 
     <header class="admin-gradient text-white pt-8 pb-12 px-6 shadow-lg">
-    <div class="max-w-6xl mx-auto flex justify-between items-end">
-        <div>
-            <h1 class="text-3xl font-bold tracking-tight">築心管理系統</h1>
-            <p class="text-emerald-200 mt-2"><i class="fas fa-user-shield mr-2"></i>幹部管理模式</p>
-        </div>
-        
-        <div class="flex items-center space-x-3">
-            <a href="member_zone.html" class="flex items-center bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition text-sm font-bold border border-white/20">
-                <i class="fas fa-home mr-2"></i> 會員專區
-            </a>
+        <div class="max-w-6xl mx-auto flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">築心管理系統</h1>
+                <p class="text-emerald-200 mt-2"><i class="fas fa-user-shield mr-2"></i>幹部管理模式</p>
+            </div>
             
-            <button onclick="location.reload()" class="bg-white/10 hover:bg-white/20 p-3 rounded-full transition border border-white/20">
-                <i class="fas fa-sync-alt"></i>
-            </button>
+            <div class="flex items-center space-x-3">
+                <a href="member_zone.html" class="flex items-center bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition text-sm font-bold border border-white/20 shadow-sm">
+                    <i class="fas fa-home mr-2"></i> 會員專區
+                </a>
+                <button onclick="location.reload()" class="bg-white/10 hover:bg-white/20 p-3 rounded-full transition border border-white/20">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
         </div>
-    </div>
-</header>
+    </header>
 
     <nav class="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div class="max-w-6xl mx-auto flex space-x-8 px-6 overflow-x-auto">
@@ -53,14 +53,14 @@
             <div class="bg-white rounded-[2rem] p-8 shadow-sm border">
                 <h3 class="text-xl font-bold mb-6 text-emerald-900"><i class="fas fa-bullhorn mr-2"></i> 首頁公佈欄更新</h3>
                 <textarea id="newsContent" rows="3" class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-emerald-500 mb-4" placeholder="在此輸入顯示在學員首頁的公告..."></textarea>
-                <button id="btn-publishNews" onclick="publishNews()" class="bg-emerald-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-900 transition shadow-md">更新網頁公告</button>
+                <button id="btn-publishNews" onclick="publishNews()" class="bg-emerald-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-900 transition">更新網頁公告</button>
             </div>
 
             <div class="bg-white rounded-[2rem] p-8 shadow-sm border border-emerald-100">
                 <h3 class="text-xl font-bold text-emerald-900 mb-6"><i class="fab fa-line mr-2 text-green-500"></i> LINE 訊息即時投放</h3>
                 <textarea id="lineMsgContent" rows="4" class="w-full p-4 bg-green-50/30 rounded-2xl border border-green-100 outline-none focus:border-green-500 mb-4" placeholder="輸入訊息內容..."></textarea>
                 <div class="flex gap-4">
-                    <button id="btn-sendLine" onclick="sendLineMessage()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-md">立即發送</button>
+                    <button id="btn-sendLine" onclick="sendLineMessage()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition">立即發送</button>
                     <button onclick="loadTemplate()" class="bg-white text-green-600 border border-green-600 px-6 py-3 rounded-xl font-bold hover:bg-green-50 transition">載入提醒範本</button>
                 </div>
             </div>
@@ -68,11 +68,18 @@
 
         <section id="section-members" class="hidden">
             <div class="bg-white rounded-[2rem] p-8 shadow-sm border">
-                <div class="flex justify-between mb-8">
+                <div class="flex justify-between items-center mb-8">
                     <h3 class="text-xl font-bold text-emerald-900">會員資料庫</h3>
-                    <button onclick="openModal('memberModal')" class="bg-emerald-100 text-emerald-800 px-6 py-2 rounded-xl font-bold hover:bg-emerald-200">+ 新增</button>
+                    <div class="flex space-x-2">
+                        <button id="btn-togglePayEdit" onclick="togglePayEditMode()" class="bg-orange-100 text-orange-700 px-6 py-2 rounded-xl font-bold hover:bg-orange-200 transition">
+                            <i class="fas fa-edit mr-1"></i> 修改繳費狀態
+                        </button>
+                        <button onclick="openModal('memberModal')" class="bg-emerald-100 text-emerald-800 px-6 py-2 rounded-xl font-bold hover:bg-emerald-200">+ 新增</button>
+                    </div>
                 </div>
-                <div class="overflow-x-auto"><table class="w-full text-left" id="memberTable"></table></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="memberTable"></table>
+                </div>
             </div>
         </section>
 
@@ -81,7 +88,7 @@
                 <h3 class="text-xl font-bold text-emerald-900 mb-6">發布新活動</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <input type="date" id="newDate" class="p-4 bg-gray-50 rounded-2xl border outline-none focus:border-emerald-500">
-                    <input type="text" id="newTitle" placeholder="標題" class="p-4 bg-gray-50 rounded-2xl border outline-none focus:border-emerald-500">
+                    <input type="text" id="newTitle" placeholder="活動名稱" class="p-4 bg-gray-50 rounded-2xl border outline-none focus:border-emerald-500">
                     <div class="flex items-center space-x-4">
                         <label class="flex items-center space-x-2"><input type="checkbox" id="newNeedCheckin" class="w-5 h-5 accent-emerald-600" checked> <span>需報到</span></label>
                         <button onclick="addEvent()" id="btn-addEvent" class="flex-1 bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">發布</button>
@@ -93,29 +100,27 @@
 
         <section id="section-rank" class="hidden">
             <div class="bg-white rounded-[2rem] p-8 shadow-sm border">
-                <h3 class="text-xl font-bold text-emerald-900 mb-6">出席榜單 (全勤與關懷)</h3>
-                <p class="text-sm text-gray-400 mb-6"><i class="fas fa-info-circle mr-1"></i> 系統自動依出席次數排序。0 次者標註為需關懷。</p>
+                <h3 class="text-xl font-bold text-emerald-900 mb-8">出席榜單 (全勤與關懷)</h3>
                 <div id="rankList" class="space-y-3"></div>
             </div>
         </section>
 
-        <section id="section-system" class="hidden space-y-8">
+        <section id="section-system" class="hidden">
             <div class="bg-white rounded-[2rem] p-8 shadow-sm border">
                 <h3 class="text-xl font-bold text-emerald-900 mb-6"><i class="fas fa-cog mr-2 text-gray-500"></i> 外部資源連結</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <label class="block text-sm font-bold text-gray-500 mb-2">導讀資料庫 URL</label>
-                        <input type="text" id="link-reading" class="w-full p-4 bg-gray-50 rounded-2xl border outline-none focus:border-emerald-500">
+                        <input type="text" id="link-reading" class="w-full p-4 bg-gray-50 rounded-2xl border outline-none">
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-gray-500 mb-2">活動剪影 URL</label>
-                        <input type="text" id="link-photo" class="w-full p-4 bg-gray-50 rounded-2xl border outline-none focus:border-emerald-500">
+                        <input type="text" id="link-photo" class="w-full p-4 bg-gray-50 rounded-2xl border outline-none">
                     </div>
                 </div>
-                <button id="btn-saveConfig" onclick="saveConfig()" class="mt-8 bg-emerald-800 text-white px-10 py-3 rounded-xl font-bold hover:bg-emerald-900 transition shadow-md">儲存系統設定</button>
+                <button id="btn-saveConfig" onclick="saveConfig()" class="mt-8 bg-emerald-800 text-white px-10 py-3 rounded-xl font-bold hover:bg-emerald-900 transition">儲存系統設定</button>
             </div>
         </section>
-
     </main>
 
     <div id="memberModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-6">
@@ -127,7 +132,7 @@
                 <input type="password" id="mPass" placeholder="預設密碼" class="w-full p-4 bg-gray-50 rounded-2xl border outline-none focus:border-emerald-500">
                 <div class="flex space-x-4 mt-8">
                     <button onclick="closeModal('memberModal')" class="flex-1 py-4 font-bold text-gray-400">取消</button>
-                    <button id="btn-addMember" onclick="addMember()" class="flex-1 bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">確認新增</button>
+                    <button id="btn-addMember" onclick="addMember()" class="flex-1 bg-emerald-800 text-white py-4 rounded-2xl font-bold">確認新增</button>
                 </div>
             </div>
         </div>
@@ -143,11 +148,11 @@
     </div>
 
     <script>
-        // --- 請務必更新此網址 ---
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec"; 
         const CHECKIN_URL = "https://sw-lin.github.io/chuxin-web/checkin.html";
         
         let allData = { users: [], calendar: [], config: {}, news: "" };
+        let isPayEditMode = false;
 
         async function init() {
             try {
@@ -157,7 +162,7 @@
                 document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
                 document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
                 document.getElementById('newsContent').value = allData.news || "";
-            } catch (e) { alert("連線失敗，請確認 API 網址"); }
+            } catch (e) { console.error(e); }
         }
 
         function renderAll() {
@@ -177,127 +182,127 @@
             document.getElementById(`tab-${tab}`).classList.add('tab-active');
         }
 
-        // --- 核心 API 通訊 ---
-        async function apiPost(data, btnId, callback) {
-            const btn = btnId ? document.getElementById(btnId) : null;
-            if(btn) btn.classList.add('btn-loading');
-            try {
-                const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
-                const result = await res.text();
-                if(result === "OK" || result === "SUCCESS") {
-                    if(callback) callback(); else location.reload();
-                } else { alert("操作失敗: " + result); }
-            } catch (e) { alert("系統忙碌中，請稍後再試"); }
-            if(btn) btn.classList.remove('btn-loading');
+        // --- 會員管理 & 繳費切換 ---
+        function togglePayEditMode() {
+            isPayEditMode = !isPayEditMode;
+            const btn = document.getElementById('btn-togglePayEdit');
+            if(isPayEditMode) {
+                btn.className = "bg-orange-600 text-white px-6 py-2 rounded-xl font-bold transition shadow-inner";
+                btn.innerHTML = '<i class="fas fa-check mr-1"></i> 完成修改';
+            } else {
+                btn.className = "bg-orange-100 text-orange-700 px-6 py-2 rounded-xl font-bold hover:bg-orange-200 transition";
+                btn.innerHTML = '<i class="fas fa-edit mr-1"></i> 修改繳費狀態';
+            }
+            renderMembers();
         }
 
-        // --- 排行榜 (榮譽與關懷) ---
-        function renderRank() {
-            const list = document.getElementById('rankList');
-            list.innerHTML = "";
-            const sorted = [...allData.users].sort((a,b) => b.attCount - a.attCount);
-            
-            sorted.forEach((u, i) => {
-                const isZero = u.attCount === 0;
-                const isTop = i < 3 && u.attCount > 0;
-                const item = document.createElement('div');
-                item.className = `flex items-center p-4 rounded-2xl border transition ${isZero ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-transparent'}`;
-                item.innerHTML = `
-                    <span class="w-8 font-bold ${isTop ? 'text-orange-500' : 'text-emerald-600'}">${i+1}</span>
-                    <div class="flex-1">
-                        <span class="font-bold text-emerald-900">${u.name}</span>
-                        ${isZero ? '<span class="ml-2 text-[10px] bg-red-200 text-red-700 px-2 py-0.5 rounded-full font-bold">需關懷</span>' : ''}
-                        ${isTop ? '<i class="fas fa-medal ml-1 text-orange-400"></i>' : ''}
-                    </div>
-                    <div class="${isZero ? 'bg-red-400' : 'bg-emerald-800'} text-white px-3 py-1 rounded-full text-xs font-bold">
-                        ${u.attCount} 次
-                    </div>
+        function renderMembers() {
+            const table = document.getElementById('memberTable');
+            table.innerHTML = `
+                <tr class="text-gray-400 text-sm border-b border-gray-100">
+                    <th class="pb-4">會員姓名</th>
+                    <th class="pb-4 text-center">聯繫電話</th>
+                    <th class="pb-4 text-center">繳費狀態</th>
+                    <th class="pb-4 text-right">管理</th>
+                </tr>
+            `;
+
+            allData.users.forEach(u => {
+                const paidUI = isPayEditMode ? 
+                    `<button onclick="updatePaidStatus('${u.phone}', '${u.paid}')" class="text-xs px-3 py-1.5 rounded-full border-2 transition ${u.paid==='是' ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-400 bg-red-50 text-red-600'} font-bold">
+                        ${u.paid==='是' ? '已繳 (點擊切換)' : '未繳 (點擊切換)'}
+                    </button>` :
+                    `<span class="text-sm px-4 py-1 rounded-full ${u.paid==='是' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} font-bold">
+                        ${u.paid==='是' ? '✅ 已繳' : '❌ 未繳'}
+                    </span>`;
+
+                table.innerHTML += `
+                    <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
+                        <td class="py-5">
+                            <div class="font-bold text-emerald-900 text-lg">${u.name}</div>
+                            <div class="inline-block bg-emerald-50 text-emerald-600 text-[10px] px-2 py-0.5 rounded-md font-bold mt-1">${u.title || '一般會員'}</div>
+                        </td>
+                        <td class="py-5 font-mono text-gray-600 text-center">${u.phone}</td>
+                        <td class="py-5 text-center">${paidUI}</td>
+                        <td class="py-5 text-right"><button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button></td>
+                    </tr>
                 `;
-                list.appendChild(item);
             });
         }
 
-        // --- 行事曆 (時間鎖定) ---
+        async function updatePaidStatus(phone, current) {
+            const next = current === '是' ? '否' : '是';
+            const user = allData.users.find(u => u.phone === phone);
+            if(user) user.paid = next;
+            renderMembers();
+            apiPost({ type: "update_paid_status", phone: phone, newStatus: next }, null, () => console.log("Paid updated"));
+        }
+
+        // --- 行事曆 (含安全鎖) ---
         function renderCalendar() {
             const list = document.getElementById('calendarList');
             list.innerHTML = "";
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const today = new Date(); today.setHours(0,0,0,0);
 
             allData.calendar.forEach(c => {
                 const eventDate = new Date(c.dateText);
                 const isFuture = eventDate > today;
                 const card = document.createElement('div');
-                card.className = "bg-white p-6 rounded-[2rem] border relative transition hover:shadow-md";
+                card.className = "bg-white p-6 rounded-[2rem] border transition hover:shadow-md";
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <div class="${isFuture ? 'text-gray-400' : 'text-orange-500'} font-bold text-sm">
-                                ${c.dateText} ${isFuture ? '(尚未開始)' : ''}
-                            </div>
+                            <div class="${isFuture ? 'text-gray-400' : 'text-orange-500'} font-bold text-sm">${c.dateText} ${isFuture ? '(尚未開放)' : ''}</div>
                             <h4 class="text-lg font-bold text-emerald-900">${c.title}</h4>
                         </div>
                         <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-400"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="flex space-x-3">
-                        ${isFuture ? 
-                            `<div class="flex-1 bg-gray-100 text-gray-400 py-2 rounded-xl text-sm font-bold text-center cursor-not-allowed"><i class="fas fa-lock mr-1"></i> 尚未開放</div>` : 
-                            `<button onclick="generateQR('${c.dateText}','${c.title}')" class="flex-1 bg-emerald-50 text-emerald-700 py-2 rounded-xl text-sm font-bold hover:bg-emerald-100">產生報到 QR</button>`
-                        }
-                    </div>
+                    ${isFuture ? 
+                        `<div class="bg-gray-100 text-gray-400 py-2 rounded-xl text-center text-sm font-bold cursor-not-allowed"><i class="fas fa-lock mr-1"></i> 尚未開放報到</div>` : 
+                        `<button onclick="generateQR('${c.dateText}','${c.title}')" class="w-full bg-emerald-50 text-emerald-700 py-2 rounded-xl text-sm font-bold hover:bg-emerald-100 transition">產生報到 QR</button>`
+                    }
                 `;
                 list.appendChild(card);
             });
         }
 
-        // --- 剩餘功能函式 ---
-        function loadTemplate() { document.getElementById('lineMsgContent').value = "【築心讀書會提醒】\n各位讀友大家好，明天就是我們的讀書會時間囉！\n期待與大家見面交流。"; }
-        function sendLineMessage() {
-            const msg = document.getElementById('lineMsgContent').value.trim();
-            if(!msg) return alert("請輸入內容");
-            apiPost({ type: "send_line_push", content: msg }, "btn-sendLine", () => { alert("訊息已成功推送至群組！"); document.getElementById('lineMsgContent').value = ""; });
+        // --- 出席榜單 (全名單排序) ---
+        function renderRank() {
+            const list = document.getElementById('rankList');
+            list.innerHTML = "";
+            const sorted = [...allData.users].sort((a,b) => b.attCount - a.attCount);
+            sorted.forEach((u, i) => {
+                const isZero = u.attCount === 0;
+                const isTop = i < 3 && u.attCount > 0;
+                const item = document.createElement('div');
+                item.className = `flex items-center p-4 rounded-2xl border ${isZero ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-transparent'}`;
+                item.innerHTML = `
+                    <span class="w-8 font-bold ${isTop ? 'text-orange-500' : 'text-emerald-600'}">${i+1}</span>
+                    <div class="flex-1 font-bold text-emerald-900">${u.name} ${isZero?'<span class="ml-1 text-[10px] bg-red-200 text-red-700 px-2 py-0.5 rounded-full">需關懷</span>':''} ${isTop?'<i class="fas fa-medal text-orange-400"></i>':''}</div>
+                    <div class="${isZero?'bg-red-400':'bg-emerald-800'} text-white px-3 py-1 rounded-full text-xs font-bold">${u.attCount} 次</div>
+                `;
+                list.appendChild(item);
+            });
         }
+
+        // --- 其他工具函式 ---
+        async function apiPost(data, btnId, callback) {
+            const btn = btnId ? document.getElementById(btnId) : null;
+            if(btn) btn.classList.add('btn-loading');
+            try {
+                const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
+                if(callback) callback(); else location.reload();
+            } catch (e) { alert("連線失敗"); }
+            if(btn) btn.classList.remove('btn-loading');
+        }
+        function loadTemplate() { document.getElementById('lineMsgContent').value = "【築心讀書會提醒】\n各位讀友大家好，明天就是我們的讀書會時間囉！"; }
+        function sendLineMessage() { apiPost({ type: "send_line_push", content: document.getElementById('lineMsgContent').value }, "btn-sendLine", () => { alert("已發送至 LINE 群組！"); document.getElementById('lineMsgContent').value = ""; }); }
         function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }, "btn-publishNews"); }
         function saveConfig() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }, "btn-saveConfig"); }
-        function renderMembers() {
-    const table = document.getElementById('memberTable');
-    table.innerHTML = `
-        <tr class="text-gray-400 text-sm border-b border-gray-100">
-            <th class="pb-4 font-bold">會員姓名</th>
-            <th class="pb-4 font-bold">聯繫電話</th>
-            <th class="pb-4 font-bold text-center">繳費狀態</th>
-            <th class="pb-4 font-bold text-right">管理</th>
-        </tr>
-    `;
-
-    allData.users.forEach(u => {
-        table.innerHTML += `
-            <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
-                <td class="py-5">
-                    <div class="font-bold text-emerald-900 text-lg">${u.name}</div>
-                    <div class="inline-block bg-emerald-50 text-emerald-600 text-[10px] px-2 py-0.5 rounded-md font-bold mt-1">
-                        ${u.title || '一般會員'}
-                    </div>
-                </td>
-                <td class="py-5 font-mono text-gray-600">${u.phone}</td>
-                <td class="py-5 text-center">
-                    <span class="text-sm px-3 py-1 rounded-full ${u.paid === '是' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} font-bold">
-                        ${u.paid === '是' ? '✅ 已繳' : '❌ 未繳'}
-                    </span>
-                </td>
-                <td class="py-5 text-right">
-                    <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 p-2 transition">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-}
         function addMember() { apiPost({ type: "add_member", name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, password: document.getElementById('mPass').value }, "btn-addMember"); }
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('newDate').value, title: document.getElementById('newTitle').value, needCheckin: document.getElementById('newNeedCheckin').checked }, "btn-addEvent"); }
-        function deleteEvent(date) { if(confirm(`確定刪除 ${date} 活動？`)) apiPost({ type: "delete_event", date: date }); }
-        function deleteMember(phone) { if(confirm("確定刪除此會員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
+        function deleteEvent(date) { if(confirm("確定刪除活動？")) apiPost({ type: "delete_event", date: date }); }
+        function deleteMember(phone) { if(confirm("確定刪除會員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
         function generateQR(date, title) {
             document.getElementById('qrTitle').innerText = title;
             document.getElementById('qrDate').innerText = date;

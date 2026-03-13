@@ -151,11 +151,18 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec"; 
         const CHECKIN_URL = "https://sw-lin.github.io/chuxin-web/checkin.html";
         
+        let ADMIN_KEY = "";// 1. 新增全域變數來存儲 Key
         let allData = { users: [], calendar: [], config: {}, news: "" };
         let isPayEditMode = false;
 
         async function init() {
-            try {
+   // 進入頁面時要求輸入
+    ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
+    if (!ADMIN_KEY) {
+        alert("未輸入金鑰，功能將受限。");
+        // 也可以導回首頁：location.href = 'index.html';
+    }
+    await fetchData();            try {
                 const res = await fetch(GAS_URL);
                 allData = await res.json();
                 renderAll();
@@ -294,15 +301,39 @@
         }
 
         // --- 其他工具函式 ---
-        async function apiPost(data, btnId, callback) {
-            const btn = btnId ? document.getElementById(btnId) : null;
-            if(btn) btn.classList.add('btn-loading');
-            try {
-                const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
-                if(callback) callback(); else location.reload();
-            } catch (e) { alert("連線失敗"); }
-            if(btn) btn.classList.remove('btn-loading');
+        // 3. 修改 apiPost，確保每次請求都帶上 adminKey
+function apiPost(data, btnId) {
+    const btn = btnId ? document.getElementById(btnId) : null;
+    if (btn) {
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+    }
+
+    // 將 ADMIN_KEY 加入傳輸資料中
+    data.adminKey = ADMIN_KEY; 
+
+    fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify(data)
+    })
+    .then(res => res.text())
+    .then(result => {
+        if (result === "SUCCESS") {
+            alert("操作成功！");
+            location.reload();
+        } else if (result === "WRONG_KEY") {
+            alert("❌ 授權金鑰錯誤！操作遭拒。");
+        } else {
+            alert("系統錯誤: " + result);
         }
+    })
+    .finally(() => {
+        if (btn) {
+            btn.classList.remove('btn-loading');
+            btn.disabled = false;
+        }
+    });
+}
         function loadTemplate() { document.getElementById('lineMsgContent').value = "【築心讀書會提醒】\n各位讀友大家好，明天就是我們的讀書會時間囉！"; }
         function sendLineMessage() { apiPost({ type: "send_line_push", content: document.getElementById('lineMsgContent').value }, "btn-sendLine", () => { alert("已發送至 LINE 群組！"); document.getElementById('lineMsgContent').value = ""; }); }
         function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }, "btn-publishNews"); }

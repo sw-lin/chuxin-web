@@ -19,7 +19,7 @@
 </head>
 <body class="pb-12 unauthorized" id="adminBody">
 
-    <header class="admin-gradient text-white pt-8 pb-12 px-6 shadow-lg">
+    <header id="adminContentHeader" class="admin-gradient text-white pt-8 pb-12 px-6 shadow-lg hidden">
         <div class="max-w-6xl mx-auto flex justify-between items-end">
             <div>
                 <h1 class="text-3xl font-bold tracking-tight">築心管理系統</h1>
@@ -46,7 +46,7 @@
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto mt-8 px-6">
+    <main id="adminContentMain" class="max-w-6xl mx-auto mt-8 px-6 hidden">
         <section id="section-news" class="space-y-8">
             <div class="bg-white rounded-[2rem] p-8 shadow-sm border">
                 <h3 class="text-xl font-bold mb-6 text-emerald-900"><i class="fas fa-bullhorn mr-2"></i> 首頁公佈欄更新</h3>
@@ -154,17 +154,15 @@
 
         // 替換原本的 init 與 fetchData 函式
 async function init() {
-    // 1. 立即跳出詢問
     ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
     
-    // 2. 如果使用者按取消或沒輸入，直接踢回原頁面
-    if (!ADMIN_KEY) {
+    // 如果取消或空白，直接踢走
+    if (!ADMIN_KEY || ADMIN_KEY.trim() === "") {
         alert("未輸入金鑰，將導回會員專區。");
-        location.replace('member_zone.html'); // 使用 replace 避免按上一頁回來
+        location.replace('member_zone.html');
         return;
     }
-
-    // 3. 嘗試抓取資料驗證金鑰
+    
     await fetchData();
 }
 
@@ -180,27 +178,30 @@ async function fetchData() {
         
         const result = await res.text();
         
+        // 嚴格檢查回傳值
         if (result === "WRONG_KEY") {
             alert("❌ 授權金鑰錯誤！");
             location.replace('member_zone.html');
-            return;
+            return; // 確保後續程式碼不執行
         }
 
-        // 4. 只有執行到這裡（代表金鑰正確），才解析資料並顯示頁面
+        // 解析資料
         allData = JSON.parse(result);
+        
+        // 只有到這一步，才開始渲染與顯示
         renderAll(); 
         
-        // 移除隱藏類別，讓內容顯現
-        document.getElementById('adminBody').classList.remove('unauthorized');
+        // 解鎖 UI
+        document.getElementById('adminContentHeader').classList.remove('hidden');
+        document.getElementById('adminContentMain').classList.remove('hidden');
         
-        // 填入設定值
         document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
         document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
         document.getElementById('newsContent').value = allData.news || "";
 
     } catch (e) {
-        console.error("系統錯誤:", e);
-        alert("連線失敗，請檢查網路。");
+        console.error("驗證失敗:", e);
+        alert("系統讀取失敗，請檢查 GAS 網址與權限。");
         location.replace('member_zone.html');
     }
 }

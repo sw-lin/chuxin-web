@@ -47,13 +47,13 @@
 
     <main class="max-w-6xl mx-auto px-4">
         <section id="sec-news" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50">
-                <h3 class="text-lg font-bold text-emerald-900 mb-4 flex items-center"><i class="fas fa-bullhorn mr-2"></i> 首頁公告更新</h3>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50 text-emerald-900">
+                <h3 class="text-lg font-bold mb-4 flex items-center"><i class="fas fa-bullhorn mr-2"></i> 首頁公告更新</h3>
                 <textarea id="newsContent" rows="4" class="w-full p-4 bg-gray-50 border rounded-xl" placeholder="輸入公告內容..."></textarea>
                 <button id="btn-publishNews" onclick="publishNews()" class="mt-4 bg-emerald-700 text-white px-8 py-3 rounded-xl hover:bg-emerald-800 transition">發布公告</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50">
-                <h3 class="text-lg font-bold text-emerald-900 mb-4 flex items-center"><i class="fab fa-line mr-2 text-green-500"></i> LINE 訊息發送</h3>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50 text-emerald-900">
+                <h3 class="text-lg font-bold mb-4 flex items-center"><i class="fab fa-line mr-2 text-green-500"></i> LINE 訊息發送</h3>
                 <input type="text" id="pushMsg" class="w-full p-4 bg-gray-50 border rounded-xl mb-4" placeholder="輸入訊息...">
                 <button id="btn-sendPush" onclick="sendLinePush()" class="bg-emerald-600 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 transition">發送訊息</button>
             </div>
@@ -108,11 +108,13 @@
 
         <section id="sec-attendance" class="hidden space-y-6">
             <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50">
-                <h3 class="font-bold mb-4 text-emerald-900"><i class="fas fa-chart-line mr-2 text-emerald-600"></i> 成員出席次數統計</h3>
+                <h3 class="font-bold mb-4 text-emerald-900 flex justify-between items-center">
+                    <span><i class="fas fa-chart-line mr-2 text-emerald-600"></i> 成員出席統計 (僅限已繳費成員)</span>
+                </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-emerald-50 text-emerald-900">
-                            <tr><th class="p-4">排名</th><th class="p-4">姓名</th><th class="p-4">繳費狀態</th><th class="p-4 text-center">總計次數</th></tr>
+                            <tr><th class="p-4">排名</th><th class="p-4">姓名</th><th class="p-4 text-center">總計次數</th></tr>
                         </thead>
                         <tbody id="attendanceList"></tbody>
                     </table>
@@ -145,12 +147,16 @@
     <script>
         let ADMIN_KEY = "";
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec"; 
-        const CHECKIN_URL = "https://your-domain.com/checkin.html"; // 替換為您的簽到網頁
+        const CHECKIN_URL = "https://your-domain.com/checkin.html"; 
         let allData = null;
 
+        // --- 修正 1: 錯誤後自動跳轉 ---
         async function init() {
             const key = prompt("管理權限驗證，請輸入金鑰：");
-            if (!key) { location.replace('member_zone.html'); return; }
+            if (!key) { 
+                location.replace('member_zone.html'); 
+                return; 
+            }
             ADMIN_KEY = key;
             await fetchData();
         }
@@ -159,12 +165,21 @@
             try {
                 const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "get_all_data", adminKey: ADMIN_KEY }) });
                 const result = await res.text();
-                if (result === "WRONG_KEY") { alert("金鑰錯誤"); location.reload(); return; }
+                
+                if (result === "WRONG_KEY") { 
+                    alert("❌ 金鑰錯誤！將自動導回會員專區。"); 
+                    location.replace('member_zone.html'); // 自動跳轉
+                    return; 
+                }
+                
                 allData = JSON.parse(result);
                 renderAll();
                 document.getElementById('adminBody').classList.remove('unauthorized');
                 document.getElementById('adminBody').style.opacity = "1";
-            } catch (e) { alert("讀取失敗"); }
+            } catch (e) { 
+                alert("連線失敗，請檢查網路或金鑰。"); 
+                location.replace('member_zone.html'); 
+            }
         }
 
         function renderAll() {
@@ -179,46 +194,36 @@
             renderAttendance();
         }
 
-        // 1. 會員名單 (純聯絡資訊)
         function renderMembers() {
             const list = document.getElementById('memberList');
             list.innerHTML = allData.users.map(u => `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-4"><div class="font-bold">${u.name}</div><div class="text-xs text-emerald-600">${u.title || '學員'}</div></td>
                     <td class="p-4 font-mono text-sm">${u.phone}</td>
-                    <td class="p-4 text-sm text-gray-500">${u.email || '尚未設定'}</td>
+                    <td class="p-4 text-sm text-gray-500">${u.email || ''}</td>
                     <td class="p-4 text-right"><button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>
             `).join('');
         }
 
-        // 2. 行事曆 (QR 限制邏輯)
         function renderCalendar() {
             const container = document.getElementById('calendarList');
             const today = new Date();
             today.setHours(0,0,0,0);
-
             container.innerHTML = allData.calendar.map(ev => {
                 const evDate = new Date(ev.dateText);
                 const isFuture = evDate > today;
-                
                 return `
                 <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm ${isFuture ? 'future-event' : ''}">
-                    <div>
-                        <div class="text-xs font-bold ${isFuture ? 'text-gray-400' : 'text-emerald-600'}">${ev.dateText} ${isFuture ? '(預定活動)' : ''}</div>
-                        <div class="font-bold text-gray-800">${ev.title}</div>
-                    </div>
+                    <div><div class="text-xs font-bold ${isFuture ? 'text-gray-400' : 'text-emerald-600'}">${ev.dateText}</div><div class="font-bold text-gray-800">${ev.title}</div></div>
                     <div class="flex gap-1">
-                        ${(!isFuture && ev.description === "需報到") ? 
-                          `<button onclick="showQR('${ev.dateText}','${ev.title}')" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"><i class="fas fa-qrcode"></i></button>` : 
-                          `<i class="fas fa-clock p-2 text-gray-200"></i>`}
+                        ${(!isFuture && ev.description === "需報到") ? `<button onclick="showQR('${ev.dateText}','${ev.title}')" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"><i class="fas fa-qrcode"></i></button>` : ''}
                         <button onclick="deleteEvent('${ev.dateText}')" class="p-2 text-gray-300 hover:text-red-500 rounded-lg"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        // 3. 繳費狀況頁面
         function renderPayment() {
             const list = document.getElementById('paymentList');
             list.innerHTML = allData.users.map(u => `
@@ -226,29 +231,25 @@
                     <td class="p-4 font-bold text-gray-800">${u.name}</td>
                     <td class="p-4 text-sm text-gray-500">2026 年度讀書會費</td>
                     <td class="p-4 text-center">
-                        <button onclick="togglePaid('${u.phone}', '${u.paid}')" 
-                                class="px-4 py-1 rounded-full text-xs font-bold ${u.paid==='是'?'bg-emerald-100 text-emerald-700':'bg-red-50 text-red-600'}">
-                            ${u.paid==='是'?'已完成':'未繳納'}
-                        </button>
+                        <button onclick="togglePaid('${u.phone}', '${u.paid}')" class="px-4 py-1 rounded-full text-xs font-bold ${u.paid==='是'?'bg-emerald-100 text-emerald-700':'bg-red-50 text-red-600'}">${u.paid==='是'?'已完成':'未繳納'}</button>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
 
-        // 4. 出席紀錄頁面 (參與次數排列)
+        // --- 修正 2: 出席紀錄排除未繳費人員 ---
         function renderAttendance() {
             const list = document.getElementById('attendanceList');
-            // 排序：次數多到少
-            const sorted = [...allData.users].sort((a,b) => b.attCount - a.attCount);
+            // 先過濾已繳費的人，再依出席次數排序
+            const sorted = allData.users
+                .filter(u => u.paid === '是') 
+                .sort((a,b) => b.attCount - a.attCount);
             
             list.innerHTML = sorted.map((u, i) => `
                 <tr class="border-b hover:bg-emerald-50 transition">
                     <td class="p-4"><span class="w-8 h-8 rounded-full flex items-center justify-center ${i<3?'bg-orange-100 text-orange-600 font-bold':'text-gray-400'}">${i+1}</span></td>
                     <td class="p-4 font-bold text-gray-800">${u.name}</td>
-                    <td class="p-4"><span class="text-xs px-2 py-1 rounded ${u.paid==='是'?'bg-emerald-50 text-emerald-600':'bg-gray-100 text-gray-400'}">${u.paid==='是'?'已付費員':'非付費員'}</span></td>
                     <td class="p-4 text-center font-mono font-bold text-emerald-800 text-lg">${u.attCount}</td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
 
         async function apiPost(data, btnId) {
@@ -258,14 +259,13 @@
                 data.adminKey = ADMIN_KEY;
                 const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
                 const result = await res.text();
-                if (result === "WRONG_KEY") { alert("金鑰失效"); location.reload(); return; }
+                if (result === "WRONG_KEY") { alert("授權過期"); location.replace('member_zone.html'); return; }
                 if (result === "SUCCESS" || result === "OK") { alert("✅ 執行成功"); await fetchData(); }
                 else { alert("結果：" + result); }
             } catch (e) { alert("連線錯誤"); }
             finally { if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); } }
         }
 
-        // 功能對接
         function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }, "btn-publishNews"); }
         function sendLinePush() { apiPost({ type: "send_line_push", content: document.getElementById('pushMsg').value }, "btn-sendPush"); }
         function saveConfig() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }, "btn-saveConfig"); }
@@ -274,7 +274,6 @@
         function deleteEvent(date) { if(confirm("確定移除活動？")) apiPost({ type: "delete_event", date: date }); }
         function deleteMember(phone) { if(confirm("確定移除會員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
         function togglePaid(phone, current) { apiPost({ type: "update_paid_status", phone: phone, newStatus: current==='是'?'否':'是' }); }
-
         function showQR(date, title) {
             document.getElementById('qrTitle').innerText = title;
             document.getElementById('qrDate').innerText = date;
@@ -282,7 +281,6 @@
             new QRCode(document.getElementById("qrcode"), { text: `${CHECKIN_URL}?event=${date}`, width: 180, height: 180, colorDark : "#064E3B" });
             document.getElementById('qrModal').classList.remove('hidden');
         }
-
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function switchTab(tab) {
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -290,7 +288,6 @@
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
             document.getElementById('tab-' + tab).classList.add('tab-active');
         }
-
         window.onload = init;
     </script>
 </body>

@@ -155,69 +155,62 @@
         let allData = { users: [], calendar: [], config: {}, news: "" };
         let isPayEditMode = false;
 
-        async function init() {
-    // 1. 先要求輸入 Key
-    ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
-    
-    if (!ADMIN_KEY) {
-        alert("未輸入金鑰，將導回會員專區。");
-        location.href = 'member_zone.html';
-        return;
-    }
+let ADMIN_KEY = ""; // 存放 Key 的全域變數
+        let allData = { users: [], calendar: [], config: {}, news: "" };
+        let isPayEditMode = false;
 
-    // 2. 只有輸入了 Key，才去執行帶驗證的 fetchData
-    await fetchData();
-}
-    
-    // 立即執行一次 fetchData，若 Key 錯誤就擋
-    await fetchData();            
+        // --- 修改後的初始化順序 ---
+        async function init() {
+            // 1. 先跳出對話框要求輸入 Key
+            ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
+            
+            if (!ADMIN_KEY) {
+                alert("未輸入金鑰，將導回會員專區。");
+                location.href = 'member_zone.html';
+                return;
+            }
+
+            // 2. 只有拿到 Key 後，才去執行 fetchData (透過 POST)
+            await fetchData();
+        }
+
+        async function fetchData() {
             try {
-                const res = await fetch(GAS_URL);
-                allData = await res.json();
-                renderAll();
+                // 強制使用 POST 請求，並夾帶 adminKey 參數
+                const res = await fetch(GAS_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        type: "get_all_data",
+                        adminKey: ADMIN_KEY 
+                    })
+                });
+
+                const result = await res.text();
+
+                // 檢查是否為金鑰錯誤
+                if (result === "WRONG_KEY") {
+                    alert("❌ 授權金鑰錯誤！將導回會員專區。");
+                    location.href = 'member_zone.html';
+                    return;
+                }
+
+                // 若成功，解析 JSON 資料
+                allData = JSON.parse(result);
+                
+                // 執行渲染畫面的功能
+                renderAll(); 
+                
+                // 填充系統設定欄位
                 document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
                 document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
                 document.getElementById('newsContent').value = allData.news || "";
-            } catch (e) { console.error(e); }
-        }
-// 2. 抓取資料邏輯：增加錯誤處理與 Key 判定
-async function fetchData() {
-    try {
-        // 修改點：改用 POST 並帶上 adminKey 去請求資料
-        const res = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ 
-                type: "get_all_data",
-                adminKey: ADMIN_KEY 
-            })
-        });
-
-        const result = await res.text();
-
-        // 3. 檢查 GAS 回傳的是否為錯誤訊息
-        if (result === "WRONG_KEY") {
-            alert("❌ 授權金鑰錯誤！將導回會員專區。");
-            location.href = 'member_zone.html';
-            return;
-        }
-
-        // 4. 若成功，解析資料並渲染
-        const data = JSON.parse(result);
-        allData = data;
-        
-        renderAll(); // 渲染所有列表
-        
-        // 填充系統設定欄位
-        document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
-        document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
-        document.getElementById('newsContent').value = allData.news || "";
-        
-    } catch (e) {
-        console.error("驗證失敗:", e);
-        alert("系統讀取失敗，請檢查金鑰或網路連線。");
-        location.href = 'member_zone.html';
-    }
-}   
+                
+            } catch (e) {
+                console.error("驗證失敗:", e);
+                alert("系統讀取失敗，請確認 GAS 網址是否正確。");
+                location.href = 'member_zone.html';
+            }
+        }   
         
         function renderAll() {
             renderMembers();

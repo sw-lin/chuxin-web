@@ -152,42 +152,54 @@
         let allData = { users: [], calendar: [], config: {}, news: "" };
         let isPayEditMode = false;
 
-        async function init() {
-            ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
-            if (!ADMIN_KEY) {
-                alert("未輸入金鑰，將導回會員專區。");
-                location.href = 'member_zone.html';
-                return;
-            }
-            await fetchData();
+        // 替換原本的 init 與 fetchData 函式
+async function init() {
+    // 強制延遲 100ms 確保頁面渲染完成再彈出，避免被瀏覽器阻擋
+    setTimeout(async () => {
+        ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
+        
+        if (!ADMIN_KEY || ADMIN_KEY.trim() === "") {
+            alert("未輸入金鑰，將導回會員專區。");
+            location.href = 'member_zone.html';
+            return;
         }
+        await fetchData();
+    }, 100);
+}
 
-        async function fetchData() {
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: "POST",
-                    body: JSON.stringify({ 
-                        type: "get_all_data",
-                        adminKey: ADMIN_KEY 
-                    })
-                });
-                const result = await res.text();
-                if (result === "WRONG_KEY") {
-                    alert("❌ 授權金鑰錯誤！將導回會員專區。");
-                    location.href = 'member_zone.html';
-                    return;
-                }
-                allData = JSON.parse(result);
-                renderAll(); 
-                document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
-                document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
-                document.getElementById('newsContent').value = allData.news || "";
-            } catch (e) {
-                console.error("驗證失敗:", e);
-                alert("系統讀取失敗，請確認 GAS 網址是否正確。");
-                location.href = 'member_zone.html';
-            }
-        }   
+async function fetchData() {
+    try {
+        // 加入快取消除機制 t=${Date.now()}
+        const res = await fetch(GAS_URL + `?t=${Date.now()}`, {
+            method: "POST",
+            mode: 'cors', // 確保跨域請求正常
+            body: JSON.stringify({ 
+                type: "get_all_data",
+                adminKey: ADMIN_KEY 
+            })
+        });
+        
+        if (!res.ok) throw new Error("網路請求失敗");
+
+        const result = await res.text();
+        if (result === "WRONG_KEY") {
+            alert("❌ 授權金鑰錯誤！將導回會員專區。");
+            location.href = 'member_zone.html';
+            return;
+        }
+        
+        allData = JSON.parse(result);
+        renderAll(); 
+        document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
+        document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
+        document.getElementById('newsContent').value = allData.news || "";
+    } catch (e) {
+        console.error("驗證失敗:", e);
+        // 增加更具體的錯誤提示
+        alert("系統連線失敗！\n原因：" + e.message + "\n請確認網路連線或 GAS 是否已「部署為 Web 應用程式」並設定為「任何人」皆可存取。");
+        location.href = 'member_zone.html';
+    }
+}
         
         function renderAll() {
             renderMembers();

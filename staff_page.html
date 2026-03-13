@@ -176,32 +176,43 @@ async function fetchData() {
             })
         });
         
-        const result = await res.text();
+        // 1. 取得原始回應
+        const rawResponse = await res.text();
         
-        // 嚴格檢查回傳值
-        if (result === "WRONG_KEY") {
+        // 2. 攔截錯誤金鑰
+        if (rawResponse === "WRONG_KEY") {
             alert("❌ 授權金鑰錯誤！");
             location.replace('member_zone.html');
-            return; // 確保後續程式碼不執行
+            return;
         }
 
-        // 解析資料
-        allData = JSON.parse(result);
+        // 3. 安全解析 JSON
+        try {
+            allData = JSON.parse(rawResponse);
+        } catch (jsonErr) {
+            console.error("JSON 解析失敗，原始內容：", rawResponse);
+            alert("資料格式錯誤，請確保 GAS 已正確部署為新版本。");
+            return;
+        }
         
-        // 只有到這一步，才開始渲染與顯示
+        // 4. 渲染畫面
         renderAll(); 
         
-        // 解鎖 UI
+        // 5. 解鎖 UI (移除 unauthorized 類別並顯示區塊)
+        document.getElementById('adminBody').classList.remove('unauthorized');
         document.getElementById('adminContentHeader').classList.remove('hidden');
         document.getElementById('adminContentMain').classList.remove('hidden');
         
-        document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
-        document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
+        // 6. 填入預設值
+        if (allData.config) {
+            document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
+            document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
+        }
         document.getElementById('newsContent').value = allData.news || "";
 
     } catch (e) {
-        console.error("驗證失敗:", e);
-        alert("系統讀取失敗，請檢查 GAS 網址與權限。");
+        console.error("連線或驗證失敗:", e);
+        alert("系統讀取失敗，請檢查網路連線或 GAS 部署網址。");
         location.replace('member_zone.html');
     }
 }

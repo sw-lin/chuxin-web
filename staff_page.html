@@ -182,3 +182,165 @@
                 document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
                 document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
                 document.getElementById('newsContent').value = allData.news || "";
+            } catch (e) {
+                console.error("驗證失敗:", e);
+                alert("系統讀取失敗，請確認 GAS 網址是否正確。");
+                location.href = 'member_zone.html';
+            }
+        }   
+        
+        function renderAll() {
+            renderMembers();
+            renderCalendar();
+            renderRank();
+        }
+
+        function switchTab(tab) {
+            ['news', 'members', 'calendar', 'rank', 'system'].forEach(t => {
+                document.getElementById(`section-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.replace('text-emerald-900', 'text-gray-400');
+                document.getElementById(`tab-${t}`).classList.remove('tab-active');
+            });
+            document.getElementById(`section-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.replace('text-gray-400', 'text-emerald-900');
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+        }
+
+        function togglePayEditMode() {
+            isPayEditMode = !isPayEditMode;
+            const btn = document.getElementById('btn-togglePayEdit');
+            if(isPayEditMode) {
+                btn.className = "bg-orange-600 text-white px-6 py-2 rounded-xl font-bold transition shadow-inner";
+                btn.innerHTML = '<i class="fas fa-check mr-1"></i> 完成修改';
+            } else {
+                btn.className = "bg-orange-100 text-orange-700 px-6 py-2 rounded-xl font-bold hover:bg-orange-200 transition";
+                btn.innerHTML = '<i class="fas fa-edit mr-1"></i> 修改繳費狀態';
+            }
+            renderMembers();
+        }
+
+        function renderMembers() {
+            const table = document.getElementById('memberTable');
+            table.innerHTML = `
+                <tr class="text-gray-400 text-sm border-b border-gray-100">
+                    <th class="pb-4">會員姓名</th>
+                    <th class="pb-4 text-center">聯繫電話</th>
+                    <th class="pb-4 text-center">繳費狀態</th>
+                    <th class="pb-4 text-right">管理</th>
+                </tr>
+            `;
+            allData.users.forEach(u => {
+                const paidUI = isPayEditMode ? 
+                    `<button onclick="updatePaidStatus('${u.phone}', '${u.paid}')" class="text-xs px-3 py-1.5 rounded-full border-2 transition ${u.paid==='是' ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-400 bg-red-50 text-red-600'} font-bold">
+                        ${u.paid==='是' ? '已繳 (點擊切換)' : '未繳 (點擊切換)'}
+                    </button>` :
+                    `<span class="text-sm px-4 py-1 rounded-full ${u.paid==='是' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} font-bold">
+                        ${u.paid==='是' ? '✅ 已繳' : '❌ 未繳'}
+                    </span>`;
+                table.innerHTML += `
+                    <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
+                        <td class="py-5">
+                            <div class="font-bold text-emerald-900 text-lg">${u.name}</div>
+                            <div class="inline-block bg-emerald-50 text-emerald-600 text-[10px] px-2 py-0.5 rounded-md font-bold mt-1">${u.title || '一般會員'}</div>
+                        </td>
+                        <td class="py-5 font-mono text-gray-600 text-center">${u.phone}</td>
+                        <td class="py-5 text-center">${paidUI}</td>
+                        <td class="py-5 text-right"><button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function updatePaidStatus(phone, current) {
+            const next = current === '是' ? '否' : '是';
+            const user = allData.users.find(u => u.phone === phone);
+            if(user) user.paid = next;
+            renderMembers();
+            apiPost({ type: "update_paid_status", phone: phone, newStatus: next }, null, () => {});
+        }
+
+        function renderCalendar() {
+            const list = document.getElementById('calendarList');
+            list.innerHTML = "";
+            const today = new Date(); 
+            today.setHours(0,0,0,0);
+            allData.calendar.forEach(c => {
+                const eventDate = new Date(c.dateText);
+                eventDate.setHours(0,0,0,0);
+                const isFuture = eventDate > today; 
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-[2rem] border transition hover:shadow-md";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <div class="${isFuture ? 'text-gray-400' : 'text-orange-500'} font-bold text-sm">
+                                ${c.dateText} ${isFuture ? '(尚未開放)' : ''}
+                            </div>
+                            <h4 class="text-lg font-bold text-emerald-900">${c.title}</h4>
+                        </div>
+                        <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-400"><i class="fas fa-times"></i></button>
+                    </div>
+                    ${isFuture ? 
+                        `<div class="bg-gray-100 text-gray-400 py-2 rounded-xl text-center text-sm font-bold cursor-not-allowed"><i class="fas fa-lock mr-1"></i> 尚未開放報到</div>` : 
+                        `<button onclick="generateQR('${c.dateText}','${c.title}')" class="w-full bg-emerald-50 text-emerald-700 py-2 rounded-xl text-sm font-bold hover:bg-emerald-100 transition">產生報到 QR</button>`
+                    }
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function renderRank() {
+            const list = document.getElementById('rankList');
+            list.innerHTML = "";
+            const sorted = [...allData.users].sort((a,b) => b.attCount - a.attCount);
+            sorted.forEach((u, i) => {
+                const isZero = u.attCount === 0;
+                const isTop = i < 3 && u.attCount > 0;
+                const item = document.createElement('div');
+                item.className = `flex items-center p-4 rounded-2xl border ${isZero ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-transparent'}`;
+                item.innerHTML = `
+                    <span class="w-8 font-bold ${isTop ? 'text-orange-500' : 'text-emerald-600'}">${i+1}</span>
+                    <div class="flex-1 font-bold text-emerald-900">${u.name} ${isZero?'<span class="ml-1 text-[10px] bg-red-200 text-red-700 px-2 py-0.5 rounded-full">需關懷</span>':''} ${isTop?'<i class="fas fa-medal text-orange-400"></i>':''}</div>
+                    <div class="${isZero?'bg-red-400':'bg-emerald-800'} text-white px-3 py-1 rounded-full text-xs font-bold">${u.attCount} 次</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function apiPost(data, btnId, callback) {
+            const btn = btnId ? document.getElementById(btnId) : null;
+            if(btn) btn.classList.add('btn-loading');
+            data.adminKey = ADMIN_KEY;
+            try {
+                const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
+                const result = await res.text();
+                if(result === "WRONG_KEY") {
+                    alert("❌ 授權過期或金鑰錯誤，請重新整理頁面。");
+                    return;
+                }
+                if(callback) callback(); else location.reload();
+            } catch (e) { alert("連線失敗"); }
+            if(btn) btn.classList.remove('btn-loading');
+        }
+
+        function loadTemplate() { document.getElementById('lineMsgContent').value = "【築心讀書會提醒】\n各位讀友大家好，明天就是我們的讀書會時間囉！"; }
+        function sendLineMessage() { apiPost({ type: "send_line_push", content: document.getElementById('lineMsgContent').value }, "btn-sendLine", () => { alert("已發送至 LINE 群組！"); document.getElementById('lineMsgContent').value = ""; }); }
+        function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }, "btn-publishNews"); }
+        function saveConfig() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }, "btn-saveConfig"); }
+        function addMember() { apiPost({ type: "add_member", name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, password: document.getElementById('mPass').value }, "btn-addMember"); }
+        function addEvent() { apiPost({ type: "add_event", date: document.getElementById('newDate').value, title: document.getElementById('newTitle').value, needCheckin: document.getElementById('newNeedCheckin').checked }, "btn-addEvent"); }
+        function deleteEvent(date) { if(confirm("確定刪除活動？")) apiPost({ type: "delete_event", date: date }); }
+        function deleteMember(phone) { if(confirm("確定刪除會員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
+        function generateQR(date, title) {
+            document.getElementById('qrTitle').innerText = title;
+            document.getElementById('qrDate').innerText = date;
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: `${CHECKIN_URL}?event=${date}`, width: 180, height: 180, colorDark : "#064E3B" });
+            openModal('qrModal');
+        }
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        window.onload = init;
+    </script>
+</body>
+</html>

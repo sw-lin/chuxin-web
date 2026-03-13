@@ -154,15 +154,19 @@
 
         // 替換原本的 init 與 fetchData 函式
 async function init() {
-    ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
+    // 1. 先從 prompt 拿到 key
+    const inputKey = prompt("請輸入管理員授權金鑰以啟用管理功能：");
     
-    // 如果取消或空白，直接踢走
-    if (!ADMIN_KEY || ADMIN_KEY.trim() === "") {
+    if (!inputKey || inputKey.trim() === "") {
         alert("未輸入金鑰，將導回會員專區。");
         location.replace('member_zone.html');
         return;
     }
     
+    // 2. 重要：存入全域變數 ADMIN_KEY
+    ADMIN_KEY = inputKey; 
+    
+    // 3. 執行第一次抓取
     await fetchData();
 }
 
@@ -279,17 +283,18 @@ async function fetchData() {
             });
         }
 
-        function updatePaidStatus(phone, currentStatus) {
+// 範例：如果您的繳費更新函式是獨立的，請改成這樣
+function updatePaidStatus(phone, currentStatus) {
     const newStatus = currentStatus === "是" ? "否" : "是";
     if(!confirm(`確定將 ${phone} 改為 ${newStatus} 嗎？`)) return;
 
-    // 統一使用 apiPost，這樣它會自動帶入 ADMIN_KEY
+    // 調用 apiPost，它會自動幫你帶上 ADMIN_KEY
     apiPost({
         type: "update_paid_status",
         phone: phone,
         newStatus: newStatus
     });
-}
+} 
         function renderCalendar() {
             const list = document.getElementById('calendarList');
             list.innerHTML = "";
@@ -338,40 +343,44 @@ async function fetchData() {
             });
         }
 
-        async function apiPost(data, btnId) {
-    // 如果全域變數 ADMIN_KEY 沒值，才問一次 (保險機制)
+async function apiPost(data, btnId) {
+    // 檢查是否有金鑰，若無則報錯（不應在此處 prompt，因為 init 應該已經拿到了）
     if (!ADMIN_KEY) {
-        ADMIN_KEY = prompt("請輸入管理員金鑰：");
+        alert("管理員授權已失效，請重新整理頁面。");
+        location.reload();
+        return;
     }
-    if (!ADMIN_KEY) return;
 
     const btn = btnId ? document.getElementById(btnId) : null;
     if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); }
 
     try {
-        // 自動把已經存好的 ADMIN_KEY 塞進資料包裡
-        data.adminKey = ADMIN_KEY;
+        // --- 核心修正：將金鑰注入請求資料中 ---
+        data.adminKey = ADMIN_KEY; 
 
         const res = await fetch(GAS_URL, {
             method: "POST",
-            body: JSON.stringify(data)
+            body: JSON.stringify(data) // 確保 data 包含 adminKey
         });
+        
         const result = await res.text();
 
         if (result === "WRONG_KEY") {
-            alert("❌ 金鑰失效或錯誤，請重新整理頁面。");
-            ADMIN_KEY = ""; // 清空金鑰強制重新整理
+            alert("❌ 金鑰失效或錯誤，系統將重新載入。");
+            ADMIN_KEY = ""; 
+            location.reload();
             return;
         }
 
         if (result === "SUCCESS" || result === "OK") {
             alert("✅ 執行成功！");
-            fetchData(); // 重新抓取資料更新畫面
+            fetchData(); // 成功後刷新清單
         } else {
-            alert("結果：" + result);
+            alert("系統回傳：" + result);
         }
     } catch (e) {
-        alert("網路連線失敗");
+        console.error("API 請求出錯:", e);
+        alert("網路連線失敗，請檢查網路狀態。");
     } finally {
         if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); }
     }

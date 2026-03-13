@@ -156,14 +156,18 @@
         let isPayEditMode = false;
 
         async function init() {
-
-            ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
+    // 1. 先要求輸入 Key
+    ADMIN_KEY = prompt("請輸入管理員授權金鑰以啟用管理功能：");
     
     if (!ADMIN_KEY) {
-        alert("未輸入金鑰，功能將受限。");
-        location.href = 'index.html'; // 強制導回首頁
+        alert("未輸入金鑰，將導回會員專區。");
+        location.href = 'member_zone.html';
         return;
     }
+
+    // 2. 只有輸入了 Key，才去執行帶驗證的 fetchData
+    await fetchData();
+}
     
     // 立即執行一次 fetchData，若 Key 錯誤就擋
     await fetchData();            
@@ -178,10 +182,8 @@
         }
 // 2. 抓取資料邏輯：增加錯誤處理與 Key 判定
 async function fetchData() {
-    // 顯示載入中提示（可選）
-    console.log("正在驗證金鑰並抓取資料...");
-
     try {
+        // 修改點：改用 POST 並帶上 adminKey 去請求資料
         const res = await fetch(GAS_URL, {
             method: "POST",
             body: JSON.stringify({ 
@@ -190,29 +192,34 @@ async function fetchData() {
             })
         });
 
-        const result = await res.text(); // 先轉成文字，避免 JSON 解析失敗
+        const result = await res.text();
 
-        // 判定是否為金鑰錯誤
+        // 3. 檢查 GAS 回傳的是否為錯誤訊息
         if (result === "WRONG_KEY") {
-            alert("❌ 授權金鑰錯誤！請重新輸入。");
-            location.reload(); // 重新整理讓使用者再輸一次
+            alert("❌ 授權金鑰錯誤！將導回會員專區。");
+            location.href = 'member_zone.html';
             return;
         }
 
-        // 嘗試解析 JSON
+        // 4. 若成功，解析資料並渲染
         const data = JSON.parse(result);
-        
-        // 成功取得資料後的渲染
         allData = data;
-        renderCalendar();
-        renderMembers();
-        renderConfig();
+        
+        renderAll(); // 渲染所有列表
+        
+        // 填充系統設定欄位
+        document.getElementById('link-reading').value = allData.config.reading_folder_url || "";
+        document.getElementById('link-photo').value = allData.config.photo_gallery_url || "";
+        document.getElementById('newsContent').value = allData.news || "";
         
     } catch (e) {
-        console.error("Fetch error:", e);
-        alert("系統讀取失敗，請檢查網路連線或 GAS 部署網址是否正確。");
+        console.error("驗證失敗:", e);
+        alert("系統讀取失敗，請檢查金鑰或網路連線。");
+        location.href = 'member_zone.html';
     }
-}        function renderAll() {
+}   
+        
+        function renderAll() {
             renderMembers();
             renderCalendar();
             renderRank();
@@ -342,37 +349,30 @@ async function fetchData() {
 
         // --- 其他工具函式 ---
         // 3. 修改 apiPost，確保每次請求都帶上 adminKey
-function apiPost(data, btnId) {
+async function apiPost(data, btnId, callback) {
     const btn = btnId ? document.getElementById(btnId) : null;
-    if (btn) {
-        btn.classList.add('btn-loading');
-        btn.disabled = true;
+    if(btn) btn.classList.add('btn-loading');
+    
+    // 夾帶 Key
+    data.adminKey = ADMIN_KEY;
+
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: "POST", 
+            body: JSON.stringify(data) 
+        });
+        const result = await res.text();
+        
+        if(result === "WRONG_KEY") {
+            alert("❌ 授權過期或金鑰錯誤，請重新整理頁面。");
+            return;
+        }
+        
+        if(callback) callback(); else location.reload();
+    } catch (e) { 
+        alert("連線失敗"); 
     }
-
-    // 將 ADMIN_KEY 加入傳輸資料中
-    data.adminKey = ADMIN_KEY; 
-
-    fetch(GAS_URL, {
-        method: "POST",
-        body: JSON.stringify(data)
-    })
-    .then(res => res.text())
-    .then(result => {
-        if (result === "SUCCESS") {
-            alert("操作成功！");
-            location.reload();
-        } else if (result === "WRONG_KEY") {
-            alert("❌ 授權金鑰錯誤！操作遭拒。");
-        } else {
-            alert("系統錯誤: " + result);
-        }
-    })
-    .finally(() => {
-        if (btn) {
-            btn.classList.remove('btn-loading');
-            btn.disabled = false;
-        }
-    });
+    if(btn) btn.classList.remove('btn-loading');
 }
         function loadTemplate() { document.getElementById('lineMsgContent').value = "【築心讀書會提醒】\n各位讀友大家好，明天就是我們的讀書會時間囉！"; }
         function sendLineMessage() { apiPost({ type: "send_line_push", content: document.getElementById('lineMsgContent').value }, "btn-sendLine", () => { alert("已發送至 LINE 群組！"); document.getElementById('lineMsgContent').value = ""; }); }

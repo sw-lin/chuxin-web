@@ -240,31 +240,39 @@
 
         // --- 行事曆 (含安全鎖) ---
         function renderCalendar() {
-            const list = document.getElementById('calendarList');
-            list.innerHTML = "";
-            const today = new Date(); today.setHours(0,0,0,0);
+    const list = document.getElementById('calendarList');
+    list.innerHTML = "";
+    const today = new Date(); 
+    today.setHours(0,0,0,0); // 將今天的時分秒歸零
 
-            allData.calendar.forEach(c => {
-                const eventDate = new Date(c.dateText);
-                const isFuture = eventDate > today;
-                const card = document.createElement('div');
-                card.className = "bg-white p-6 rounded-[2rem] border transition hover:shadow-md";
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <div class="${isFuture ? 'text-gray-400' : 'text-orange-500'} font-bold text-sm">${c.dateText} ${isFuture ? '(尚未開放)' : ''}</div>
-                            <h4 class="text-lg font-bold text-emerald-900">${c.title}</h4>
-                        </div>
-                        <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-400"><i class="fas fa-times"></i></button>
+    allData.calendar.forEach(c => {
+        const eventDate = new Date(c.dateText);
+        eventDate.setHours(0,0,0,0); // 重要：活動日期也必須歸零，確保比較基準一致
+        
+        // 修正判定：只有當活動日期「嚴格大於」今日時，才視為尚未開放的未來活動
+        // 今天的活動 (eventDate 等於 today) 會讓 isFuture 為 false，進而顯示 QR 按鈕
+        const isFuture = eventDate > today; 
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-6 rounded-[2rem] border transition hover:shadow-md";
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <div class="${isFuture ? 'text-gray-400' : 'text-orange-500'} font-bold text-sm">
+                        ${c.dateText} ${isFuture ? '(尚未開放)' : ''}
                     </div>
-                    ${isFuture ? 
-                        `<div class="bg-gray-100 text-gray-400 py-2 rounded-xl text-center text-sm font-bold cursor-not-allowed"><i class="fas fa-lock mr-1"></i> 尚未開放報到</div>` : 
-                        `<button onclick="generateQR('${c.dateText}','${c.title}')" class="w-full bg-emerald-50 text-emerald-700 py-2 rounded-xl text-sm font-bold hover:bg-emerald-100 transition">產生報到 QR</button>`
-                    }
-                `;
-                list.appendChild(card);
-            });
-        }
+                    <h4 class="text-lg font-bold text-emerald-900">${c.title}</h4>
+                </div>
+                <button onclick="deleteEvent('${c.dateText}')" class="text-gray-300 hover:text-red-400"><i class="fas fa-times"></i></button>
+            </div>
+            ${isFuture ? 
+                `<div class="bg-gray-100 text-gray-400 py-2 rounded-xl text-center text-sm font-bold cursor-not-allowed"><i class="fas fa-lock mr-1"></i> 尚未開放報到</div>` : 
+                `<button onclick="generateQR('${c.dateText}','${c.title}')" class="w-full bg-emerald-50 text-emerald-700 py-2 rounded-xl text-sm font-bold hover:bg-emerald-100 transition">產生報到 QR</button>`
+            }
+        `;
+        list.appendChild(card);
+    });
+}
 
         // --- 出席榜單 (全名單排序) ---
         function renderRank() {

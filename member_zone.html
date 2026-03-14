@@ -86,26 +86,41 @@
             syncData(user);
         };
 
- async function syncData(cachedUser) {
+async function syncData() {
     try {
-        // 1. 強制將手機端存的號碼也轉為「末9碼」格式
-        const myMatch = String(cachedUser.phone || "").replace(/\D/g, "").slice(-9);
+        // 1. 從 sessionStorage 取得使用者資訊
+        const userStr = sessionStorage.getItem('userInfo');
+        if (!userStr) {
+            alert("偵測不到登入資訊，請重新登入");
+            logout();
+            return;
+        }
         
-        console.log("手機端比對代碼:", myMatch); // 除錯用
+        const cachedUser = JSON.parse(userStr);
+        // 關鍵修正：確保不管是 .phone 還是 .currentPhone 都能抓到
+        const rawPhone = cachedUser.phone || cachedUser.currentPhone || "";
+        const myMatch = String(rawPhone).replace(/\D/g, "").slice(-9);
+        
+        console.log("登入手機號碼:", rawPhone, "處理後末9碼:", myMatch);
+
+        if (!myMatch) {
+            alert("登入資料異常（無電話），請重新登入");
+            logout();
+            return;
+        }
 
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
-        // 2. 在搜尋資料庫時，確保每一筆也都是用「末9碼」來比對
+        // 2. 比對資料庫
         const liveUser = (data.users || []).find(u => {
             const dbMatch = String(u.phone || "").replace(/\D/g, "").slice(-9);
             return dbMatch === myMatch;
         });
         
         if (!liveUser) {
-            // 如果還是失敗，彈出目前的清單供檢查
             const dbList = (data.users || []).slice(0, 3).map(u => u.phone).join(', ');
-            alert(`驗證失敗。\n您的末9碼：${myMatch}\n資料庫前三位電話：${dbList}`);
+            alert(`驗證失敗。\n您的末9碼：${myMatch}\n資料庫電話：${dbList}`);
             logout();
             return;
         }

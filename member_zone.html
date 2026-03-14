@@ -25,7 +25,7 @@
         <div class="flex space-x-2">
             <button onclick="openStaffModal()" class="text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full hover:bg-amber-500/40 transition">幹部專區</button>
             <button onclick="openEditModal()" class="text-[10px] bg-white/10 px-3 py-1 rounded-full hover:bg-white/20 transition">修改資料</button>
-            <button id="logoutBtn" class="text-[10px] bg-red-900/30 px-3 py-1 rounded-full hover:bg-red-800 transition">登出</button>
+            <button onclick="logout()" class="text-[10px] bg-red-900/30 px-3 py-1 rounded-full hover:bg-red-800 transition">登出</button>
         </div>
     </nav>
 
@@ -44,7 +44,7 @@
             </div>
         </div>
 
-        <button onclick="window.startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-transform">
+        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-transform">
             <i class="fas fa-qrcode text-2xl"></i>
             <span class="text-xl font-bold">掃碼報到</span>
         </button>
@@ -65,86 +65,75 @@
             </button>
         </div>
 
-        <div>
-            <h3 class="font-bold text-emerald-900 mb-4 px-2 text-lg">學習歷程</h3>
-            <div id="historyList" class="space-y-3">
-                <p class="text-center py-10 text-gray-400 italic text-sm">正在整理您的學習紀錄...</p>
-            </div>
+        <h3 class="font-bold text-emerald-900 mb-4 px-2 text-lg">學習歷程</h3>
+        <div id="historyList" class="space-y-3">
+            <p class="text-center py-10 text-gray-400 italic">正在整理紀錄...</p>
         </div>
     </main>
 
+    <div id="editModal" class="modal">
+        <div class="bg-white p-8 rounded-[2.5rem] w-80 relative shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-emerald-900 text-center">修改個人資料</h3>
+            <div class="space-y-4">
+                <input type="email" id="editEmail" placeholder="新的電子郵件" class="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+                <input type="password" id="oldPwd" placeholder="請輸入舊密碼驗證" class="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+                <input type="password" id="newPwd" placeholder="新密碼 (不改則留空)" class="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+                <button onclick="handleUpdateProfile()" class="w-full bg-emerald-800 text-white p-4 rounded-xl font-bold shadow-lg">確認修改</button>
+                <button onclick="closeModal('editModal')" class="w-full text-gray-400 text-sm">取消返回</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-        let configLinks = {}; // 存放從 Config 分頁抓到的連結
-        let html5QrCode = null;
-        let currentUserData = null;
+        let configLinks = {};
+        let currentUser = null;
 
-        // 初始化
         window.onload = () => {
             const userStr = sessionStorage.getItem('userInfo');
-            if (!userStr) { window.location.replace('index.html'); return; }
-            currentUserData = JSON.parse(userStr);
-            document.getElementById('userName').innerText = currentUserData.name || "成員";
-            (currentUserData);
+            if (!userStr) { location.href = 'index.html'; return; }
+            currentUser = JSON.parse(userStr);
+            document.getElementById('userName').innerText = currentUser.name || "讀書會成員";
+            syncData(currentUser);
         };
 
         async function syncData(user) {
             try {
-                // 手機碼匹配 (處理全形與末9碼)
-                const myMatch = String(user.phone || "").replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\D/g, "").slice(-9);
-
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                // --- 核心偵錯：看看這行在 F12 控制台顯示什麼 ---
-        console.log("GAS 回傳的原始資料:", data);
                 
-                // 儲存連結資料 (對應您的 Config A欄 Key)
-                configLinks = data.config || {}; 
-
-console.log("解析後的連結資料:", configLinks);
-                
-                const liveUser = (data.users || []).find(u => String(u.phone || "").replace(/\D/g, "").slice(-9) === myMatch);
-                if (!liveUser) { window.location.replace('index.html'); return; }
-
+                configLinks = data.config || {};
                 document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
 
-                // 計算邏輯
-                const todayStr = new Date().toISOString().split('T')[0];
-                const validEvents = (data.calendar || []).filter(ev => ev.dateText && ev.dateText <= todayStr);
-                const attendLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
+                const myMatch = String(user.phone || "").replace(/\D/g, "").slice(-9);
+                const liveUser = (data.users || []).find(u => String(u.phone || "").slice(-9) === myMatch);
                 
-                let count = 0;
-                validEvents.forEach(ev => { if (attendLogs.includes(ev.dateText)) count++; });
+                if (liveUser) {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const validEvents = (data.calendar || []).filter(ev => ev.dateText && ev.dateText <= todayStr);
+                    const attendLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
+                    
+                    let count = 0;
+                    validEvents.forEach(ev => { if (attendLogs.includes(ev.dateText)) count++; });
 
-                const percent = validEvents.length > 0 ? Math.round((count / validEvents.length) * 100) : 0;
-                document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
-
-                // 參與率 50% 以上噴彩帶
-                if (percent >= 50) {
-                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#F97316', '#FDE68A'] });
+                    const percent = validEvents.length > 0 ? Math.round((count / validEvents.length) * 100) : 0;
+                    document.getElementById('attPercent').innerText = percent + "%";
+                    document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
+                    
+                    if (percent >= 50) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    renderHistory(validEvents, attendLogs);
                 }
-
-                renderHistory(validEvents, attendLogs);
-            } catch (err) {
-                console.error("同步出錯:", err);
-                document.getElementById('historyList').innerHTML = '<p class="text-center py-10 text-red-400">連線失敗</p>';
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // 處理課程資料與活動剪影跳轉
         function handleFolderLink(key) {
             const url = configLinks[key];
-            if (url && url.startsWith('http')) {
-                window.open(url, '_blank');
-            } else {
-                alert("目前尚未設定連結，請洽詢幹部。");
-            }
+            if (url && url.startsWith('http')) { window.open(url, '_blank'); } 
+            else { alert("目前尚未設定連結，或資料讀取失敗。"); }
         }
 
         function renderHistory(events, logs) {
             const list = document.getElementById('historyList');
-            if (events.length === 0) { list.innerHTML = '<p class="text-center py-10 text-gray-400">目前尚無活動紀錄</p>'; return; }
             list.innerHTML = [...events].reverse().map(ev => {
                 const isAttended = logs.includes(ev.dateText);
                 return `
@@ -153,15 +142,47 @@ console.log("解析後的連結資料:", configLinks);
                             <div class="text-xs text-emerald-600 font-bold mb-1">${ev.dateText}</div>
                             <div class="text-emerald-900 font-bold">${ev.title}</div>
                         </div>
-                        <div class="${isAttended ? 'text-emerald-600' : 'text-gray-300'} flex flex-col items-center">
-                            <i class="fas ${isAttended ? 'fa-check-circle' : 'fa-times-circle'} text-2xl"></i>
-                            <span class="text-[10px] mt-1 font-bold">${isAttended ? '已出席' : '未報到'}</span>
-                        </div>
+                        <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
                     </div>`;
             }).join('');
         }
 
-        // ... 其餘的 Modal 控制 (openEditModal, verifyStaff 等) 保持不變 ...
+        function openEditModal() { document.getElementById('editModal').style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+
+        async function handleUpdateProfile() {
+            const email = document.getElementById('editEmail').value;
+            const oldPassword = document.getElementById('oldPwd').value;
+            const newPassword = document.getElementById('newPwd').value;
+
+            if (!oldPassword) return alert("請輸入舊密碼以驗證身分");
+
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    type: 'updateProfile',
+                    phone: currentUser.phone,
+                    email: email,
+                    oldPassword: oldPassword,
+                    newPassword: newPassword
+                })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") {
+                alert("修改成功！");
+                closeModal('editModal');
+            } else {
+                alert("修改失敗：" + result.message);
+            }
+        }
+        
+        // 模擬幹部驗證
+        function openStaffModal() {
+            const key = prompt("請輸入幹部授權碼：");
+            if (key === "CH99forever") alert("驗證成功，幹部功能開發中...");
+            else if (key) alert("授權碼錯誤");
+        }
     </script>
 </body>
 </html>

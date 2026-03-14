@@ -14,7 +14,7 @@
         @keyframes fade { from {opacity: .6} to {opacity: 1} }
         @media (max-width: 640px) { .slide { height: 400px; } }
         
-        /* 核心修正：確保彈窗初始狀態絕對是隱藏的 */
+        /* 彈窗樣式保持不變 */
         .modal { 
             display: none; 
             position: fixed; 
@@ -52,8 +52,8 @@
             <img class="slide" src="5.jpg">
             <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center px-6 z-10">
                 <div class="max-w-3xl">
-                    <h1 class="text-4xl md:text-6xl text-white font-bold mb-6 leading-tight">在共讀中築心</h1>
-                    <p class="text-emerald-50 text-lg md:text-xl font-light italic opacity-90">「於相伴中成長」</p>
+                    <h1 class="text-4xl md:text-6xl text-white font-bold mb-6 leading-tight">在文字中漫步<br>在共讀中築心</h1>
+                    <p class="text-emerald-50 text-lg md:text-xl font-light italic opacity-90">「陪伴與成長的閱讀空間」</p>
                 </div>
             </div>
         </div>
@@ -73,38 +73,24 @@
         <div class="max-w-xl mx-auto text-center">
             <h2 class="text-3xl font-bold text-emerald-900 mb-4">加入我們</h2>
             <p class="text-gray-500 mb-10">歡迎填寫報名資料，與我們一同開啟閱讀之旅</p>
-            
             <form action="https://formspree.io/f/xpqjvblg" method="POST" class="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl text-left border border-emerald-100">
                 <div class="space-y-6">
-                    <div>
-                        <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">您的姓名</label>
-                        <input type="text" name="姓名" required placeholder="您的姓名" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">手機號碼</label>
-                        <input type="tel" name="電話" required placeholder="0912345678" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">電子郵件</label>
-                        <input type="email" name="Email" required placeholder="yourname@email.com" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition">
-                    </div>
-                    <button type="submit" class="w-full bg-emerald-800 text-white font-bold py-5 rounded-2xl hover:bg-emerald-700 shadow-lg transition-all active:scale-[0.98]">
-                        送出報名申請
-                    </button>
+                    <div><label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">您的姓名</label><input type="text" name="姓名" required placeholder="您的姓名" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition"></div>
+                    <div><label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">手機號碼</label><input type="tel" name="電話" required placeholder="0912345678" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition"></div>
+                    <div><label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">電子郵件</label><input type="email" name="Email" required placeholder="yourname@email.com" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition"></div>
+                    <button type="submit" class="w-full bg-emerald-800 text-white font-bold py-5 rounded-2xl hover:bg-emerald-700 shadow-lg transition-all active:scale-[0.98]">送出報名申請</button>
                 </div>
             </form>
         </div>
     </section>
 
-    <footer class="py-12 text-center text-gray-400 text-xs tracking-widest uppercase">
-        © 2026 Chuxin Book Club
-    </footer>
+    <footer class="py-12 text-center text-gray-400 text-xs tracking-widest uppercase">© 2026 Chuxin Book Club</footer>
 
     <div id="aboutModal" class="modal">
         <div class="bg-white max-w-2xl w-full rounded-[2.5rem] p-10 shadow-2xl relative max-h-[85vh] overflow-y-auto m-6 flex flex-col">
             <button onclick="closeModal('aboutModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
             <h2 class="text-2xl font-bold text-emerald-900 mb-6 flex items-center"><i class="fas fa-leaf mr-3 text-emerald-600"></i>關於築心</h2>
-            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">正在讀取關於我的內容...</div>
+            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">正在讀取內容...</div>
         </div>
     </div>
 
@@ -126,6 +112,13 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
+        // 核心修正：將全形轉半形的工具
+        function toHalfWidth(str) {
+            return str.replace(/[０-９]/g, function(s) {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            }).replace(/\s/g, ""); // 同時移除空格
+        }
+
         // 輪播動畫
         let slideIndex = 0;
         function showSlides() {
@@ -137,99 +130,68 @@
             setTimeout(showSlides, 4500);
         }
 
-        // 彈窗控制 (點擊按鈕才執行)
         function openAbout() {
             document.getElementById('aboutModal').style.display = 'flex';
-            fetch('about.txt?t=' + Date.now())
-                .then(r => r.text())
-                .then(t => { document.getElementById('aboutContent').innerText = t; })
-                .catch(() => { document.getElementById('aboutContent').innerText = "內容暫時無法讀取..."; });
+            fetch('about.txt?t=' + Date.now()).then(r => r.text()).then(t => {
+                document.getElementById('aboutContent').innerText = t;
+            }).catch(() => { document.getElementById('aboutContent').innerText = "內容暫時無法讀取..."; });
         }
 
-        function openLogin() {
-            document.getElementById('loginModal').style.display = 'flex';
-        }
+        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-        }
-
-        // 抓取 4 次活動 (純後台抓取，不影響 UI 彈窗)
         async function loadEvents() {
             try {
                 const res = await fetch(GAS_URL + "?t=" + Date.now());
                 const data = await res.json();
                 const today = new Date().toISOString().split('T')[0];
                 const grid = document.getElementById('event-grid');
-
                 if(data.calendar) {
-                    const upcoming = data.calendar
-                        .filter(ev => ev.dateText >= today)
-                        .sort((a,b) => a.dateText.localeCompare(b.dateText))
-                        .slice(0, 4);
-
-                    if(upcoming.length > 0) {
-                        grid.innerHTML = upcoming.map(ev => `
-                            <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
-                                <div class="text-emerald-600 font-bold mb-2">${ev.dateText}</div>
-                                <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
-                                <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-4 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
-                            </div>
-                        `).join('');
-                    } else {
-                        grid.innerHTML = '<p class="col-span-full text-center text-gray-400 italic">目前暫無預告活動</p>';
-                    }
+                    const upcoming = data.calendar.filter(ev => ev.dateText >= today).sort((a,b) => a.dateText.localeCompare(b.dateText)).slice(0, 4);
+                    grid.innerHTML = upcoming.length > 0 ? upcoming.map(ev => `
+                        <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
+                            <div class="text-emerald-600 font-bold mb-2">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
+                            <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-4 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
+                        </div>
+                    `).join('') : '<p class="col-span-full text-center text-gray-400 italic">目前暫無預告活動</p>';
                 }
-            } catch (e) { 
-                console.error(e);
-                document.getElementById('event-grid').innerHTML = '<p class="col-span-full text-center text-gray-400">目前暫無法顯示活動資訊</p>';
+            } catch (e) { console.error(e); }
+        }
+
+        // 核心修正：登入處理
+        window.handleLogin = async function() {
+            const rawPhone = document.getElementById('userPhone').value.trim();
+            // 強制轉半形並移除所有非數字內容
+            const u = toHalfWidth(rawPhone).replace(/\D/g, "");
+            const p = document.getElementById('userPass').value.trim();
+
+            if(!u || !p) return alert('請填寫完整手機與密碼');
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.innerText = '正在登入...';
+
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'login', phone: u, password: p })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    // 關鍵：將清洗後的 phone 存入，供 member_zone 使用
+                    sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
+                    window.location.href = 'member_zone.html';
+                } else {
+                    alert("登入失敗：手機號碼或密碼錯誤");
+                }
+            } catch (e) {
+                alert("網路連線失敗，請檢查網路狀態");
+            } finally {
+                btn.disabled = false; btn.innerText = '確認進入';
             }
-        }
-
-        // 登入驗證
-window.handleLogin = async function() {
-    // 取得輸入值並強制轉換：全形轉半形、移除所有非數字字元（含空格）
-    let rawPhone = document.getElementById('userPhone').value;
-    const u = rawPhone.replace(/[０-９]/g, function(s) {
-        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-    }).replace(/\D/g, ""); // \D 代表移除所有「非數字」內容
-
-    const p = document.getElementById('userPass').value.trim();
-
-    if(!u || !p) return alert('請填寫完整資訊');
-    
-    const btn = document.getElementById('loginBtn');
-    btn.disabled = true; 
-    btn.innerText = '正在登入...';
-    
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ type: 'login', phone: u, password: p })
-        });
-        const result = await res.json();
-
-        if (result.result === "SUCCESS") {
-            // 存入時確保欄位名稱統一為 phone
-            const userInfo = { ...result, phone: u };
-            sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
-            window.location.href = 'member_zone.html';
-        } else {
-            alert("登入失敗：手機或密碼錯誤");
-        }
-    } catch (e) {
-        alert("網路連線失敗，請檢查 GAS 是否正確發布");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = '進入會館';
-    }
-};
-
-        // 核心載入邏輯：僅啟動輪播與活動載入，不啟動彈窗
-        window.onload = () => {
-            showSlides(); 
-            loadEvents();
         };
+
+        window.onload = () => { showSlides(); loadEvents(); };
     </script>
 </body>
 </html>

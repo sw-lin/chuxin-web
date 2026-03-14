@@ -68,6 +68,14 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let html5QrCode = null;
 
+        // 工具函式：強制清洗任何全形數字或非數字字元
+        function cleanPhone(str) {
+            if (!str) return "";
+            return String(str).replace(/[０-９]/g, function(s) {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            }).replace(/\D/g, "");
+        }
+
         window.onload = () => {
             const userStr = sessionStorage.getItem('userInfo');
             if (!userStr) { location.href = 'index.html'; return; }
@@ -78,12 +86,11 @@
 
         async function syncData(user) {
             try {
-                // 確保手機號碼處理正確（取末 9 碼）
-                const rawPhone = user.phone || user.currentPhone || "";
-                const myMatch = String(rawPhone).replace(/\D/g, "").slice(-9);
+                // 1. 取得清洗後的手機末 9 碼
+                const myMatch = cleanPhone(user.phone || user.currentPhone).slice(-9);
 
-                if (!myMatch) {
-                    alert("手機號碼格式異常，請重新登入。");
+                if (!myMatch || myMatch.length < 9) {
+                    alert("登入資訊異常，請重新登入。");
                     logout();
                     return;
                 }
@@ -91,43 +98,44 @@
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // 比對資料庫中的使用者
+                // 2. 在資料庫中尋找匹配的使用者 (同樣使用清洗後的末 9 碼比對)
                 const liveUser = (data.users || []).find(u => {
-                    const dbMatch = String(u.phone || "").replace(/\D/g, "").slice(-9);
+                    const dbMatch = cleanPhone(u.phone).slice(-9);
                     return dbMatch === myMatch;
                 });
                 
                 if (!liveUser) {
-                    alert(`同步失敗：找不到您的資料。\n您的末9碼：${myMatch}`);
+                    alert(`驗證失敗。\n您的末9碼：${myMatch}\n資料庫前三筆電話：${(data.users || []).slice(0,3).map(u => cleanPhone(u.phone)).join(', ')}`);
                     logout();
                     return;
                 }
 
-                // 更新公告與參與數據
+                // --- 以下為功能保留區：更新 UI 與計算邏輯 ---
+
+                // A. 更新公告
                 document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
                 
+                // B. 計算參與數據
                 const todayStr = new Date().toISOString().split('T')[0];
                 const validEvents = (data.calendar || []).filter(ev => {
                     const isPast = ev.dateText && ev.dateText <= todayStr;
-                    // 只要標題或備註包含「需報到」就列入計算
-                    const isRequired = (ev.title + (ev.description || "")).includes("需報到");
+                    const content = (ev.title + (ev.description || ""));
+                    const isRequired = content.includes("需報到") || content.includes("導讀");
                     return isPast && isRequired;
                 });
 
                 const attendLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
                 
-                // 計算報到次數
                 let count = 0;
                 validEvents.forEach(ev => {
                     if (attendLogs.includes(ev.dateText)) count++;
                 });
 
-                // 更新 UI 數據
                 const percent = validEvents.length > 0 ? Math.round((count / validEvents.length) * 100) : 0;
                 document.getElementById('attPercent').innerText = percent + "%";
                 document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
 
-                // 渲染學習歷程清單
+                // C. 渲染學習歷程
                 renderHistory(validEvents, attendLogs);
 
             } catch (err) {
@@ -168,11 +176,9 @@
                 { fps: 10, qrbox: { width: 250, height: 250 } }, 
                 (text) => {
                     stopScanner();
-                    // 掃描後直接跳轉報到網址
                     window.location.href = text;
                 }
             ).catch(err => {
-                console.error("Scanner Error:", err);
                 alert("無法啟動相機");
                 stopScanner();
             });
@@ -180,4 +186,19 @@
 
         function stopScanner() {
             if (html5QrCode) {
-                html5QrCode.stop
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scannerModal').classList.add('hidden');
+                    html5QrCode = null;
+                });
+            } else {
+                document.getElementById('scannerModal').classList.add('hidden');
+            }
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

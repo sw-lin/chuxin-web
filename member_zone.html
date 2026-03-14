@@ -44,14 +44,14 @@
         </button>
 
         <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
-            <h3 class="font-bold text-emerald-800 mb-1">最新公告</h3>
-            <p id="news" class="text-gray-500 text-sm">正在同步資訊...</p>
+            <h3 class="font-bold text-emerald-800 mb-1 text-sm">最新公告</h3>
+            <p id="news" class="text-gray-500 text-xs">載入中...</p>
         </div>
 
         <div>
-            <h3 class="font-bold text-emerald-900 mb-4 px-2">學習歷程</h3>
+            <h3 class="font-bold text-emerald-900 mb-4 px-2 text-lg">學習歷程</h3>
             <div id="historyList" class="space-y-3">
-                <p class="text-center py-10 text-gray-400 italic">正在載入...</p>
+                <p class="text-center py-10 text-gray-400 italic">資料同步中...</p>
             </div>
         </div>
     </main>
@@ -66,18 +66,26 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         
-        // 核心：將任何日期文字格式化為 2026-03-06
-        function formatToISO(str) {
-            if (!str) return "";
-            const d = new Date(str);
-            if (isNaN(d.getTime())) return String(str).split(' ')[0].replace(/\//g, '-');
-            return d.getFullYear() + '-' + 
-                   String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                   String(d.getDate()).padStart(2, '0');
+        // 強力日期格式化：轉為 YYYY-MM-DD
+        function formatToISO(input) {
+            if (!input) return "";
+            let d = new Date(input);
+            if (isNaN(d.getTime())) {
+                let parts = String(input).split(/[\/\-]/);
+                if (parts.length >= 3) {
+                    return `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].split(' ')[0].padStart(2,'0')}`;
+                }
+                return String(input);
+            }
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
 
-        // 清理電話號碼（只留數字）
-        function cleanPhone(str) { return String(str || "").replace(/\D/g, ""); }
+        // 強力電話格式化：補足 10 位數並去雜質
+        function normalizePhone(str) {
+            let p = String(str || "").replace(/\D/g, "");
+            if (p.length === 9 && p.startsWith('9')) p = '0' + p; // 補回消失的 0
+            return p;
+        }
 
         window.onload = () => {
             const userStr = sessionStorage.getItem('userInfo');
@@ -92,42 +100,38 @@
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // 比對用戶
-                const myPhone = cleanPhone(cachedUser.phone);
-                const liveUser = (data.users || []).find(u => cleanPhone(u.phone) === myPhone);
+                const myPhone = normalizePhone(cachedUser.phone);
+                // 兩邊都做 normalizePhone 以防萬一
+                const liveUser = (data.users || []).find(u => normalizePhone(u.phone) === myPhone);
                 
                 if (!liveUser) {
-                    alert("驗證失敗，請重新登入");
-                    logout();
+                    document.getElementById('historyList').innerHTML = `<p class="text-center text-red-400">找不到手機 ${myPhone} 的資料</p>`;
                     return;
                 }
 
-                // 更新公告
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
 
-                // 計算分母：以日曆中「小於等於今天」的活動為準
-                const today = formatToISO(new Date());
+                const todayStr = formatToISO(new Date());
+                // 放寬條件：只要日期小於等於今天且有標題就顯示
                 const pastEvents = (data.calendar || [])
-                    .filter(ev => ev.dateText && formatToISO(ev.dateText) <= today)
+                    .filter(ev => ev.dateText && formatToISO(ev.dateText) <= todayStr)
                     .sort((a,b) => b.dateText.localeCompare(a.dateText));
 
-                // 標準化用戶報到紀錄
                 let myLogs = Array.isArray(liveUser.attendLog) ? liveUser.attendLog : [];
                 const standardLogs = myLogs.map(log => formatToISO(log));
 
-                // 渲染與計算
                 let count = 0;
                 const html = pastEvents.map(ev => {
                     const eventDate = formatToISO(ev.dateText);
                     const isOk = standardLogs.includes(eventDate);
                     if (isOk) count++;
                     return `
-                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isOk ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'} shadow-sm">
+                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isOk ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'}">
                             <div class="flex flex-col">
                                 <span class="text-[10px] text-gray-400 font-mono">${eventDate}</span>
                                 <span class="font-bold text-emerald-900">${ev.title}</span>
                             </div>
-                            <span>${isOk ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs">未報到</i>'}</span>
+                            <span>${isOk ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs italic">未出席</i>'}</span>
                         </div>`;
                 }).join('');
 
@@ -139,7 +143,7 @@
 
             } catch (err) {
                 console.error("Sync Error:", err);
-                document.getElementById('historyList').innerHTML = "連線異常";
+                document.getElementById('historyList').innerHTML = "連線失敗，請檢查網路";
             }
         }
 

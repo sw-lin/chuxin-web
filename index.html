@@ -171,21 +171,15 @@ window.handleLogin = async function() {
         });
         const result = await res.json();
 
-        if (result.result === "SUCCESS") {
-            // 存入 session 並跳轉
-            sessionStorage.setItem('userInfo', JSON.stringify(result));
-            window.location.href = 'member_zone.html';
-        } else { 
-            alert(result === "WRONG_PASSWORD" ? '密碼錯誤' : '手機或密碼有誤'); 
-            btn.disabled = false; 
-            btn.innerText = '進入會館'; 
-        }
-    } catch (e) { 
-        console.error(e);
-        alert('伺服器連線失敗，請檢查網路'); 
-        btn.disabled = false; 
-        btn.innerText = '進入會館'; 
-    }
+if (result.result === "SUCCESS") {
+    // 關鍵修正：除了存入 result，還要補上手機號碼，member_zone 才抓得到
+    const userInfo = {
+        ...result,
+        phone: u  // 強制把登入時輸入的手機號碼存進去
+    };
+    sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+    window.location.href = 'member_zone.html';
+}
 };
 
 // 2. 修復首頁活動顯示：對齊 GAS 的輸出格式

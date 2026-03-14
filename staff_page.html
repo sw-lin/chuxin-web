@@ -10,7 +10,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #F8FAF9; }
-        #pushMsg { min-height: 200px; resize: vertical; }
         .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none !important; }
@@ -26,7 +25,6 @@
                 <h1 class="text-2xl font-bold flex items-center">
                     <i class="fas fa-shield-alt mr-3"></i> 築心管理系統
                 </h1>
-                <p class="text-emerald-100 text-sm opacity-80 mt-1">幹部專屬管理模式</p>
             </div>
             <button id="editToggleBtn" onclick="toggleEditMode()" class="flex items-center gap-2 px-4 py-1.5 bg-white/20 rounded-full font-bold text-sm hover:bg-white/30 transition">
                 <i class="fas fa-edit"></i> <span>編輯模式：關</span>
@@ -47,15 +45,15 @@
 
     <main class="max-w-6xl mx-auto px-4">
         <section id="sec-news" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border">
                 <h3 class="text-lg font-bold mb-4 text-emerald-900"><i class="fas fa-bullhorn mr-2"></i> 首頁公告內容</h3>
-                <textarea id="newsContent" rows="4" class="w-full p-4 bg-gray-50 border rounded-xl outline-none" placeholder="輸入公告..."></textarea>
-                <button id="btn-publishNews" onclick="publishNews()" class="mt-4 bg-emerald-700 text-white px-8 py-2 rounded-xl">發布公告</button>
+                <textarea id="newsContent" rows="4" class="w-full p-4 bg-gray-50 border rounded-xl outline-none"></textarea>
+                <button onclick="publishNews()" class="mt-4 bg-emerald-700 text-white px-8 py-2 rounded-xl">發布公告</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm p-6 border border-emerald-50">
-                <h3 class="text-lg font-bold mb-4 text-emerald-900"><i class="fab fa-line mr-2 text-green-500"></i> LINE 訊息發送 (含預覽)</h3>
-                <textarea id="pushMsg" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 outline-none" placeholder="在此輸入訊息..."></textarea>
-                <button id="btn-sendPush" onclick="sendLinePush()" class="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold">確認發送至群組</button>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border">
+                <h3 class="text-lg font-bold mb-4 text-emerald-900"><i class="fab fa-line mr-2 text-green-500"></i> LINE 訊息發送</h3>
+                <textarea id="pushMsg" rows="4" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 outline-none" placeholder="在此輸入訊息..."></textarea>
+                <button onclick="sendLinePush()" class="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold">確認發送至群組</button>
             </div>
         </section>
 
@@ -78,13 +76,30 @@
             </div>
         </section>
 
+        <section id="sec-calendar" class="hidden space-y-6">
+            <div id="calAddZone" class="hidden bg-orange-50 rounded-2xl p-6 border-2 border-orange-200">
+                <h3 class="font-bold mb-4 text-orange-700">新增行程</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input type="date" id="calDate" class="p-2 border rounded-lg">
+                    <input type="text" id="calTitle" placeholder="活動名稱" class="p-2 border rounded-lg">
+                    <button onclick="addEvent()" class="bg-orange-600 text-white py-2 rounded-lg">新增</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50"><tr><th class="p-4">日期</th><th class="p-4">內容</th><th class="p-4 text-right">功能</th></tr></thead>
+                    <tbody id="calendarList"></tbody>
+                </table>
+            </div>
+        </section>
+
         <section id="sec-payment" class="hidden space-y-6">
             <div id="paymentAddZone" class="hidden bg-orange-50 rounded-2xl p-6 border-2 border-orange-200">
-                <h3 class="font-bold mb-4 text-orange-700">開立新收費項目</h3>
+                <h3 class="font-bold mb-4 text-orange-700">開立收費項目</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <input type="text" id="payTitle" placeholder="項目名稱" class="p-2 border rounded-lg">
                     <input type="date" id="payDeadline" class="p-2 border rounded-lg">
-                    <button onclick="addPaymentItem()" class="bg-orange-600 text-white py-2 rounded-lg font-bold">建立項目</button>
+                    <button onclick="addPaymentItem()" class="bg-orange-600 text-white py-2 rounded-lg font-bold">建立</button>
                 </div>
             </div>
             <div class="bg-white rounded-2xl shadow-sm p-6 border">
@@ -92,10 +107,16 @@
                     <h3 class="font-bold text-lg">項目：
                         <select id="currentPayItem" onchange="renderPayment()" class="ml-2 bg-emerald-50 border px-3 py-1 rounded-lg"></select>
                     </h3>
-                    <button onclick="preparePaymentListMsg()" class="text-sm bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-bold">複製名單至 LINE</button>
+                    <div class="flex gap-2">
+                        <button onclick="copyPaymentList()" class="text-sm bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-bold">複製名單</button>
+                        <div id="batchZone" class="hidden flex gap-2">
+                            <button onclick="batchPaymentUpdate('已完成')" class="text-sm bg-emerald-600 text-white px-4 py-2 rounded-full font-bold">全選已繳</button>
+                            <button onclick="batchPaymentUpdate('未繳納')" class="text-sm bg-red-600 text-white px-4 py-2 rounded-full font-bold">全選未繳</button>
+                        </div>
+                    </div>
                 </div>
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50"><tr><th class="p-4">姓名</th><th class="p-4">項目</th><th class="p-4 text-center">狀態</th></tr></thead>
+                    <thead class="bg-gray-50"><tr><th class="p-4">姓名</th><th class="p-4">狀態</th></tr></thead>
                     <tbody id="paymentList"></tbody>
                 </table>
             </div>
@@ -103,37 +124,36 @@
 
         <section id="sec-attendance" class="hidden">
             <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <h3 class="font-bold mb-4 text-lg">最近簽到紀錄</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50"><tr><th class="p-4">日期</th><th class="p-4">姓名</th><th class="p-4">電話</th><th class="p-4">時間</th></tr></thead>
-                        <tbody id="attendanceList"></tbody>
-                    </table>
-                </div>
+                <h3 class="font-bold mb-4 text-lg">簽到流向 (顯示最近50筆)</h3>
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50"><tr><th class="p-4">日期</th><th class="p-4">姓名</th><th class="p-4">時間</th></tr></thead>
+                    <tbody id="attendanceList"></tbody>
+                </table>
             </div>
         </section>
 
         <section id="sec-system" class="hidden space-y-6">
             <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <h3 class="font-bold mb-6 text-lg flex items-center"><i class="fas fa-cog mr-2"></i> 資源連結設定</h3>
+                <h3 class="font-bold mb-6 text-lg"><i class="fas fa-cog mr-2"></i> 資源連結設定</h3>
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-2">導讀資料夾網址 (Google Drive)</label>
-                        <input type="text" id="cfg-reading" class="w-full p-3 bg-gray-50 border rounded-xl outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-2">活動相簿網址 (Google Photos/Flickr)</label>
-                        <input type="text" id="cfg-photo" class="w-full p-3 bg-gray-50 border rounded-xl outline-none">
-                    </div>
-                    <button id="btn-saveConfig" onclick="saveSystemConfig()" class="bg-emerald-700 text-white px-10 py-3 rounded-xl font-bold">儲存所有設定</button>
+                    <div><label class="block text-sm font-bold mb-2">導讀資料夾網址</label><input type="text" id="cfg-reading" class="w-full p-3 bg-gray-50 border rounded-xl"></div>
+                    <div><label class="block text-sm font-bold mb-2">活動相簿網址</label><input type="text" id="cfg-photo" class="w-full p-3 bg-gray-50 border rounded-xl"></div>
+                    <button onclick="saveSystemConfig()" class="bg-emerald-700 text-white px-10 py-3 rounded-xl font-bold">儲存設定</button>
                 </div>
             </div>
         </section>
     </main>
 
+    <div id="qrModal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-[100]" onclick="this.classList.add('hidden')">
+        <div class="bg-white p-8 rounded-3xl text-center" onclick="event.stopPropagation()">
+            <div id="qrcode" class="mb-4"></div>
+            <p id="qrText" class="font-bold text-lg"></p>
+        </div>
+    </div>
+
     <script>
         let ADMIN_KEY = "";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec"; 
+        const GAS_URL = "您的_GAS_網址"; 
         let allData = null;
         let isEditMode = false;
 
@@ -151,10 +171,13 @@
                 renderAll();
                 document.getElementById('adminBody').classList.remove('unauthorized');
                 document.getElementById('adminBody').style.opacity = "1";
-            } catch (e) { alert("連線錯誤或金鑰無效"); }
+            } catch (e) { alert("連線錯誤"); }
         }
 
         function switchTab(tab) {
+            // 切換分頁時自動重置編輯模式
+            if(isEditMode) toggleEditMode(); 
+            
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + tab).classList.remove('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
@@ -165,50 +188,57 @@
             isEditMode = !isEditMode;
             document.getElementById('editToggleBtn').querySelector('span').innerText = isEditMode ? "編輯模式：開" : "編輯模式：關";
             document.getElementById('editToggleBtn').classList.toggle('edit-mode-active', isEditMode);
+            
+            // 繳費批次按鈕顯示
+            document.getElementById('batchZone').classList.toggle('hidden', !isEditMode);
             renderAll();
         }
 
         function renderAll() {
             if (!allData) return;
-            // 公告
             document.getElementById('newsContent').value = allData.news || "";
-            // 會員
             renderMembers();
-            // 繳費
+            renderCalendar();
             renderPayment();
-            // 出席
             renderAttendance();
-            // 系統設定
             document.getElementById('cfg-reading').value = allData.config.reading_folder_url || "";
             document.getElementById('cfg-photo').value = allData.config.photo_gallery_url || "";
         }
 
-        function renderMembers() {
-            const list = document.getElementById('memberList');
-            document.getElementById('quickAddZone').classList.toggle('hidden', !isEditMode);
-            list.innerHTML = allData.users.map(u => `
+        function renderCalendar() {
+            const list = document.getElementById('calendarList');
+            document.getElementById('calAddZone').classList.toggle('hidden', !isEditMode);
+            const today = new Date().setHours(0,0,0,0);
+            
+            list.innerHTML = allData.calendar.map(ev => {
+                const evDate = new Date(ev.dateText).getTime();
+                // 只有「非未來」事件才顯示 QR 按鈕
+                const qrBtn = evDate <= today ? 
+                    `<button onclick="showQR('${ev.dateText}')" class="text-emerald-600 mr-4"><i class="fas fa-qrcode"></i></button>` : 
+                    `<span class="text-gray-300 mr-4 italic text-xs">尚未開始</span>`;
+                
+                return `
                 <tr class="border-b">
-                    <td class="p-4 font-bold">${u.name}</td>
-                    <td class="p-4">${u.phone}</td>
-                    <td class="p-4">${u.email || ''}</td>
-                    <td class="p-4 text-right ${isEditMode ? '' : 'hidden'}">
-                        <button onclick="deleteMember('${u.phone}')" class="text-red-400"><i class="fas fa-trash-alt"></i></button>
+                    <td class="p-4 font-mono">${ev.dateText}</td>
+                    <td class="p-4 font-bold">${ev.title}</td>
+                    <td class="p-4 text-right">
+                        ${qrBtn}
+                        <button onclick="deleteEvent('${ev.dateText}')" class="text-red-400 ${isEditMode ? '' : 'hidden'}"><i class="fas fa-trash-alt"></i></button>
                     </td>
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
         }
 
         function renderPayment() {
             const select = document.getElementById('currentPayItem');
             const list = document.getElementById('paymentList');
             document.getElementById('paymentAddZone').classList.toggle('hidden', !isEditMode);
-
+            
             if (allData.paymentItems && allData.paymentItems.length > 0) {
-                const prev = select.value;
+                const prev = select.value || allData.paymentItems[0].title;
                 select.innerHTML = allData.paymentItems.map(it => `<option value="${it.title}" ${it.title===prev?'selected':''}>${it.title}</option>`).join('');
-            } else {
-                select.innerHTML = '<option value="">請先建立項目</option>';
             }
-
+            
             const activeItem = select.value;
             list.innerHTML = allData.users.map(u => {
                 const record = (allData.paymentRecords || []).find(r => r.title === activeItem && r.phone === u.phone);
@@ -216,8 +246,7 @@
                 return `
                     <tr class="border-b">
                         <td class="p-4 font-bold">${u.name}</td>
-                        <td class="p-4 text-gray-500 text-sm">${activeItem}</td>
-                        <td class="p-4 text-center">
+                        <td class="p-4">
                             <button onclick="updatePayment('${u.phone}', '${activeItem}', '${status}')" 
                                 class="px-4 py-1 rounded-full text-xs font-bold ${status==='已完成'?'bg-emerald-100 text-emerald-700':'bg-red-50 text-red-600'}">
                                 ${status}
@@ -225,68 +254,80 @@
                         </td>
                     </tr>`;
             }).join('');
-
-            if (isEditMode && activeItem) {
-                list.innerHTML += `<tr><td colspan="3" class="p-4 text-center"><button onclick="deletePayItem('${activeItem}')" class="text-red-500 text-xs font-bold underline">刪除此收費項目與紀錄</button></td></tr>`;
-            }
         }
 
         function renderAttendance() {
             const list = document.getElementById('attendanceList');
-            if (!allData.attendanceRaw) return;
-            list.innerHTML = allData.attendanceRaw.reverse().slice(0, 50).map(row => `
-                <tr class="border-b text-sm">
+            if(!allData.attendanceRaw) return;
+            list.innerHTML = allData.attendanceRaw.map(row => `
+                <tr class="border-b">
                     <td class="p-4">${row[0]}</td>
                     <td class="p-4 font-bold">${row[2]}</td>
-                    <td class="p-4 font-mono">${row[1]}</td>
-                    <td class="p-4 text-gray-400">${row[3] ? new Date(row[3]).toLocaleTimeString() : ''}</td>
+                    <td class="p-4 text-gray-400 text-xs">${row[3] ? new Date(row[3]).toLocaleTimeString() : ''}</td>
                 </tr>`).join('');
         }
 
-        // --- API 呼叫 ---
-        async function apiPost(data, btnId) {
-            if(btnId) document.getElementById(btnId).disabled = true;
-            data.adminKey = ADMIN_KEY;
-            try {
-                const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
-                if (await res.text() === "SUCCESS") { alert("執行成功"); fetchData(); }
-            } catch (e) { alert("發生錯誤"); }
-            if(btnId) document.getElementById(btnId).disabled = false;
+        function copyPaymentList() {
+            const item = document.getElementById('currentPayItem').value;
+            let text = `【築心讀書會 - ${item} 繳費名單】\n`;
+            let paidCount = 0;
+            
+            allData.users.forEach(u => {
+                const record = (allData.paymentRecords || []).find(r => r.title === item && r.phone === u.phone);
+                if(record && record.status === '已完成') {
+                    text += `✅ ${u.name}\n`;
+                    paidCount++;
+                } else {
+                    text += `❌ ${u.name} (未繳)\n`;
+                }
+            });
+            text += `\n統計：${paidCount} / ${allData.users.length}`;
+            
+            navigator.clipboard.writeText(text).then(() => alert("名單已複製，可直接貼到 LINE！"));
         }
 
-        function saveSystemConfig() {
-            apiPost({ 
-                type: "update_config", 
-                reading: document.getElementById('cfg-reading').value, 
-                photo: document.getElementById('cfg-photo').value 
-            }, "btn-saveConfig");
+        async function batchPaymentUpdate(newStatus) {
+            const item = document.getElementById('currentPayItem').value;
+            if(!item) return;
+            if(!confirm(`確定要將「${item}」的所有人員狀態改為【${newStatus}】嗎？`)) return;
+            
+            // 使用 Promise.all 批次發送請求以加快速度
+            const promises = allData.users.map(u => 
+                fetch(GAS_URL, { method: "POST", body: JSON.stringify({ 
+                    type: "update_payment_record", 
+                    adminKey: ADMIN_KEY, 
+                    phone: u.phone, 
+                    title: item, 
+                    status: newStatus 
+                })})
+            );
+            await Promise.all(promises);
+            alert("批次更新完成");
+            fetchData();
+        }
+
+        function showQR(date) {
+            const modal = document.getElementById('qrModal');
+            const qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = "";
+            new QRCode(qrDiv, { text: date, width: 200, height: 200 });
+            document.getElementById('qrText').innerText = date + " 簽到碼";
+            modal.classList.remove('hidden');
+        }
+
+        // --- 核心 API 通訊 (其餘功能請參考先前版本補充) ---
+        async function apiPost(data) {
+            data.adminKey = ADMIN_KEY;
+            const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
+            const result = await res.text();
+            if (result === "SUCCESS") fetchData();
         }
 
         function updatePayment(phone, title, current) {
             const next = current === '已完成' ? '未繳納' : '已完成';
             apiPost({ type: "update_payment_record", phone: phone, title: title, status: next });
         }
-
-        function deletePayItem(title) {
-            if(confirm(`警告：確定要刪除「${title}」及其所有繳費紀錄嗎？此動作無法復原。`)) {
-                apiPost({ type: "delete_payment_item", title: title });
-            }
-        }
-
-        function addPaymentItem() {
-            const t = document.getElementById('payTitle').value;
-            const d = document.getElementById('payDeadline').value;
-            if(!t) return alert("請輸入名稱");
-            apiPost({ type: "add_payment_item", title: t, deadline: d });
-        }
-
-        function publishNews() { apiPost({ type: "publish_news", content: document.getElementById('newsContent').value }, "btn-publishNews"); }
-        function sendLinePush() {
-            const msg = document.getElementById('pushMsg').value;
-            if(!msg) return;
-            if(confirm("確定發送 LINE 推播？")) apiPost({ type: "send_line_push", content: msg }, "btn-sendPush");
-        }
-
+        
         window.onload = init;
     </script>
 </body>

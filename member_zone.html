@@ -30,13 +30,12 @@
     </nav>
 
     <main class="max-w-4xl mx-auto p-4 space-y-5">
-        
         <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
             <div class="relative z-10">
                 <div class="flex justify-between items-start mb-6">
                     <div>
-                        <h2 id="userName" class="text-3xl font-bold mb-2">載入中...</h2>
-                        <span id="userTitle" class="bg-white/20 px-4 py-1 rounded-full text-xs border border-white/10">載入中...</span>
+                        <h2 id="userName" class="text-3xl font-bold mb-2 tracking-tight">載入中...</h2>
+                        <span id="userTitle" class="bg-white/20 px-4 py-1 rounded-full text-xs border border-white/10 italic font-serif">會員</span>
                     </div>
                     <button onclick="openEditModal()" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition">
                         <i class="fas fa-cog text-emerald-100"></i>
@@ -44,12 +43,12 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm border border-white/5">
-                        <div class="text-white/60 text-xs mb-1">學習參與率</div>
+                        <div class="text-white/60 text-[10px] mb-1">已發生活動參與率</div>
                         <div id="attPercent" class="text-2xl font-bold italic text-orange-200">0%</div>
                     </div>
                     <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm border border-white/5">
-                        <div class="text-white/60 text-xs mb-1">總出席次數</div>
-                        <div id="attCountDisplay" class="text-2xl font-bold">0</div>
+                        <div class="text-white/60 text-[10px] mb-1">已報到 / 已發生次數</div>
+                        <div id="attCountDisplay" class="text-2xl font-bold font-mono">0 / 0</div>
                     </div>
                 </div>
             </div>
@@ -65,24 +64,17 @@
                 <i class="fas fa-bullhorn text-emerald-500"></i>
                 <h3 class="font-bold">最新公告</h3>
             </div>
-            <p id="news" class="text-gray-600 leading-relaxed font-medium font-serif italic">正在同步資訊...</p>
-        </div>
-
-        <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
-            <h3 class="font-bold text-emerald-900 mb-4">近期活動</h3>
-            <div id="upcomingList" class="space-y-4">
-                <p class="text-gray-400 text-sm italic">載入活動中...</p>
-            </div>
+            <p id="news" class="text-gray-600 leading-relaxed font-medium">正在取得最新資訊...</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <button onclick="openRemoteLink('reading')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center group transition">
+            <button onclick="openRemoteLink('reading_folder_url')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center">
                 <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-2 text-emerald-600">
                     <i class="fas fa-book-reader text-xl"></i>
                 </div>
                 <span class="font-bold text-emerald-900">雲端書箱</span>
             </button>
-            <button onclick="openRemoteLink('photo')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center group transition">
+            <button onclick="openRemoteLink('photo_gallery_url')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center">
                 <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-2 text-amber-600">
                     <i class="fas fa-images text-xl"></i>
                 </div>
@@ -122,8 +114,10 @@
             if (!userStr) { location.href = 'index.html'; return; }
             const user = JSON.parse(userStr);
             document.getElementById('userName').innerText = user.name;
-            document.getElementById('userTitle').innerText = user.role || '學員';
-            if (user.role && user.role !== "學員") document.getElementById('adminEntry').classList.remove('hidden');
+            document.getElementById('userTitle').innerText = user.role || user.title || '學員';
+            if ((user.role || user.title) && (user.role !== "學員" && user.title !== "學員")) {
+                document.getElementById('adminEntry').classList.remove('hidden');
+            }
             syncData();
         };
 
@@ -131,72 +125,64 @@
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
-                const user = JSON.parse(sessionStorage.getItem('userInfo'));
+                const cachedUser = JSON.parse(sessionStorage.getItem('userInfo'));
+                
+                // 1. 抓取該會員最新資料
+                const liveUser = (data.users || []).find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
+                if (!liveUser) return;
+                sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
 
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
-                remoteConfig = data.config || {}; // 修正：抓取 GAS 的 config
+                remoteConfig = data.config || {};
 
-                const today = new Date().toISOString().split('T')[0];
-                const allEvents = data.events || [];
-
-                // 1. 渲染近期活動 (2則)
-                const upcoming = allEvents.filter(e => e.date >= today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,2);
-                document.getElementById('upcomingList').innerHTML = upcoming.map(ev => `
-                    <div class="flex items-center justify-between border-b border-emerald-50 pb-3 last:border-0 last:pb-0">
-                        <div class="flex items-center space-x-3">
-                            <div class="text-center bg-emerald-50 text-emerald-700 px-3 py-1 rounded-xl font-bold text-sm">
-                                ${new Date(ev.date).getDate()} <span class="text-[10px] block opacity-50">${new Date(ev.date).toLocaleString('en',{month:'short'})}</span>
-                            </div>
-                            <div class="font-bold text-emerald-900">${ev.title}</div>
-                        </div>
-                        <button onclick='createCalendarLink(${JSON.stringify(ev)})' class="text-emerald-500 text-xs font-bold bg-emerald-100 px-3 py-1.5 rounded-full">加日曆</button>
-                    </div>`).join('');
-
-                // 2. 學習歷程對照 (修正：確保對比欄位正確)
-                const pastEvents = allEvents.filter(e => e.date < today).sort((a,b)=>b.date.localeCompare(a.date));
-                // 這裡要注意：GAS 回傳的 userInfo 裡面的出席紀錄欄位可能是 attendLog 或 attendanceLog
-                const myLogs = (user.attendLog || user.attendanceLog || []).map(d => String(d).trim());
+                // 2. 處理活動與日期比對
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
                 
+                // 分母：日期小於今天的活動
+                const pastEvents = (data.calendar || []).filter(ev => ev.dateText < todayStr).sort((a,b)=>b.dateText.localeCompare(a.dateText));
+                
+                // 報到紀錄格式化 (移除時間部分)
+                const myLogs = (liveUser.attendLog || []).map(log => {
+                    const s = String(log).trim();
+                    return s.includes('T') ? s.split('T')[0] : (s.includes(' ') ? s.split(' ')[0] : s);
+                }).filter(s => s !== "");
+
+                // 3. 渲染歷程
                 document.getElementById('historyList').innerHTML = pastEvents.map(ev => {
-                    const isAttended = myLogs.includes(ev.date);
+                    const isAttended = myLogs.some(logDate => logDate.replace(/\//g, '-') === ev.dateText);
                     return `
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/50' : 'border-transparent'}">
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'} shadow-sm">
                         <div class="flex items-center space-x-4">
-                            <div class="text-[10px] font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.date}</div>
+                            <div class="text-[10px] font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</div>
                             <div class="font-bold text-emerald-900 text-sm">${ev.title}</div>
                         </div>
-                        <div>${isAttended ? '<span class="text-emerald-600 text-[10px] font-bold bg-emerald-100 px-2 py-1 rounded-full">已出席</span>' : '<span class="text-gray-300 text-[10px] italic">未出席</span>'}</div>
+                        <div>${isAttended ? '<span class="text-emerald-600 text-[10px] font-bold bg-emerald-100 px-3 py-1 rounded-full">已報到</span>' : '<span class="text-gray-300 text-[10px] italic">未報到</span>'}</div>
                     </div>`;
-                }).join('');
+                }).join('') || '<p class="text-center text-gray-400 py-10">尚無過去活動紀錄</p>';
 
-                // 3. 出席率與彩花
-                const myCount = myLogs.length;
-                const percent = pastEvents.length > 0 ? Math.round((myCount / pastEvents.length) * 100) : 0;
+                // 4. 計算參與率 (分子：在 pastEvents 中的報到數 / 分母：pastEvents 總數)
+                const myAttendedCount = pastEvents.filter(ev => myLogs.some(logDate => logDate.replace(/\//g, '-') === ev.dateText)).length;
+                const totalPast = pastEvents.length;
+                const percent = totalPast > 0 ? Math.round((myAttendedCount / totalPast) * 100) : 0;
+                
                 document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerHTML = `${myCount} <span class="text-xs opacity-40">/ ${pastEvents.length}</span>`;
-                if (percent >= 50) setTimeout(() => confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }), 1000);
+                document.getElementById('attCountDisplay').innerHTML = `${myAttendedCount} <span class="text-xs opacity-40">/ ${totalPast}</span>`;
+                
+                // 50% 以上噴花鼓勵
+                if (percent >= 50) {
+                    setTimeout(() => {
+                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#F97316', '#FDE68A'] });
+                    }, 800);
+                }
 
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Sync Error:", e); }
         }
 
         function openRemoteLink(key) {
-            // 修正：從 GAS 傳回的 config 欄位名稱對齊
-            const mapping = { 'reading': 'reading_folder_url', 'photo': 'photo_gallery_url' };
-            const url = remoteConfig[mapping[key]];
-            if (url) window.open(url, '_blank');
-            else alert("後端尚未設定連結，請洽管理員");
-        }
-
-        function createCalendarLink(ev) {
-            const dateStr = ev.date.replace(/-/g, '');
-            const title = "築心讀書會：" + ev.title;
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            if (isIOS) {
-                const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${dateStr}T093000\nDTEND:${dateStr}T120000\nSUMMARY:${title}\nEND:VEVENT\nEND:VCALENDAR`;
-                window.location.href = URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
-            } else {
-                window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T093000/${dateStr}T120000`, '_blank');
-            }
+            const url = remoteConfig[key];
+            if (url && url.startsWith('http')) window.open(url, '_blank');
+            else alert("連結尚未設定");
         }
 
         function startScanner() {

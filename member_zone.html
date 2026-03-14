@@ -32,7 +32,7 @@
                     <div id="attPercent" class="text-2xl font-bold text-orange-200">0%</div>
                 </div>
                 <div class="bg-black/10 p-4 rounded-3xl text-center">
-                    <div class="text-[10px] opacity-60 mb-1">出席次數</div>
+                    <div class="text-[10px] opacity-60 mb-1">報到次數</div>
                     <div id="attCountDisplay" class="text-2xl font-bold">0 / 0</div>
                 </div>
             </div>
@@ -66,25 +66,16 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         
-        // 強力日期格式化：轉為 YYYY-MM-DD
         function formatToISO(input) {
             if (!input) return "";
-            let d = new Date(input);
-            if (isNaN(d.getTime())) {
-                let parts = String(input).split(/[\/\-]/);
-                if (parts.length >= 3) {
-                    return `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].split(' ')[0].padStart(2,'0')}`;
-                }
-                return String(input);
-            }
+            const d = new Date(input);
+            if (isNaN(d.getTime())) return String(input).split(' ')[0].replace(/\//g, '-');
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
 
-        // 強力電話格式化：補足 10 位數並去雜質
-        function normalizePhone(str) {
-            let p = String(str || "").replace(/\D/g, "");
-            if (p.length === 9 && p.startsWith('9')) p = '0' + p; // 補回消失的 0
-            return p;
+        // 核心：只取數字且只比對末 9 碼（繞過開頭 0 的格式問題）
+        function getMatchPhone(str) {
+            return String(str || "").replace(/\D/g, "").slice(-9);
         }
 
         window.onload = () => {
@@ -100,28 +91,32 @@
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                const myPhone = normalizePhone(cachedUser.phone);
-                // 兩邊都做 normalizePhone 以防萬一
-                const liveUser = (data.users || []).find(u => normalizePhone(u.phone) === myPhone);
+                const myMatch = getMatchPhone(cachedUser.phone);
+                const liveUser = (data.users || []).find(u => getMatchPhone(u.phone) === myMatch);
                 
                 if (!liveUser) {
-                    document.getElementById('historyList').innerHTML = `<p class="text-center text-red-400">找不到手機 ${myPhone} 的資料</p>`;
+                    alert("手機號碼比對失敗，請嘗試重新登入。");
+                    logout();
                     return;
                 }
 
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
 
                 const todayStr = formatToISO(new Date());
-                // 放寬條件：只要日期小於等於今天且有標題就顯示
-                const pastEvents = (data.calendar || [])
-                    .filter(ev => ev.dateText && formatToISO(ev.dateText) <= todayStr)
-                    .sort((a,b) => b.dateText.localeCompare(a.dateText));
+                
+                // --- 精準過濾邏輯 ---
+                // 條件：日期已過 + 標題或描述包含「需報到」
+                const validEvents = (data.calendar || []).filter(ev => {
+                    const isPast = ev.dateText && formatToISO(ev.dateText) <= todayStr;
+                    const isRequired = (ev.title + (ev.description || "")).includes("需報到");
+                    return isPast && isRequired;
+                }).sort((a,b) => b.dateText.localeCompare(a.dateText));
 
                 let myLogs = Array.isArray(liveUser.attendLog) ? liveUser.attendLog : [];
                 const standardLogs = myLogs.map(log => formatToISO(log));
 
                 let count = 0;
-                const html = pastEvents.map(ev => {
+                const html = validEvents.map(ev => {
                     const eventDate = formatToISO(ev.dateText);
                     const isOk = standardLogs.includes(eventDate);
                     if (isOk) count++;
@@ -129,21 +124,21 @@
                         <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isOk ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'}">
                             <div class="flex flex-col">
                                 <span class="text-[10px] text-gray-400 font-mono">${eventDate}</span>
-                                <span class="font-bold text-emerald-900">${ev.title}</span>
+                                <span class="font-bold text-emerald-900">${ev.title.replace('需報到','')}</span>
                             </div>
-                            <span>${isOk ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs italic">未出席</i>'}</span>
+                            <span>${isOk ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs italic">未報到</i>'}</span>
                         </div>`;
                 }).join('');
 
-                document.getElementById('historyList').innerHTML = html || '<p class="text-center py-10 text-gray-400">尚無活動紀錄</p>';
+                document.getElementById('historyList').innerHTML = html || '<p class="text-center py-10 text-gray-400 italic">尚無需報到的活動紀錄</p>';
                 
-                const total = pastEvents.length;
+                const total = validEvents.length;
                 document.getElementById('attPercent').innerText = (total > 0 ? Math.round((count/total)*100) : 0) + "%";
                 document.getElementById('attCountDisplay').innerText = `${count} / ${total}`;
 
             } catch (err) {
                 console.error("Sync Error:", err);
-                document.getElementById('historyList').innerHTML = "連線失敗，請檢查網路";
+                document.getElementById('historyList').innerHTML = "資料同步失敗";
             }
         }
 

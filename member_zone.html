@@ -149,37 +149,51 @@
         }
 
         // --- 精準對接 GAS: 使用 'password' 而非 'oldPassword' ---
-        async function handleUpdateProfile() {
+async function handleUpdateProfile() {
+            // 抓取彈窗中的輸入值
             const oldP = document.getElementById('oldPass').value;
             const newP = document.getElementById('newPass').value;
             const email = document.getElementById('editEmail').value;
+
             if (!oldP) return alert("請輸入舊密碼驗證身份");
             
             const btn = document.getElementById('updateBtn');
-            btn.disabled = true; btn.innerText = "更新中...";
+            const originalText = btn.innerText;
+            btn.disabled = true; 
+            btn.innerText = "更新中...";
             
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
+                    // 這裡的 body 結構必須完全符合您當初 GAS 運行的邏輯
                     body: JSON.stringify({
                         type: 'updateProfile',
                         phone: currentUser.phone,
                         email: email,
-                        password: oldP, // 注意：這裡必須與 GAS 的變數名稱一致
+                        oldPassword: oldP, // 關鍵修正：必須使用 oldPassword
                         newPassword: newP
                     })
                 });
+                
                 const result = await res.json();
+                
                 if (result.result === "SUCCESS") {
-                    alert("更新成功！");
+                    alert("資料更新成功！");
+                    // 更新瀏覽器暫存的資訊
                     currentUser.email = email;
                     sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
                     location.reload();
                 } else {
-                    alert("更新失敗：" + (result.message || "密碼錯誤"));
+                    // 如果後端回傳錯誤，顯示後端的錯誤訊息
+                    alert("更新失敗：" + (result.message || "舊密碼驗證失敗"));
                 }
-            } catch (e) { alert("連線失敗"); }
-            btn.disabled = false; btn.innerText = "確認更新";
+            } catch (e) {
+                console.error(e);
+                alert("網路連線失敗，請稍後再試");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
 
         async function syncData(user) {

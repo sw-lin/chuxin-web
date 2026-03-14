@@ -240,20 +240,40 @@
             }).join('');
         }
 
-        async function batchUpdatePayment(newStatus) {
-            const item = document.getElementById('currentPayItem').value;
-            if(!item || !confirm(`確定將「${item}」全部設為 ${newStatus} 嗎？`)) return;
-            
-            // 由於 GAS 配額與連線限制，這裡建議分批發送，或告知使用者需等待
-            alert("正在批次處理，請勿關閉視窗...");
-            for(let u of allData.users) {
-                await fetch(GAS_URL, { method: "POST", body: JSON.stringify({
-                    type: "update_payment_record", adminKey: ADMIN_KEY, phone: u.phone, title: item, status: newStatus
-                })});
-            }
-            alert("批次處理完成！");
-            fetchData();
-        }
+   async function batchUpdatePayment(newStatus) {
+    const item = document.getElementById('currentPayItem').value;
+    if(!item || !confirm(`確定將所有人的「${item}」狀態清為【${newStatus}】嗎？`)) return;
+    
+    // 顯示處理中 UI
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = "處理中...";
+    btn.disabled = true;
+
+    try {
+        // 使用 Promise.all 同時發送請求（速度最快）
+        const tasks = allData.users.map(u => 
+            fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    type: "update_payment_record",
+                    adminKey: ADMIN_KEY,
+                    phone: u.phone,
+                    title: item,
+                    status: newStatus
+                })
+            })
+        );
+        await Promise.all(tasks);
+        alert("批次更新成功！");
+        await fetchData(); // 重新整理資料
+    } catch (e) {
+        alert("批次更新過程發生錯誤");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
 
         function copyPaymentToLine() {
             const item = document.getElementById('currentPayItem').value;

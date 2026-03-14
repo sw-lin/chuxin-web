@@ -9,96 +9,115 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; color: #2C3E50; scroll-behavior: smooth; }
-        .hero-gradient { background: linear-gradient(to bottom, rgba(6,78,59,0.8), rgba(6,78,59,0.4)); }
-        .slide { display: none; width: 100%; height: 500px; object-fit: cover; animation: fade 1.5s; }
-        @keyframes fade { from {opacity: .4} to {opacity: 1} }
+        .hero-gradient { background: linear-gradient(to bottom, rgba(6,78,59,0.7), rgba(6,78,59,0.4)); }
+        .slide { display: none; width: 100%; height: 600px; object-fit: cover; animation: fade 1.5s; }
+        @keyframes fade { from {opacity: .6} to {opacity: 1} }
+        @media (max-width: 640px) { .slide { height: 400px; } }
     </style>
 </head>
-<body>
+<body class="bg-[#FDFBF7]">
 
-    <nav class="sticky top-0 bg-white/90 backdrop-blur-md z-50 shadow-sm px-4 md:px-6 py-4 flex justify-between items-center">
+    <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md shadow-sm px-6 py-4 flex justify-between items-center">
         <div class="flex items-center space-x-2">
             <i class="fas fa-leaf text-emerald-700 text-xl"></i>
-            <span class="text-lg md:text-xl font-bold text-emerald-900">築心讀書會</span>
+            <span class="text-xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
         </div>
+        <a href="#login" class="bg-emerald-800 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-emerald-700 transition">進入會館</a>
     </nav>
 
-    <div class="relative overflow-hidden bg-emerald-900">
-        <div class="hero-gradient absolute inset-0 z-10"></div>
-        <div class="slideshow-container">
-            <img class="slide" src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&q=80" style="display:block;">
+    <header class="relative pt-16">
+        <div class="slideshow-container relative overflow-hidden bg-emerald-900">
+            <img class="slide" src="1.jpg">
+            <img class="slide" src="2.jpg">
+            <img class="slide" src="3.jpg">
+            <img class="slide" src="4.jpg">
+            <img class="slide" src="5.jpg">
+            
+            <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center px-6 z-10">
+                <div class="max-w-3xl">
+                    <h1 class="text-4xl md:text-6xl text-white font-bold mb-6 leading-tight">在文字中漫步<br>在共讀中築心</h1>
+                    <p class="text-emerald-50 text-lg md:text-xl mb-10 font-light tracking-wide italic">「這不僅是一個讀書會，更是一個心靈棲息的地方。」</p>
+                </div>
+            </div>
         </div>
-        <div class="absolute inset-0 z-20 flex flex-col items-center justify-center text-white p-6 text-center">
-            <h2 class="text-3xl md:text-5xl font-bold mb-4 tracking-widest">在共讀中築心</h2>
-            <p class="text-lg md:text-xl opacity-90 italic">於陪伴中成長</p>
-        </div>
-    </div>
+    </header>
 
-    <section id="login-section" class="py-20 px-6">
-        <div class="max-w-md mx-auto bg-white rounded-[2.5rem] p-8 md:p-10 shadow-xl border border-emerald-100">
-            <h3 class="text-2xl font-bold text-emerald-900 mb-8 text-center">會員登入</h3>
+    <section id="login" class="py-24 px-6">
+        <div class="max-w-md mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-emerald-50">
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-check text-emerald-700 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-emerald-900">會員登入</h2>
+                <p class="text-gray-400 text-sm mt-2">請驗證您的身份以開啟會員專區</p>
+            </div>
+            
             <div class="space-y-6">
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">手機號碼</label>
-                    <input id="userPhone" type="tel" placeholder="0912345678" class="w-full px-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">手機號碼</label>
+                    <input type="tel" id="userPhone" placeholder="0912345678" 
+                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">登入密碼</label>
-                    <input id="userPass" type="password" placeholder="請輸入密碼" class="w-full px-4 py-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">登入密碼</label>
+                    <input type="password" id="userPass" placeholder="請輸入密碼" 
+                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition outline-none">
                 </div>
-                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-900 transition shadow-lg">進入會館</button>
+                <button id="loginBtn" onclick="handleLogin()" 
+                    class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-[0.98]">
+                    進入會館
+                </button>
             </div>
         </div>
     </section>
 
     <script>
-        // 確認此網址與您的 GAS 部署網址一致
+        // 確認此網址正確
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
+        // 半形處理 (避免手機輸入全域數字)
         function toHalfWidth(str) {
-            if (!str) return "";
             return str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s+/g, "");
         }
 
         async function handleLogin() {
-            const rawPhone = document.getElementById('userPhone').value;
+            const rawU = document.getElementById('userPhone').value;
             const p = document.getElementById('userPass').value.trim();
-            const u = toHalfWidth(rawPhone);
+            const u = toHalfWidth(rawU);
 
-            if(!u || !p) return alert('請填寫完整資訊');
-            
+            if(!u || !p) return alert('請完整填寫電話與密碼');
+
             const btn = document.getElementById('loginBtn');
-            btn.disabled = true; 
-            btn.innerText = '正在登入...';
-            
+            btn.innerText = "驗證身分中...";
+            btn.disabled = true;
+
             try {
-                const res = await fetch(GAS_URL, {
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ type: 'login', phone: u, password: p })
                 });
-                
-                const result = await res.json();
+                const result = await response.json();
 
                 if (result.result === "SUCCESS") {
                     const userInfo = {
                         ...result,
-                        phone: u  // 重要：存入手機號碼供 member_zone 比對
+                        phone: u 
                     };
                     sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
                     window.location.href = 'member_zone.html';
                 } else {
-                    alert(result === "WRONG_PASSWORD" ? "密碼錯誤" : "找不到帳號");
+                    alert(result === "WRONG_PASSWORD" ? "密碼錯誤" : "找不到此會員帳號");
                 }
             } catch (e) {
-                console.error("Login Error:", e);
-                alert("連線失敗，請檢查網路或確認 GAS 網址正確且已發布為「所有人」。");
+                console.error(e);
+                alert("伺服器連線失敗，請檢查網路或 GAS 網址是否正確。");
             } finally {
+                btn.innerText = "進入會館";
                 btn.disabled = false;
-                btn.innerText = '進入會館';
             }
         }
 
-        // 自動輪播簡單邏輯
+        // 輪播圖邏輯
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
@@ -107,8 +126,9 @@
             slideIndex++;
             if (slideIndex > slides.length) slideIndex = 1;
             slides[slideIndex-1].style.display = "block";
-            setTimeout(showSlides, 4000);
+            setTimeout(showSlides, 4000); // 4秒切換一次
         }
+
         window.onload = showSlides;
     </script>
 </body>

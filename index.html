@@ -12,7 +12,6 @@
         .hero-gradient { background: linear-gradient(to bottom, rgba(6,78,59,0.8), rgba(6,78,59,0.4)); }
         .slide { display: none; width: 100%; height: 500px; object-fit: cover; animation: fade 1.5s; }
         @keyframes fade { from {opacity: .4} to {opacity: 1} }
-        @media (max-width: 640px) { .slide { height: 350px; } }
     </style>
 </head>
 <body class="bg-[#FDFBF7]">
@@ -23,11 +22,6 @@
                 <i class="fas fa-leaf text-emerald-700 text-xl"></i>
                 <span class="text-xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
             </div>
-            <div class="hidden md:flex space-x-8 text-sm font-medium text-emerald-800">
-                <a href="#about" class="hover:text-emerald-600 transition">關於我們</a>
-                <a href="#events" class="hover:text-emerald-600 transition">近期活動</a>
-                <a href="#login" class="bg-emerald-800 text-white px-5 py-2 rounded-full hover:bg-emerald-700 transition">進入會館</a>
-            </div>
         </div>
     </nav>
 
@@ -35,12 +29,8 @@
         <div class="slideshow-container relative overflow-hidden">
             <img class="slide" src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&q=80">
             <img class="slide" src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80">
-            <img class="slide" src="https://images.unsplash.com/photo-1491841573634-28140fc7ced7?auto=format&fit=crop&q=80">
-            <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center px-6">
-                <div class="max-w-3xl">
-                    <h1 class="text-4xl md:text-6xl text-white font-bold mb-6 leading-tight">在文字中漫步<br>在共讀中築心</h1>
-                    <p class="text-emerald-50 text-lg md:text-xl mb-10 font-light tracking-wide">這不僅是一個讀書會，更是一個心靈棲息的地方。</p>
-                </div>
+            <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center">
+                <h1 class="text-4xl text-white font-bold">在文字中漫步，在共讀中築心</h1>
             </div>
         </div>
     </header>
@@ -48,45 +38,27 @@
     <section id="login" class="py-20 px-6">
         <div class="max-w-md mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border border-emerald-50">
             <div class="text-center mb-10">
-                <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-door-open text-emerald-700 text-2xl"></i>
-                </div>
                 <h2 class="text-2xl font-bold text-emerald-900">會員登入</h2>
-                <p class="text-gray-400 text-sm mt-2">請輸入您的手機與密碼進入專區</p>
+                <p class="text-gray-400 text-sm mt-2">請輸入您的手機與密碼</p>
             </div>
-            
             <div class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">手機號碼</label>
-                    <input type="tel" id="login-phone" placeholder="0912345678" 
-                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition outline-none">
+                    <label class="block text-xs font-bold text-emerald-800 mb-2">手機號碼</label>
+                    <input type="tel" id="login-phone" placeholder="0912345678" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">登入密碼</label>
-                    <input type="password" id="login-pwd" placeholder="預設為 123" 
-                        class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition outline-none">
+                    <label class="block text-xs font-bold text-emerald-800 mb-2">登入密碼</label>
+                    <input type="password" id="login-pwd" placeholder="預設為 123" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
-                <button onclick="handleLogin()" 
-                    class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-[0.98]">
-                    進入會館
-                </button>
+                <button onclick="handleLogin()" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 transition-all">進入會館</button>
             </div>
-        </div>
-    </section>
-
-    <section id="events" class="py-20 px-6 bg-emerald-50/30">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-3xl font-bold text-center text-emerald-900 mb-16">近期活動預告</h2>
-            <div id="event-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                </div>
         </div>
     </section>
 
     <script>
-        // ！！請確保此網址與您的 GAS 部署網址一致！！
+        // 確認與您的 GAS 部署網址一致
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
-        // 登入處理函式
         async function handleLogin() {
             const u = document.getElementById('login-phone').value.trim();
             const p = document.getElementById('login-pwd').value.trim();
@@ -108,9 +80,11 @@
                 const result = await response.json();
 
                 if (result.result === "SUCCESS") {
-                    // 關鍵修正：將手機號碼 u 併入 userInfo 儲存
+                    // 這裡我已經把括號和屬性對齊好了
                     const userInfo = {
-                        ...result,
+                        result: "SUCCESS",
+                        name: result.name,
+                        role: result.role,
                         phone: u 
                     };
                     sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
@@ -120,41 +94,13 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("登入失敗，請確認 GAS 網址是否正確且已發布。");
+                alert("連線失敗：請確保您的 GAS 已經完成「部署」並設為「所有人」皆可存取。");
             } finally {
                 btn.innerText = "進入會館";
                 btn.disabled = false;
             }
         }
 
-        // 初始化：載入公告與活動
-        async function init() {
-            try {
-                const res = await fetch(GAS_URL);
-                const data = await res.json();
-                
-                if(data.calendar) {
-                    const grid = document.getElementById('event-grid');
-                    const today = new Date().toISOString().split('T')[0];
-                    const upcoming = data.calendar.filter(ev => ev.dateText >= today).slice(0, 3);
-                    
-                    if(upcoming.length > 0) {
-                        grid.innerHTML = upcoming.map(ev => `
-                            <div class="bg-white p-8 rounded-[2rem] border border-emerald-50 shadow-sm text-center">
-                                <div class="text-emerald-600 font-bold mb-2">${ev.dateText}</div>
-                                <div class="text-emerald-900 font-bold text-lg">${ev.title}</div>
-                            </div>
-                        `).join('');
-                    } else {
-                        grid.innerHTML = '<p class="col-span-full text-center text-gray-400">目前暫無近期活動</p>';
-                    }
-                }
-            } catch (e) {
-                console.error("Init Error:", e);
-            }
-        }
-
-        // 輪播圖邏輯
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
@@ -164,11 +110,7 @@
             if(slides[slideIndex-1]) slides[slideIndex-1].style.display = "block";
             setTimeout(showSlides, 4000);
         }
-
-        window.onload = () => {
-            showSlides();
-            init();
-        };
+        window.onload = showSlides;
     </script>
 </body>
 </html>

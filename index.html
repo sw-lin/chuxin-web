@@ -195,17 +195,33 @@ async function init() {
         const data = await res.json();
         const grid = document.getElementById('event-grid');
         
-        // 修正點：GAS 回傳的是 data.events
+        // 1. 取得今天日期（並將時間設為 00:00:00 以精準比較日期）
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         if (data.events && data.events.length > 0) {
-            grid.innerHTML = data.events.map(ev => `
-                <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
-                    <div class="text-emerald-600 font-bold mb-2">${ev.date}</div>
-                    <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
-                    <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-3 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
-                </div>
-            `).join('');
-        } else {
-            grid.innerHTML = '<div class="col-span-full text-center text-gray-400 italic">目前暫無近期活動</div>';
+            // 2. 篩選：日期大於或等於今天的活動
+            const upcomingEvents = data.events
+                .filter(ev => {
+                    const evDate = new Date(ev.date);
+                    return evDate >= today;
+                })
+                // 3. 排序：確保日期是由近到遠
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                // 4. 只取前 4 件
+                .slice(0, 4);
+
+            if (upcomingEvents.length > 0) {
+                grid.innerHTML = upcomingEvents.map(ev => `
+                    <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
+                        <div class="text-emerald-600 font-bold mb-2">${ev.date}</div>
+                        <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
+                        <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-3 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = '<div class="col-span-full text-center text-gray-400 italic">目前暫無近期活動</div>';
+            }
         }
     } catch (e) { 
         console.error("Init Error:", e);

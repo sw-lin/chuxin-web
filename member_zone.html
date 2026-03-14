@@ -11,6 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="min-h-screen pb-10">
@@ -20,7 +21,7 @@
             <i class="fas fa-leaf text-emerald-300"></i>
             <span class="font-bold">築心會館</span>
         </div>
-        <button onclick="logout()" class="text-xs bg-white/10 px-3 py-1 rounded-full">登出</button>
+        <button onclick="logout()" class="text-xs bg-white/10 px-3 py-1 rounded-full hover:bg-white/20 transition">登出</button>
     </nav>
 
     <main class="max-w-4xl mx-auto p-4 space-y-5">
@@ -45,7 +46,7 @@
 
         <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
             <h3 class="font-bold text-emerald-800 mb-1 text-sm">最新公告</h3>
-            <p id="news" class="text-gray-500 text-xs">同步中...</p>
+            <p id="news" class="text-gray-500 text-xs">載入公告中...</p>
         </div>
 
         <div>
@@ -59,113 +60,124 @@
     <div id="scannerModal" class="fixed inset-0 bg-black/95 hidden z-[100] flex flex-col items-center justify-center p-6">
         <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden">
             <div id="reader"></div>
-            <div class="p-4"><button onclick="stopScanner()" class="w-full py-3 bg-gray-100 rounded-xl">關閉</button></div>
+            <div class="p-4"><button onclick="stopScanner()" class="w-full py-3 bg-gray-100 rounded-xl font-bold">關閉掃描</button></div>
         </div>
     </div>
 
     <script>
-        // 請確保此網址與您的 Google Apps Script 部署網址一致
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-        
-        function formatToISO(input) {
-            if (!input) return "";
-            const d = new Date(input);
-            if (isNaN(d.getTime())) return String(input).split(' ')[0].replace(/\//g, '-');
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-        }
-
-        function getMatchPhone(str) {
-            return String(str || "").replace(/\D/g, "").slice(-9);
-        }
+        let html5QrCode = null;
 
         window.onload = () => {
             const userStr = sessionStorage.getItem('userInfo');
             if (!userStr) { location.href = 'index.html'; return; }
             const user = JSON.parse(userStr);
-            document.getElementById('userName').innerText = user.name;
+            document.getElementById('userName').innerText = user.name || "讀書會成員";
             syncData(user);
         };
 
-async function syncData() {
-    try {
-        // 1. 從 sessionStorage 取得使用者資訊
-        const userStr = sessionStorage.getItem('userInfo');
-        if (!userStr) {
-            alert("偵測不到登入資訊，請重新登入");
-            logout();
-            return;
+        async function syncData(user) {
+            try {
+                // 確保手機號碼處理正確（取末 9 碼）
+                const rawPhone = user.phone || user.currentPhone || "";
+                const myMatch = String(rawPhone).replace(/\D/g, "").slice(-9);
+
+                if (!myMatch) {
+                    alert("手機號碼格式異常，請重新登入。");
+                    logout();
+                    return;
+                }
+
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                
+                // 比對資料庫中的使用者
+                const liveUser = (data.users || []).find(u => {
+                    const dbMatch = String(u.phone || "").replace(/\D/g, "").slice(-9);
+                    return dbMatch === myMatch;
+                });
+                
+                if (!liveUser) {
+                    alert(`同步失敗：找不到您的資料。\n您的末9碼：${myMatch}`);
+                    logout();
+                    return;
+                }
+
+                // 更新公告與參與數據
+                document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
+                
+                const todayStr = new Date().toISOString().split('T')[0];
+                const validEvents = (data.calendar || []).filter(ev => {
+                    const isPast = ev.dateText && ev.dateText <= todayStr;
+                    // 只要標題或備註包含「需報到」就列入計算
+                    const isRequired = (ev.title + (ev.description || "")).includes("需報到");
+                    return isPast && isRequired;
+                });
+
+                const attendLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
+                
+                // 計算報到次數
+                let count = 0;
+                validEvents.forEach(ev => {
+                    if (attendLogs.includes(ev.dateText)) count++;
+                });
+
+                // 更新 UI 數據
+                const percent = validEvents.length > 0 ? Math.round((count / validEvents.length) * 100) : 0;
+                document.getElementById('attPercent').innerText = percent + "%";
+                document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
+
+                // 渲染學習歷程清單
+                renderHistory(validEvents, attendLogs);
+
+            } catch (err) {
+                console.error("Sync Error:", err);
+                document.getElementById('historyList').innerHTML = `<p class="text-center py-10 text-red-400">連線失敗，請檢查網路</p>`;
+            }
         }
-        
-        const cachedUser = JSON.parse(userStr);
-        // 關鍵修正：確保不管是 .phone 還是 .currentPhone 都能抓到
-        const rawPhone = cachedUser.phone || cachedUser.currentPhone || "";
-        const myMatch = String(rawPhone).replace(/\D/g, "").slice(-9);
-        
-        console.log("登入手機號碼:", rawPhone, "處理後末9碼:", myMatch);
 
-        if (!myMatch) {
-            alert("登入資料異常（無電話），請重新登入");
-            logout();
-            return;
+        function renderHistory(events, logs) {
+            const list = document.getElementById('historyList');
+            if (events.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-400">尚無相關學習紀錄</p>`;
+                return;
+            }
+
+            list.innerHTML = events.reverse().map(ev => {
+                const isAttended = logs.includes(ev.dateText);
+                return `
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50">
+                        <div>
+                            <div class="text-xs text-emerald-600 font-bold mb-1">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold">${ev.title}</div>
+                        </div>
+                        <div class="${isAttended ? 'text-emerald-600' : 'text-gray-300'} flex flex-col items-center">
+                            <i class="fas ${isAttended ? 'fa-check-circle' : 'fa-times-circle'} text-2xl"></i>
+                            <span class="text-[10px] mt-1 font-bold">${isAttended ? '已出席' : '未報到'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
-
-        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-        const data = await res.json();
-        
-        // 2. 比對資料庫
-        const liveUser = (data.users || []).find(u => {
-            const dbMatch = String(u.phone || "").replace(/\D/g, "").slice(-9);
-            return dbMatch === myMatch;
-        });
-        
-        if (!liveUser) {
-            const dbList = (data.users || []).slice(0, 3).map(u => u.phone).join(', ');
-            alert(`驗證失敗。\n您的末9碼：${myMatch}\n資料庫電話：${dbList}`);
-            logout();
-            return;
-        }
-
-        // --- 以下為顯示邏輯 (保持不變) ---
-        document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
-        const todayStr = new Date().toISOString().split('T')[0];
-        
-        // 參與率計算：過濾「需報到」且「日期已過」
-        const validEvents = (data.calendar || []).filter(ev => {
-            const isPast = ev.dateText && ev.dateText <= todayStr;
-            const isRequired = (ev.title + (ev.description || "")).includes("需報到");
-            return isPast && isRequired;
-        });
-
-        const standardLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
-        let count = 0;
-        // ...其餘渲染 UI 的代碼...
-        
-        // 成功抓到資料後，更新畫面
-        renderHistory(validEvents, standardLogs); 
-
-    } catch (err) {
-        console.error("Sync Error:", err);
-        document.getElementById('historyList').innerHTML = "資料同步失敗，請檢查網路。";
-    }
-}
 
         function startScanner() {
             document.getElementById('scannerModal').classList.remove('hidden');
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-                stopScanner(); window.location.href = text;
-            }).catch(() => stopScanner());
+            html5QrCode = new Html5QrCode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 } }, 
+                (text) => {
+                    stopScanner();
+                    // 掃描後直接跳轉報到網址
+                    window.location.href = text;
+                }
+            ).catch(err => {
+                console.error("Scanner Error:", err);
+                alert("無法啟動相機");
+                stopScanner();
+            });
         }
 
         function stopScanner() {
-            if (html5QrCode) html5QrCode.stop().finally(() => {
-                document.getElementById('scannerModal').classList.add('hidden');
-                html5QrCode = null;
-            });
-            else document.getElementById('scannerModal').classList.add('hidden');
-        }
-
-        function logout() { sessionStorage.clear(); location.href = 'index.html'; }
-    </script>
-</body>
-</html>
+            if (html5QrCode) {
+                html5QrCode.stop

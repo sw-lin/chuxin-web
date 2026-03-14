@@ -25,7 +25,7 @@
 
     <main class="max-w-4xl mx-auto p-4 space-y-5">
         <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl">
-            <h2 id="userName" class="text-3xl font-bold mb-4">載入中...</h2>
+            <h2 id="userName" class="text-3xl font-bold mb-4 text-white">載入中...</h2>
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-black/10 p-4 rounded-3xl text-center">
                     <div class="text-[10px] opacity-60 mb-1">學習參與率</div>
@@ -38,14 +38,14 @@
             </div>
         </div>
 
-        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3">
+        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-transform">
             <i class="fas fa-qrcode text-2xl"></i>
             <span class="text-xl font-bold">掃碼報到</span>
         </button>
 
         <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
             <h3 class="font-bold text-emerald-800 mb-1 text-sm">最新公告</h3>
-            <p id="news" class="text-gray-500 text-xs">載入中...</p>
+            <p id="news" class="text-gray-500 text-xs">正在連線資料庫...</p>
         </div>
 
         <div>
@@ -73,7 +73,7 @@
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
 
-        // 核心：只取數字且只比對末 9 碼（繞過開頭 0 的格式問題）
+        // 核心：只取數字且比對末 9 碼，並加上 debug 輸出
         function getMatchPhone(str) {
             return String(str || "").replace(/\D/g, "").slice(-9);
         }
@@ -92,10 +92,14 @@
                 const data = await res.json();
                 
                 const myMatch = getMatchPhone(cachedUser.phone);
-                const liveUser = (data.users || []).find(u => getMatchPhone(u.phone) === myMatch);
+                const userList = data.users || [];
+                const liveUser = userList.find(u => getMatchPhone(u.phone) === myMatch);
                 
                 if (!liveUser) {
-                    alert("手機號碼比對失敗，請嘗試重新登入。");
+                    // --- 增加診斷訊息 ---
+                    const dbPhones = userList.map(u => getMatchPhone(u.phone)).join(', ');
+                    console.error("Match Failed. Mine:", myMatch, "DB has:", dbPhones);
+                    alert(`驗證失敗。\n您的電話尾數：${myMatch}\n資料庫電話：${dbPhones.slice(0,20)}...`);
                     logout();
                     return;
                 }
@@ -104,12 +108,12 @@
 
                 const todayStr = formatToISO(new Date());
                 
-                // --- 精準過濾邏輯 ---
-                // 條件：日期已過 + 標題或描述包含「需報到」
+                // --- 精準過濾：過去活動 + 包含「需報到」 ---
                 const validEvents = (data.calendar || []).filter(ev => {
                     const isPast = ev.dateText && formatToISO(ev.dateText) <= todayStr;
-                    const isRequired = (ev.title + (ev.description || "")).includes("需報到");
-                    return isPast && isRequired;
+                    // 檢查標題或內容是否包含「需報到」
+                    const contentStr = (ev.title || "") + (ev.description || "");
+                    return isPast && contentStr.includes("需報到");
                 }).sort((a,b) => b.dateText.localeCompare(a.dateText));
 
                 let myLogs = Array.isArray(liveUser.attendLog) ? liveUser.attendLog : [];
@@ -124,7 +128,7 @@
                         <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isOk ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'}">
                             <div class="flex flex-col">
                                 <span class="text-[10px] text-gray-400 font-mono">${eventDate}</span>
-                                <span class="font-bold text-emerald-900">${ev.title.replace('需報到','')}</span>
+                                <span class="font-bold text-emerald-900">${ev.title.replace('需報到','').trim()}</span>
                             </div>
                             <span>${isOk ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs italic">未報到</i>'}</span>
                         </div>`;
@@ -138,7 +142,7 @@
 
             } catch (err) {
                 console.error("Sync Error:", err);
-                document.getElementById('historyList').innerHTML = "資料同步失敗";
+                document.getElementById('historyList').innerHTML = "連線超時，請重新整理頁面";
             }
         }
 

@@ -25,7 +25,7 @@
 
     <main class="max-w-4xl mx-auto p-4 space-y-5">
         <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl">
-            <h2 id="userName" class="text-3xl font-bold mb-4 text-white">載入中...</h2>
+            <h2 id="userName" class="text-3xl font-bold mb-4 text-white">讀取中...</h2>
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-black/10 p-4 rounded-3xl text-center">
                     <div class="text-[10px] opacity-60 mb-1">學習參與率</div>
@@ -45,13 +45,13 @@
 
         <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
             <h3 class="font-bold text-emerald-800 mb-1 text-sm">最新公告</h3>
-            <p id="news" class="text-gray-500 text-xs">正在連線資料庫...</p>
+            <p id="news" class="text-gray-500 text-xs">同步中...</p>
         </div>
 
         <div>
             <h3 class="font-bold text-emerald-900 mb-4 px-2 text-lg">學習歷程</h3>
             <div id="historyList" class="space-y-3">
-                <p class="text-center py-10 text-gray-400 italic">資料同步中...</p>
+                <p class="text-center py-10 text-gray-400 italic">正在載入紀錄...</p>
             </div>
         </div>
     </main>
@@ -64,6 +64,7 @@
     </div>
 
     <script>
+        // 請確保此網址與您的 Google Apps Script 部署網址一致
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         
         function formatToISO(input) {
@@ -73,7 +74,6 @@
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
 
-        // 核心：只取數字且比對末 9 碼，並加上 debug 輸出
         function getMatchPhone(str) {
             return String(str || "").replace(/\D/g, "").slice(-9);
         }
@@ -88,18 +88,19 @@
 
         async function syncData(cachedUser) {
             try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                // 加入 10 秒超時機制
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`, { signal: controller.signal });
                 const data = await res.json();
+                clearTimeout(timeoutId);
                 
                 const myMatch = getMatchPhone(cachedUser.phone);
-                const userList = data.users || [];
-                const liveUser = userList.find(u => getMatchPhone(u.phone) === myMatch);
+                const liveUser = (data.users || []).find(u => getMatchPhone(u.phone) === myMatch);
                 
                 if (!liveUser) {
-                    // --- 增加診斷訊息 ---
-                    const dbPhones = userList.map(u => getMatchPhone(u.phone)).join(', ');
-                    console.error("Match Failed. Mine:", myMatch, "DB has:", dbPhones);
-                    alert(`驗證失敗。\n您的電話尾數：${myMatch}\n資料庫電話：${dbPhones.slice(0,20)}...`);
+                    alert("手機號碼比對失敗，請確保試算表中有您的資料並重新登入。");
                     logout();
                     return;
                 }
@@ -107,17 +108,13 @@
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
 
                 const todayStr = formatToISO(new Date());
-                
-                // --- 精準過濾：過去活動 + 包含「需報到」 ---
                 const validEvents = (data.calendar || []).filter(ev => {
                     const isPast = ev.dateText && formatToISO(ev.dateText) <= todayStr;
-                    // 檢查標題或內容是否包含「需報到」
                     const contentStr = (ev.title || "") + (ev.description || "");
                     return isPast && contentStr.includes("需報到");
                 }).sort((a,b) => b.dateText.localeCompare(a.dateText));
 
-                let myLogs = Array.isArray(liveUser.attendLog) ? liveUser.attendLog : [];
-                const standardLogs = myLogs.map(log => formatToISO(log));
+                const standardLogs = (liveUser.attendLog || []).map(log => formatToISO(log));
 
                 let count = 0;
                 const html = validEvents.map(ev => {
@@ -134,15 +131,12 @@
                         </div>`;
                 }).join('');
 
-                document.getElementById('historyList').innerHTML = html || '<p class="text-center py-10 text-gray-400 italic">尚無需報到的活動紀錄</p>';
-                
-                const total = validEvents.length;
-                document.getElementById('attPercent').innerText = (total > 0 ? Math.round((count/total)*100) : 0) + "%";
-                document.getElementById('attCountDisplay').innerText = `${count} / ${total}`;
+                document.getElementById('historyList').innerHTML = html || '<p class="text-center py-10 text-gray-400">目前沒有需要報到的活動紀錄</p>';
+                document.getElementById('attPercent').innerText = (validEvents.length > 0 ? Math.round((count/validEvents.length)*100) : 0) + "%";
+                document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
 
             } catch (err) {
-                console.error("Sync Error:", err);
-                document.getElementById('historyList').innerHTML = "連線超時，請重新整理頁面";
+                document.getElementById('historyList').innerHTML = "伺服器忙碌中，請稍後再試";
             }
         }
 

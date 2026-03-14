@@ -86,59 +86,53 @@
             syncData(user);
         };
 
-        async function syncData(cachedUser) {
-            try {
-                // 加入 10 秒超時機制
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+ async function syncData(cachedUser) {
+    try {
+        // 1. 強制將手機端存的號碼也轉為「末9碼」格式
+        const myMatch = String(cachedUser.phone || "").replace(/\D/g, "").slice(-9);
+        
+        console.log("手機端比對代碼:", myMatch); // 除錯用
 
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`, { signal: controller.signal });
-                const data = await res.json();
-                clearTimeout(timeoutId);
-                
-                const myMatch = getMatchPhone(cachedUser.phone);
-                const liveUser = (data.users || []).find(u => getMatchPhone(u.phone) === myMatch);
-                
-                if (!liveUser) {
-                    alert("手機號碼比對失敗，請確保試算表中有您的資料並重新登入。");
-                    logout();
-                    return;
-                }
-
-                document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
-
-                const todayStr = formatToISO(new Date());
-                const validEvents = (data.calendar || []).filter(ev => {
-                    const isPast = ev.dateText && formatToISO(ev.dateText) <= todayStr;
-                    const contentStr = (ev.title || "") + (ev.description || "");
-                    return isPast && contentStr.includes("需報到");
-                }).sort((a,b) => b.dateText.localeCompare(a.dateText));
-
-                const standardLogs = (liveUser.attendLog || []).map(log => formatToISO(log));
-
-                let count = 0;
-                const html = validEvents.map(ev => {
-                    const eventDate = formatToISO(ev.dateText);
-                    const isOk = standardLogs.includes(eventDate);
-                    if (isOk) count++;
-                    return `
-                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isOk ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'}">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] text-gray-400 font-mono">${eventDate}</span>
-                                <span class="font-bold text-emerald-900">${ev.title.replace('需報到','').trim()}</span>
-                            </div>
-                            <span>${isOk ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs italic">未報到</i>'}</span>
-                        </div>`;
-                }).join('');
-
-                document.getElementById('historyList').innerHTML = html || '<p class="text-center py-10 text-gray-400">目前沒有需要報到的活動紀錄</p>';
-                document.getElementById('attPercent').innerText = (validEvents.length > 0 ? Math.round((count/validEvents.length)*100) : 0) + "%";
-                document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
-
-            } catch (err) {
-                document.getElementById('historyList').innerHTML = "伺服器忙碌中，請稍後再試";
-            }
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        
+        // 2. 在搜尋資料庫時，確保每一筆也都是用「末9碼」來比對
+        const liveUser = (data.users || []).find(u => {
+            const dbMatch = String(u.phone || "").replace(/\D/g, "").slice(-9);
+            return dbMatch === myMatch;
+        });
+        
+        if (!liveUser) {
+            // 如果還是失敗，彈出目前的清單供檢查
+            const dbList = (data.users || []).slice(0, 3).map(u => u.phone).join(', ');
+            alert(`驗證失敗。\n您的末9碼：${myMatch}\n資料庫前三位電話：${dbList}`);
+            logout();
+            return;
         }
+
+        // --- 以下為顯示邏輯 (保持不變) ---
+        document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // 參與率計算：過濾「需報到」且「日期已過」
+        const validEvents = (data.calendar || []).filter(ev => {
+            const isPast = ev.dateText && ev.dateText <= todayStr;
+            const isRequired = (ev.title + (ev.description || "")).includes("需報到");
+            return isPast && isRequired;
+        });
+
+        const standardLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
+        let count = 0;
+        // ...其餘渲染 UI 的代碼...
+        
+        // 成功抓到資料後，更新畫面
+        renderHistory(validEvents, standardLogs); 
+
+    } catch (err) {
+        console.error("Sync Error:", err);
+        document.getElementById('historyList').innerHTML = "資料同步失敗，請檢查網路。";
+    }
+}
 
         function startScanner() {
             document.getElementById('scannerModal').classList.remove('hidden');

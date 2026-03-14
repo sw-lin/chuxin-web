@@ -12,7 +12,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .scan-orange { background: #F97316; }
     </style>
 </head>
 <body class="min-h-screen pb-10">
@@ -34,19 +33,19 @@
             <div class="relative z-10">
                 <div class="flex justify-between items-start mb-6">
                     <div>
-                        <h2 id="userName" class="text-3xl font-bold mb-2 tracking-tight">載入中...</h2>
-                        <span id="userTitle" class="bg-white/20 px-4 py-1 rounded-full text-xs border border-white/10 italic font-serif">會員</span>
+                        <h2 id="userName" class="text-3xl font-bold mb-2">載入中...</h2>
+                        <span id="userTitle" class="bg-white/20 px-4 py-1 rounded-full text-xs border border-white/10">學員</span>
                     </div>
                     <button onclick="openEditModal()" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition">
                         <i class="fas fa-cog text-emerald-100"></i>
                     </button>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm border border-white/5">
+                    <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm">
                         <div class="text-white/60 text-[10px] mb-1">已發生活動參與率</div>
                         <div id="attPercent" class="text-2xl font-bold italic text-orange-200">0%</div>
                     </div>
-                    <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm border border-white/5">
+                    <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm">
                         <div class="text-white/60 text-[10px] mb-1">已報到 / 已發生次數</div>
                         <div id="attCountDisplay" class="text-2xl font-bold font-mono">0 / 0</div>
                     </div>
@@ -54,7 +53,7 @@
             </div>
         </div>
 
-        <button onclick="startScanner()" class="w-full scan-orange py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-all">
+        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-all">
             <i class="fas fa-qrcode text-2xl"></i>
             <span class="text-xl font-black tracking-widest">掃碼報到</span>
         </button>
@@ -69,15 +68,11 @@
 
         <div class="grid grid-cols-2 gap-4">
             <button onclick="openRemoteLink('reading_folder_url')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center">
-                <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-2 text-emerald-600">
-                    <i class="fas fa-book-reader text-xl"></i>
-                </div>
+                <i class="fas fa-book-reader text-emerald-600 text-xl mb-2"></i>
                 <span class="font-bold text-emerald-900">雲端書箱</span>
             </button>
             <button onclick="openRemoteLink('photo_gallery_url')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center">
-                <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-2 text-amber-600">
-                    <i class="fas fa-images text-xl"></i>
-                </div>
+                <i class="fas fa-images text-amber-600 text-xl mb-2"></i>
                 <span class="font-bold text-emerald-900">精彩相簿</span>
             </button>
         </div>
@@ -85,22 +80,15 @@
         <div>
             <h3 class="font-bold text-emerald-900 mb-4 px-2 text-lg">學習歷程</h3>
             <div id="historyList" class="space-y-3">
-                <p class="text-center text-gray-400 py-10 italic text-sm">正在對照出席紀錄...</p>
+                <p class="text-center text-gray-400 py-10 italic">載入歷程中...</p>
             </div>
-        </div>
-
-        <div id="adminEntry" class="hidden pt-4">
-            <button onclick="location.href='staff_page.html'" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold flex items-center justify-center space-x-2">
-                <i class="fas fa-user-shield"></i>
-                <span>進入幹部管理後台</span>
-            </button>
         </div>
     </main>
 
     <div id="scannerModal" class="fixed inset-0 bg-black/95 hidden z-[100] flex flex-col items-center justify-center p-6">
-        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div id="reader" class="w-full"></div>
-            <div class="p-4"><button onclick="stopScanner()" class="w-full py-3 bg-gray-100 rounded-xl font-bold text-gray-500">關閉相機</button></div>
+        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden">
+            <div id="reader"></div>
+            <div class="p-4"><button onclick="stopScanner()" class="w-full py-3 bg-gray-100 rounded-xl font-bold">關閉</button></div>
         </div>
     </div>
 
@@ -114,10 +102,7 @@
             if (!userStr) { location.href = 'index.html'; return; }
             const user = JSON.parse(userStr);
             document.getElementById('userName').innerText = user.name;
-            document.getElementById('userTitle').innerText = user.role || user.title || '學員';
-            if ((user.role || user.title) && (user.role !== "學員" && user.title !== "學員")) {
-                document.getElementById('adminEntry').classList.remove('hidden');
-            }
+            document.getElementById('userTitle').innerText = user.title || '學員';
             syncData();
         };
 
@@ -127,62 +112,75 @@
                 const data = await res.json();
                 const cachedUser = JSON.parse(sessionStorage.getItem('userInfo'));
                 
-                // 1. 抓取該會員最新資料
-                const liveUser = (data.users || []).find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
+                // 1. 抓取最新資料 (容錯處理)
+                const users = data.users || [];
+                const liveUser = users.find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
                 if (!liveUser) return;
+                
                 sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
-
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
                 remoteConfig = data.config || {};
 
-                // 2. 處理活動與日期比對
+                // 2. 核心邏輯：動態分母 (日期早於今天 18:00 以後的視為已發生)
                 const now = new Date();
                 const todayStr = now.toISOString().split('T')[0];
                 
-                // 分母：日期小於今天的活動
-                const pastEvents = (data.calendar || []).filter(ev => ev.dateText < todayStr).sort((a,b)=>b.dateText.localeCompare(a.dateText));
+                // 只計今天以前的活動作為分母
+                const pastEvents = (data.calendar || [])
+                    .filter(ev => ev.dateText && ev.dateText <= todayStr)
+                    .sort((a,b) => b.dateText.localeCompare(a.dateText));
                 
-                // 報到紀錄格式化 (移除時間部分)
-                const myLogs = (liveUser.attendLog || []).map(log => {
+                // 3. 處理報到紀錄 (防呆轉換)
+                let rawLogs = liveUser.attendLog || [];
+                if (!Array.isArray(rawLogs)) rawLogs = []; 
+                
+                const myLogs = rawLogs.map(log => {
                     const s = String(log).trim();
-                    return s.includes('T') ? s.split('T')[0] : (s.includes(' ') ? s.split(' ')[0] : s);
-                }).filter(s => s !== "");
+                    if (s.includes('T')) return s.split('T')[0];
+                    if (s.includes(' ')) return s.split(' ')[0];
+                    return s.replace(/\//g, '-');
+                });
 
-                // 3. 渲染歷程
-                document.getElementById('historyList').innerHTML = pastEvents.map(ev => {
-                    const isAttended = myLogs.some(logDate => logDate.replace(/\//g, '-') === ev.dateText);
+                // 4. 渲染歷程與比對
+                let attendedCount = 0;
+                const historyHtml = pastEvents.map(ev => {
+                    // 比對日期是否匹配
+                    const isAttended = myLogs.some(logDate => logDate === ev.dateText);
+                    if (isAttended) attendedCount++;
+
                     return `
-                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100'} shadow-sm">
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-50'} shadow-sm">
                         <div class="flex items-center space-x-4">
                             <div class="text-[10px] font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</div>
                             <div class="font-bold text-emerald-900 text-sm">${ev.title}</div>
                         </div>
                         <div>${isAttended ? '<span class="text-emerald-600 text-[10px] font-bold bg-emerald-100 px-3 py-1 rounded-full">已報到</span>' : '<span class="text-gray-300 text-[10px] italic">未報到</span>'}</div>
                     </div>`;
-                }).join('') || '<p class="text-center text-gray-400 py-10">尚無過去活動紀錄</p>';
+                }).join('');
 
-                // 4. 計算參與率 (分子：在 pastEvents 中的報到數 / 分母：pastEvents 總數)
-                const myAttendedCount = pastEvents.filter(ev => myLogs.some(logDate => logDate.replace(/\//g, '-') === ev.dateText)).length;
+                document.getElementById('historyList').innerHTML = historyHtml || '<p class="text-center text-gray-400 py-10">尚無活動紀錄</p>';
+
+                // 5. 計算百分比
                 const totalPast = pastEvents.length;
-                const percent = totalPast > 0 ? Math.round((myAttendedCount / totalPast) * 100) : 0;
+                const percent = totalPast > 0 ? Math.round((attendedCount / totalPast) * 100) : 0;
                 
                 document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerHTML = `${myAttendedCount} <span class="text-xs opacity-40">/ ${totalPast}</span>`;
+                document.getElementById('attCountDisplay').innerHTML = `${attendedCount} <span class="text-xs opacity-40">/ ${totalPast}</span>`;
                 
-                // 50% 以上噴花鼓勵
-                if (percent >= 50) {
-                    setTimeout(() => {
-                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#F97316', '#FDE68A'] });
-                    }, 800);
+                if (percent >= 50 && totalPast > 0) {
+                    setTimeout(() => confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }), 500);
                 }
 
-            } catch (e) { console.error("Sync Error:", e); }
+            } catch (e) { 
+                console.error("同步失敗:", e);
+                document.getElementById('historyList').innerHTML = '<p class="text-center text-red-400 py-10 text-sm">資料讀取異常，請重新登入</p>';
+            }
         }
 
         function openRemoteLink(key) {
             const url = remoteConfig[key];
             if (url && url.startsWith('http')) window.open(url, '_blank');
-            else alert("連結尚未設定");
+            else alert("連結設定中，請稍候");
         }
 
         function startScanner() {

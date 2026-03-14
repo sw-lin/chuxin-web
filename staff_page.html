@@ -179,18 +179,26 @@
 
         function renderAll() {
             if (!allData) return;
-            document.getElementById('newsContent').value = allData.news || "";
-            
-            // 會員渲染
-            document.getElementById('memberList').innerHTML = allData.users.map(u => `
-                <tr class="border-b">
-                    <td class="p-4 font-bold">${u.name}<br><span class="text-xs text-emerald-600">${u.title||'學員'}</span></td>
-                    <td class="p-4 text-sm">${u.phone}</td>
-                    <td class="p-4 text-xs text-gray-400">${u.email||''}</td>
-                    <td class="p-4 text-right edit-col ${isEditMode?'':'hidden'}">
-                        <button onclick="deleteMember('${u.phone}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`).join('');
+
+    // 1. 系統設定回顯 (修正空白問題)
+    if (allData.config) {
+        document.getElementById('cfg-reading').value = allData.config.reading_folder_url || "";
+        document.getElementById('cfg-photo').value = allData.config.photo_gallery_url || "";
+    }
+
+    // 2. 公告回顯
+    document.getElementById('newsContent').value = allData.news || "";
+
+    // 3. 會員渲染 (自動套用出席次數排序)
+    const memberHTML = allData.users.map(u => `
+        <tr class="border-b">
+            <td class="p-4 font-bold">${u.name}<br><span class="text-xs text-emerald-600">${u.title} (出席:${u.attCount})</span></td>
+            <td class="p-4 text-sm">${u.phone}</td>
+            <td class="p-4 text-right edit-col ${isEditMode?'':'hidden'}">
+                <button onclick="deleteMember('${u.phone}')" class="text-red-400"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>`).join('');
+    document.getElementById('memberList').innerHTML = memberHTML;
 
             // 行事曆渲染 (修正版)
             const today = new Date().setHours(0,0,0,0);
@@ -307,9 +315,7 @@
 // 1. 建立收費項目 (加入防重與訊息提示)
 async function addPaymentItem() {
     const title = document.getElementById('payTitle').value.trim();
-    const deadline = document.getElementById('payDeadline').value;
-    
-    if(!title) return alert("請輸入收費項目名稱！");
+    if(!title) return alert("請輸入收費名稱");
 
     const res = await fetch(GAS_URL, {
         method: "POST",
@@ -317,22 +323,15 @@ async function addPaymentItem() {
             type: "add_payment_item",
             adminKey: ADMIN_KEY,
             title: title,
-            deadline: deadline
+            deadline: document.getElementById('payDeadline').value
         })
     });
-    
     const result = await res.text();
-    
-    if (result === "SUCCESS") {
-        alert("✅ 「" + title + "」收費單已建立成功！");
-        // 清空輸入框
-        document.getElementById('payTitle').value = "";
-        document.getElementById('payDeadline').value = "";
-        fetchData(); // 重新整理資料
-    } else if (result === "DUPLICATE_ITEM") {
-        alert("⚠️ 錯誤：已有相同名稱的收費項目，請勿重複建立。");
-    } else {
-        alert("建立失敗：" + result);
+    if(result === "SUCCESS") {
+        alert("✅ 建立成功！");
+        fetchData();
+    } else if(result === "DUPLICATE_ITEM") {
+        alert("❌ 錯誤：此收費項目已存在。");
     }
 }
 

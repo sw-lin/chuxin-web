@@ -13,388 +13,169 @@
         .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none !important; }
-        .edit-mode-active { border-color: #F97316 !important; color: #F97316 !important; background-color: #FFF7ED; }
     </style>
 </head>
-<body id="adminBody" class="pb-12">
+<body class="min-h-screen">
 
-    <header class="admin-gradient text-white py-6 px-4 shadow-lg">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold flex items-center"><i class="fas fa-shield-alt mr-3"></i> 築心管理系統</h1>
-            <button id="editToggleBtn" onclick="toggleEditMode()" class="flex items-center gap-2 px-4 py-1.5 bg-white/20 rounded-full font-bold text-sm hover:bg-white/30 transition">
-                <i class="fas fa-edit"></i> <span>編輯模式：關</span>
-            </button>
-        </div>
-    </header>
-
-    <nav class="bg-white shadow-sm sticky top-0 z-40 mb-6 border-b overflow-x-auto">
-        <div class="max-w-6xl mx-auto flex px-4">
-            <button onclick="switchTab('news')" id="tab-news" class="py-4 px-6 font-medium tab-active whitespace-nowrap">公告與 LINE</button>
-            <button onclick="switchTab('members')" id="tab-members" class="py-4 px-6 text-gray-500 font-medium whitespace-nowrap">會員名單</button>
-            <button onclick="switchTab('calendar')" id="tab-calendar" class="py-4 px-6 text-gray-500 font-medium whitespace-nowrap">行事曆</button>
-            <button onclick="switchTab('payment')" id="tab-payment" class="py-4 px-6 text-gray-500 font-medium whitespace-nowrap">繳費狀況</button>
-            <button onclick="switchTab('attendance')" id="tab-attendance" class="py-4 px-6 text-gray-500 font-medium whitespace-nowrap">出席紀錄</button>
-            <button onclick="switchTab('system')" id="tab-system" class="py-4 px-6 text-gray-500 font-medium whitespace-nowrap">系統設定</button>
+    <nav class="bg-white border-b sticky top-0 z-50 px-4">
+        <div class="max-w-5xl mx-auto flex justify-between items-center h-16">
+            <div class="flex items-center space-x-2 text-[#064E3B]">
+                <i class="fas fa-shield-alt"></i>
+                <span class="font-bold">後台管理</span>
+            </div>
+            <div class="flex space-x-6 text-sm font-medium text-gray-500">
+                <button id="tab-members" onclick="switchTab('members')" class="py-5 tab-active">會員</button>
+                <button id="tab-calendar" onclick="switchTab('calendar')" class="py-5">行事曆</button>
+                <button onclick="location.href='member_zone.html'" class="py-5 text-gray-400">返回</button>
+            </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto px-4">
-        <section id="sec-news" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <h3 class="text-lg font-bold mb-4 text-emerald-900">首頁公告</h3>
-                <textarea id="newsContent" rows="3" class="w-full p-4 bg-gray-50 border rounded-xl outline-none"></textarea>
-                <button onclick="apiPost({type:'publish_news', content:document.getElementById('newsContent').value})" class="mt-4 bg-emerald-700 text-white px-8 py-2 rounded-xl">發布</button>
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <h3 class="text-lg font-bold mb-4 text-emerald-900">LINE 群組推播</h3>
-                <textarea id="pushMsg" rows="3" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 outline-none" placeholder="輸入訊息..."></textarea>
-                <button onclick="apiPost({type:'send_line_push', content:document.getElementById('pushMsg').value})" class="bg-emerald-600 text-white px-8 py-2 rounded-xl">發送至 LINE</button>
-            </div>
-        </section>
-
-        <section id="sec-members" class="hidden space-y-6">
-            <div id="quickAddZone" class="hidden bg-orange-50 rounded-2xl p-6 border-2 border-orange-200">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <input type="text" id="mName" placeholder="姓名" class="p-2 border rounded-lg">
-                    <input type="text" id="mPhone" placeholder="電話" class="p-2 border rounded-lg">
-                    <input type="text" id="mEmail" placeholder="Email" class="p-2 border rounded-lg">
-                    <button onclick="addMember()" class="bg-orange-600 text-white py-2 rounded-lg font-bold">確認新增</button>
+    <main class="max-w-5xl mx-auto p-4 md:p-8">
+        <section id="sec-members" class="space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-4 text-emerald-900">快速新增會員</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="text" id="mName" placeholder="姓名" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
+                    <input type="tel" id="mPhone" placeholder="手機 (登入帳號)" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
+                    <input type="email" id="mEmail" placeholder="Email" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
+                    <button onclick="addMember()" class="bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-700 transition">新增</button>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border">
-                <table class="w-full text-left"><thead class="bg-emerald-50"><tr><th class="p-4">姓名</th><th class="p-4">電話</th><th class="p-4">Email</th><th class="p-4 text-right edit-col hidden">操作</th></tr></thead><tbody id="memberList"></tbody></table>
-            </div>
+            <div id="memberList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
         </section>
 
         <section id="sec-calendar" class="hidden space-y-6">
-            <div id="calAddZone" class="hidden bg-orange-50 rounded-2xl p-6 border-2 border-orange-200">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <input type="date" id="calDate" class="p-2 border rounded-lg">
-                    <input type="text" id="calTitle" placeholder="活動主題" class="p-2 border rounded-lg">
-                    <button onclick="addEvent()" class="bg-orange-600 text-white py-2 rounded-lg font-bold">建立活動</button>
-                </div>
-            </div>
-            <div id="calendarContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        </section>
-
-        <section id="sec-payment" class="hidden space-y-6">
-            <div id="paymentAddZone" class="hidden bg-orange-50 rounded-2xl p-6 border-2 border-orange-200">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-4 text-emerald-900">排定新活動</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="text" id="payTitle" placeholder="收費項目名稱" class="p-2 border rounded-lg">
-                    <input type="date" id="payDeadline" class="p-2 border rounded-lg">
-                    <button onclick="addPaymentItem()"
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <div class="flex flex-col md:flex-row justify-between mb-6 gap-4 border-b pb-4">
-                    <h3 class="font-bold text-lg">項目：<select id="currentPayItem" onchange="renderPayment()" class="ml-2 bg-emerald-50 border px-3 py-1 rounded-lg outline-none"></select></h3>
-                    <div class="flex gap-2 flex-wrap">
-                        <button onclick="copyPaymentToLine()" class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-bold"><i class="fab fa-line mr-1"></i>產生繳費名單至 LINE</button>
-                        <div id="batchZone" class="hidden flex gap-2">
-                            <button onclick="batchUpdatePayment('已完成')" class="bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-bold">全部清為已繳</button>
-                            <button onclick="batchUpdatePayment('未繳納')" class="bg-red-600 text-white px-4 py-2 rounded-full text-sm font-bold">全部清為未繳</button>
-                            <button onclick="deletePaymentItem()" class="bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold hover:bg-red-100 hover:text-red-600 transition">
-        <i class="fas fa-trash-alt mr-1"></i> 移除此項目</button>                       
-                    </div>
-                </div>
-                <div id="paymentList" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <section id="sec-attendance" class="hidden">
-            <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="p-4">日期</th><th class="p-4">姓名</th><th class="p-4">簽到時間</th></tr></thead><tbody id="attendanceList"></tbody></table>
-            </div>
-        </section>
-
-        <section id="sec-system" class="hidden space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm p-6 border">
-                <div class="space-y-4">
-                    <div><label class="block text-sm font-bold mb-1">導讀資料夾網址</label><input type="text" id="cfg-reading" class="w-full p-2 bg-gray-50 border rounded-lg"></div>
-                    <div><label class="block text-sm font-bold mb-1">相簿網址</label><input type="text" id="cfg-photo" class="w-full p-2 bg-gray-50 border rounded-lg"></div>
-                    <button onclick="apiPost({type:'update_config', reading:document.getElementById('cfg-reading').value, photo:document.getElementById('cfg-photo').value})" class="bg-emerald-800 text-white px-8 py-2 rounded-xl font-bold">儲存</button>
+                    <input type="date" id="calDate" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
+                    <input type="text" id="calTitle" placeholder="活動名稱" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
+                    <button onclick="addEvent()" class="bg-emerald-800 text-white rounded-xl font-bold">發布</button>
                 </div>
             </div>
+            <div id="eventList" class="space-y-3"></div>
         </section>
     </main>
 
-    <div id="qrModal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50" onclick="this.classList.add('hidden')">
-        <div class="bg-white p-8 rounded-3xl text-center" onclick="event.stopPropagation()">
-            <div id="qrcode" class="mb-4"></div>
-            <p id="qrText" class="font-bold text-lg"></p>
+    <div id="qrModal" class="fixed inset-0 bg-black/80 backdrop-filter blur-sm z-[100] hidden flex items-center justify-center p-6">
+        <div class="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center">
+            <h3 id="qrTitle" class="text-xl font-bold text-emerald-900 mb-1"></h3>
+            <p id="qrDate" class="text-xs text-emerald-600 mb-8 font-mono"></p>
+            <div id="qrcode" class="flex justify-center mb-8 border-4 border-emerald-50 p-4 rounded-3xl"></div>
+            <button onclick="closeModal('qrModal')" class="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold">關閉</button>
         </div>
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec"; // <--- 💡 務必替換成部署後的網址
-        let ADMIN_KEY = "";
-        let allData = null;
-        let isEditMode = false;
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+        const CHECKIN_URL = "https://your-domain.com/checkin.html"; // 請改為您的簽到頁網址
+        let adminKey = "";
 
+        // --- 核心修正：初始化邏輯 ---
         async function init() {
-    // 直接從 session 讀取，不彈窗
-    const savedKey = sessionStorage.getItem('adminKey');
-    
-    if (!savedKey) {
-        alert("未經授權，請回首頁");
-        location.href = 'index.html';
-        return;
-    }
-    
-    // 將金鑰填入全域變數，供後續 apiPost 使用
-    adminKey = savedKey; 
-    
-    // 隱藏權限不足的提示，顯示內容
-    document.getElementById('auth-overlay').classList.add('unauthorized');
-    
-    // 開始抓取資料
-    await refreshData();
-}
+            // 從 Session 讀取在 member_zone 輸入的金鑰
+            const savedKey = sessionStorage.getItem('adminKey');
+            
+            if (!savedKey) {
+                alert("權限不足，請重新由會員中心進入");
+                location.href = 'member_zone.html';
+                return;
+            }
 
-        async function fetchData() {
+            adminKey = savedKey; // 賦值給全域變數供 apiPost 使用
+            document.body.style.opacity = "1"; // 顯示頁面內容
+            fetchData();
+        }
+
+        async function apiPost(data) {
+            // 自動帶入金鑰進行驗證
+            data.key = adminKey;
+            
             try {
-                const response = await fetch(GAS_URL, {
-                    method: "POST",
-                    body: JSON.stringify({ type: "get_all_data", adminKey: ADMIN_KEY })
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
                 });
-                const result = await response.text();
-                
-                if (result === "WRONG_KEY") { alert("金鑰錯誤！"); window.location.reload(); return; }
-                allData = JSON.parse(result);
-                renderAll();
-                document.body.style.opacity = "1";
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    alert("操作成功");
+                    fetchData();
+                } else {
+                    alert("失敗：" + (result.message || "授權無效"));
+                }
             } catch (e) {
-                alert("連線失敗，請檢查 GAS 網址或網路狀態");
-                console.error(e);
+                alert("系統連線失敗");
             }
         }
 
+        async function fetchData() {
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                renderMembers(data.users || []);
+                renderEvents(data.calendar || []);
+            } catch (e) { console.error(e); }
+        }
+
+        function renderMembers(users) {
+            const list = document.getElementById('memberList');
+            list.innerHTML = users.map(u => `
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-emerald-900">${u.name}</div>
+                        <div class="text-[10px] text-gray-400 font-mono">${u.phone}</div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderEvents(events) {
+            const list = document.getElementById('eventList');
+            list.innerHTML = events.reverse().map(ev => `
+                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm">
+                    <div>
+                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                        <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                    </div>
+                    <button onclick="showQR('${ev.dateText}', '${ev.title}')" class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold">QR碼</button>
+                </div>
+            `).join('');
+        }
+
+        function addMember() {
+            const name = document.getElementById('mName').value;
+            const phone = document.getElementById('mPhone').value;
+            if(!name || !phone) return alert("請填寫姓名與電話");
+            apiPost({ type: "add_member", name, phone, email: document.getElementById('mEmail').value, password: "123" });
+        }
+
+        function addEvent() {
+            const date = document.getElementById('calDate').value;
+            const title = document.getElementById('calTitle').value;
+            if(!date || !title) return alert("請填寫日期與名稱");
+            apiPost({ type: "add_event", date, title });
+        }
+
+        function deleteMember(phone) { if(confirm("確定刪除會員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
+        function showQR(date, title) {
+            document.getElementById('qrTitle').innerText = title;
+            document.getElementById('qrDate').innerText = date;
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: `${CHECKIN_URL}?event=${date}`, width: 180, height: 180 });
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function switchTab(tab) {
-            if(isEditMode) toggleEditMode(); // 切換分頁自動關閉編輯模式
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + tab).classList.remove('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
             document.getElementById('tab-' + tab).classList.add('tab-active');
         }
-
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            document.getElementById('editToggleBtn').querySelector('span').innerText = isEditMode ? "編輯模式：開" : "編輯模式：關";
-            document.getElementById('editToggleBtn').classList.toggle('edit-mode-active', isEditMode);
-            
-            document.getElementById('quickAddZone').classList.toggle('hidden', !isEditMode);
-            document.getElementById('calAddZone').classList.toggle('hidden', !isEditMode);
-            document.getElementById('paymentAddZone').classList.toggle('hidden', !isEditMode);
-            document.getElementById('batchZone').classList.toggle('hidden', !isEditMode);
-            
-            document.querySelectorAll('.edit-col').forEach(el => el.classList.toggle('hidden', !isEditMode));
-            renderAll();
-        }
-
-        function renderAll() {
-            if (!allData) return;
-
-    // 1. 系統設定回顯 (修正空白問題)
-    if (allData.config) {
-        document.getElementById('cfg-reading').value = allData.config.reading_folder_url || "";
-        document.getElementById('cfg-photo').value = allData.config.photo_gallery_url || "";
-    }
-
-    // 2. 公告回顯
-    document.getElementById('newsContent').value = allData.news || "";
-
-    // 3. 會員渲染 (自動套用出席次數排序)
-    const memberHTML = allData.users.map(u => `
-        <tr class="border-b">
-            <td class="p-4 font-bold">${u.name}<br><span class="text-xs text-emerald-600">${u.title} (出席:${u.attCount})</span></td>
-            <td class="p-4 text-sm">${u.phone}</td>
-            <td class="p-4 text-right edit-col ${isEditMode?'':'hidden'}">
-                <button onclick="deleteMember('${u.phone}')" class="text-red-400"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>`).join('');
-    document.getElementById('memberList').innerHTML = memberHTML;
-
-            // 行事曆渲染 (修正版)
-            const today = new Date().setHours(0,0,0,0);
-            document.getElementById('calendarContainer').innerHTML = allData.calendar.map(ev => {
-                const evDate = new Date(ev.dateText).getTime();
-                const canCheckin = evDate <= today; // 判斷是否為「非未來」事件
-                return `
-                <div class="bg-white p-5 rounded-2xl border shadow-sm flex justify-between items-center">
-                    <div>
-                        <div class="text-emerald-600 font-mono text-sm">${ev.dateText}</div>
-                        <div class="font-bold text-lg">${ev.title}</div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        ${canCheckin ? `<button onclick="showQR('${ev.dateText}')" class="text-emerald-600 text-xl"><i class="fas fa-qrcode"></i></button>` : `<span class="text-gray-300 text-xs italic">尚未開始</span>`}
-                        <button onclick="deleteEvent('${ev.dateText}')" class="text-red-300 hover:text-red-500 ${isEditMode?'':'hidden'}"><i class="fas fa-trash-alt"></i></button>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // 繳費項目下拉選單
-            const paySelect = document.getElementById('currentPayItem');
-            const currentVal = paySelect.value;
-            paySelect.innerHTML = allData.paymentItems.map(it => `<option value="${it.title}" ${it.title===currentVal?'selected':''}>${it.title}</option>`).join('');
-            renderPayment();
-
-            // 出席紀錄
-            document.getElementById('attendanceList').innerHTML = (allData.attendanceRaw || []).map(row => `
-                <tr class="border-b"><td class="p-4">${row[0]}</td><td class="p-4 font-bold">${row[2]}</td><td class="p-4 text-gray-400 text-xs">${row[3]?new Date(row[3]).toLocaleTimeString():''}</td></tr>`).join('');
-        }
-
-        function renderPayment() {
-            const activeItem = document.getElementById('currentPayItem').value;
-            const container = document.getElementById('paymentList');
-            if(!activeItem) { container.innerHTML = "尚未建立收費項目"; return; }
-
-            container.innerHTML = allData.users.map(u => {
-                const record = allData.paymentRecords.find(r => r.title === activeItem && r.phone === u.phone);
-                const status = record ? record.status : "未繳納";
-                return `
-                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-                    <span class="font-bold">${u.name}</span>
-                    <button onclick="updatePayment('${u.phone}', '${activeItem}', '${status}')" 
-                        class="px-6 py-1 rounded-full text-xs font-bold transition ${status==='已完成'?'bg-emerald-100 text-emerald-700':'bg-red-50 text-red-500'}">
-                        ${status}
-                    </button>
-                </div>`;
-            }).join('');
-        }
-
-   async function batchUpdatePayment(newStatus) {
-    const item = document.getElementById('currentPayItem').value;
-    if(!item || !confirm(`確定將所有人的「${item}」狀態清為【${newStatus}】嗎？`)) return;
-    
-    // 顯示處理中 UI
-    const btn = event.target;
-    const originalText = btn.innerText;
-    btn.innerText = "處理中...";
-    btn.disabled = true;
-
-    try {
-        // 使用 Promise.all 同時發送請求（速度最快）
-        const tasks = allData.users.map(u => 
-            fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify({
-                    type: "update_payment_record",
-                    adminKey: ADMIN_KEY,
-                    phone: u.phone,
-                    title: item,
-                    status: newStatus
-                })
-            })
-        );
-        await Promise.all(tasks);
-        alert("批次更新成功！");
-        await fetchData(); // 重新整理資料
-    } catch (e) {
-        alert("批次更新過程發生錯誤");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
-
-        function copyPaymentToLine() {
-            const item = document.getElementById('currentPayItem').value;
-            let text = `【築心讀書會 - ${item} 繳納統計】\n`;
-            let paid = [], unpaid = [];
-            allData.users.forEach(u => {
-                const rec = allData.paymentRecords.find(r => r.title === item && r.phone === u.phone);
-                (rec && rec.status === '已完成') ? paid.push(u.name) : unpaid.push(u.name);
-            });
-            text += `✅ 已繳名單：\n${paid.join('、') || '暫無'}\n\n❌ 待繳人員：\n${unpaid.join('、') || '暫無'}`;
-            navigator.clipboard.writeText(text).then(() => alert("統計名單已複製到剪貼簿，請至 LINE 貼上"));
-        }
-
-        function showQR(date) {
-            const qrDiv = document.getElementById('qrcode');
-            qrDiv.innerHTML = "";
-            new QRCode(qrDiv, { text: date, width: 200, height: 200 });
-            document.getElementById('qrText').innerText = date + " 簽到專用碼";
-            document.getElementById('qrModal').classList.remove('hidden');
-        }
-
-        async function apiPost(data) {
-            data.adminKey = ADMIN_KEY;
-            const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) });
-            if ((await res.text()) === "SUCCESS") fetchData();
-        }
-
-        // 會員與事件的具體 API 呼叫 (補充範例)
-// --- 繳費與收費單管理修正版 ---
-
-// 1. 建立收費項目 (加入防重與訊息提示)
-async function addPaymentItem() {
-    const title = document.getElementById('payTitle').value.trim();
-    if(!title) return alert("請輸入收費名稱");
-
-    const res = await fetch(GAS_URL, {
-        method: "POST",
-        body: JSON.stringify({
-            type: "add_payment_item",
-            adminKey: ADMIN_KEY,
-            title: title,
-            deadline: document.getElementById('payDeadline').value
-        })
-    });
-    const result = await res.text();
-    if(result === "SUCCESS") {
-        alert("✅ 建立成功！");
-        fetchData();
-    } else if(result === "DUPLICATE_ITEM") {
-        alert("❌ 錯誤：此收費項目已存在。");
-    }
-}
-
-// 2. 刪除整個收費項目 (包含所有人的繳費紀錄)
-async function deletePaymentItem() {
-    const title = document.getElementById('currentPayItem').value;
-    if(!title) return;
-    
-    if(confirm("⚠️ 警告：確定要永久刪除「" + title + "」收費單嗎？\n這將同時刪除所有會員對此項目的繳費紀錄，且無法復原！")) {
-        const res = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({
-                type: "delete_payment_item",
-                adminKey: ADMIN_KEY,
-                title: title
-            })
-        });
-        
-        if ((await res.text()) === "SUCCESS") {
-            alert("項目已刪除。");
-            fetchData();
-        } else {
-            alert("刪除失敗");
-        }
-    }
-}
-
-// 3. 修改切換分頁邏輯 (確保分頁切換時，舊的編輯分頁會完全清空)
-function switchTab(tab) {
-    // 如果正在編輯模式，切換分頁時自動關閉，確保狀態乾淨
-    if(isEditMode) {
-        toggleEditMode(); 
-    }
-    
-    document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-    document.getElementById('sec-' + tab).classList.remove('hidden');
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
-    document.getElementById('tab-' + tab).classList.add('tab-active');
-}        
-        function addMember() {
-            apiPost({ type: "add_member", name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, email: document.getElementById('mEmail').value, password: "123" });
-        }
-        function deleteMember(phone) { if(confirm("確定刪除？")) apiPost({ type: "delete_member", currentPhone: phone }); }
-        function addEvent() { apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); }
-        function deleteEvent(date) { if(confirm("確定刪除活動？")) apiPost({ type: "delete_event", date: date }); }
-        function updatePayment(phone, title, current) {
-            const next = current === '已完成' ? '未繳納' : '已完成';
-            apiPost({ type: "update_payment_record", phone: phone, title: title, status: next });
-        }
-
         window.onload = init;
     </script>
 </body>

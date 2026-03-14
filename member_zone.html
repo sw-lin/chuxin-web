@@ -85,7 +85,7 @@
             if (!userStr) { window.location.replace('index.html'); return; }
             currentUserData = JSON.parse(userStr);
             document.getElementById('userName').innerText = currentUserData.name || "成員";
-            syncData(currentUserData);
+            (currentUserData);
         };
 
         async function syncData(user) {
@@ -95,9 +95,13 @@
 
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
+                // --- 核心偵錯：看看這行在 F12 控制台顯示什麼 ---
+        console.log("GAS 回傳的原始資料:", data);
                 
                 // 儲存連結資料 (對應您的 Config A欄 Key)
                 configLinks = data.config || {}; 
+
+console.log("解析後的連結資料:", configLinks);
                 
                 const liveUser = (data.users || []).find(u => String(u.phone || "").replace(/\D/g, "").slice(-9) === myMatch);
                 if (!liveUser) { window.location.replace('index.html'); return; }
@@ -123,7 +127,7 @@
 
                 renderHistory(validEvents, attendLogs);
             } catch (err) {
-                console.error(err);
+                console.error("同步出錯:", err);
                 document.getElementById('historyList').innerHTML = '<p class="text-center py-10 text-red-400">連線失敗</p>';
             }
         }

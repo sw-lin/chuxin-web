@@ -147,69 +147,71 @@
             } catch (e) { container.innerHTML = "無法載入 about.txt，請檢查檔案是否存在。"; }
         };
 
-        window.handleLogin = async function() {
-        const rawPhone = document.getElementById('userPhone').value;
-        const p = document.getElementById('userPass').value.trim();
-        
-        // 核心優化：將輸入的內容（無論全碼半碼）轉為純半碼數字
-        const u = toHalfWidth(rawPhone);
+        // 1. 修復登入邏輯：改為向後端「詢問」而不是在前端比對
+window.handleLogin = async function() {
+    const rawPhone = document.getElementById('userPhone').value;
+    const p = document.getElementById('userPass').value.trim();
+    const u = toHalfWidth(rawPhone);
 
-        if(!u || !p) return alert('請填寫完整資訊');
-        
-        const btn = document.getElementById('loginBtn');
-        btn.disabled = true; 
-        btn.innerText = '正在登入...';
-        
-        try {
-            // 使用 t=Date.now() 避免瀏覽器抓到舊的快取資料
-            const res = await fetch(GAS_URL + "?t=" + Date.now());
-            const data = await res.json();
-            const encryptedP = btoa(p);
-            
-            // 比對資料庫
-            const found = data.users.find(user => 
-                String(user.phone).trim() === u && 
-                String(user.password).trim() === encryptedP
-            );
+    if(!u || !p) return alert('請填寫完整資訊');
+    
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; 
+    btn.innerText = '正在登入...';
+    
+    try {
+        // 發送 POST 請求給 GAS 進行驗證
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'login',
+                phone: u,
+                password: p
+            })
+        });
+        const result = await res.json();
 
-            if (found) {
-                // 登入成功，存入 session 並跳轉
-                sessionStorage.setItem('userInfo', JSON.stringify(found));
-                window.location.href = 'member_zone.html';
-            } else { 
-                alert('手機或密碼有誤'); 
-                btn.disabled = false; 
-                btn.innerText = '進入會館'; 
-            }
-        } catch (e) { 
-            console.error(e);
-            alert('伺服器連線失敗，請檢查網路'); 
+        if (result.result === "SUCCESS") {
+            // 存入 session 並跳轉
+            sessionStorage.setItem('userInfo', JSON.stringify(result));
+            window.location.href = 'member_zone.html';
+        } else { 
+            alert(result === "WRONG_PASSWORD" ? '密碼錯誤' : '手機或密碼有誤'); 
             btn.disabled = false; 
             btn.innerText = '進入會館'; 
         }
-    };
+    } catch (e) { 
+        console.error(e);
+        alert('伺服器連線失敗，請檢查網路'); 
+        btn.disabled = false; 
+        btn.innerText = '進入會館'; 
+    }
+};
 
-        async function init() {
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const grid = document.getElementById('event-grid');
-                const now = new Date();
-                const comingSoon = data.calendar.filter(ev => new Date(ev.dateText) >= now).slice(0, 4);
-                
-                if (comingSoon.length > 0) {
-                    grid.innerHTML = comingSoon.map(ev => `
-                        <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
-                            <div class="text-emerald-600 font-bold mb-2">${ev.dateText}</div>
-                            <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
-                            <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-3 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
-                        </div>
-                    `).join('');
-                } else {
-                    grid.innerHTML = '<div class="col-span-full text-center text-gray-400 italic">目前暫無近期活動</div>';
-                }
-            } catch (e) { document.getElementById('event-grid').innerHTML = '<div class="col-span-full text-center text-gray-400">目前無法顯示活動</div>'; }
+// 2. 修復首頁活動顯示：對齊 GAS 的輸出格式
+async function init() {
+    try {
+        const res = await fetch(GAS_URL + "?t=" + Date.now());
+        const data = await res.json();
+        const grid = document.getElementById('event-grid');
+        
+        // 修正點：GAS 回傳的是 data.events
+        if (data.events && data.events.length > 0) {
+            grid.innerHTML = data.events.map(ev => `
+                <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
+                    <div class="text-emerald-600 font-bold mb-2">${ev.date}</div>
+                    <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
+                    <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-3 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
+                </div>
+            `).join('');
+        } else {
+            grid.innerHTML = '<div class="col-span-full text-center text-gray-400 italic">目前暫無近期活動</div>';
         }
+    } catch (e) { 
+        console.error("Init Error:", e);
+        document.getElementById('event-grid').innerHTML = '<div class="col-span-full text-center text-gray-400">目前無法顯示活動</div>'; 
+    }
+}
 
         let slideIndex = 0;
         function showSlides() {

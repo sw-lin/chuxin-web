@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAF9; opacity: 0; transition: opacity 0.5s; }
+        body { font-family: 'Noto Serif TC', serif; background-color: #F8FAF9; transition: opacity 0.5s; }
         .admin-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .tab-active { border-bottom: 4px solid #F97316; color: #F97316 !important; }
         .hidden { display: none !important; }
@@ -21,12 +21,12 @@
         <div class="max-w-5xl mx-auto flex justify-between items-center h-16">
             <div class="flex items-center space-x-2 text-[#064E3B]">
                 <i class="fas fa-shield-alt"></i>
-                <span class="font-bold">後台管理</span>
+                <span class="font-bold text-lg">後台管理中心</span>
             </div>
             <div class="flex space-x-6 text-sm font-medium text-gray-500">
-                <button id="tab-members" onclick="switchTab('members')" class="py-5 tab-active">會員</button>
-                <button id="tab-calendar" onclick="switchTab('calendar')" class="py-5">行事曆</button>
-                <button onclick="location.href='member_zone.html'" class="py-5 text-gray-400">返回</button>
+                <button id="tab-members" onclick="switchTab('members')" class="py-5 tab-active">會員管理</button>
+                <button id="tab-calendar" onclick="switchTab('calendar')" class="py-5">行事曆管理</button>
+                <button onclick="location.href='member_zone.html'" class="py-5 text-gray-400 hover:text-emerald-700">返回</button>
             </div>
         </div>
     </nav>
@@ -36,23 +36,26 @@
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-lg mb-4 text-emerald-900">快速新增會員</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" id="mName" placeholder="姓名" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
-                    <input type="tel" id="mPhone" placeholder="手機 (登入帳號)" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
-                    <input type="email" id="mEmail" placeholder="Email" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
-                    <button onclick="addMember()" class="bg-emerald-800 text-white rounded-xl font-bold hover:bg-emerald-700 transition">新增</button>
+                    <input type="text" id="mName" placeholder="姓名" class="bg-gray-50 p-4 rounded-2xl outline-none text-sm border border-transparent focus:border-emerald-200">
+                    <input type="tel" id="mPhone" placeholder="手機號碼" class="bg-gray-50 p-4 rounded-2xl outline-none text-sm border border-transparent focus:border-emerald-200">
+                    <input type="email" id="mEmail" placeholder="Email (選填)" class="bg-gray-50 p-4 rounded-2xl outline-none text-sm border border-transparent focus:border-emerald-200">
+                    <button onclick="addMember()" class="bg-emerald-800 text-white rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg">新增會員</button>
                 </div>
             </div>
+            
             <div id="memberList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                </div>
+                <div class="animate-pulse bg-gray-100 h-24 rounded-[2rem]"></div>
+                <div class="animate-pulse bg-gray-100 h-24 rounded-[2rem]"></div>
+            </div>
         </section>
 
         <section id="sec-calendar" class="hidden space-y-6">
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-lg mb-4 text-emerald-900">排定新活動</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="date" id="calDate" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
-                    <input type="text" id="calTitle" placeholder="活動名稱" class="bg-gray-50 p-3 rounded-xl outline-none text-sm">
-                    <button onclick="addEvent()" class="bg-emerald-800 text-white rounded-xl font-bold">發布</button>
+                    <input type="date" id="calDate" class="bg-gray-50 p-4 rounded-2xl outline-none text-sm border border-transparent focus:border-emerald-200">
+                    <input type="text" id="calTitle" placeholder="活動名稱" class="bg-gray-50 p-4 rounded-2xl outline-none text-sm border border-transparent focus:border-emerald-200">
+                    <button onclick="addEvent()" class="bg-emerald-800 text-white rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg">發布活動</button>
                 </div>
             </div>
             <div id="eventList" class="space-y-3"></div>
@@ -60,39 +63,39 @@
     </main>
 
     <div id="qrModal" class="fixed inset-0 bg-black/80 backdrop-filter blur-sm z-[100] hidden flex items-center justify-center p-6">
-        <div class="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center">
+        <div class="bg-white rounded-[3.5rem] p-10 max-w-sm w-full text-center shadow-2xl">
             <h3 id="qrTitle" class="text-xl font-bold text-emerald-900 mb-1"></h3>
             <p id="qrDate" class="text-xs text-emerald-600 mb-8 font-mono"></p>
-            <div id="qrcode" class="flex justify-center mb-8 border-4 border-emerald-50 p-4 rounded-3xl"></div>
-            <button onclick="closeModal('qrModal')" class="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold">關閉</button>
+            <div id="qrcode" class="flex justify-center mb-10 bg-white p-4 rounded-3xl"></div>
+            <button onclick="closeModal('qrModal')" class="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold hover:bg-gray-200 transition">關閉窗口</button>
         </div>
     </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-        const CHECKIN_URL = "https://your-domain.com/checkin.html"; // 請改為您的簽到頁網址
+        const CHECKIN_URL = "https://your-domain.com/checkin.html"; 
         let adminKey = "";
 
-        // --- 核心修正：初始化邏輯 ---
-        async function init() {
-            // 從 Session 讀取在 member_zone 輸入的金鑰
-            const savedKey = sessionStorage.getItem('adminKey');
+        // 初始化：確保只在有金鑰的情況下載入資料
+        window.onload = async () => {
+            adminKey = sessionStorage.getItem('adminKey');
             
-            if (!savedKey) {
-                alert("權限不足，請重新由會員中心進入");
-                location.href = 'member_zone.html';
-                return;
+            if (!adminKey) {
+                // 如果 Session 沒抓到，嘗試再問一次（確保不空白）
+                adminKey = prompt("請輸入幹部授權碼以顯示內容：");
+                if (!adminKey) {
+                    alert("授權失敗");
+                    location.href = 'member_zone.html';
+                    return;
+                }
+                sessionStorage.setItem('adminKey', adminKey);
             }
-
-            adminKey = savedKey; // 賦值給全域變數供 apiPost 使用
-            document.body.style.opacity = "1"; // 顯示頁面內容
+            
             fetchData();
-        }
+        };
 
         async function apiPost(data) {
-            // 自動帶入金鑰進行驗證
-            data.key = adminKey;
-            
+            data.key = adminKey; // 自動封裝金鑰
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
@@ -100,13 +103,13 @@
                 });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    alert("操作成功");
+                    alert("操作成功！");
                     fetchData();
                 } else {
-                    alert("失敗：" + (result.message || "授權無效"));
+                    alert("失敗：" + result.message);
                 }
             } catch (e) {
-                alert("系統連線失敗");
+                alert("網路通訊錯誤");
             }
         }
 
@@ -116,33 +119,39 @@
                 const data = await res.json();
                 renderMembers(data.users || []);
                 renderEvents(data.calendar || []);
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error("載入失敗", e);
+            }
         }
 
         function renderMembers(users) {
             const list = document.getElementById('memberList');
+            if (users.length === 0) { list.innerHTML = "<p class='p-4 text-gray-400'>目前暫無會員資料</p>"; return; }
+            
             list.innerHTML = users.map(u => `
-                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 flex justify-between items-center">
+                <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-50 flex justify-between items-center hover:shadow-md transition">
                     <div>
                         <div class="font-bold text-emerald-900">${u.name}</div>
-                        <div class="text-[10px] text-gray-400 font-mono">${u.phone}</div>
+                        <div class="text-[10px] text-gray-400 font-mono mt-1">${u.phone}</div>
                     </div>
-                    <div class="flex space-x-2">
-                        <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button>
-                    </div>
+                    <button onclick="deleteMember('${u.phone}')" class="w-10 h-10 flex items-center justify-center text-gray-300 hover:text-red-500 transition">
+                        <i class="fas fa-trash-alt text-sm"></i>
+                    </button>
                 </div>
             `).join('');
         }
 
         function renderEvents(events) {
             const list = document.getElementById('eventList');
-            list.innerHTML = events.reverse().map(ev => `
-                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm">
+            list.innerHTML = [...events].reverse().map(ev => `
+                <div class="bg-white p-5 rounded-3xl flex justify-between items-center shadow-sm border border-gray-50 mb-3">
                     <div>
-                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                        <div class="text-[10px] text-emerald-600 font-bold mb-0.5">${ev.dateText}</div>
                         <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                     </div>
-                    <button onclick="showQR('${ev.dateText}', '${ev.title}')" class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold">QR碼</button>
+                    <button onclick="showQR('${ev.dateText}', '${ev.title}')" class="bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-emerald-100 transition">
+                        顯示簽到 QR
+                    </button>
                 </div>
             `).join('');
         }
@@ -150,33 +159,50 @@
         function addMember() {
             const name = document.getElementById('mName').value;
             const phone = document.getElementById('mPhone').value;
-            if(!name || !phone) return alert("請填寫姓名與電話");
-            apiPost({ type: "add_member", name, phone, email: document.getElementById('mEmail').value, password: "123" });
+            const email = document.getElementById('mEmail').value;
+            if(!name || !phone) return alert("姓名與手機為必填");
+            apiPost({ type: "add_member", name, phone, email, password: "123" });
+            // 清空輸入
+            document.getElementById('mName').value = "";
+            document.getElementById('mPhone').value = "";
         }
 
         function addEvent() {
             const date = document.getElementById('calDate').value;
             const title = document.getElementById('calTitle').value;
-            if(!date || !title) return alert("請填寫日期與名稱");
+            if(!date || !title) return alert("日期與活動名稱為必填");
             apiPost({ type: "add_event", date, title });
         }
 
-        function deleteMember(phone) { if(confirm("確定刪除會員？")) apiPost({ type: "delete_member", currentPhone: phone }); }
+        function deleteMember(phone) {
+            if(confirm("確定要移除此會員嗎？")) apiPost({ type: "delete_member", currentPhone: phone });
+        }
+
         function showQR(date, title) {
             document.getElementById('qrTitle').innerText = title;
             document.getElementById('qrDate').innerText = date;
             document.getElementById('qrcode').innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: `${CHECKIN_URL}?event=${date}`, width: 180, height: 180 });
+            new QRCode(document.getElementById("qrcode"), {
+                text: `${CHECKIN_URL}?event=${date}`,
+                width: 200,
+                height: 200,
+                colorDark : "#064E3B",
+                colorLight : "#ffffff"
+            });
             document.getElementById('qrModal').classList.remove('hidden');
         }
+
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        
         function switchTab(tab) {
-            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('sec-members').classList.add('hidden');
+            document.getElementById('sec-calendar').classList.add('hidden');
             document.getElementById('sec-' + tab).classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            
+            document.getElementById('tab-members').classList.remove('tab-active');
+            document.getElementById('tab-calendar').classList.remove('tab-active');
             document.getElementById('tab-' + tab).classList.add('tab-active');
         }
-        window.onload = init;
     </script>
 </body>
 </html>

@@ -13,8 +13,8 @@
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .glass-nav { background: #064E3B; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
-        .modal.flex { display: flex; }
+        .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -35,35 +35,35 @@
 
     <main class="max-w-4xl mx-auto p-4 space-y-6">
         <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
-            <h2 id="userName" class="text-3xl font-bold mb-4">載入中...</h2>
+            <h2 id="userName" class="text-3xl font-bold mb-4">讀取中...</h2>
             <div class="grid grid-cols-2 gap-4 text-center">
-                <div class="bg-black/10 p-4 rounded-3xl">
-                    <div class="text-[10px] opacity-60 mb-1">參與率</div>
+                <div class="bg-black/10 p-4 rounded-3xl border border-white/5">
+                    <div class="text-[10px] opacity-60 mb-1 uppercase">參與率</div>
                     <div id="attPercent" class="text-3xl font-bold text-orange-200">0%</div>
                 </div>
-                <div class="bg-black/10 p-4 rounded-3xl">
-                    <div class="text-[10px] opacity-60 mb-1">出席場次</div>
+                <div class="bg-black/10 p-4 rounded-3xl border border-white/5">
+                    <div class="text-[10px] opacity-60 mb-1 uppercase">出席數</div>
                     <div id="attCountDisplay" class="text-2xl font-bold">0 / 0</div>
                 </div>
             </div>
         </div>
 
-        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition">
-            <i class="fas fa-qrcode text-2xl"></i>
+        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-transform group">
+            <i class="fas fa-qrcode text-2xl group-hover:rotate-12 transition"></i>
             <span class="text-xl font-bold tracking-widest">掃碼報到</span>
         </button>
 
         <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
             <h3 class="font-bold text-emerald-800 text-xs mb-1">最新公告</h3>
-            <p id="news" class="text-gray-500 text-[11px] truncate">同步中...</p>
+            <p id="news" class="text-gray-500 text-[11px] truncate mt-0.5 italic">正在同步公告...</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center space-y-2 border border-emerald-50">
+            <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center space-y-2 border border-emerald-50 hover:bg-emerald-50 transition">
                 <i class="fas fa-book-open text-emerald-700"></i>
                 <span class="font-bold text-emerald-900 text-sm">課程資料庫</span>
             </button>
-            <button onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center space-y-2 border border-emerald-50">
+            <button onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center space-y-2 border border-emerald-50 hover:bg-emerald-50 transition">
                 <i class="fas fa-images text-emerald-700"></i>
                 <span class="font-bold text-emerald-900 text-sm">活動剪影</span>
             </button>
@@ -74,24 +74,24 @@
     </main>
 
     <div id="scannerModal" class="modal">
-        <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div id="reader"></div>
+        <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+            <div id="reader" class="w-full"></div>
             <div class="p-6">
-                <button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">取消</button>
+                <button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-500 hover:bg-gray-200 transition">取消返回</button>
             </div>
         </div>
     </div>
 
     <div id="editProfileModal" class="modal">
         <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="text-xl font-bold text-emerald-900 mb-6 text-center">修改資料</h3>
+            <h3 class="text-xl font-bold text-emerald-900 mb-6 text-center">修改個人資料</h3>
             <div class="space-y-4">
                 <input type="email" id="editEmail" placeholder="電子郵件" class="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none text-sm">
-                <input type="password" id="oldPass" placeholder="舊密碼驗證" class="w-full px-5 py-4 bg-gray-100 rounded-2xl outline-none text-sm">
+                <input type="password" id="oldPass" placeholder="驗證舊密碼" class="w-full px-5 py-4 bg-gray-100 rounded-2xl outline-none text-sm">
                 <input type="password" id="newPass" placeholder="新密碼 (不改留空)" class="w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none text-sm">
                 <div class="flex pt-4 space-x-2">
                     <button onclick="closeEditModal()" class="flex-1 text-gray-400 font-bold">取消</button>
-                    <button onclick="handleUpdateProfile()" class="flex-[2] bg-emerald-800 text-white py-4 rounded-2xl font-bold">確認</button>
+                    <button onclick="handleUpdateProfile()" id="updateBtn" class="flex-[2] bg-emerald-800 text-white py-4 rounded-2xl font-bold shadow-lg">確認更新</button>
                 </div>
             </div>
         </div>
@@ -107,15 +107,14 @@
             const userStr = sessionStorage.getItem('userInfo');
             if (!userStr) { location.href = 'index.html'; return; }
             currentUser = JSON.parse(userStr);
-            document.getElementById('userName').innerText = currentUser.name;
+            document.getElementById('userName').innerText = currentUser.name || "讀書會成員";
             syncData(currentUser);
         };
 
-        // --- 幹部入口：完全移除金鑰字串，僅作跳轉與詢問 ---
+        // --- 幹部入口：輸入金鑰後帶入 Session 並跳轉 ---
         function enterStaffMode() {
             const key = prompt("請輸入幹部授權金鑰：");
             if (key) {
-                // 將輸入的金鑰存入 Session，讓 staff_page.html 拿去向 GAS 驗證
                 sessionStorage.setItem('adminKey', key);
                 location.href = 'staff_page.html';
             }
@@ -126,61 +125,103 @@
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 remoteConfig = data.config || {};
-                document.getElementById('news').innerText = data.news || "";
+                document.getElementById('news').innerText = data.news || "歡迎來到築心讀書會。";
 
-                const myPhone = String(user.phone).replace(/\D/g, "").slice(-9);
-                const liveUser = data.users.find(u => String(u.phone).slice(-9) === myPhone);
+                const myMatch = String(user.phone || "").replace(/\D/g, "").slice(-9);
+                const liveUser = (data.users || []).find(u => String(u.phone || "").slice(-9) === myMatch);
                 
                 if (liveUser) {
-                    const today = new Date().toISOString().split('T')[0];
-                    const events = data.calendar.filter(ev => ev.dateText <= today);
-                    const logs = liveUser.attendLog.map(l => l.split('T')[0]);
-                    let count = events.filter(ev => logs.includes(ev.dateText)).length;
-
-                    document.getElementById('attPercent').innerText = (events.length ? Math.round(count/events.length*100) : 0) + "%";
-                    document.getElementById('attCountDisplay').innerText = `${count} / ${events.length}`;
-                    renderHistory(events, logs);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const validEvents = (data.calendar || []).filter(ev => ev.dateText && ev.dateText <= todayStr);
+                    const attendLogs = (liveUser.attendLog || []).map(log => log.split('T')[0]);
+                    let count = 0;
+                    validEvents.forEach(ev => { if (attendLogs.includes(ev.dateText)) count++; });
+                    const percent = validEvents.length > 0 ? Math.round((count / validEvents.length) * 100) : 0;
+                    document.getElementById('attPercent').innerText = percent + "%";
+                    document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
+                    if (percent >= 50) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    renderHistory(validEvents, attendLogs);
                 }
-            } catch (e) { console.error(e); }
+            } catch (err) { console.error("同步失敗:", err); }
         }
 
         function renderHistory(events, logs) {
-            document.getElementById('historyList').innerHTML = [...events].reverse().map(ev => `
-                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
-                    <div><div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div><div class="text-emerald-900 font-bold text-sm">${ev.title}</div></div>
-                    <i class="fas ${logs.includes(ev.dateText) ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
-                </div>`).join('');
+            const list = document.getElementById('historyList');
+            list.innerHTML = [...events].reverse().map(ev => {
+                const isAttended = logs.includes(ev.dateText);
+                return `
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50">
+                        <div>
+                            <div class="text-[10px] text-emerald-600 font-bold mb-1">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                        </div>
+                        <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
+                    </div>`;
+            }).join('');
         }
 
+        // --- 修正後的相機功能 ---
         function startScanner() {
-            document.getElementById('scannerModal').classList.add('flex');
+            document.getElementById('scannerModal').classList.add('active');
+            // 注意：名稱必須是 Html5QrCode (C 大寫)
             html5QrCode = new Html5QrCode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-                stopScanner(); window.location.href = text;
-            }).catch(() => stopScanner());
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 250 }, 
+                (decodedText) => {
+                    stopScanner();
+                    window.location.href = decodedText; // 直接跳轉到 QR Code 內的 checkin.html 網址
+                }
+            ).catch(err => {
+                console.error("相機開啟失敗:", err);
+                alert("無法存取相機，請確認已授權權限。");
+                stopScanner();
+            });
         }
 
         function stopScanner() {
             if (html5QrCode) {
                 html5QrCode.stop().finally(() => {
-                    document.getElementById('scannerModal').classList.remove('flex');
+                    document.getElementById('scannerModal').classList.remove('active');
                     html5QrCode = null;
                 });
-            } else { document.getElementById('scannerModal').classList.remove('flex'); }
+            } else {
+                document.getElementById('scannerModal').classList.remove('active');
+            }
         }
 
         function openRemoteLink(key) {
-            if (remoteConfig[key]) window.open(remoteConfig[key], '_blank');
-            else alert("尚未設定連結");
+            const url = remoteConfig[key];
+            if (url && url.startsWith('http')) window.open(url, '_blank');
+            else alert("連結尚未設定");
         }
 
-        function openEditModal() { document.getElementById('editProfileModal').classList.add('flex'); }
-        function closeEditModal() { document.getElementById('editProfileModal').classList.remove('flex'); }
+        function openEditModal() { document.getElementById('editProfileModal').classList.add('active'); }
+        function closeEditModal() { document.getElementById('editProfileModal').classList.remove('active'); }
+        
         async function handleUpdateProfile() {
-            // 此處實作與您的 GAS doPost updateProfile 對接...
-            alert("更新功能已就緒");
-            closeEditModal();
+            const oldP = document.getElementById('oldPass').value;
+            if (!oldP) return alert("請輸入舊密碼驗證");
+            const btn = document.getElementById('updateBtn');
+            btn.disabled = true; btn.innerText = "更新中...";
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'updateProfile',
+                        phone: currentUser.phone,
+                        email: document.getElementById('editEmail').value,
+                        oldPassword: oldP,
+                        newPassword: document.getElementById('newPass').value
+                    })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") { alert("更新成功！"); location.reload(); }
+                else alert("更新失敗：" + result.message);
+            } catch (e) { alert("連線失敗"); }
+            btn.disabled = false; btn.innerText = "確認更新";
         }
+
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
     </script>
 </body>

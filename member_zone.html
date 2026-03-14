@@ -115,12 +115,13 @@
         };
 
         function enterStaffMode() {
-            const key = prompt("請輸入幹部授權碼：");
-            if (key) {
-                sessionStorage.setItem('adminKey', key);
-                location.href = 'staff_page.html';
-            }
-        }
+           const key = prompt("請輸入幹部授權碼：");
+       if (key) {
+          // 統一使用 adminKey 作為存放名稱
+          sessionStorage.setItem('adminKey', key);
+          location.href = 'staff_page.html';
+    }
+}
 
         // --- 恢復與昨日版本一致的掃描呼叫方式 ---
         function startScanner() {

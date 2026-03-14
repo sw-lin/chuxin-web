@@ -68,7 +68,7 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let html5QrCode = null;
 
-        // 工具函式：強制清洗任何全形數字或非數字字元
+        // 強力清洗函式：將全形轉半形，並移除所有非數字內容
         function cleanPhone(str) {
             if (!str) return "";
             return String(str).replace(/[０-９]/g, function(s) {
@@ -86,11 +86,11 @@
 
         async function syncData(user) {
             try {
-                // 1. 取得清洗後的手機末 9 碼
+                // 1. 從快取資料中取得清洗後的末 9 碼
                 const myMatch = cleanPhone(user.phone || user.currentPhone).slice(-9);
 
                 if (!myMatch || myMatch.length < 9) {
-                    alert("登入資訊異常，請重新登入。");
+                    alert("手機資訊不完整，請重新登入");
                     logout();
                     return;
                 }
@@ -98,24 +98,21 @@
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
                 
-                // 2. 在資料庫中尋找匹配的使用者 (同樣使用清洗後的末 9 碼比對)
+                // 2. 在資料庫中比對 (同樣要清洗資料庫回傳的手機號碼)
                 const liveUser = (data.users || []).find(u => {
                     const dbMatch = cleanPhone(u.phone).slice(-9);
                     return dbMatch === myMatch;
                 });
                 
                 if (!liveUser) {
-                    alert(`驗證失敗。\n您的末9碼：${myMatch}\n資料庫前三筆電話：${(data.users || []).slice(0,3).map(u => cleanPhone(u.phone)).join(', ')}`);
+                    alert(`驗證失敗。您的末9碼：${myMatch}\n請確認與資料庫登記相符。`);
                     logout();
                     return;
                 }
 
-                // --- 以下為功能保留區：更新 UI 與計算邏輯 ---
-
-                // A. 更新公告
+                // --- 功能區：更新公告、計算與渲染 ---
                 document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
                 
-                // B. 計算參與數據
                 const todayStr = new Date().toISOString().split('T')[0];
                 const validEvents = (data.calendar || []).filter(ev => {
                     const isPast = ev.dateText && ev.dateText <= todayStr;
@@ -135,7 +132,6 @@
                 document.getElementById('attPercent').innerText = percent + "%";
                 document.getElementById('attCountDisplay').innerText = `${count} / ${validEvents.length}`;
 
-                // C. 渲染學習歷程
                 renderHistory(validEvents, attendLogs);
 
             } catch (err) {

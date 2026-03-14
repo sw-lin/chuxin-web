@@ -131,11 +131,24 @@
         let isEditMode = false;
 
         async function init() {
-            const key = prompt("管理驗證金鑰：");
-            if (!key) { window.location.reload(); return; }
-            ADMIN_KEY = key;
-            await fetchData();
-        }
+    // 直接從 session 讀取，不彈窗
+    const savedKey = sessionStorage.getItem('adminKey');
+    
+    if (!savedKey) {
+        alert("未經授權，請回首頁");
+        location.href = 'index.html';
+        return;
+    }
+    
+    // 將金鑰填入全域變數，供後續 apiPost 使用
+    adminKey = savedKey; 
+    
+    // 隱藏權限不足的提示，顯示內容
+    document.getElementById('auth-overlay').classList.add('unauthorized');
+    
+    // 開始抓取資料
+    await refreshData();
+}
 
         async function fetchData() {
             try {

@@ -13,8 +13,21 @@
         .slide { display: none; width: 100%; height: 600px; object-fit: cover; animation: fade 1.5s; }
         @keyframes fade { from {opacity: .6} to {opacity: 1} }
         @media (max-width: 640px) { .slide { height: 400px; } }
-        /* 彈窗樣式 */
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+        
+        /* 核心修正：確保彈窗初始狀態絕對是隱藏的 */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 100; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(5px); 
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="bg-[#FDFBF7]">
@@ -25,8 +38,8 @@
             <span class="text-xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
         </div>
         <div class="flex items-center space-x-3 md:space-x-6">
-            <button onclick="showModal('aboutModal')" class="text-emerald-800 font-bold hover:text-emerald-600 transition text-sm px-3 py-2">關於我</button>
-            <button onclick="showModal('loginModal')" class="bg-emerald-800 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-emerald-700 transition shadow-lg">進入會館</button>
+            <button onclick="openAbout()" class="text-emerald-800 font-bold hover:text-emerald-600 transition text-sm px-3 py-2">關於我</button>
+            <button onclick="openLogin()" class="bg-emerald-800 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-emerald-700 transition shadow-lg">進入會館</button>
         </div>
     </nav>
 
@@ -40,7 +53,7 @@
             <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center px-6 z-10">
                 <div class="max-w-3xl">
                     <h1 class="text-4xl md:text-6xl text-white font-bold mb-6 leading-tight">在共讀中築心</h1>
-                    <p class="text-emerald-50 text-lg md:text-xl font-light italic opacity-90">於陪伴中成長</p>
+                    <p class="text-emerald-50 text-lg md:text-xl font-light italic opacity-90">「於相伴中成長」</p>
                 </div>
             </div>
         </div>
@@ -52,17 +65,14 @@
             <div class="h-px w-full ml-6 bg-emerald-100"></div>
         </div>
         <div id="event-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="animate-pulse bg-emerald-50 h-40 rounded-3xl"></div>
-            <div class="animate-pulse bg-emerald-50 h-40 rounded-3xl"></div>
-            <div class="animate-pulse bg-emerald-50 h-40 rounded-3xl"></div>
-            <div class="animate-pulse bg-emerald-50 h-40 rounded-3xl"></div>
+            <div class="animate-pulse bg-emerald-50 h-40 rounded-3xl col-span-full flex items-center justify-center text-emerald-200 text-sm italic">正在探索未來活動...</div>
         </div>
     </section>
 
     <section id="register" class="py-24 px-6 bg-emerald-50/50">
         <div class="max-w-xl mx-auto text-center">
             <h2 class="text-3xl font-bold text-emerald-900 mb-4">加入我們</h2>
-            <p class="text-gray-500 mb-10">對我們有興趣嗎？留下資料，我們會與您聯繫</p>
+            <p class="text-gray-500 mb-10">歡迎填寫報名資料，與我們一同開啟閱讀之旅</p>
             
             <form action="https://formspree.io/f/xpqjvblg" method="POST" class="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl text-left border border-emerald-100">
                 <div class="space-y-6">
@@ -90,16 +100,16 @@
         © 2026 Chuxin Book Club
     </footer>
 
-    <div id="aboutModal" class="modal flex items-center justify-center p-6">
-        <div class="bg-white max-w-2xl w-full rounded-[2.5rem] p-10 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+    <div id="aboutModal" class="modal">
+        <div class="bg-white max-w-2xl w-full rounded-[2.5rem] p-10 shadow-2xl relative max-h-[85vh] overflow-y-auto m-6 flex flex-col">
             <button onclick="closeModal('aboutModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
             <h2 class="text-2xl font-bold text-emerald-900 mb-6 flex items-center"><i class="fas fa-leaf mr-3 text-emerald-600"></i>關於築心</h2>
-            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">載入中...</div>
+            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">正在讀取關於我的內容...</div>
         </div>
     </div>
 
-    <div id="loginModal" class="modal flex items-center justify-center p-6">
-        <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative">
+    <div id="loginModal" class="modal">
+        <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative m-6 flex flex-col">
             <button onclick="closeModal('loginModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
             <div class="text-center mb-8">
                 <h3 class="text-2xl font-bold text-emerald-900">會員登入</h3>
@@ -127,24 +137,27 @@
             setTimeout(showSlides, 4500);
         }
 
-        // 彈窗邏輯
-        function showModal(id) {
-            document.getElementById(id).style.display = 'flex';
-            if(id === 'aboutModal') loadAboutText();
-        }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        // 讀取 About.txt
-        function loadAboutText() {
-            fetch('about.txt?t=' + Date.now()).then(r => r.text()).then(t => {
-                document.getElementById('aboutContent').innerText = t;
-            }).catch(() => document.getElementById('aboutContent').innerText = "內容載入中或檔案不存在...");
+        // 彈窗控制 (點擊按鈕才執行)
+        function openAbout() {
+            document.getElementById('aboutModal').style.display = 'flex';
+            fetch('about.txt?t=' + Date.now())
+                .then(r => r.text())
+                .then(t => { document.getElementById('aboutContent').innerText = t; })
+                .catch(() => { document.getElementById('aboutContent').innerText = "內容暫時無法讀取..."; });
         }
 
-        // 抓取近期活動 (4場)
+        function openLogin() {
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // 抓取 4 次活動 (純後台抓取，不影響 UI 彈窗)
         async function loadEvents() {
             try {
-                const res = await fetch(GAS_URL);
+                const res = await fetch(GAS_URL + "?t=" + Date.now());
                 const data = await res.json();
                 const today = new Date().toISOString().split('T')[0];
                 const grid = document.getElementById('event-grid');
@@ -164,20 +177,23 @@
                             </div>
                         `).join('');
                     } else {
-                        grid.innerHTML = '<p class="col-span-full text-center text-gray-400">目前暫無預告活動</p>';
+                        grid.innerHTML = '<p class="col-span-full text-center text-gray-400 italic">目前暫無預告活動</p>';
                     }
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('event-grid').innerHTML = '<p class="col-span-full text-center text-gray-400">目前暫無法顯示活動資訊</p>';
+            }
         }
 
         // 登入驗證
         async function handleLogin() {
             const u = document.getElementById('userPhone').value.trim();
             const p = document.getElementById('userPass').value.trim();
-            if(!u || !p) return alert('請填寫電話與密碼');
+            if(!u || !p) return alert('請填寫完整手機與密碼');
 
             const btn = document.getElementById('loginBtn');
-            btn.disabled = true; btn.innerText = '驗證中...';
+            btn.disabled = true; btn.innerText = '正在進入...';
 
             try {
                 const res = await fetch(GAS_URL, {
@@ -192,13 +208,17 @@
                     alert("手機號碼或密碼錯誤");
                 }
             } catch (e) {
-                alert("網路連線失敗");
+                alert("網路連線失敗，請稍後再試。");
             } finally {
                 btn.disabled = false; btn.innerText = '確認進入';
             }
         }
 
-        window.onload = () => { showSlides(); loadEvents(); };
+        // 核心載入邏輯：僅啟動輪播與活動載入，不啟動彈窗
+        window.onload = () => {
+            showSlides(); 
+            loadEvents();
+        };
     </script>
 </body>
 </html>

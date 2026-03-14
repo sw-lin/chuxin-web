@@ -156,7 +156,7 @@
     <script>
         let ADMIN_KEY = "";
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec"; 
-        const CHECKIN_URL = "https://sw-lin.github.io/chuxin-web/checkin.html"; // 確保這是您的簽到頁
+        const CHECKIN_URL = "https://sw-lin.github.io/chuxin-web/checkin.html"; 
         let allData = null;
         let isEditMode = false;
 
@@ -179,11 +179,17 @@
             } catch (e) { alert("連線錯誤，請確認網路或 GAS 網址。"); }
         }
 
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
+        // 修改：切換編輯模式邏輯
+        function toggleEditMode(forceValue) {
+            isEditMode = (forceValue !== undefined) ? forceValue : !isEditMode;
             const btn = document.getElementById('editToggleBtn');
-            btn.classList.toggle('edit-mode-active');
-            btn.querySelector('span').innerText = isEditMode ? "編輯模式：開" : "編輯模式：關";
+            if (isEditMode) {
+                btn.classList.add('edit-mode-active');
+                btn.querySelector('span').innerText = "編輯模式：開";
+            } else {
+                btn.classList.remove('edit-mode-active');
+                btn.querySelector('span').innerText = "編輯模式：關";
+            }
             renderMembers();
             renderCalendar();
         }
@@ -229,7 +235,8 @@
 
             container.innerHTML = allData.calendar.map(ev => {
                 const evDate = new Date(ev.dateText);
-                const isActive = evDate <= today; // 當日及過去為 active
+                evDate.setHours(0,0,0,0);
+                const isActive = evDate <= today; // 當日及過去為有效
                 return `
                 <div class="bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm">
                     <div>
@@ -294,13 +301,17 @@
         function sendLinePush() { apiPost({ type: "send_line_push", content: document.getElementById('pushMsg').value }, "btn-sendPush", () => document.getElementById('pushMsg').value = ""); }
         function saveConfig() { apiPost({ type: "update_config", reading: document.getElementById('link-reading').value, photo: document.getElementById('link-photo').value }, "btn-saveConfig"); }
         
+        // 修正：加入密碼 Base64 編碼邏輯
         function addMember() { 
+            const rawPassword = document.getElementById('mPass').value;
+            const encodedPassword = btoa(rawPassword); // 進行 Base64 編碼
+            
             apiPost({ 
                 type: "add_member", 
                 name: document.getElementById('mName').value, 
                 phone: document.getElementById('mPhone').value, 
                 email: document.getElementById('mEmail').value,
-                password: document.getElementById('mPass').value // 傳送預設密碼
+                password: encodedPassword 
             }, "btn-addMember", () => {
                 document.getElementById('mName').value = ""; document.getElementById('mPhone').value = ""; 
                 document.getElementById('mEmail').value = ""; document.getElementById('mPass').value = "";
@@ -326,7 +337,9 @@
         }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
+        // 修改：跳轉分頁時自動關閉編輯模式
         function switchTab(tab) {
+            toggleEditMode(false); // 強制關閉編輯模式
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + tab).classList.remove('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));

@@ -22,65 +22,50 @@
                 <i class="fas fa-leaf text-emerald-300"></i>
                 <span class="text-xl font-bold tracking-wider">築心會館</span>
             </div>
-            <button onclick="logout()" class="text-emerald-200 hover:text-white transition">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
+            <button onclick="logout()" class="text-emerald-200"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </nav>
 
     <main class="max-w-4xl mx-auto p-4 space-y-5">
         <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
-            <div class="relative z-10">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h2 id="userName" class="text-3xl font-bold mb-2">載入中...</h2>
-                        <span id="userTitle" class="bg-white/20 px-4 py-1 rounded-full text-xs border border-white/10">學員</span>
-                    </div>
-                    <button onclick="openEditModal()" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition">
-                        <i class="fas fa-cog text-emerald-100"></i>
-                    </button>
+            <h2 id="userName" class="text-3xl font-bold mb-4">載入中...</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white/10 p-4 rounded-3xl">
+                    <div class="text-white/60 text-[10px] mb-1">已發生活動參與率</div>
+                    <div id="attPercent" class="text-2xl font-bold italic text-orange-200">0%</div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm">
-                        <div class="text-white/60 text-[10px] mb-1">已發生活動參與率</div>
-                        <div id="attPercent" class="text-2xl font-bold italic text-orange-200">0%</div>
-                    </div>
-                    <div class="bg-white/10 p-4 rounded-3xl backdrop-blur-sm">
-                        <div class="text-white/60 text-[10px] mb-1">已報到 / 已發生次數</div>
-                        <div id="attCountDisplay" class="text-2xl font-bold font-mono">0 / 0</div>
-                    </div>
+                <div class="bg-white/10 p-4 rounded-3xl">
+                    <div class="text-white/60 text-[10px] mb-1">已報到 / 已發生次數</div>
+                    <div id="attCountDisplay" class="text-2xl font-bold">0 / 0</div>
                 </div>
             </div>
         </div>
 
-        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3 active:scale-95 transition-all">
+        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-3xl shadow-lg text-white flex items-center justify-center space-x-3">
             <i class="fas fa-qrcode text-2xl"></i>
             <span class="text-xl font-black tracking-widest">掃碼報到</span>
         </button>
 
         <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50">
-            <div class="flex items-center space-x-2 mb-3 text-emerald-800">
-                <i class="fas fa-bullhorn text-emerald-500"></i>
-                <h3 class="font-bold">最新公告</h3>
-            </div>
-            <p id="news" class="text-gray-600 leading-relaxed font-medium">正在取得最新資訊...</p>
+            <h3 class="font-bold text-emerald-800 mb-2"><i class="fas fa-bullhorn mr-2"></i>最新公告</h3>
+            <p id="news" class="text-gray-600">同步中...</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
             <button onclick="openRemoteLink('reading_folder_url')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center">
-                <i class="fas fa-book-reader text-emerald-600 text-xl mb-2"></i>
+                <i class="fas fa-book-reader text-emerald-600 text-xl mb-1"></i>
                 <span class="font-bold text-emerald-900">雲端書箱</span>
             </button>
             <button onclick="openRemoteLink('photo_gallery_url')" class="p-6 bg-white rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center">
-                <i class="fas fa-images text-amber-600 text-xl mb-2"></i>
+                <i class="fas fa-images text-amber-600 text-xl mb-1"></i>
                 <span class="font-bold text-emerald-900">精彩相簿</span>
             </button>
         </div>
 
         <div>
-            <h3 class="font-bold text-emerald-900 mb-4 px-2 text-lg">學習歷程</h3>
-            <div id="historyList" class="space-y-3">
-                <p class="text-center text-gray-400 py-10 italic">載入歷程中...</p>
+            <h3 class="font-bold text-emerald-900 mb-4 px-2">學習歷程</h3>
+            <div id="historyList" class="space-y-3 text-sm italic text-gray-400 text-center py-10">
+                等待同步資料中...
             </div>
         </div>
     </main>
@@ -88,7 +73,7 @@
     <div id="scannerModal" class="fixed inset-0 bg-black/95 hidden z-[100] flex flex-col items-center justify-center p-6">
         <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden">
             <div id="reader"></div>
-            <div class="p-4"><button onclick="stopScanner()" class="w-full py-3 bg-gray-100 rounded-xl font-bold">關閉</button></div>
+            <div class="p-4"><button onclick="stopScanner()" class="w-full py-3 bg-gray-100 rounded-xl">關閉</button></div>
         </div>
     </div>
 
@@ -102,85 +87,77 @@
             if (!userStr) { location.href = 'index.html'; return; }
             const user = JSON.parse(userStr);
             document.getElementById('userName').innerText = user.name;
-            document.getElementById('userTitle').innerText = user.title || '學員';
             syncData();
         };
 
         async function syncData() {
             try {
+                // 強制清除快取
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
+                
+                // 1. 抓取當前用戶最新狀態
                 const cachedUser = JSON.parse(sessionStorage.getItem('userInfo'));
-                
-                // 1. 抓取最新資料 (容錯處理)
-                const users = data.users || [];
-                const liveUser = users.find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
-                if (!liveUser) return;
-                
+                const liveUser = (data.users || []).find(u => String(u.phone).trim() === String(cachedUser.phone).trim());
+                if (!liveUser) {
+                    document.getElementById('historyList').innerText = "找不到用戶資料，請重新登入";
+                    return;
+                }
                 sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
+
+                // 2. 更新基礎資訊
                 document.getElementById('news').innerText = data.news || "歡迎參加讀書會";
                 remoteConfig = data.config || {};
 
-                // 2. 核心邏輯：動態分母 (日期早於今天 18:00 以後的視為已發生)
-                const now = new Date();
-                const todayStr = now.toISOString().split('T')[0];
-                
-                // 只計今天以前的活動作為分母
-                const pastEvents = (data.calendar || [])
-                    .filter(ev => ev.dateText && ev.dateText <= todayStr)
+                // 3. 處理動態分母 (過去已發生的活動)
+                const today = new Date().toISOString().split('T')[0];
+                const calendar = data.calendar || [];
+                const pastEvents = calendar
+                    .filter(ev => ev.dateText && ev.dateText <= today)
                     .sort((a,b) => b.dateText.localeCompare(a.dateText));
-                
-                // 3. 處理報到紀錄 (防呆轉換)
-                let rawLogs = liveUser.attendLog || [];
-                if (!Array.isArray(rawLogs)) rawLogs = []; 
-                
-                const myLogs = rawLogs.map(log => {
-                    const s = String(log).trim();
-                    if (s.includes('T')) return s.split('T')[0];
-                    if (s.includes(' ')) return s.split(' ')[0];
-                    return s.replace(/\//g, '-');
-                });
 
-                // 4. 渲染歷程與比對
+                // 4. 處理報到紀錄 (確保格式為 YYYY-MM-DD)
+                let myLogs = Array.isArray(liveUser.attendLog) ? liveUser.attendLog : [];
+                const formattedLogs = myLogs.map(l => String(l).split('T')[0].replace(/\//g, '-').trim());
+
+                // 5. 渲染歷程並計算
                 let attendedCount = 0;
                 const historyHtml = pastEvents.map(ev => {
-                    // 比對日期是否匹配
-                    const isAttended = myLogs.some(logDate => logDate === ev.dateText);
+                    const isAttended = formattedLogs.includes(ev.dateText);
                     if (isAttended) attendedCount++;
-
                     return `
-                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-50'} shadow-sm">
-                        <div class="flex items-center space-x-4">
-                            <div class="text-[10px] font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</div>
-                            <div class="font-bold text-emerald-900 text-sm">${ev.title}</div>
-                        </div>
-                        <div>${isAttended ? '<span class="text-emerald-600 text-[10px] font-bold bg-emerald-100 px-3 py-1 rounded-full">已報到</span>' : '<span class="text-gray-300 text-[10px] italic">未報到</span>'}</div>
-                    </div>`;
+                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border ${isAttended ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-50'} shadow-sm">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-[10px] font-bold ${isAttended ? 'text-emerald-500' : 'text-gray-400'}">${ev.dateText}</span>
+                                <span class="font-bold text-emerald-900">${ev.title}</span>
+                            </div>
+                            <span>${isAttended ? '<b class="text-emerald-600 text-xs">已報到</b>' : '<i class="text-gray-300 text-xs">未報到</i>'}</span>
+                        </div>`;
                 }).join('');
 
-                document.getElementById('historyList').innerHTML = historyHtml || '<p class="text-center text-gray-400 py-10">尚無活動紀錄</p>';
+                document.getElementById('historyList').innerHTML = historyHtml || '<p class="py-10">尚無活動紀錄</p>';
 
-                // 5. 計算百分比
+                // 6. 更新數據與百分比
                 const totalPast = pastEvents.length;
                 const percent = totalPast > 0 ? Math.round((attendedCount / totalPast) * 100) : 0;
                 
                 document.getElementById('attPercent').innerText = percent + "%";
-                document.getElementById('attCountDisplay').innerHTML = `${attendedCount} <span class="text-xs opacity-40">/ ${totalPast}</span>`;
+                document.getElementById('attCountDisplay').innerHTML = `${attendedCount} / ${totalPast}`;
                 
                 if (percent >= 50 && totalPast > 0) {
-                    setTimeout(() => confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }), 500);
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
                 }
 
-            } catch (e) { 
-                console.error("同步失敗:", e);
-                document.getElementById('historyList').innerHTML = '<p class="text-center text-red-400 py-10 text-sm">資料讀取異常，請重新登入</p>';
+            } catch (err) {
+                console.error("Critical Sync Error:", err);
+                document.getElementById('news').innerText = "連線失敗，請重新載入";
             }
         }
 
         function openRemoteLink(key) {
             const url = remoteConfig[key];
             if (url && url.startsWith('http')) window.open(url, '_blank');
-            else alert("連結設定中，請稍候");
+            else alert("連結尚未準備好");
         }
 
         function startScanner() {

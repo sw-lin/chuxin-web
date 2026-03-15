@@ -154,17 +154,58 @@
             document.getElementById('overlay').classList.toggle('hidden');
         }
 
-        function switchTab(tab, title) {
-            document.querySelectorAll('.tab-content').forEach(c => {
-                c.classList.remove('active');
-                c.classList.remove('edit-mode-active'); // 切換分頁時重置編輯狀態
-            });
-            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-            document.getElementById('sec-' + tab).classList.add('active');
-            document.getElementById('current-title').innerText = title;
-            event.currentTarget.classList.add('active');
-            toggleMenu();
+       // --- 2. 修改 switchTab：增加強制重置邏輯 ---
+function switchTab(tab, title) {
+    // 隱藏所有分頁
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.remove('active');
+        // 強制移除所有分頁的編輯狀態
+        c.classList.remove('edit-mode-active');
+    });
+
+    // 重置所有編輯按鈕的樣式與文字
+    document.querySelectorAll('[id^="sec-"] .text-orange-600, [id^="sec-"] .text-white').forEach(btn => {
+        if (btn.tagName === "BUTTON" && btn.innerHTML.includes('編輯')) {
+            btn.innerHTML = '<i class="fas fa-lock"></i> 編輯開關';
+            btn.className = "text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50";
         }
+    });
+
+    // 重置系統設定的狀態
+    isSystemEditing = false;
+    if (document.getElementById('sec-system')) {
+        const readingInput = document.getElementById('conf-reading');
+        const photoInput = document.getElementById('conf-photo');
+        const saveBtn = document.getElementById('systemSaveBtn');
+        const lockBtn = document.getElementById('systemLockBtn');
+        
+        if(readingInput) {
+            readingInput.disabled = true;
+            photoInput.disabled = true;
+            saveBtn.disabled = true;
+            readingInput.classList.add('bg-gray-100', 'opacity-50');
+            photoInput.classList.add('bg-gray-100', 'opacity-50');
+            saveBtn.classList.replace('bg-emerald-800', 'bg-gray-300');
+            saveBtn.classList.add('cursor-not-allowed');
+            lockBtn.innerHTML = '<i class="fas fa-lock"></i> 解除鎖定';
+            lockBtn.className = "text-sm bg-gray-100 px-4 py-2 rounded-lg";
+        }
+    }
+
+    // 切換目標分頁
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    document.getElementById('sec-' + tab).classList.add('active');
+    document.getElementById('current-title').innerText = title;
+    
+    // 側邊欄收合
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    if (sidebar) sidebar.classList.add('-translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
+    
+    // 重新渲染，確保垃圾桶圖示狀態正確
+    renderAll();
+}
 
         // --- 針對特定分頁的編輯開關 ---
         function toggleSectionEdit(sectionId) {
@@ -235,31 +276,38 @@
             }).join('');
         }
 
-        // ... (其餘 apiPost, updateNews, saveLineMsg 等同前版) ...
-        async function apiPost(data) {
-    // 1. 開啟等待畫面
+// --- 1. 修改 apiPost：確保無論如何都會刷新畫面 ---
+async function apiPost(data) {
     const overlay = document.getElementById('loadingOverlay');
     overlay.classList.remove('hidden');
     
     data.key = adminKey;
     try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(data),
+            // 設定較短的 timeout，若雲端太慢就改由 fetchData 補位
+        });
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // 成功後給予提示，並延遲一秒關閉，確保資料已同步
+            // 成功：關閉動畫並重新讀取資料
             setTimeout(() => {
                 overlay.classList.add('hidden');
-                fetchData(); // 重新載入最新資料
-            }, 500);
+                fetchData(); 
+            }, 300);
         } else {
             alert("❌ 失敗：" + result.message);
             overlay.classList.add('hidden');
         }
     } catch (e) {
-        // 即使發生錯誤也要把畫面解鎖，以免卡死
-        overlay.classList.add('hidden');
-        alert("連線超時，請檢查網路或稍後再試。");
+        // 重要：即使發生連線超時錯誤，也要強制執行 fetchData
+        // 因為 GAS 有時候會跑完但沒回傳，強制重整能確保看到最新狀態
+        console.log("觸發補償機制，強制刷新資料庫狀態");
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            fetchData(); 
+        }, 1000);
     }
 }
         async function fetchData() {
@@ -291,7 +339,7 @@
         }
         function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }
         
-// --- 系統設定模式切換 ---
+// --- 3. 系統設定解鎖/鎖定循環 ---
 let isSystemEditing = false;
 function toggleSystemEdit() {
     isSystemEditing = !isSystemEditing;
@@ -301,7 +349,6 @@ function toggleSystemEdit() {
     const lockBtn = document.getElementById('systemLockBtn');
 
     if (isSystemEditing) {
-        // 解鎖模式
         readingInput.disabled = false;
         photoInput.disabled = false;
         saveBtn.disabled = false;
@@ -310,10 +357,8 @@ function toggleSystemEdit() {
         saveBtn.classList.replace('bg-gray-300', 'bg-emerald-800');
         saveBtn.classList.remove('cursor-not-allowed');
         lockBtn.innerHTML = '<i class="fas fa-check-circle"></i> 結束編輯';
-        lockBtn.classList.replace('bg-gray-100', 'bg-orange-500');
-        lockBtn.classList.add('text-white');
+        lockBtn.classList.add('bg-orange-500', 'text-white');
     } else {
-        // 鎖定模式
         readingInput.disabled = true;
         photoInput.disabled = true;
         saveBtn.disabled = true;
@@ -322,10 +367,9 @@ function toggleSystemEdit() {
         saveBtn.classList.replace('bg-emerald-800', 'bg-gray-300');
         saveBtn.classList.add('cursor-not-allowed');
         lockBtn.innerHTML = '<i class="fas fa-lock"></i> 解除鎖定';
-        lockBtn.classList.replace('bg-orange-500', 'bg-gray-100');
-        lockBtn.classList.remove('text-white');
+        lockBtn.className = "text-sm bg-gray-100 px-4 py-2 rounded-lg";
     }
-}        
+}       
     </script>
 </body>
 </html>

@@ -154,56 +154,37 @@
             document.getElementById('overlay').classList.toggle('hidden');
         }
 
-       // --- 2. 修改 switchTab：增加強制重置邏輯 ---
+// --- 3. 修改 switchTab：增加「換頁就歸位」邏輯 ---
 function switchTab(tab, title) {
-    // 隱藏所有分頁
+    // 1. 關閉所有分頁的編輯狀態
     document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.remove('active');
-        // 強制移除所有分頁的編輯狀態
-        c.classList.remove('edit-mode-active');
+        c.classList.remove('active', 'edit-mode-active');
     });
 
-    // 重置所有編輯按鈕的樣式與文字
-    document.querySelectorAll('[id^="sec-"] .text-orange-600, [id^="sec-"] .text-white').forEach(btn => {
-        if (btn.tagName === "BUTTON" && btn.innerHTML.includes('編輯')) {
+    // 2. 恢復所有「編輯開關」按鈕到初始狀態
+    document.querySelectorAll('[id^="sec-"] button').forEach(btn => {
+        if (btn.innerText.includes('編輯')) {
             btn.innerHTML = '<i class="fas fa-lock"></i> 編輯開關';
             btn.className = "text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50";
         }
     });
 
-    // 重置系統設定的狀態
-    isSystemEditing = false;
-    if (document.getElementById('sec-system')) {
-        const readingInput = document.getElementById('conf-reading');
-        const photoInput = document.getElementById('conf-photo');
-        const saveBtn = document.getElementById('systemSaveBtn');
-        const lockBtn = document.getElementById('systemLockBtn');
-        
-        if(readingInput) {
-            readingInput.disabled = true;
-            photoInput.disabled = true;
-            saveBtn.disabled = true;
-            readingInput.classList.add('bg-gray-100', 'opacity-50');
-            photoInput.classList.add('bg-gray-100', 'opacity-50');
-            saveBtn.classList.replace('bg-emerald-800', 'bg-gray-300');
-            saveBtn.classList.add('cursor-not-allowed');
-            lockBtn.innerHTML = '<i class="fas fa-lock"></i> 解除鎖定';
-            lockBtn.className = "text-sm bg-gray-100 px-4 py-2 rounded-lg";
-        }
-    }
+    // 3. 強制讓系統設定回到鎖定狀態
+    isSystemEditing = true; 
+    toggleSystemEdit(); // 透過呼叫切換函式來重置為 false (鎖定)
 
-    // 切換目標分頁
+    // 4. 切換顯示分頁
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
     document.getElementById('sec-' + tab).classList.add('active');
     document.getElementById('current-title').innerText = title;
     
-    // 側邊欄收合
+    // 5. 關閉選單
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
     if (sidebar) sidebar.classList.add('-translate-x-full');
     if (overlay) overlay.classList.add('hidden');
-    
-    // 重新渲染，確保垃圾桶圖示狀態正確
+
+    // 6. 重新渲染畫面 (確保垃圾桶按鈕會根據新狀態消失)
     renderAll();
 }
 
@@ -276,37 +257,32 @@ function switchTab(tab, title) {
             }).join('');
         }
 
-// --- 1. 修改 apiPost：確保無論如何都會刷新畫面 ---
+// --- 2. 修改 apiPost：確保超時也會強制刷新畫面 ---
 async function apiPost(data) {
     const overlay = document.getElementById('loadingOverlay');
     overlay.classList.remove('hidden');
     
     data.key = adminKey;
     try {
-        const res = await fetch(GAS_URL, { 
-            method: 'POST', 
-            body: JSON.stringify(data),
-            // 設定較短的 timeout，若雲端太慢就改由 fetchData 補位
-        });
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // 成功：關閉動畫並重新讀取資料
+            // 操作成功：延遲一下讓 GAS 寫入完全，然後重抓資料
             setTimeout(() => {
                 overlay.classList.add('hidden');
                 fetchData(); 
-            }, 300);
+            }, 500);
         } else {
-            alert("❌ 失敗：" + result.message);
             overlay.classList.add('hidden');
+            alert("❌ 操作失敗：" + result.message);
         }
     } catch (e) {
-        // 重要：即使發生連線超時錯誤，也要強制執行 fetchData
-        // 因為 GAS 有時候會跑完但沒回傳，強制重整能確保看到最新狀態
-        console.log("觸發補償機制，強制刷新資料庫狀態");
+        // 補償機制：如果連線超時(Timeout)，但可能資料庫已經改了
+        console.warn("連線超時，啟動補償刷新");
         setTimeout(() => {
             overlay.classList.add('hidden');
-            fetchData(); 
+            fetchData(); // 強制刷新畫面以對齊最新資料
         }, 1000);
     }
 }
@@ -339,16 +315,17 @@ async function apiPost(data) {
         }
         function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }
         
-// --- 3. 系統設定解鎖/鎖定循環 ---
+// --- 1. 系統設定的循環開關 (修正回不去的問題) ---
 let isSystemEditing = false;
 function toggleSystemEdit() {
-    isSystemEditing = !isSystemEditing;
+    isSystemEditing = !isSystemEditing; // 切換狀態
     const readingInput = document.getElementById('conf-reading');
     const photoInput = document.getElementById('conf-photo');
     const saveBtn = document.getElementById('systemSaveBtn');
     const lockBtn = document.getElementById('systemLockBtn');
 
     if (isSystemEditing) {
+        // 進入編輯模式
         readingInput.disabled = false;
         photoInput.disabled = false;
         saveBtn.disabled = false;
@@ -356,9 +333,10 @@ function toggleSystemEdit() {
         photoInput.classList.remove('bg-gray-100', 'opacity-50');
         saveBtn.classList.replace('bg-gray-300', 'bg-emerald-800');
         saveBtn.classList.remove('cursor-not-allowed');
-        lockBtn.innerHTML = '<i class="fas fa-check-circle"></i> 結束編輯';
-        lockBtn.classList.add('bg-orange-500', 'text-white');
+        lockBtn.innerHTML = '<i class="fas fa-check-circle"></i> 結束並鎖定';
+        lockBtn.className = "text-sm bg-orange-500 text-white px-4 py-2 rounded-lg shadow-sm";
     } else {
+        // 回到一般模式 (鎖定)
         readingInput.disabled = true;
         photoInput.disabled = true;
         saveBtn.disabled = true;
@@ -367,7 +345,7 @@ function toggleSystemEdit() {
         saveBtn.classList.replace('bg-emerald-800', 'bg-gray-300');
         saveBtn.classList.add('cursor-not-allowed');
         lockBtn.innerHTML = '<i class="fas fa-lock"></i> 解除鎖定';
-        lockBtn.className = "text-sm bg-gray-100 px-4 py-2 rounded-lg";
+        lockBtn.className = "text-sm bg-gray-100 text-gray-600 px-4 py-2 rounded-lg border";
     }
 }       
     </script>

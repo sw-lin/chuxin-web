@@ -403,14 +403,20 @@ async function apiPost(data) {
             renderAll();
         }
         function renderAll() {
-            if(!cachedData) return;
-            document.getElementById('input-news').value = cachedData.news || "";
-            document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
-            document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
-            renderMembers(cachedData.users || []);
-            renderEvents(cachedData.calendar || []);
-            renderAttendanceOptions(); // 新增：渲染下拉選單
-        }
+         if(!cachedData) return;
+         document.getElementById('input-news').value = cachedData.news || "";
+         document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
+         document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
+    
+         renderMembers(cachedData.users || []);
+         renderEvents(cachedData.calendar || []);
+         renderAttendanceOptions(); // 這是原本就有的
+    
+    // === 加入這行：更新繳費項目的下拉選單 ===
+    if (typeof updatePaymentSelect === "function") {
+        updatePaymentSelect();
+    }
+}
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
         
@@ -691,26 +697,30 @@ function sendPaidToLine() {
     }
 }
 
-// 擴充 syncData 以處理下拉選單更新
-// 請找到您原本的 syncData 函式，在成功的區塊內加入渲染下拉選單的邏輯
 function updatePaymentSelect() {
     const select = document.getElementById('pay-item-select');
-    if (!select || !cachedData.payments) return;
+    if (!select) return;
     
-    // 取得所有不重複的繳費項目名稱
-    const items = [...new Set(cachedData.payments.map(p => p.itemTitle))];
+    // 取得繳費資料 (兼容 payments 或 payment 欄位)
+    const paymentData = cachedData.payments || cachedData.payment || [];
+    
+    // 提取所有不重複的項目名稱
+    const items = [...new Set(paymentData.map(p => p.itemTitle))].filter(it => it);
+    
     const currentVal = select.value;
-    
     select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
+    
     items.forEach(it => {
         const opt = document.createElement('option');
         opt.value = it;
         opt.innerText = it;
         select.appendChild(opt);
     });
-    if (items.includes(currentVal)) select.value = currentVal;
-    renderPaymentDetail();
-} 
+
+    if (currentVal && items.includes(currentVal)) {
+        select.value = currentVal;
+    }
+}
     
     </script>
 </body>

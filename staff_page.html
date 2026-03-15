@@ -406,6 +406,10 @@ async function apiPost(data) {
 function renderAll() {
     if (!cachedData) return;
     
+    // === 加入這行，然後按 F12 打開 Console 視窗看結果 ===
+    console.log("從雲端抓到的完整資料：", cachedData);
+    // ===============================================
+    
     // 更新新聞與設定
     if(document.getElementById('input-news')) document.getElementById('input-news').value = cachedData.news || "";
     if(document.getElementById('conf-reading')) document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";

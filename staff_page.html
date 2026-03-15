@@ -406,19 +406,24 @@ async function apiPost(data) {
 function renderAll() {
     if (!cachedData) return;
     
-    // 更新系統設定與快訊
-    if(document.getElementById('input-news')) document.getElementById('input-news').value = cachedData.news || "";
-    if(document.getElementById('conf-reading')) document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
-    if(document.getElementById('conf-photo')) document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
+    // 更新系統快訊與設定
+    const newsInput = document.getElementById('input-news');
+    if (newsInput) newsInput.value = cachedData.news || "";
     
-    // 渲染各個分頁
+    const readingInput = document.getElementById('conf-reading');
+    if (readingInput) readingInput.value = cachedData.config?.reading_folder_url || "";
+    
+    const photoInput = document.getElementById('conf-photo');
+    if (photoInput) photoInput.value = cachedData.config?.photo_gallery_url || "";
+
+    // 渲染原本的三大區塊
     renderMembers(cachedData.users || []);
     renderEvents(cachedData.calendar || []);
     renderAttendanceOptions(); 
 
-    // === 關鍵：在這裡啟動繳費選單更新 ===
-    updatePaymentSelect();
-    renderPaymentDetail(); 
+    // === 關鍵：在這裡加入繳費區的刷新指令 ===
+    updatePaymentSelect();  // 更新下拉選單
+    renderPaymentDetail();  // 更新名單列表
 }
         
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
@@ -705,23 +710,24 @@ function updatePaymentSelect() {
     const select = document.getElementById('pay-item-select');
     if (!select) return;
     
-    // 取得資料，並給予空陣列作為預設值
+    // 兼容處理：抓取 payments 或 payment 
     const paymentData = cachedData.payments || cachedData.payment || [];
     
-    // 取得所有不重複的項目名稱並過濾掉空值
+    // 取得所有不重複的項目名稱
     const items = [...new Set(paymentData.map(p => p.itemTitle))].filter(it => it);
     
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
     
-    if (items.length > 0) {
-        items.forEach(it => {
-            const opt = document.createElement('option');
-            opt.value = it;
-            opt.innerText = it;
-            select.appendChild(opt);
-        });
-        if (currentVal && items.includes(currentVal)) select.value = currentVal;
+    items.forEach(it => {
+        const opt = document.createElement('option');
+        opt.value = it;
+        opt.innerText = it;
+        select.appendChild(opt);
+    });
+
+    if (currentVal && items.includes(currentVal)) {
+        select.value = currentVal;
     }
 }
     

@@ -257,7 +257,6 @@ function switchTab(tab, title) {
             }).join('');
         }
 
-// --- 2. 修改 apiPost：確保超時也會強制刷新畫面 ---
 async function apiPost(data) {
     const overlay = document.getElementById('loadingOverlay');
     overlay.classList.remove('hidden');
@@ -268,21 +267,26 @@ async function apiPost(data) {
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // 操作成功：延遲一下讓 GAS 寫入完全，然後重抓資料
-            setTimeout(() => {
+            setTimeout(async () => {
                 overlay.classList.add('hidden');
-                fetchData(); 
+                await fetchData(); // 等待重新抓取並渲染完成
+                
+                // 如果是新增會員，自動捲動到底部
+                if (data.type === "add_member") {
+                    window.scrollTo({
+                        top: document.body.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
             }, 500);
         } else {
             overlay.classList.add('hidden');
-            alert("❌ 操作失敗：" + result.message);
+            alert("❌ 失敗：" + result.message);
         }
     } catch (e) {
-        // 補償機制：如果連線超時(Timeout)，但可能資料庫已經改了
-        console.warn("連線超時，啟動補償刷新");
         setTimeout(() => {
             overlay.classList.add('hidden');
-            fetchData(); // 強制刷新畫面以對齊最新資料
+            fetchData(); 
         }, 1000);
     }
 }
@@ -315,35 +319,30 @@ async function apiPost(data) {
         }
         function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }
         
-// --- 1. 系統設定的循環開關 (修正回不去的問題) ---
 let isSystemEditing = false;
 function toggleSystemEdit() {
-    isSystemEditing = !isSystemEditing; // 切換狀態
+    isSystemEditing = !isSystemEditing; 
     const readingInput = document.getElementById('conf-reading');
     const photoInput = document.getElementById('conf-photo');
-    const saveBtn = document.getElementById('systemSaveBtn');
+    const saveBtn = document.getElementById('systemSaveBtn'); // 確保您的 HTML ID 正確
     const lockBtn = document.getElementById('systemLockBtn');
 
     if (isSystemEditing) {
-        // 進入編輯模式
+        // 解鎖：允許編輯
         readingInput.disabled = false;
         photoInput.disabled = false;
-        saveBtn.disabled = false;
+        if(saveBtn) saveBtn.disabled = false;
         readingInput.classList.remove('bg-gray-100', 'opacity-50');
         photoInput.classList.remove('bg-gray-100', 'opacity-50');
-        saveBtn.classList.replace('bg-gray-300', 'bg-emerald-800');
-        saveBtn.classList.remove('cursor-not-allowed');
         lockBtn.innerHTML = '<i class="fas fa-check-circle"></i> 結束並鎖定';
         lockBtn.className = "text-sm bg-orange-500 text-white px-4 py-2 rounded-lg shadow-sm";
     } else {
-        // 回到一般模式 (鎖定)
+        // 鎖定：禁止編輯
         readingInput.disabled = true;
         photoInput.disabled = true;
-        saveBtn.disabled = true;
+        if(saveBtn) saveBtn.disabled = true;
         readingInput.classList.add('bg-gray-100', 'opacity-50');
         photoInput.classList.add('bg-gray-100', 'opacity-50');
-        saveBtn.classList.replace('bg-emerald-800', 'bg-gray-300');
-        saveBtn.classList.add('cursor-not-allowed');
         lockBtn.innerHTML = '<i class="fas fa-lock"></i> 解除鎖定';
         lockBtn.className = "text-sm bg-gray-100 text-gray-600 px-4 py-2 rounded-lg border";
     }

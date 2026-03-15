@@ -21,7 +21,11 @@
         .edit-mode-active .edit-only { display: block !important; }
     </style>
 </head>
-<body class="min-h-screen">
+
+<hr class="my-4">
+<button onclick="syncData()" class="w-full text-left p-4 flex items-center text-xl text-emerald-600 font-bold bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all">
+    <i class="fas fa-sync-alt mr-4 w-8"></i> 同步雲端資料
+</button><body class="min-h-screen">
 
     <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-[60] sidebar -translate-x-full">
         <div class="p-8">
@@ -707,27 +711,63 @@ function sendPaidToLine() {
 
 function updatePaymentSelect() {
     const select = document.getElementById('pay-item-select');
-    if (!select) return;
+    if (!select) {
+        console.error("找不到 ID 為 pay-item-select 的下拉選單！");
+        return;
+    }
     
-    // 兼容處理：抓取 payments 或 payment 
-    const paymentData = cachedData.payments || cachedData.payment || [];
-    
-    // 取得所有不重複的項目名稱
+    // 強制檢查資料來源
+    const paymentData = cachedData.payments || [];
+    console.log("正在準備下拉選單，資料筆數：", paymentData.length);
+
+    // 取得所有項目名稱
     const items = [...new Set(paymentData.map(p => p.itemTitle))].filter(it => it);
     
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
     
-    items.forEach(it => {
-        const opt = document.createElement('option');
-        opt.value = it;
-        opt.innerText = it;
-        select.appendChild(opt);
-    });
-
-    if (currentVal && items.includes(currentVal)) {
-        select.value = currentVal;
+    if (items.length > 0) {
+        items.forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it;
+            opt.text = it;
+            select.appendChild(opt);
+        });
+        if (currentVal && items.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    } else {
+        console.warn("沒有找到任何項目名稱，所以選單是空的");
     }
+}
+
+function syncData() {
+    // 檢查是否有設定 GAS 網址
+    if (!typeof GAS_URL !== 'undefined' || !GAS_URL) {
+        return alert("錯誤：未設定 GAS_URL");
+    }
+
+    console.log("正在同步雲端資料...");
+
+    fetch(GAS_URL + "?type=all")
+        .then(res => res.json())
+        .then(data => {
+            // 1. 將資料存入快取
+            cachedData = data;
+            console.log("資料同步成功：", data);
+
+            // 2. 執行所有畫面的渲染 (這是最重要的步驟)
+            if (typeof renderAll === "function") renderAll();
+            
+            // 3. 特別啟動繳費下拉選單更新
+            updatePaymentSelect(); 
+
+            alert("同步完成！已抓取到繳費項目。");
+        })
+        .catch(err => {
+            console.error("同步失敗：", err);
+            alert("同步失敗，請檢查網路連接");
+        });
 }
     
     </script>

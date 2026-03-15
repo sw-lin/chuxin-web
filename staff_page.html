@@ -774,5 +774,59 @@ function syncData() {
 }
 // --- 真正的 syncData 定義結束 ---    
     </script>
-</body>
+    <script>
+(function() {
+    console.log("🛠️ 補丁已啟動");
+
+    window.syncData = function() {
+        if (!GAS_URL) return alert("❌ 尚未設定 GAS_URL");
+        
+        const btn = event ? event.currentTarget : null;
+        if (btn && btn.tagName === 'BUTTON') {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 同步中...';
+            btn.disabled = true;
+        }
+
+        fetch(GAS_URL + "?type=all")
+            .then(res => res.json())
+            .then(data => {
+                window.cachedData = data;
+                console.log("✅ 資料同步成功：", data);
+                
+                // 刷新所有畫面
+                if (typeof renderAll === "function") renderAll();
+                
+                // 強制執行選單填充
+                updatePaymentSelect();
+                
+                alert("✅ 同步完成！");
+            })
+            .catch(err => alert("❌ 同步失敗：" + err))
+            .finally(() => {
+                if (btn && btn.tagName === 'BUTTON') {
+                    btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> 同步資料';
+                    btn.disabled = false;
+                }
+            });
+    };
+
+    window.updatePaymentSelect = function() {
+        const select = document.getElementById('pay-item-select');
+        if (!select) return;
+
+        const payments = (window.cachedData && window.cachedData.payments) ? window.cachedData.payments : [];
+        const items = [...new Set(payments.map(p => p.itemTitle))].filter(it => it);
+        
+        console.log("正在重新填充選單，內容為：", items);
+
+        select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
+        items.forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it;
+            opt.text = it;
+            select.appendChild(opt);
+        });
+    };
+})();
+</script></body>
 </html>

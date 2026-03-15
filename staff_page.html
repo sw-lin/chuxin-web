@@ -406,24 +406,19 @@ async function apiPost(data) {
 function renderAll() {
     if (!cachedData) return;
     
-    // 更新系統快訊與設定
-    const newsInput = document.getElementById('input-news');
-    if (newsInput) newsInput.value = cachedData.news || "";
-    
-    const readingInput = document.getElementById('conf-reading');
-    if (readingInput) readingInput.value = cachedData.config?.reading_folder_url || "";
-    
-    const photoInput = document.getElementById('conf-photo');
-    if (photoInput) photoInput.value = cachedData.config?.photo_gallery_url || "";
+    // 更新新聞與設定
+    if(document.getElementById('input-news')) document.getElementById('input-news').value = cachedData.news || "";
+    if(document.getElementById('conf-reading')) document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
+    if(document.getElementById('conf-photo')) document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
 
-    // 渲染原本的三大區塊
+    // 渲染會員、活動、出席
     renderMembers(cachedData.users || []);
     renderEvents(cachedData.calendar || []);
     renderAttendanceOptions(); 
 
-    // === 關鍵：在這裡加入繳費區的刷新指令 ===
-    updatePaymentSelect();  // 更新下拉選單
-    renderPaymentDetail();  // 更新名單列表
+    // === 重點：呼叫繳費區更新 ===
+    updatePaymentSelect();  // 讓下拉選單出現項目
+    renderPaymentDetail();  // 讓清單畫出來
 }
         
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }

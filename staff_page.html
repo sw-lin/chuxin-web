@@ -14,72 +14,94 @@
         .tab-content.active { display: block; }
         .menu-item.active { background-color: #064E3B; color: white; border-radius: 12px; }
         .edit-mode .show-on-edit { display: block !important; }
-        /* 增加字體大小 */
-        .text-huge { font-size: 1.2rem; }
+        /* 針對長輩閱讀的大字級設定 */
+        .text-huge { font-size: 1.3rem; line-height: 1.6; }
+        .btn-huge { font-size: 1.4rem; padding: 1rem 1.5rem; }
+        .list-card { background: white; padding: 1.5rem; border-radius: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="min-h-screen">
 
     <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-[60] sidebar -translate-x-full">
         <div class="p-8">
-            <h2 class="text-2xl font-bold text-emerald-900 mb-10">管理導覽</h2>
+            <h2 class="text-3xl font-bold text-emerald-900 mb-10">功能選單</h2>
             <nav class="space-y-4">
-                <button onclick="switchTab('news')" class="menu-item active w-full text-left p-5 flex items-center text-xl border border-transparent"><i class="fas fa-bullhorn mr-4"></i>公告欄</button>
-                <button onclick="switchTab('line')" class="menu-item w-full text-left p-5 flex items-center text-xl border border-transparent"><i class="fab fa-line mr-4"></i>Line 訊息</button>
-                <button onclick="switchTab('members')" class="menu-item w-full text-left p-5 flex items-center text-xl border border-transparent"><i class="fas fa-users mr-4"></i>會員名冊</button>
-                <button onclick="switchTab('calendar')" class="menu-item w-full text-left p-5 flex items-center text-xl border border-transparent"><i class="fas fa-calendar-alt mr-4"></i>行事曆</button>
-                <button onclick="switchTab('system')" class="menu-item w-full text-left p-5 flex items-center text-xl border border-transparent"><i class="fas fa-cog mr-4"></i>系統設定</button>
+                <button onclick="switchTab('news', '公告欄管理')" class="menu-item active w-full text-left p-5 flex items-center text-xl"><i class="fas fa-bullhorn mr-4"></i>公告欄</button>
+                <button onclick="switchTab('line', 'Line 訊息發送')" class="menu-item w-full text-left p-5 flex items-center text-xl"><i class="fab fa-line mr-4"></i>Line 訊息</button>
+                <button onclick="switchTab('members', '會員名冊管理')" class="menu-item w-full text-left p-5 flex items-center text-xl"><i class="fas fa-users mr-4"></i>會員名冊</button>
+                <button onclick="switchTab('calendar', '行事曆管理')" class="menu-item w-full text-left p-5 flex items-center text-xl"><i class="fas fa-calendar-alt mr-4"></i>行事曆</button>
+                <button onclick="switchTab('system', '系統設定管理')" class="menu-item w-full text-left p-5 flex items-center text-xl"><i class="fas fa-cog mr-4"></i>系統設定</button>
             </nav>
         </div>
     </div>
 
     <div id="overlay" onclick="toggleMenu()" class="fixed inset-0 bg-black/50 z-[50] hidden"></div>
 
-    <header class="bg-white border-b sticky top-0 z-40 px-6 h-20 flex items-center justify-between">
+    <header class="bg-white border-b sticky top-0 z-40 px-6 h-24 flex items-center justify-between">
         <div class="flex items-center">
-            <button onclick="toggleMenu()" class="text-emerald-900 text-3xl mr-4"><i class="fas fa-bars"></i></button>
+            <button onclick="toggleMenu()" class="text-emerald-900 text-4xl mr-5 p-2"><i class="fas fa-bars"></i></button>
             <span id="current-title" class="font-bold text-2xl text-emerald-900">公告欄管理</span>
         </div>
-        <button id="editMasterBtn" onclick="toggleEditMode()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-full font-bold shadow-inner">
+        <button id="editMasterBtn" onclick="toggleEditMode()" class="bg-gray-100 text-gray-700 px-8 py-3 rounded-full font-bold text-xl shadow-inner border border-gray-200">
             <i class="fas fa-edit"></i> 編輯模式
         </button>
     </header>
 
-    <main class="max-w-4xl mx-auto p-6 md:p-10">
+    <main class="max-w-5xl mx-auto p-6 md:p-10" id="main-content">
         
         <section id="sec-news" class="tab-content active">
-            <div class="bg-white p-8 rounded-[2rem] shadow-sm border">
-                <textarea id="input-news" rows="6" class="w-full bg-gray-50 p-6 rounded-3xl text-xl outline-none border-2 border-transparent focus:border-emerald-200" placeholder="輸入公告內容..."></textarea>
-                <button onclick="updateNews()" class="w-full mt-6 bg-emerald-800 text-white py-5 rounded-2xl font-bold text-2xl">更新所有手機公告</button>
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border">
+                <h3 class="text-xl font-bold mb-4 text-emerald-800">首頁公告文字：</h3>
+                <textarea id="input-news" rows="5" class="w-full bg-gray-50 p-6 rounded-3xl text-2xl outline-none border-2 border-transparent focus:border-emerald-200" placeholder="在此輸入公告..."></textarea>
+                <button onclick="updateNews()" class="w-full mt-6 bg-emerald-800 text-white py-6 rounded-2xl font-bold text-2xl shadow-lg active:scale-95 transition">更新手機公告</button>
             </div>
         </section>
 
         <section id="sec-line" class="tab-content">
-            <div class="bg-white p-8 rounded-[2rem] shadow-sm border">
-                <textarea id="line-msg" rows="12" class="w-full bg-blue-50/50 p-6 rounded-3xl text-xl outline-none border-2 border-transparent focus:border-blue-400" placeholder="輸入要發送的 Line 訊息內容..."></textarea>
-                <button onclick="saveLineMsg()" class="w-full mt-6 bg-[#06C755] text-white py-5 rounded-2xl font-bold text-2xl shadow-lg">發送 Line 訊息</button>
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border">
+                <h3 class="text-xl font-bold mb-4 text-emerald-800">編輯 Line 訊息 (支援換行)：</h3>
+                <textarea id="line-msg" rows="12" class="w-full bg-blue-50/50 p-6 rounded-3xl text-2xl outline-none border-2 border-transparent focus:border-blue-400" placeholder="輸入訊息..."></textarea>
+                <button onclick="saveLineMsg()" class="w-full mt-6 bg-[#06C755] text-white py-6 rounded-2xl font-bold text-2xl shadow-lg active:scale-95 transition">發送 Line 群組訊息</button>
             </div>
         </section>
 
-        <section id="sec-members" class="tab-content">
-            <div id="add-member-bar" class="bg-orange-50 p-8 rounded-[2rem] border-2 border-orange-200 hidden show-on-edit mb-6">
-                <div class="space-y-4">
-                    <input type="text" id="mName" placeholder="姓名" class="w-full p-4 rounded-xl text-xl border">
-                    <input type="tel" id="mPhone" placeholder="手機" class="w-full p-4 rounded-xl text-xl border">
-                    <input type="email" id="mEmail" placeholder="Email (可留空)" class="w-full p-4 rounded-xl text-xl border">
-                    <button onclick="addMember()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-xl">確認新增會員</button>
+        <section id="sec-members" class="tab-content space-y-6">
+            <div id="add-member-bar" class="bg-orange-50 p-8 rounded-[2rem] border-2 border-orange-200 hidden show-on-edit">
+                <h4 class="text-2xl font-bold text-orange-800 mb-6">新增會員 (密碼預設 1234)</h4>
+                <div class="grid grid-cols-1 gap-4">
+                    <input type="text" id="mName" placeholder="姓名" class="w-full p-5 rounded-2xl text-2xl border border-orange-200">
+                    <input type="tel" id="mPhone" placeholder="手機" class="w-full p-5 rounded-2xl text-2xl border border-orange-200">
+                    <input type="email" id="mEmail" placeholder="Email" class="w-full p-5 rounded-2xl text-2xl border border-orange-200">
+                    <button onclick="addMember()" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-bold text-2xl">加入名冊</button>
                 </div>
             </div>
-            <div id="memberList" class="space-y-3 text-huge"></div>
+            <div id="memberList" class="space-y-4">
+                </div>
         </section>
 
-        <section id="sec-calendar" class="tab-content"><div id="eventList" class="space-y-3"></div></section>
+        <section id="sec-calendar" class="tab-content space-y-6">
+            <div id="add-event-bar" class="bg-emerald-50 p-8 rounded-[2rem] border-2 border-emerald-200 hidden show-on-edit">
+                <div class="grid grid-cols-1 gap-4">
+                    <input type="date" id="calDate" class="w-full p-5 rounded-2xl text-2xl border">
+                    <input type="text" id="calTitle" placeholder="活動名稱" class="w-full p-5 rounded-2xl text-2xl border">
+                    <button onclick="addEvent()" class="w-full bg-emerald-800 text-white py-5 rounded-2xl font-bold text-2xl">發布新活動</button>
+                </div>
+            </div>
+            <div id="eventList" class="space-y-4"></div>
+        </section>
+
         <section id="sec-system" class="tab-content">
-             <div class="bg-white p-8 rounded-[2rem] border space-y-4">
-                <input type="text" id="conf-reading" placeholder="課程連結" class="w-full p-4 border rounded-xl">
-                <input type="text" id="conf-photo" placeholder="剪影連結" class="w-full p-4 border rounded-xl">
-                <button onclick="saveSystemConfig()" class="w-full bg-gray-800 text-white py-4 rounded-xl font-bold">更新系統連結</button>
-             </div>
+            <div class="bg-white p-8 rounded-[2.5rem] border space-y-8">
+                <div>
+                    <label class="text-lg font-bold text-gray-500 block mb-3">課程資料夾連結 (Google Drive)</label>
+                    <input type="text" id="conf-reading" class="w-full p-5 rounded-2xl text-xl border bg-gray-50">
+                </div>
+                <div>
+                    <label class="text-lg font-bold text-gray-500 block mb-3">活動剪影連結 (Google Photo)</label>
+                    <input type="text" id="conf-photo" class="w-full p-5 rounded-2xl text-xl border bg-gray-50">
+                </div>
+                <button onclick="saveSystemConfig()" class="w-full bg-gray-800 text-white py-6 rounded-2xl font-bold text-2xl shadow-lg">儲存並同步連結</button>
+            </div>
         </section>
 
     </main>
@@ -92,9 +114,10 @@
 
         window.onload = async () => {
             adminKey = sessionStorage.getItem('adminKey') || prompt("請輸入金鑰：");
-            if (adminKey) sessionStorage.setItem('adminKey', adminKey);
-            else location.href = 'member_zone.html';
-            fetchData();
+            if (adminKey) {
+                sessionStorage.setItem('adminKey', adminKey);
+                fetchData();
+            } else { location.href = 'member_zone.html'; }
         };
 
         function toggleMenu() {
@@ -102,10 +125,16 @@
             document.getElementById('overlay').classList.toggle('hidden');
         }
 
-        function switchTab(tab) {
+        // 修改分頁切換：更新左上角標題文字
+        function switchTab(tab, title) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
             document.getElementById('sec-' + tab).classList.add('active');
+            
+            // 標題顯示當前分頁名稱
+            document.getElementById('current-title').innerText = title;
+            
+            // 找到點擊的按鈕並設為 active
             event.currentTarget.classList.add('active');
             toggleMenu();
         }
@@ -113,28 +142,39 @@
         function toggleEditMode() {
             isEditMode = !isEditMode;
             const btn = document.getElementById('editMasterBtn');
-            btn.innerHTML = isEditMode ? '<i class="fas fa-check"></i> 完成' : '<i class="fas fa-edit"></i> 編輯模式';
-            btn.className = isEditMode ? "bg-orange-500 text-white px-6 py-2 rounded-full font-bold shadow-lg" : "bg-gray-200 text-gray-700 px-6 py-2 rounded-full font-bold shadow-inner";
-            document.getElementById('main-content').classList.toggle('edit-mode');
+            const main = document.getElementById('main-content');
+            if (isEditMode) {
+                btn.innerHTML = '<i class="fas fa-check"></i> 完成編輯';
+                btn.classList.replace('bg-gray-100', 'bg-orange-500');
+                btn.classList.replace('text-gray-700', 'text-white');
+                main.classList.add('edit-mode');
+            } else {
+                btn.innerHTML = '<i class="fas fa-edit"></i> 編輯模式';
+                btn.classList.replace('bg-orange-500', 'bg-gray-100');
+                btn.classList.replace('text-white', 'text-gray-700');
+                main.classList.remove('edit-mode');
+            }
             renderAll();
         }
 
         async function apiPost(data) {
-            data.key = adminKey; // 對接修正後的 GAS params.key
+            data.key = adminKey; // 確保與 GAS 的 SECRET_ADMIN_KEY 對接
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    alert("✅ 成功同步至雲端資料庫");
+                    alert("✅ 雲端資料同步成功");
                     fetchData();
                 } else { alert("❌ 失敗：" + result.message); }
-            } catch (e) { alert("連線異常，請檢查 GAS 權限設定"); }
+            } catch (e) { alert("指令已送出，請稍後確認資料庫。"); fetchData(); }
         }
 
         async function fetchData() {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            cachedData = await res.json();
-            renderAll();
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                cachedData = await res.json();
+                renderAll();
+            } catch (e) { console.error("資料載入錯誤", e); }
         }
 
         function renderAll() {
@@ -143,26 +183,65 @@
             document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
             document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
             
-            // 名冊渲染：姓名 | 電話 | Email
+            renderMembers(cachedData.users || []);
+            renderEvents(cachedData.calendar || []);
+        }
+
+        // 名冊：姓名 | 電話 | Email 一行大字
+        function renderMembers(users) {
             const list = document.getElementById('memberList');
-            list.innerHTML = (cachedData.users || []).map(u => `
-                <div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm">
-                    <div class="flex flex-wrap items-center">
-                        <span class="font-bold text-emerald-900 mr-4">${u.name}</span>
-                        <span class="text-gray-500 font-mono mr-4">${u.phone}</span>
-                        <span class="text-base text-blue-400 font-mono">${u.email || ''}</span>
+            list.innerHTML = users.map(u => `
+                <div class="list-card flex justify-between items-center">
+                    <div class="flex flex-wrap items-center text-huge">
+                        <span class="font-bold text-emerald-900 mr-5">${u.name}</span>
+                        <span class="text-gray-500 font-mono mr-5">${u.phone}</span>
+                        <span class="text-lg text-blue-500">${u.email || ''}</span>
                     </div>
-                    <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-2"><i class="fas fa-trash-alt"></i></button>
+                    <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-3 text-2xl">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
             `).join('');
         }
 
+        function renderEvents(events) {
+            const list = document.getElementById('eventList');
+            list.innerHTML = [...events].reverse().map(ev => `
+                <div class="list-card flex justify-between items-center">
+                    <div class="text-huge">
+                        <div class="text-sm font-bold text-emerald-600 font-mono">${ev.dateText}</div>
+                        <div class="font-bold text-emerald-900">${ev.title}</div>
+                    </div>
+                    <button onclick="deleteEvent('${ev.dateText}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-3 text-2xl">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 功能對接
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
-        function addMember() { apiPost({ type: "add_member", name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, email: document.getElementById('mEmail').value, password: "1234" }); }
-        function deleteMember(phone) { if(confirm("確定刪除？")) apiPost({ type: "delete_member", currentPhone: phone }); }
+        function addMember() { 
+            const name = document.getElementById('mName').value;
+            const phone = document.getElementById('mPhone').value;
+            if(!name || !phone) return alert("請填寫姓名與電話");
+            apiPost({ type: "add_member", name, phone, email: document.getElementById('mEmail').value, password: "1234" }); 
+        }
+        function deleteMember(phone) { if(confirm("確定要刪除這位會員嗎？")) apiPost({ type: "delete_member", currentPhone: phone }); }
+        function addEvent() { 
+            const date = document.getElementById('calDate').value;
+            const title = document.getElementById('calTitle').value;
+            if(!date || !title) return alert("請填寫日期與標題");
+            apiPost({ type: "add_event", date, title }); 
+        }
+        function deleteEvent(date) { if(confirm("確定刪除此活動？")) apiPost({ type: "delete_event", date }); }
         function saveSystemConfig() { 
-            apiPost({ type: "update_config", reading_folder_url: document.getElementById('conf-reading').value, photo_gallery_url: document.getElementById('conf-photo').value }); 
+            apiPost({ 
+                type: "update_config", 
+                reading_folder_url: document.getElementById('conf-reading').value, 
+                photo_gallery_url: document.getElementById('conf-photo').value 
+            }); 
         }
     </script>
 </body>

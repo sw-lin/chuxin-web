@@ -402,21 +402,25 @@ async function apiPost(data) {
             cachedData = await res.json();
             renderAll();
         }
-        function renderAll() {
-         if(!cachedData) return;
-         document.getElementById('input-news').value = cachedData.news || "";
-         document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
-         document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
+        
+function renderAll() {
+    if (!cachedData) return;
     
-         renderMembers(cachedData.users || []);
-         renderEvents(cachedData.calendar || []);
-         renderAttendanceOptions(); // 這是原本就有的
+    // 更新系統設定與快訊
+    if(document.getElementById('input-news')) document.getElementById('input-news').value = cachedData.news || "";
+    if(document.getElementById('conf-reading')) document.getElementById('conf-reading').value = cachedData.config?.reading_folder_url || "";
+    if(document.getElementById('conf-photo')) document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
     
-    // === 加入這行：更新繳費項目的下拉選單 ===
-    if (typeof updatePaymentSelect === "function") {
-        updatePaymentSelect();
-    }
+    // 渲染各個分頁
+    renderMembers(cachedData.users || []);
+    renderEvents(cachedData.calendar || []);
+    renderAttendanceOptions(); 
+
+    // === 關鍵：在這裡啟動繳費選單更新 ===
+    updatePaymentSelect();
+    renderPaymentDetail(); 
 }
+        
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
         
@@ -701,24 +705,23 @@ function updatePaymentSelect() {
     const select = document.getElementById('pay-item-select');
     if (!select) return;
     
-    // 取得繳費資料 (兼容 payments 或 payment 欄位)
+    // 取得資料，並給予空陣列作為預設值
     const paymentData = cachedData.payments || cachedData.payment || [];
     
-    // 提取所有不重複的項目名稱
+    // 取得所有不重複的項目名稱並過濾掉空值
     const items = [...new Set(paymentData.map(p => p.itemTitle))].filter(it => it);
     
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
     
-    items.forEach(it => {
-        const opt = document.createElement('option');
-        opt.value = it;
-        opt.innerText = it;
-        select.appendChild(opt);
-    });
-
-    if (currentVal && items.includes(currentVal)) {
-        select.value = currentVal;
+    if (items.length > 0) {
+        items.forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it;
+            opt.innerText = it;
+            select.appendChild(opt);
+        });
+        if (currentVal && items.includes(currentVal)) select.value = currentVal;
     }
 }
     

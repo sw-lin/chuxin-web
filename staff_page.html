@@ -130,7 +130,44 @@
     <div id="attendance-detail-list" class="space-y-3">
         </div>
 </section>
+
         
+        <section id="payments" class="tab-content">
+        <div class="flex justify-between items-center mb-6">
+        <h1 class="text-4xl font-bold text-emerald-900">繳費管理</h1>
+        <button onclick="toggleSectionEdit('payments')" class="text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50">
+            <i class="fas fa-lock"></i> 編輯模式
+        </button>
+    </div>
+
+    <div class="edit-only bg-orange-100 p-6 rounded-[2rem] mb-6 border-2 border-orange-200 hidden">
+        <div class="flex flex-col gap-4">
+            <input type="text" id="payItemTitle" placeholder="項目名稱 (例如：113年會費)" class="p-4 rounded-xl text-xl w-full">
+            <div class="flex gap-4">
+                <button onclick="initPayment('未繳')" class="flex-1 bg-gray-500 text-white py-4 rounded-xl font-bold text-lg">預設：所有人未繳</button>
+                <button onclick="initPayment('已繳')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg">預設：所有人已繳</button>
+            </div>
+            <p class="text-orange-700 text-sm italic">* 初始化會將所有會員加入此繳費項目。</p>
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <select id="pay-item-select" onchange="renderPaymentDetail()" class="w-full p-6 rounded-2xl border-none shadow-sm text-2xl bg-white font-bold text-emerald-900">
+            <option value="">-- 請選擇繳費項目 --</option>
+        </select>
+    </div>
+
+    <div id="payment-summary" class="hidden mb-6 bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex justify-between items-center">
+        <div>
+            <div class="text-gray-500">已繳人數：<span id="paid-count" class="font-bold text-emerald-900">0</span> 人</div>
+        </div>
+        <button onclick="sendPaidToLine()" class="bg-[#00B900] text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg active:scale-95 transition-all">
+            <i class="fab fa-line mr-2"></i>發送已繳名單
+        </button>
+    </div>
+
+    <div id="payment-detail-list" class="space-y-3"></div>
+</section>        
         
         <section id="sec-payments" class="tab-content"><div class="text-center p-20 text-gray-400 text-2xl">繳費紀錄功能載入中...</div></section>
         <section id="sec-signup" class="tab-content"><div class="text-center p-20 text-gray-400 text-2xl">活動報名功能載入中...</div></section>
@@ -527,7 +564,154 @@ function renderAttendanceDetail() {
             </div>
         `).join('');
     }
-}      
+}   
+
+        // 初始化繳費項目 (建立所有人的資料)
+async function initPayment(defaultStatus) {
+    const title = document.getElementById('payItemTitle').value.trim();
+    if (!title) return alert("請輸入項目名稱");
+    if (!confirm(`確定要為所有會員建立「${title}」紀錄，且預設為 ${defaultStatus} 嗎？`)) return;
+
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerText = "處理中...";
+
+    try {
+        // 我們將針對 cachedData.users 裡的每個人送出初始化指令
+        const tasks = cachedData.users.map(user => {
+            return fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    type: 'update_payment',
+                    key: sessionStorage.getItem('adminKey'),
+                    date: new Date().toISOString().split('T')[0],
+                    itemTitle: title,
+                    phone: user.phone,
+                    name: user.name,
+                    status: defaultStatus
+                })
+            });
+        });
+
+        await Promise.all(tasks);
+        alert("✅ 繳費項目建立完成！");
+        document.getElementById('payItemTitle').value = ""; // 清空
+        syncData(); // 重新同步資料庫
+    } catch (e) {
+        alert("連線失敗");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = `預設：所有人${defaultStatus}`;
+    }
+}
+
+// 渲染繳費清單
+function renderPaymentDetail() {
+    const selectedItem = document.getElementById('pay-item-select').value;
+    const listContainer = document.getElementById('payment-detail-list');
+    const summary = document.getElementById('payment-summary');
+    
+    if (!selectedItem || !cachedData.payments) {
+        listContainer.innerHTML = "";
+        summary.classList.add('hidden');
+        return;
+    }
+
+    // 過濾該項目的資料
+    const filtered = cachedData.payments.filter(p => p.itemTitle === selectedItem);
+    const paidCount = filtered.filter(p => p.status === '已繳').length;
+
+    summary.classList.remove('hidden');
+    document.getElementById('paid-count').innerText = paidCount;
+
+    listContainer.innerHTML = filtered.map(p => {
+        const isPaid = p.status === '已繳';
+        // 判斷當前是否為編輯模式
+        const isEditMode = !document.getElementById('payments').querySelector('.edit-only').classList.contains('hidden');
+        
+        return `
+            <div class="list-card flex justify-between items-center ${isPaid ? 'bg-white' : 'bg-gray-50'} p-6 rounded-2xl border ${isPaid ? 'border-emerald-200' : 'border-gray-200'}">
+                <div class="text-huge">
+                    <span class="font-bold ${isPaid ? 'text-emerald-900' : 'text-gray-400'}">${p.name}</span>
+                </div>
+                <div>
+                    <button onclick="${isEditMode ? `updateSinglePayment('${p.itemTitle}', '${p.phone}', '${p.name}', '${p.status}')` : ''}" 
+                            class="px-6 py-2 rounded-full font-bold text-lg transition-all ${isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'} ${isEditMode ? 'cursor-pointer hover:scale-105' : 'cursor-default'}">
+                        ${p.status}
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 單筆狀態切換 (已繳 <-> 未繳)
+async function updateSinglePayment(itemTitle, phone, name, currentStatus) {
+    const newStatus = currentStatus === '已繳' ? '未繳' : '已繳';
+    try {
+        await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'update_payment',
+                key: sessionStorage.getItem('adminKey'),
+                itemTitle: itemTitle,
+                phone: phone,
+                name: name,
+                status: newStatus
+            })
+        });
+        syncData(); // 重新讀取顯示新狀態
+    } catch (e) {
+        alert("切換失敗");
+    }
+}
+
+// 發送 LINE 名單 (僅限已繳人員)
+function sendPaidToLine() {
+    const selectedItem = document.getElementById('pay-item-select').value;
+    const paidList = cachedData.payments
+        .filter(p => p.itemTitle === selectedItem && p.status === '已繳')
+        .map(p => p.name);
+
+    if (paidList.length === 0) return alert("目前尚無人繳費");
+
+    const message = `💰 【${selectedItem}】繳費完成確認\n━━━━━━━━━━━━\n` +
+                    paidList.join('、') + `\n━━━━━━━━━━━━\n總計：${paidList.length} 位`;
+
+    if (confirm(`發送已繳費名單（${paidList.length}人）至 LINE？`)) {
+        // 使用您現有的 send_line 功能
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'send_line',
+                key: sessionStorage.getItem('adminKey'),
+                message: message
+            })
+        }).then(() => alert("✅ 已成功送出"));
+    }
+}
+
+// 擴充 syncData 以處理下拉選單更新
+// 請找到您原本的 syncData 函式，在成功的區塊內加入渲染下拉選單的邏輯
+function updatePaymentSelect() {
+    const select = document.getElementById('pay-item-select');
+    if (!select || !cachedData.payments) return;
+    
+    // 取得所有不重複的繳費項目名稱
+    const items = [...new Set(cachedData.payments.map(p => p.itemTitle))];
+    const currentVal = select.value;
+    
+    select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
+    items.forEach(it => {
+        const opt = document.createElement('option');
+        opt.value = it;
+        opt.innerText = it;
+        select.appendChild(opt);
+    });
+    if (items.includes(currentVal)) select.value = currentVal;
+    renderPaymentDetail();
+} 
+    
     </script>
 </body>
 </html>

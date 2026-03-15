@@ -247,7 +247,14 @@
                 const result = await res.text();
                 if (result === "WRONG_KEY") { alert("授權失效"); location.replace('member_zone.html'); return; }
                 if (result === "SUCCESS" || result === "OK") { 
-                    alert("✅ 執行成功"); 
+                    
+                    // 根據傳送的類型 (data.type) 來決定彈出的文字
+            let msg = "操作成功";
+            if (data.type === "update_news") msg = "✅ 首頁公告已更新！";
+            if (data.type === "send_line") msg = "🚀 Line 訊息已推播至群組！";
+            if (data.type === "add_member") msg = "👤 新會員已加入名冊！";
+            
+                     alert(msg);
                     if (successCallback) successCallback(); // 執行清空欄位等後續動作
                     await fetchData(); 
                 } else { alert("錯誤：" + result); }

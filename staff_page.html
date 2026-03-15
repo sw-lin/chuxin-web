@@ -6,6 +6,7 @@
     <title>管理中樞 | 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #F4F7F5; }
@@ -50,14 +51,7 @@
             <i class="fas fa-edit"></i> 編輯模式
         </button>
     </div>
-    <div id="qrModal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-6">
-    <div class="bg-white p-8 rounded-[3rem] max-w-sm w-full text-center">
-        <h3 id="qrTitle" class="text-2xl font-bold text-emerald-900 mb-6">活動報到</h3>
-        <div id="qrcode" class="flex justify-center mb-6"></div>
-        <p class="text-gray-500 mb-6 text-lg">請學員使用手機掃描上方條碼</p>
-        <button onclick="closeQR()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-xl">關閉視窗</button>
-    </div>
-</div> 
+    
         
 </header>
 
@@ -120,6 +114,14 @@
 
     </main>
 
+    <div id="qrModal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-6">
+    <div class="bg-white p-8 rounded-[3rem] max-w-sm w-full text-center">
+        <h3 id="qrTitle" class="text-2xl font-bold text-emerald-900 mb-6">活動報到</h3>
+        <div id="qrcode" class="flex justify-center mb-6"></div>
+        <p class="text-gray-500 mb-6 text-lg">請學員使用手機掃描上方條碼</p>
+        <button onclick="closeQR()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-xl">關閉視窗</button>
+    </div>
+</div>     
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let adminKey = "";
@@ -298,26 +300,33 @@
         }
         // --- QR Code 顯示邏輯 ---
     function showQR(date, title) {
-        document.getElementById('qrModal').classList.remove('hidden');
-        document.getElementById('qrTitle').innerText = title + " | 報到";
-        
-        // 清除舊的 QR Code
-        document.getElementById('qrcode').innerHTML = "";
-        
-        // 產生新的 QR Code (內容包含日期與活動名稱)
-        new QRCode(document.getElementById("qrcode"), {
-            text: "CHECKIN:" + date, // 這邊可以根據您會員端的判斷邏輯調整內容
-            width: 256,
-            height: 256,
-            colorDark : "#064E3B",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-    }
+    // 顯示彈窗
+    const modal = document.getElementById('qrModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex'); // 確保使用 flex 居中
+    
+    document.getElementById('qrTitle').innerText = title + " | 報到";
+    
+    // 清除舊的 QR Code 內容
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = "";
+    
+    // 產生新 QR Code
+    new QRCode(qrContainer, {
+        text: "CHECKIN:" + date,
+        width: 256,
+        height: 256,
+        colorDark : "#064E3B",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+}
 
-    function closeQR() {
-        document.getElementById('qrModal').classList.add('hidden');
-    }        
+function closeQR() {
+    const modal = document.getElementById('qrModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
     </script>
 </body>
 </html>

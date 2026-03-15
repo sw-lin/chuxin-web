@@ -221,6 +221,78 @@ async function handleUpdateProfile() {
             } catch (e) {}
         }
 
+        // 修正後的 fetchData (加入自動重試機制)
+async function fetchData() {
+    try {
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        if (!res.ok) throw new Error("連線異常");
+        const data = await res.json();
+        allData = data;
+        
+        // 從 data.users 中重新更新目前登入者的資料
+        const updatedUser = data.users.find(u => u.phone === currentUser.phone);
+        if (updatedUser) {
+            currentUser = updatedUser;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+        
+        renderUI();
+    } catch (e) {
+        console.warn("連線失敗，1秒後自動重試...");
+        setTimeout(async () => {
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                allData = data;
+                renderUI();
+            } catch (err) {
+                // 若重試也失敗，僅在主畫面顯示小提示，不打斷使用者
+                console.error("無法同步最新資料");
+            }
+        }, 1000);
+    }
+}
+// 修正後的 UI 渲染 (讀取新的出席記錄格式)
+function renderUI() {
+    if (!allData || !currentUser) return;
+
+    // 1. 公告更新
+    if (document.getElementById('newsContent')) {
+        document.getElementById('newsContent').innerText = allData.news || "歡迎參加築心讀書會";
+    }
+
+    // 2. 出席紀錄統計 (使用 currentUser.attendLog)
+    const logs = currentUser.attendLog || [];
+    const events = allData.calendar || [];
+    const count = logs.length;
+    
+    const attendDisplay = document.getElementById('attendDisplay');
+    if (attendDisplay) {
+        attendDisplay.innerText = `${count} / ${events.length}`;
+    }
+
+    // 3. 渲染歷史紀錄清單
+    const historyList = document.getElementById('historyList');
+    if (historyList) {
+        // 由新到舊排列
+        historyList.innerHTML = [...events].reverse().map(ev => {
+            // 檢查該活動日期是否在會員的簽到記錄中
+            const isAttended = logs.includes(ev.dateText);
+            return `
+                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                    <div>
+                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                        <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                    </div>
+                    <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    // 4. 更新遠端連結 (Config)
+    remoteConfig = allData.config || {};
+}
         function openRemoteLink(key) {
             if (remoteConfig[key]) window.open(remoteConfig[key], '_blank');
             else alert("尚未設定連結");

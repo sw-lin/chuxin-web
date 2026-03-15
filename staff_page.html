@@ -623,10 +623,20 @@ function sendPaidToLine() {
 window.switchTab = function(tab, title) {
     console.log("切換分頁至：", tab);
     
-    // 隱藏所有分頁
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    // --- 新增：切換分頁時，強制關閉所有編輯模式 (安全性考量) ---
+    document.body.classList.remove('edit-mode-active');
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.remove('active', 'edit-mode-active');
+        // 重設按鈕文字與顏色 (如果是橘色則變回預設)
+        const editBtn = c.querySelector('button[onclick*="toggleSectionEdit"]');
+        if (editBtn) {
+            editBtn.innerHTML = '<i class="fas fa-lock"></i> 編輯模式';
+            editBtn.className = 'text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50';
+        }
+    });
+    // ---------------------------------------------------
 
-    // 顯示目標分頁 (增加 ID 容錯)
+    // 顯示目標分頁
     let target = document.getElementById('sec-' + tab) || document.getElementById(tab);
     if (target) {
         target.classList.add('active');
@@ -638,8 +648,11 @@ window.switchTab = function(tab, title) {
     document.getElementById('current-title').innerText = title;
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
     
-    // 關閉側邊欄
-    toggleMenu(); 
+    // 關閉側邊欄選單 (手機版常用)
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    if (sidebar) sidebar.classList.add('-translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
     
     // 重新渲染資料
     if (typeof renderAll === "function") renderAll();

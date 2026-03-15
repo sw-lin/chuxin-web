@@ -177,6 +177,39 @@
             document.getElementById('overlay').classList.toggle('hidden');
         }
 
+        async function sendAttendanceToLine() {
+    const select = document.getElementById('event-select');
+    const eventTitle = select.options[select.selectedIndex].text;
+    const selectedDate = select.value;
+
+    const attendees = cachedData.attendance
+        .filter(a => a.eventId.includes(selectedDate) || a.timestamp.toString().includes(selectedDate))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+        .map(a => a.name);
+
+    if (attendees.length === 0) return alert("目前尚無簽到人員");
+
+    if (!confirm(`確定要將「${eventTitle}」名單發送至 LINE 嗎？`)) return;
+
+    const message = `📢 【${eventTitle}】出席確認\n` +
+                    `━━━━━━━━━━━━\n` +
+                    attendees.join('、') + `\n` +
+                    `━━━━━━━━━━━━\n` +
+                    `總計：${attendees.length} 位`;
+
+    const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            type: 'send_line',
+            key: sessionStorage.getItem('adminKey'),
+            message: message
+        })
+    });
+    
+    const result = await res.json();
+    if(result.result === "SUCCESS") alert("✅ 名單已傳送到 LINE！");
+    else alert("❌ 發送失敗");
+}
 // --- 3. 修改 switchTab：增加「換頁就歸位」邏輯 ---
 function switchTab(tab, title) {
     // 1. 關閉所有分頁的編輯狀態
@@ -329,7 +362,49 @@ async function apiPost(data) {
         }
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
-        function addMember() { apiPost({ type: "add_member", name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, email: document.getElementById('mEmail').value, password: "1234" }); }
+        
+        async function addMember() {
+    const name = document.getElementById('newName').value.trim();
+    const phone = document.getElementById('newPhone').value.trim();
+    const email = document.getElementById('newEmail').value.trim(); // 確保抓到 Email 欄位
+    
+    if (!name || !phone) {
+        alert("請輸入姓名與電話");
+        return;
+    }
+
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'add_member',
+                key: sessionStorage.getItem('adminKey'),
+                name: name,
+                phone: phone,
+                email: email, // 傳送 Email 給 GAS
+                password: phone.slice(-4), 
+                role: '學員'
+            })
+        });
+
+        const result = await res.json();
+
+        if (result.result === "SUCCESS") {
+            alert("✅ 新增成功！");
+            // --- 成功後清空欄位 ---
+            document.getElementById('newName').value = "";
+            document.getElementById('newPhone').value = "";
+            document.getElementById('newEmail').value = "";
+            syncData(); // 重新整理列表
+        } else {
+            alert("新增失敗：" + (result.message || ""));
+        }
+    } catch (e) {
+        alert("連線失敗，請檢查網路");
+    }
+}        
+        
+        
         function deleteMember(p) { if(confirm("刪除？")) apiPost({ type: "delete_member", currentPhone: p }); }
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); }
         function deleteEvent(d) { if(confirm("刪除？")) apiPost({ type: "delete_event", date: d }); }
@@ -399,13 +474,19 @@ function renderAttendanceDetail() {
         return;
     }
 
-    // 篩選出該場活動的簽到記錄
-    // 注意：這裡比對的是您 Attendance 表中的 EventID 或相關日期欄位
-    const filtered = cachedData.attendance.filter(a => a.eventId.includes(selectedDate) || a.timestamp.toString().includes(selectedDate));
+    // 篩選並進行「時間發生順序」排序 (由舊到新)
+    const filtered = cachedData.attendance
+        .filter(a => a.eventId.includes(selectedDate) || a.timestamp.toString().includes(selectedDate))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // 排序關鍵
 
     summary.classList.remove('hidden');
     document.getElementById('attend-count').innerText = filtered.length;
     document.getElementById('attend-date').innerText = selectedDate;
+    
+    // 顯示一鍵發送按鈕 (如果還沒顯示的話)
+    if(document.getElementById('attendance-actions')) {
+        document.getElementById('attendance-actions').classList.remove('hidden');
+    }
 
     if (filtered.length === 0) {
         listContainer.innerHTML = '<div class="text-center p-10 text-gray-400 text-xl">目前尚無人簽到</div>';
@@ -416,11 +497,10 @@ function renderAttendanceDetail() {
                     <span class="font-bold text-emerald-900 w-32">${a.name}</span>
                     <span class="text-gray-400 font-mono text-lg">${new Date(a.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 簽到</span>
                 </div>
-                <div class="text-gray-400 text-sm">${a.phone}</div>
             </div>
         `).join('');
     }
-}        
+}       
     </script>
 </body>
 </html>

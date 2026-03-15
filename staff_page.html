@@ -159,7 +159,11 @@
             <option value="">-- 請選擇繳費項目 --</option>
         </select>
     </div>
-
+<div class="mb-4">
+    <button onclick="sendPaymentToLine()" class="w-full bg-[#00B900] text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#009900] transition-all">
+        <i class="fab fa-line mr-2"></i> 發送繳費名單至 LINE
+    </button>
+</div> 
     <div id="payment-list-container" class="space-y-4">
         <div class="text-center p-20 text-gray-400 text-2xl">請選擇繳費項目</div>
     </div>
@@ -751,7 +755,33 @@ window.updateSinglePayment = async function(itemTitle, phone, name, currentStatu
     } catch (e) {
         alert("網路連線失敗");
     }
-};      
+};  
+window.sendPaymentToLine = function() {
+    const select = document.getElementById('pay-item-select');
+    const title = select.value;
+    if (!title) return alert("請先選擇要發送的項目");
+
+    // 過濾出該項目的已繳費名單
+    const paidUsers = (window.cachedData && window.cachedData.payments) ? 
+                      window.cachedData.payments.filter(p => p.itemTitle === title && p.status === '已繳') : [];
+
+    if (paidUsers.length === 0) return alert("目前尚無已繳費人員");
+
+    // --- 訊息格式優化：鏢頭跳行，人名跳行 ---
+    // \n 代表換行
+    let message = `【${title}】\n✅ 已繳費名單更新：\n------------------\n`;
+    
+    paidUsers.forEach((p, index) => {
+        message += `${index + 1}. ${p.name}\n`; // 每一位人名後面都換行
+    });
+
+    message += `\n總計：${paidUsers.length} 位`;
+
+    // 使用 LINE Notify 或 LINE URL Scheme
+    // 這裡使用最直接的 liff/line 傳送方式 (視您的 LINE 設定而定)
+    const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(message)}`;
+    window.open(lineUrl, '_blank');
+};        
 </script>
 </body>
 </html>

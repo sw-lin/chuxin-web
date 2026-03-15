@@ -550,44 +550,45 @@ function renderAttendanceDetail() {
     }
 }   
 
-        // 初始化繳費項目 (建立所有人的資料)
-async function initPayment(defaultStatus) {
+// 強化版：初始化繳費項目
+window.initPayment = async function(defaultStatus) {
     const title = document.getElementById('payItemTitle').value.trim();
     if (!title) return alert("請輸入項目名稱");
-    if (!confirm(`確定要為所有會員建立「${title}」紀錄，且預設為 ${defaultStatus} 嗎？`)) return;
+    
+    // 關鍵：確保抓得到會員名冊
+    const users = window.cachedData ? window.cachedData.users : [];
+    if (users.length === 0) return alert("❌ 錯誤：目前名冊中沒有會員，請先同步資料！");
+
+    if (!confirm(`確定要為 ${users.length} 位會員建立「${title}」紀錄嗎？`)) return;
 
     const btn = event.target;
     btn.disabled = true;
     btn.innerText = "處理中...";
 
     try {
-        // 我們將針對 cachedData.users 裡的每個人送出初始化指令
-        const tasks = cachedData.users.map(user => {
-            return fetch(GAS_URL, {
+        // 使用序列化處理，避免同時對 GAS 發出過多請求
+        for (const user of users) {
+            await fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify({
                     type: 'update_payment',
                     key: sessionStorage.getItem('adminKey'),
-                    date: new Date().toISOString().split('T')[0],
                     itemTitle: title,
                     phone: user.phone,
                     name: user.name,
                     status: defaultStatus
                 })
             });
-        });
-
-        await Promise.all(tasks);
+        }
         alert("✅ 繳費項目建立完成！");
-        document.getElementById('payItemTitle').value = ""; // 清空
-        syncData(); // 重新同步資料庫
+        syncData(); // 重新同步
     } catch (e) {
         alert("連線失敗");
     } finally {
         btn.disabled = false;
         btn.innerText = `預設：所有人${defaultStatus}`;
     }
-}
+};
 
 // 渲染繳費清單
 function renderPaymentDetail() {
@@ -629,11 +630,14 @@ function renderPaymentDetail() {
     }).join('');
 }
 
-// 單筆狀態切換 (已繳 <-> 未繳)
-async function updateSinglePayment(itemTitle, phone, name, currentStatus) {
+// 強化版：切換繳費狀態
+window.updateSinglePayment = async function(itemTitle, phone, name, currentStatus) {
     const newStatus = currentStatus === '已繳' ? '未繳' : '已繳';
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay) overlay.classList.remove('hidden');
+
     try {
-        await fetch(GAS_URL, {
+        const res = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'update_payment',
@@ -644,11 +648,16 @@ async function updateSinglePayment(itemTitle, phone, name, currentStatus) {
                 status: newStatus
             })
         });
-        syncData(); // 重新讀取顯示新狀態
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            await syncData(); // 成功後自動刷新畫面
+        }
     } catch (e) {
-        alert("切換失敗");
+        alert("切換失敗，請檢查網路");
+    } finally {
+        if(overlay) overlay.classList.add('hidden');
     }
-}
+};
 
 // 發送 LINE 名單 (僅限已繳人員)
 function sendPaidToLine() {

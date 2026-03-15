@@ -102,7 +102,30 @@
             <div id="eventList" class="space-y-3"></div>
         </section>
 
-        <section id="sec-attendance" class="tab-content"><div class="text-center p-20 text-gray-400 text-2xl">出席紀錄功能載入中...</div></section>
+        <section id="sec-attendance" class="tab-content">
+    <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border mb-6">
+        <h3 class="text-xl font-bold text-emerald-800 mb-4">查看出席名單：</h3>
+        <select id="event-select" onchange="renderAttendanceDetail()" class="w-full p-5 rounded-2xl text-2xl border bg-gray-50 outline-none focus:border-emerald-300">
+            <option value="">-- 請選擇一場活動 --</option>
+        </select>
+    </div>
+
+    <div id="attendance-summary" class="hidden grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 text-center">
+            <p class="text-gray-500">已簽到人數</p>
+            <p id="attend-count" class="text-4xl font-bold text-emerald-800">0</p>
+        </div>
+        <div class="bg-orange-50 p-6 rounded-3xl border border-orange-100 text-center">
+            <p class="text-gray-500">活動日期</p>
+            <p id="attend-date" class="text-2xl font-bold text-orange-800">--</p>
+        </div>
+    </div>
+
+    <div id="attendance-detail-list" class="space-y-3">
+        </div>
+</section>
+        
+        
         <section id="sec-payments" class="tab-content"><div class="text-center p-20 text-gray-400 text-2xl">繳費紀錄功能載入中...</div></section>
         <section id="sec-signup" class="tab-content"><div class="text-center p-20 text-gray-400 text-2xl">活動報名功能載入中...</div></section>
 
@@ -302,6 +325,7 @@ async function apiPost(data) {
             document.getElementById('conf-photo').value = cachedData.config?.photo_gallery_url || "";
             renderMembers(cachedData.users || []);
             renderEvents(cachedData.calendar || []);
+            renderAttendanceOptions(); // 新增：渲染下拉選單
         }
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
@@ -346,7 +370,57 @@ function toggleSystemEdit() {
         lockBtn.innerHTML = '<i class="fas fa-lock"></i> 解除鎖定';
         lockBtn.className = "text-sm bg-gray-100 text-gray-600 px-4 py-2 rounded-lg border";
     }
-}       
+} 
+function renderAttendanceOptions() {
+    const select = document.getElementById('event-select');
+    if (!select) return;
+    
+    // 只取出行事曆中有舉辦過的活動 (按時間由新到舊排)
+    const events = [...cachedData.calendar].sort((a,b) => new Date(b.dateText) - new Date(a.dateText));
+    
+    // 保留第一個預設選項，其餘清空
+    select.innerHTML = '<option value="">-- 請選擇一場活動 --</option>';
+    events.forEach(ev => {
+        const opt = document.createElement('option');
+        opt.value = ev.dateText; // 這裡暫時用日期當辨識，若有 ID 更好
+        opt.innerText = `${ev.dateText} ${ev.title}`;
+        select.appendChild(opt);
+    });
+}
+
+function renderAttendanceDetail() {
+    const selectedDate = document.getElementById('event-select').value;
+    const listContainer = document.getElementById('attendance-detail-list');
+    const summary = document.getElementById('attendance-summary');
+    
+    if (!selectedDate) {
+        listContainer.innerHTML = "";
+        summary.classList.add('hidden');
+        return;
+    }
+
+    // 篩選出該場活動的簽到記錄
+    // 注意：這裡比對的是您 Attendance 表中的 EventID 或相關日期欄位
+    const filtered = cachedData.attendance.filter(a => a.eventId.includes(selectedDate) || a.timestamp.toString().includes(selectedDate));
+
+    summary.classList.remove('hidden');
+    document.getElementById('attend-count').innerText = filtered.length;
+    document.getElementById('attend-date').innerText = selectedDate;
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = '<div class="text-center p-10 text-gray-400 text-xl">目前尚無人簽到</div>';
+    } else {
+        listContainer.innerHTML = filtered.map(a => `
+            <div class="list-card flex justify-between items-center bg-white p-6 rounded-2xl border">
+                <div class="text-huge flex items-center">
+                    <span class="font-bold text-emerald-900 w-32">${a.name}</span>
+                    <span class="text-gray-400 font-mono text-lg">${new Date(a.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 簽到</span>
+                </div>
+                <div class="text-gray-400 text-sm">${a.phone}</div>
+            </div>
+        `).join('');
+    }
+}        
     </script>
 </body>
 </html>

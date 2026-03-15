@@ -38,14 +38,19 @@
     <div id="overlay" onclick="toggleMenu()" class="fixed inset-0 bg-black/50 z-[50] hidden"></div>
 
     <header class="bg-white border-b sticky top-0 z-40 px-6 h-24 flex items-center justify-between">
-        <div class="flex items-center">
-            <button onclick="toggleMenu()" class="text-emerald-900 text-4xl mr-5 p-2"><i class="fas fa-bars"></i></button>
-            <span id="current-title" class="font-bold text-2xl text-emerald-900">公告欄管理</span>
-        </div>
+    <div class="flex items-center">
+        <button onclick="toggleMenu()" class="text-emerald-900 text-4xl mr-5 p-2"><i class="fas fa-bars"></i></button>
+        <span id="current-title" class="font-bold text-2xl text-emerald-900">公告欄管理</span>
+    </div>
+    <div class="flex items-center space-x-3">
+        <a href="member_zone.html" class="bg-emerald-50 text-emerald-700 px-6 py-3 rounded-full font-bold text-lg border border-emerald-200 hover:bg-emerald-100">
+            <i class="fas fa-external-link-alt mr-1"></i> 會員頁面
+        </a>
         <button id="editMasterBtn" onclick="toggleEditMode()" class="bg-gray-100 text-gray-700 px-8 py-3 rounded-full font-bold text-xl shadow-inner border border-gray-200">
             <i class="fas fa-edit"></i> 編輯模式
         </button>
-    </header>
+    </div>
+</header>
 
     <main class="max-w-5xl mx-auto p-6 md:p-10" id="main-content">
         
@@ -196,20 +201,31 @@
 
         // 名冊：姓名 | 電話 | Email 一行大字
         function renderMembers(users) {
-            const list = document.getElementById('memberList');
-            list.innerHTML = users.map(u => `
-                <div class="list-card flex justify-between items-center">
-                    <div class="flex flex-wrap items-center text-huge">
-                        <span class="font-bold text-emerald-900 mr-5">${u.name}</span>
-                        <span class="text-gray-500 font-mono mr-5">${u.phone}</span>
-                        <span class="text-lg text-blue-500">${u.email || ''}</span>
+        const list = document.getElementById('memberList');
+        list.innerHTML = users.map(u => {
+            // 1. 電話補 0 邏輯
+            let displayPhone = String(u.phone).trim();
+            if (displayPhone.length === 9 && displayPhone.startsWith('9')) {
+                displayPhone = '0' + displayPhone;
+            }
+
+            return `
+                <div class="list-card flex justify-between items-center bg-white p-6 mb-3 rounded-2xl border">
+                    <div class="flex items-center text-huge w-full">
+                        <div class="font-bold text-emerald-900" style="min-width: 120px;">${u.name}</div>
+                        
+                        <div class="text-gray-500 font-mono" style="min-width: 180px;">${displayPhone}</div>
+                        
+                        <div class="text-lg text-blue-500 truncate" style="flex: 1;">${u.email || ''}</div>
                     </div>
-                    <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-3 text-2xl">
+                    
+                    <button onclick="deleteMember('${u.phone}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-3 text-2xl ml-4">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
-            `).join('');
-        }
+            `;
+        }).join('');
+    }
 
         function renderEvents(events) {
             const list = document.getElementById('eventList');

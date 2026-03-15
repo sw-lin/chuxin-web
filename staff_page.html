@@ -263,37 +263,42 @@ async function sendAttendanceToLine() {
         alert("連線失敗");
     }
 }
-// --- 3. 修改 switchTab：增加「換頁就歸位」邏輯 ---
 function switchTab(tab, title) {
-    // 1. 關閉所有分頁的編輯狀態
+    console.log("正在切換至分頁：", tab);
+
+    // 1. 隱藏所有分頁
     document.querySelectorAll('.tab-content').forEach(c => {
         c.classList.remove('active', 'edit-mode-active');
     });
 
-    // 2. 恢復所有「編輯開關」按鈕到初始狀態
-    document.querySelectorAll('[id^="sec-"] button').forEach(btn => {
-        if (btn.innerText.includes('編輯')) {
-            btn.innerHTML = '<i class="fas fa-lock"></i> 編輯開關';
-            btn.className = "text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50";
-        }
-    });
+    // 2. 顯示目標分頁 (增加防呆檢查)
+    // 優先嘗試 sec-tab，如果找不到就嘗試 tab 本身
+    let targetId = 'sec-' + tab;
+    let targetSec = document.getElementById(targetId);
+    
+    // 如果 sec-payments 找不到，就找 payments
+    if (!targetSec) {
+        targetId = tab;
+        targetSec = document.getElementById(targetId);
+    }
 
-    // 3. 強制讓系統設定回到鎖定狀態
-    isSystemEditing = true; 
-    toggleSystemEdit(); // 透過呼叫切換函式來重置為 false (鎖定)
+    if (targetSec) {
+        targetSec.classList.add('active');
+    } else {
+        console.error("❌ 找不到目標分頁 ID:", targetId);
+    }
 
-    // 4. 切換顯示分頁
+    // 3. 更新標題與側邊欄狀態
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-    document.getElementById('sec-' + tab).classList.add('active');
     document.getElementById('current-title').innerText = title;
     
-    // 5. 關閉選單
+    // 4. 關閉選單
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
     if (sidebar) sidebar.classList.add('-translate-x-full');
     if (overlay) overlay.classList.add('hidden');
 
-    // 6. 重新渲染畫面 (確保垃圾桶按鈕會根據新狀態消失)
+    // 5. 重新渲染畫面
     renderAll();
 }
 

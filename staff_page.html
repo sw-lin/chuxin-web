@@ -709,21 +709,17 @@ function sendPaidToLine() {
     }
 }
 
+
 function updatePaymentSelect() {
     const select = document.getElementById('pay-item-select');
-    if (!select) {
-        console.error("找不到 ID 為 pay-item-select 的下拉選單！");
-        return;
-    }
-    
-    // 強制檢查資料來源
-    const paymentData = cachedData.payments || [];
-    console.log("正在準備下拉選單，資料筆數：", paymentData.length);
+    if (!select) return;
 
-    // 取得所有項目名稱
+    // 確保有資料可以抓
+    const paymentData = cachedData.payments || [];
+    
+    // 提取不重複的項目
     const items = [...new Set(paymentData.map(p => p.itemTitle))].filter(it => it);
     
-    const currentVal = select.value;
     select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
     
     if (items.length > 0) {
@@ -733,43 +729,52 @@ function updatePaymentSelect() {
             opt.text = it;
             select.appendChild(opt);
         });
-        if (currentVal && items.includes(currentVal)) {
-            select.value = currentVal;
-        }
+        console.log("選單已更新項目：", items);
     } else {
-        console.warn("沒有找到任何項目名稱，所以選單是空的");
+        console.warn("目前沒有繳費項目資料");
     }
-}
-
+}   
+        
+// --- 真正的 syncData 定義開始 ---
 function syncData() {
-    // 檢查是否有設定 GAS 網址
-    if (!typeof GAS_URL !== 'undefined' || !GAS_URL) {
-        return alert("錯誤：未設定 GAS_URL");
+    // 1. 檢查網址 (請確認你程式碼上方 GAS_URL 有填寫)
+    if (!GAS_URL) return alert("❌ 錯誤：請在程式碼上方填入您的 GAS 網址！");
+
+    // 2. 抓取按鈕顯示狀態
+    const btn = event ? event.currentTarget : null;
+    const originalText = (btn && btn.tagName === 'BUTTON') ? btn.innerHTML : '同步資料';
+    if (btn && btn.tagName === 'BUTTON') {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 同步中...';
+        btn.disabled = true;
     }
 
-    console.log("正在同步雲端資料...");
+    console.log("開始同步雲端資料...");
 
+    // 3. 執行抓取
     fetch(GAS_URL + "?type=all")
         .then(res => res.json())
         .then(data => {
-            // 1. 將資料存入快取
             cachedData = data;
-            console.log("資料同步成功：", data);
-
-            // 2. 執行所有畫面的渲染 (這是最重要的步驟)
-            if (typeof renderAll === "function") renderAll();
+            console.log("✅ 同步成功：", data);
             
-            // 3. 特別啟動繳費下拉選單更新
-            updatePaymentSelect(); 
-
-            alert("同步完成！已抓取到繳費項目。");
+            // 4. 更新畫面
+            if (typeof renderAll === "function") renderAll(); 
+            updatePaymentSelect(); // 這行就是讓下拉選單活過來的關鍵
+            
+            alert("✅ 資料同步完成！");
         })
         .catch(err => {
-            console.error("同步失敗：", err);
-            alert("同步失敗，請檢查網路連接");
+            console.error("❌ 同步失敗：", err);
+            alert("❌ 同步失敗，請檢查網址或網路");
+        })
+        .finally(() => {
+            if (btn && btn.tagName === 'BUTTON') {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         });
 }
-    
+// --- 真正的 syncData 定義結束 ---    
     </script>
 </body>
 </html>

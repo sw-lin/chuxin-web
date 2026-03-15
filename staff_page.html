@@ -136,22 +136,21 @@
 </section>
 
         
-        <section id="payments" class="tab-content">
-        <div class="flex justify-between items-center mb-6">
+<section id="sec-payments" class="tab-content">
+    <div class="flex justify-between items-center mb-6">
         <h1 class="text-4xl font-bold text-emerald-900">繳費管理</h1>
-        <button onclick="toggleSectionEdit('payments')" class="text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50">
+        <button onclick="toggleSectionEdit('sec-payments')" class="text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50">
             <i class="fas fa-lock"></i> 編輯模式
         </button>
     </div>
 
-    <div class="edit-only bg-orange-100 p-6 rounded-[2rem] mb-6 border-2 border-orange-200 hidden">
+    <div class="edit-only bg-orange-100 p-6 rounded-[2rem] mb-6 border-2 border-orange-200">
         <div class="flex flex-col gap-4">
-            <input type="text" id="payItemTitle" placeholder="項目名稱 (例如：113年會費)" class="p-4 rounded-xl text-xl w-full">
+            <input type="text" id="payItemTitle" placeholder="項目名稱 (例如：115年會費)" class="p-4 rounded-xl text-xl w-full">
             <div class="flex gap-4">
                 <button onclick="initPayment('未繳')" class="flex-1 bg-gray-500 text-white py-4 rounded-xl font-bold text-lg">預設：所有人未繳</button>
                 <button onclick="initPayment('已繳')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg">預設：所有人已繳</button>
             </div>
-            <p class="text-orange-700 text-sm italic">* 初始化會將所有會員加入此繳費項目。</p>
         </div>
     </div>
 
@@ -161,17 +160,10 @@
         </select>
     </div>
 
-    <div id="payment-summary" class="hidden mb-6 bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex justify-between items-center">
-        <div>
-            <div class="text-gray-500">已繳人數：<span id="paid-count" class="font-bold text-emerald-900">0</span> 人</div>
-        </div>
-        <button onclick="sendPaidToLine()" class="bg-[#00B900] text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg active:scale-95 transition-all">
-            <i class="fab fa-line mr-2"></i>發送已繳名單
-        </button>
+    <div id="payment-list-container" class="space-y-4">
+        <div class="text-center p-20 text-gray-400 text-2xl">請選擇繳費項目</div>
     </div>
-
-    <div id="payment-detail-list" class="space-y-3"></div>
-</section>        
+</section>       
         
 
         <section id="sec-system" class="tab-content">
@@ -682,11 +674,13 @@ window.updatePaymentSelect = function() {
     console.log("選單已更新：", items);
 };
 // 強化版：渲染繳費名單 (沒日期也能跑)
+// 1. 渲染名單 (對應 HTML 的 payment-list-container)
 window.renderPaymentDetail = function() {
     const select = document.getElementById('pay-item-select');
-    const title = select.value;
     const container = document.getElementById('payment-list-container');
-    if (!container) return;
+    if (!select || !container) return;
+
+    const title = select.value;
     if (!title) {
         container.innerHTML = '<div class="text-center p-20 text-gray-400 text-2xl">請選擇繳費項目</div>';
         return;
@@ -695,17 +689,22 @@ window.renderPaymentDetail = function() {
     const payments = (window.cachedData && window.cachedData.payments) ? 
                      window.cachedData.payments.filter(p => p.itemTitle === title) : [];
 
-    let html = `<div class="space-y-4">`;
+    if (payments.length === 0) {
+        container.innerHTML = '<div class="text-center p-20 text-gray-400 text-2xl">此項目尚無名單，請先執行初始化</div>';
+        return;
+    }
+
+    let html = "";
     payments.forEach(p => {
-        // 容錯處理：如果沒日期，顯示 "尚未更新"
+        const isPaid = p.status === '已繳';
         const dateStr = p.date ? p.date.toString().split('T')[0] : "尚未更新";
-        const statusClass = p.status === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
+        const statusClass = isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
         
         html += `
-            <div class="list-card flex justify-between items-center p-6 bg-white rounded-2xl shadow-sm">
+            <div class="list-card flex justify-between items-center p-6 bg-white rounded-2xl shadow-sm border mb-4">
                 <div>
                     <div class="text-2xl font-bold text-emerald-900">${p.name}</div>
-                    <div class="text-gray-500">${dateStr}</div>
+                    <div class="text-gray-400 text-sm">${dateStr}</div>
                 </div>
                 <button onclick="updateSinglePayment('${p.itemTitle}', '${p.phone}', '${p.name}', '${p.status}')" 
                         class="px-8 py-3 rounded-xl font-bold text-xl transition-all ${statusClass}">
@@ -713,26 +712,26 @@ window.renderPaymentDetail = function() {
                 </button>
             </div>`;
     });
-    html += `</div>`;
     container.innerHTML = html;
 };
 
-// 強化版：切換狀態 (確保 adminKey 有傳出去)
+// 2. 更新狀態 (增加編輯模式強制檢查)
 window.updateSinglePayment = async function(itemTitle, phone, name, currentStatus) {
-    // 檢查是否開啟編輯模式
-    if (!document.body.classList.contains('edit-mode-active')) {
-        return alert("請先開啟右上角的『編輯模式』才能修改狀態！");
+    // 檢查目前分頁是否處於編輯模式
+    const sec = document.getElementById('sec-payments');
+    if (!sec.classList.contains('edit-mode-active')) {
+        return alert("請先開啟右上角的『編輯模式』！");
     }
 
     const newStatus = currentStatus === '已繳' ? '未繳' : '已繳';
-    const key = sessionStorage.getItem('adminKey'); // 取得你的管理員密鑰
+    const key = sessionStorage.getItem('adminKey');
 
     try {
         const res = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'update_payment',
-                key: key, 
+                key: key,
                 itemTitle: itemTitle,
                 phone: phone,
                 name: name,
@@ -741,20 +740,18 @@ window.updateSinglePayment = async function(itemTitle, phone, name, currentStatu
         });
         const result = await res.json();
         if (result.result === "SUCCESS") {
-            // 修改成功後，直接更新本地資料，不用重新整理網頁，速度更快
+            // 直接更新緩存資料，達成「秒跳狀態」
             const target = window.cachedData.payments.find(p => p.itemTitle === itemTitle && p.phone === phone);
             if (target) {
                 target.status = newStatus;
-                target.date = new Date().toISOString(); // 自動補上今日日期
+                target.date = new Date().toISOString();
             }
-            renderPaymentDetail(); // 重新畫出清單
-        } else {
-            alert("❌ 修改失敗：" + result.message);
+            renderPaymentDetail();
         }
     } catch (e) {
-        alert("連線失敗，請檢查網路");
+        alert("網路連線失敗");
     }
-};        
+};      
 </script>
 </body>
 </html>

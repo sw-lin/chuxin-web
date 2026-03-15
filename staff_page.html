@@ -50,6 +50,15 @@
             <i class="fas fa-edit"></i> 編輯模式
         </button>
     </div>
+    <div id="qrModal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-6">
+    <div class="bg-white p-8 rounded-[3rem] max-w-sm w-full text-center">
+        <h3 id="qrTitle" class="text-2xl font-bold text-emerald-900 mb-6">活動報到</h3>
+        <div id="qrcode" class="flex justify-center mb-6"></div>
+        <p class="text-gray-500 mb-6 text-lg">請學員使用手機掃描上方條碼</p>
+        <button onclick="closeQR()" class="w-full bg-emerald-800 text-white py-4 rounded-2xl font-bold text-xl">關閉視窗</button>
+    </div>
+</div> 
+        
 </header>
 
     <main class="max-w-5xl mx-auto p-6 md:p-10" id="main-content">
@@ -229,17 +238,38 @@
 
         function renderEvents(events) {
             const list = document.getElementById('eventList');
-            list.innerHTML = [...events].reverse().map(ev => `
-                <div class="list-card flex justify-between items-center">
-                    <div class="text-huge">
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 取得今天凌晨的時間點用於比較
+
+        // 1. 排序邏輯：由舊到新 (越早發生排上面)
+        const sortedEvents = [...events].sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
+
+        list.innerHTML = sortedEvents.map(ev => {
+            const evDate = new Date(ev.dateText);
+            // 2. 判斷是否為「今天」或「以前」的活動
+            const canShowQR = evDate <= today;
+
+            return `
+                <div class="list-card flex justify-between items-center bg-white p-6 mb-3 rounded-2xl border">
+                    <div class="text-huge flex-1">
                         <div class="text-sm font-bold text-emerald-600 font-mono">${ev.dateText}</div>
                         <div class="font-bold text-emerald-900">${ev.title}</div>
                     </div>
-                    <button onclick="deleteEvent('${ev.dateText}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-3 text-2xl">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    
+                    <div class="flex items-center space-x-3">
+                        ${canShowQR ? `
+                            <button onclick="showQR('${ev.dateText}', '${ev.title}')" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-lg shadow-md hover:bg-blue-700">
+                                <i class="fas fa-qrcode mr-2"></i> 報到碼
+                            </button>
+                        ` : ''}
+                        
+                        <button onclick="deleteEvent('${ev.dateText}')" class="text-gray-300 hover:text-red-500 hidden show-on-edit p-3 text-2xl">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
-            `).join('');
+            `;
+        }).join('');
         }
 
         // 功能對接
@@ -266,6 +296,28 @@
                 photo_gallery_url: document.getElementById('conf-photo').value 
             }); 
         }
+        // --- QR Code 顯示邏輯 ---
+    function showQR(date, title) {
+        document.getElementById('qrModal').classList.remove('hidden');
+        document.getElementById('qrTitle').innerText = title + " | 報到";
+        
+        // 清除舊的 QR Code
+        document.getElementById('qrcode').innerHTML = "";
+        
+        // 產生新的 QR Code (內容包含日期與活動名稱)
+        new QRCode(document.getElementById("qrcode"), {
+            text: "CHECKIN:" + date, // 這邊可以根據您會員端的判斷邏輯調整內容
+            width: 256,
+            height: 256,
+            colorDark : "#064E3B",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+
+    function closeQR() {
+        document.getElementById('qrModal').classList.add('hidden');
+    }        
     </script>
 </body>
 </html>

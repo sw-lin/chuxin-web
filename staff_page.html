@@ -263,44 +263,7 @@ async function sendAttendanceToLine() {
         alert("連線失敗");
     }
 }
-function switchTab(tab, title) {
-    console.log("正在切換至分頁：", tab);
 
-    // 1. 隱藏所有分頁
-    document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.remove('active', 'edit-mode-active');
-    });
-
-    // 2. 顯示目標分頁 (增加防呆檢查)
-    // 優先嘗試 sec-tab，如果找不到就嘗試 tab 本身
-    let targetId = 'sec-' + tab;
-    let targetSec = document.getElementById(targetId);
-    
-    // 如果 sec-payments 找不到，就找 payments
-    if (!targetSec) {
-        targetId = tab;
-        targetSec = document.getElementById(targetId);
-    }
-
-    if (targetSec) {
-        targetSec.classList.add('active');
-    } else {
-        console.error("❌ 找不到目標分頁 ID:", targetId);
-    }
-
-    // 3. 更新標題與側邊欄狀態
-    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-    document.getElementById('current-title').innerText = title;
-    
-    // 4. 關閉選單
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    if (sidebar) sidebar.classList.add('-translate-x-full');
-    if (overlay) overlay.classList.add('hidden');
-
-    // 5. 重新渲染畫面
-    renderAll();
-}
 
         // --- 針對特定分頁的編輯開關 ---
         function toggleSectionEdit(sectionId) {
@@ -712,124 +675,70 @@ function sendPaidToLine() {
     }
 }
 
-
-function updatePaymentSelect() {
-    const select = document.getElementById('pay-item-select');
-    if (!select) {
-        console.error("找不到 ID: pay-item-select");
-        return;
-    }
-    
-    // 確保抓取到 payments 資料
-    const paymentData = cachedData.payments || [];
-    console.log("繳費資料筆數：", paymentData.length);
-
-    // 取得所有不重複項目
-    const items = [...new Set(paymentData.map(p => p.itemTitle))].filter(it => it);
-    console.log("可選項目：", items);
-    
-    const currentVal = select.value;
-    select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
-    
-    if (items.length > 0) {
-        items.forEach(it => {
-            const opt = document.createElement('option');
-            opt.value = it;
-            opt.text = it;
-            select.appendChild(opt);
-        });
-        // 恢復之前的選擇
-        if (currentVal && items.includes(currentVal)) {
-            select.value = currentVal;
-        }
-    } else {
-        console.warn("目前沒有任何繳費項目資料可供顯示");
-    }
-}
         
-// --- 真正的 syncData 定義開始 ---
-function syncData() {
-    // 檢查 GAS_URL 是否存在
-    if (typeof GAS_URL === 'undefined' || !GAS_URL) {
-        return alert("❌ 錯誤：未設定 GAS_URL");
+    
+    </script>
+    <script>
+// --- 全域唯一正確邏輯區 ---
+
+// 切換分頁邏輯
+window.switchTab = function(tab, title) {
+    console.log("切換分頁至：", tab);
+    
+    // 隱藏所有分頁
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    // 顯示目標分頁 (增加 ID 容錯)
+    let target = document.getElementById('sec-' + tab) || document.getElementById(tab);
+    if (target) {
+        target.classList.add('active');
+    } else {
+        console.error("找不到分頁 ID:", tab);
     }
 
-    console.log("正在同步雲端資料...");
+    // 更新標題與側邊欄
+    document.getElementById('current-title').innerText = title;
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    
+    // 關閉側邊欄
+    toggleMenu(); 
+    
+    // 重新渲染資料
+    if (typeof renderAll === "function") renderAll();
+};
 
+// 同步資料邏輯
+window.syncData = function() {
+    if (!GAS_URL) return alert("未設定 GAS_URL");
+    console.log("強效同步中...");
     fetch(GAS_URL + "?type=all")
         .then(res => res.json())
         .then(data => {
-            cachedData = data;
-            console.log("資料同步成功：", data);
-
-            // 執行原本就有的渲染
-            if (typeof renderAll === "function") renderAll();
-            
-            // --- 關鍵步驟：更新繳費下拉選單 ---
-            updatePaymentSelect(); 
-
+            window.cachedData = data;
+            console.log("✅ 同步成功");
+            updatePaymentSelect(); // 立即更新選單
+            renderAll();
             alert("✅ 同步完成！");
         })
-        .catch(err => {
-            console.error("同步失敗：", err);
-            alert("❌ 同步失敗，請檢查網路");
-        });
-}
-// --- 真正的 syncData 定義結束 ---    
-    </script>
-    <script>
-(function() {
-    console.log("🛠️ 補丁已啟動");
+        .catch(err => alert("同步失敗：" + err));
+};
 
-    window.syncData = function() {
-        if (!GAS_URL) return alert("❌ 尚未設定 GAS_URL");
-        
-        const btn = event ? event.currentTarget : null;
-        if (btn && btn.tagName === 'BUTTON') {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 同步中...';
-            btn.disabled = true;
-        }
-
-        fetch(GAS_URL + "?type=all")
-            .then(res => res.json())
-            .then(data => {
-                window.cachedData = data;
-                console.log("✅ 資料同步成功：", data);
-                
-                // 刷新所有畫面
-                if (typeof renderAll === "function") renderAll();
-                
-                // 強制執行選單填充
-                updatePaymentSelect();
-                
-                alert("✅ 同步完成！");
-            })
-            .catch(err => alert("❌ 同步失敗：" + err))
-            .finally(() => {
-                if (btn && btn.tagName === 'BUTTON') {
-                    btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> 同步資料';
-                    btn.disabled = false;
-                }
-            });
-    };
-
-    window.updatePaymentSelect = function() {
-        const select = document.getElementById('pay-item-select');
-        if (!select) return;
-
-        const payments = (window.cachedData && window.cachedData.payments) ? window.cachedData.payments : [];
-        const items = [...new Set(payments.map(p => p.itemTitle))].filter(it => it);
-        
-        console.log("正在重新填充選單，內容為：", items);
-
-        select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
-        items.forEach(it => {
-            const opt = document.createElement('option');
-            opt.value = it;
-            opt.text = it;
-            select.appendChild(opt);
-        });
-    };
-})();
-</script></body>
+// 更新選單邏輯
+window.updatePaymentSelect = function() {
+    const select = document.getElementById('pay-item-select');
+    if (!select) return;
+    const payments = (window.cachedData && window.cachedData.payments) ? window.cachedData.payments : [];
+    const items = [...new Set(payments.map(p => p.itemTitle))].filter(it => it);
+    
+    select.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>';
+    items.forEach(it => {
+        const opt = document.createElement('option');
+        opt.value = it;
+        opt.text = it;
+        select.appendChild(opt);
+    });
+    console.log("選單已更新：", items);
+};
+</script>
+</body>
 </html>

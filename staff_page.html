@@ -322,19 +322,13 @@ async function sendAttendanceToLine() {
 
 function renderConfig() {
     if (!window.cachedData) return;
-    
-    // 1. 公告內容 (來自 GAS 的 news)
-    const newsArea = document.getElementById('conf-news'); // 假設您的公告輸入框 ID 是這個
+    const newsArea = document.getElementById('conf-news');
     if (newsArea) newsArea.value = window.cachedData.news || '';
-
-    // 2. 外部連結 (來自 GAS 的 config 物件)
-    const conf = window.cachedData.config || {};
-    const reading = document.getElementById('conf-reading');
-    const photo = document.getElementById('conf-photo');
     
-    if (reading) reading.value = conf['reading_folder_url'] || '';
-    if (photo) photo.value = conf['photo_gallery_url'] || '';
-}   
+    const conf = window.cachedData.config || {};
+    if (document.getElementById('conf-reading')) document.getElementById('conf-reading').value = conf['reading_folder_url'] || '';
+    if (document.getElementById('conf-photo')) document.getElementById('conf-photo').value = conf['photo_gallery_url'] || '';
+}
         
 function renderEvents() {
     const container = document.getElementById('eventList');
@@ -428,9 +422,40 @@ async function apiPost(data) {
         alert("連線失敗，請稍後再試");
     }
 }        
+
+async function updateNews() {
+    const content = document.getElementById('conf-news').value;
+    const adminKey = sessionStorage.getItem('adminKey');
+    
+    // 這裡的 key 必須叫 content，因為你的 GAS doPost 是寫 data.content
+    const res = await apiPost({ type: 'update_news', content: content, key: adminKey });
+    if (res.result === 'SUCCESS') {
+        alert('公告已更新！');
+        syncData(false);
+    }
+}   
         
-        function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
-        function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
+async function saveLineMsg() {
+    const msg = document.getElementById('line-msg').value;
+    const adminKey = sessionStorage.getItem('adminKey'); // 取得存放在 session 的金鑰
+    
+    if (!msg) return alert("請輸入訊息內容");
+    if (!confirm("確定要發送公告至 LINE 群組嗎？")) return;
+
+    // 💡 必須包含 key，否則 GAS 會回傳「金鑰無效」
+    const res = await apiPost({ 
+        type: "send_line", 
+        message: msg, 
+        key: adminKey 
+    });
+
+    if (res.result === "SUCCESS") {
+        alert("LINE 公告發送成功！");
+        document.getElementById('line-msg').value = ""; // 清空輸入框
+    } else {
+        alert("發送失敗：" + (res.message || "請檢查金鑰或網路"));
+    }
+}
         
 // 補上 (event) 參數
 async function addMember(event) {
@@ -617,30 +642,33 @@ function renderAttendance() {
     const select = document.getElementById('attendEventSelect');
     const container = document.getElementById('attendList');
     if (!select || !container) return;
+    
+    container.className = "max-w-2xl mx-auto px-2";
 
-    const targetDate = select.value;
-    if (!targetDate) {
+    const targetEventId = select.value; // 這通常是日期
+    if (!targetEventId) {
         container.innerHTML = '<div class="text-center text-slate-400 py-8">請先選擇活動項目</div>';
         return;
     }
 
+    // 💡 這裡改用 eventId 來比對
     const logs = (window.cachedData && window.cachedData.attendance) ? 
-                 window.cachedData.attendance.filter(l => l.dateText === targetDate) : [];
+                 window.cachedData.attendance.filter(l => l.eventId === targetEventId) : [];
 
     if (logs.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-400 py-8">目前尚無人簽到</div>';
+        container.innerHTML = '<div class="text-center text-slate-400 py-8">此活動尚無人簽到</div>';
     } else {
         container.innerHTML = logs.map(l => `
-            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm mb-2">
                 <div>
                     <div class="font-bold text-lg text-slate-800">${l.name}</div>
                     <div class="text-sm text-slate-500">${l.phone}</div>
                 </div>
-                <div class="text-emerald-600 font-bold">${l.time || ''} 簽到</div>
+                <div class="text-emerald-600 font-bold text-sm">已簽到</div>
             </div>
         `).join('');
     }
-}        
+}
 
 function renderAttendanceDetail() {
     const selectedDate = document.getElementById('event-select').value;

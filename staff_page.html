@@ -72,26 +72,37 @@
         </section>
 
         <section id="sec-members" class="tab-content">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-gray-400">名冊清單</h3>
-                <button onclick="toggleSectionEdit('sec-members')" class="text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50">
-                    <i class="fas fa-lock"></i> 編輯開關
-                </button>
-            </div>
-            
-
-            
-            <div class="edit-only bg-orange-100 p-6 rounded-[2rem] mb-6 border-2 border-orange-200">
-          <div class="grid grid-cols-1 gap-3">
-          <input type="text" id="mName" placeholder="姓名" class="p-4 rounded-xl text-xl">
-          <input type="tel" id="mPhone" placeholder="手機" class="p-4 rounded-xl text-xl">
-          <input type="email" id="mEmail" placeholder="Email" class="p-4 rounded-xl text-xl">
-        <button onclick="addMember(event)" class="bg-orange-600 text-white py-4 rounded-xl font-bold text-xl">新增至名冊</button>
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-gray-400">名冊清單</h3>
+        <button onclick="toggleSectionEdit('sec-members')" class="text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50">
+            <i class="fas fa-lock"></i> 編輯開關
+        </button>
     </div>
-</div>
-            <div id="memberList" class="space-y-3"></div>
-        </section>
 
+    <div class="edit-only bg-orange-100 p-6 rounded-[2rem] mb-6 border-2 border-orange-200">
+        <div class="grid grid-cols-1 gap-3">
+            <input type="text" id="mName" placeholder="姓名" class="p-4 rounded-xl text-xl">
+            <input type="tel" id="mPhone" placeholder="手機" class="p-4 rounded-xl text-xl">
+            <input type="email" id="mEmail" placeholder="Email" class="p-4 rounded-xl text-xl">
+            <button onclick="addMember(event)" class="bg-orange-600 text-white py-4 rounded-xl font-bold text-xl">新增至名冊</button>
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
+                <i class="fas fa-search"></i>
+            </span>
+            <input type="text" id="userSearch" oninput="renderUsers()" 
+                   placeholder="搜尋姓名或手機..." 
+                   class="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-orange-500 focus:outline-none text-lg shadow-sm">
+        </div>
+    </div>
+
+    <div id="memberList" class="space-y-3"></div>
+</section>
+
+        
         <section id="sec-calendar" class="tab-content">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-gray-400">活動時程</h3>
@@ -500,7 +511,16 @@ function renderUsers() {
     `).join('');
 }   
         
-        function deleteMember(p) { if(confirm("刪除？")) apiPost({ type: "delete_member", currentPhone: p }); }
+        function deleteMember(name, phone, key) {
+           if(confirm(`確定要刪除會員：${name} 嗎？`)) {
+           apiPost({ 
+              type: "delete_member", 
+              currentPhone: phone,
+              key: key 
+              });
+           }
+        }   
+        
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); }
         function deleteEvent(d) { if(confirm("刪除？")) apiPost({ type: "delete_event", date: d }); }
         function saveSystemConfig() { apiPost({ type: "update_config", reading_folder_url: document.getElementById('conf-reading').value, photo_gallery_url: document.getElementById('conf-photo').value }); }
@@ -711,33 +731,26 @@ window.switchTab = function(tab, title) {
 };
 
 // 同步資料邏輯 (改寫為 async 讓其他函式可以等待它完成)
-window.syncData = async function(showModal = true) {
-    if (!GAS_URL) return alert("未設定 GAS_URL");
-    
+window.syncData = async function(showLoading = true) {
     const overlay = document.getElementById('loadingOverlay');
-    if(overlay && showModal) overlay.classList.remove('hidden');
-    
-    console.log("正在從雲端同步最新資料...");
-    
+    if (showLoading && overlay) overlay.classList.remove('hidden');
+
     try {
-        // 加上 &t= 防止瀏覽器抓舊快取
+        // 加上 t=... 防止瀏覽器快取舊資料
         const res = await fetch(GAS_URL + "?type=all&t=" + Date.now());
         const data = await res.json();
-        
         window.cachedData = data;
-        console.log("✅ 資料已同步：", data);
-        
+        console.log("資料同步成功:", data);
+
+        // --- 核心修正：同步完一定要執行這兩行，畫面才會畫出來 ---
+        if (typeof renderUsers === "function") renderUsers();
         if (typeof updatePaymentSelect === "function") updatePaymentSelect();
-        if (typeof renderAll === "function") renderAll();
-        
-        if (showModal) alert("✅ 同步完成！");
-        return true;
-    } catch (err) {
-        console.error("同步失敗:", err);
-        if (showModal) alert("同步失敗，請檢查網路");
-        return false;
+        if (typeof renderEvents === "function") renderEvents();
+
+    } catch (e) {
+        console.error("同步失敗:", e);
     } finally {
-        if(overlay && showModal) overlay.classList.add('hidden');
+        if (overlay) overlay.classList.add('hidden');
     }
 };
         

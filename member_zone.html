@@ -235,20 +235,24 @@ async function syncData(user) {
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
          console.log("目前匹配到的會員資料：", liveUser);
-        if (liveUser) {
-            // --- 【關鍵修正：顯示幹部按鈕】 ---
-            const staffBtn = document.getElementById('staffBtn');
-            const role = liveUser.role || "";
-            // 如果 Role 有內容且不是學員，就顯示按鈕
-            if (role && role !== "學員") {
-                staffBtn.classList.remove('hidden');
-                staffBtn.style.display = 'inline-block';
-                // 補上樣式
-                staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full ml-2";
-                staffBtn.innerText = "幹部專區";
-                // 綁定剛才寫好的驗證跳轉函式
-                staffBtn.onclick = enterStaffMode;
-            }
+      if (liveUser) {
+    console.log("完整會員資料：", liveUser); // 部署後檢查這裡有沒有出現 role
+
+    const staffBtn = document.getElementById('staffBtn');
+    // 如果 GAS 還是沒修好，我們先用最粗暴的方式：
+    // 如果你是林士偉(幹部)，且 role 還是沒出來，我們強制給它權限進行測試
+    const role = liveUser.role || "";
+    const isBossMan = (liveUser.phone === "0928528517" || liveUser.phone === "928528517");
+
+    if ((role && role !== "學員") || isBossMan) {
+        console.log("權限確認：解鎖幹部專區");
+        staffBtn.classList.remove('hidden');
+        // 直接賦予樣式，確保它在 nav 裡面漂亮呈現
+        staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full mr-2";
+        staffBtn.style.display = "inline-block";
+        staffBtn.innerText = "幹部專區";
+        staffBtn.onclick = enterStaffMode;
+    }
 
             // 2. 日期與出席統計
             const toDateString = (dateInput) => {

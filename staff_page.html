@@ -320,38 +320,50 @@ async function sendAttendanceToLine() {
             }).join('');
         }
 
+function renderConfig() {
+    if (!window.cachedData || !window.cachedData.config) return;
+    const conf = window.cachedData.config;
+    const reading = document.getElementById('conf-reading');
+    const photo = document.getElementById('conf-photo');
+    if (reading) reading.value = conf.reading_folder_url || '';
+    if (photo) photo.value = conf.photo_gallery_url || '';
+}        
+        
 function renderEvents() {
     const container = document.getElementById('eventList');
-    const select = document.getElementById('attendEventSelect'); // 出席系統選單
+    const select = document.getElementById('attendEventSelect');
     if (!container) return;
 
     const events = (window.cachedData && window.cachedData.events) ? window.cachedData.events : [];
-    
-    // 更新活動清單 HTML
-    container.innerHTML = events.map(ev => `
-        <div class="list-card flex justify-between items-center">
-            <div>
-                <div class="text-emerald-600 font-bold">${ev.dateText || ev.date}</div>
-                <div class="text-xl font-bold">${ev.title}</div>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="showQR('${ev.dateText || ev.date}', '${ev.title}')" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <i class="fas fa-qrcode"></i>
-                </button>
-                <button onclick="deleteEvent('${ev.dateText || ev.date}')" class="edit-only p-3 bg-rose-50 text-rose-600 rounded-xl">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </div>
-    `).join('');
+    console.log("正在渲染行事曆，資料量：", events.length);
 
-    // 更新出席活動下拉選單
+    // 1. 畫出行事曆
+    container.innerHTML = events.map(ev => {
+        const d = ev.dateText || ev.date || "無日期";
+        return `
+            <div class="list-card flex justify-between items-center mb-3">
+                <div>
+                    <div class="text-emerald-600 font-bold text-xs">${d}</div>
+                    <div class="text-lg font-bold text-slate-800">${ev.title}</div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="showQR('${d}', '${ev.title}')" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i class="fas fa-qrcode"></i>
+                    </button>
+                    <button onclick="deleteEvent('${d}')" class="edit-only p-3 bg-rose-50 text-rose-600 rounded-xl">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // 2. 💡 關鍵：同步更新出席狀況的「活動下拉選單」
     if (select) {
-        select.innerHTML = '<option value="">請選擇活動...</option>' + 
+        select.innerHTML = '<option value="">選擇活動...</option>' + 
             events.map(ev => `<option value="${ev.dateText || ev.date}">${ev.dateText || ev.date} ${ev.title}</option>`).join('');
     }
-}
-        
+}        
 function renderAll() {
     if (!cachedData) return;
     
@@ -505,10 +517,11 @@ function renderUsers() {
     );
 
     container.innerHTML = filtered.map(u => `
-        <div class="list-card flex justify-between items-center shadow-sm">
-            <div>
+        <div class="list-card flex justify-between items-center shadow-sm mb-3 bg-white p-4 rounded-xl border border-gray-100">
+            <div class="flex-1">
                 <div class="font-bold text-xl text-slate-800">${u.name}</div>
-                <div class="text-slate-500">${u.phone}</div>
+                <div class="text-slate-500 text-sm">${u.phone}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5 truncate max-w-[200px]">${u.email || '尚未設定 Email'}</div>
             </div>
             <div class="flex gap-2 edit-only">
                 <button onclick="deleteMember('${u.name}', '${u.phone}', '${adminKey}')" 
@@ -518,8 +531,8 @@ function renderUsers() {
             </div>
         </div>
     `).join('');
-}
-       
+} 
+        
 // 修正後的刪除函式
 function deleteMember(name, phone, key) {
     if(confirm(`確定要刪除會員：${name} 嗎？`)) {

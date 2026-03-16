@@ -431,7 +431,7 @@ async function addMember() {
 
         const result = await res.json();
 
-if (result.result === "SUCCESS") {
+        if (result.result === "SUCCESS") {
             alert("✅ 新增成功！");
             
             // 1. 清空欄位
@@ -448,10 +448,21 @@ if (result.result === "SUCCESS") {
             } else {
                 location.reload(); 
             }
-        } 
-    }
-}
+        } else {
+            // 補充：如果後端回傳失敗 (例如手機號碼重複)，也要跳通知
+            alert("❌ 失敗：" + (result.message || "未知錯誤"));
+        }
         
+    // 👇👇👇 這裡就是您漏掉的 catch 與 finally 👇👇👇
+    } catch (e) {
+        console.error("錯誤詳情:", e);
+        alert("連線失敗，請檢查網路");
+    } finally {
+        // 無論成功或失敗，都要把按鈕恢復原狀
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}    
         
         function deleteMember(p) { if(confirm("刪除？")) apiPost({ type: "delete_member", currentPhone: p }); }
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); }

@@ -25,7 +25,9 @@
                 <span class="font-bold tracking-wider">築心會館</span>
             </div>
             <div class="flex space-x-2">
-                <button onclick="enterStaffMode()" class="text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full">幹部專區</button>
+                <button id="staffBtn" onclick="goToStaffEntry()" class="hidden ...">
+                   進入幹部管理
+                </button>
                 <button onclick="openEditModal()" class="text-[10px] bg-white/10 px-3 py-1 rounded-full">修改資料</button>
                 <button onclick="logout()" class="text-[10px] bg-red-900/30 px-3 py-1 rounded-full">登出</button>
             </div>
@@ -268,7 +270,16 @@ async function handleUpdateProfile() {
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}        
+}   
+        
+function checkStaffRole(role) {
+    const staffBtn = document.getElementById('staffBtn');
+    // 只要 role 不是空的，也不是 "學員" (C 欄有內容)
+    if (role && role !== "學員" && role !== "") {
+        staffBtn.classList.remove('hidden'); // 顯示按鈕
+    }
+}   
+        
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {
     try {
@@ -300,6 +311,19 @@ async function fetchData() {
         }, 1000);
     }
 }
+        
+function goToStaffEntry() {
+    const key = prompt("請輸入管理員金鑰：");
+    if (key === null) return; // 取消
+    
+    // 這裡我們先簡單在前端存入金鑰
+    // 實務上可以發送一個 fetch 到 GAS 驗證金鑰對不對
+    sessionStorage.setItem('staff_key', key);
+    
+    // 跳轉到幹部選單頁 (你之後要分拆出來的頁面)
+    location.href = "staff_menu.html"; 
+} 
+        
 // 修正後的 UI 渲染 (讀取新的出席記錄格式)
 function renderUI() {
     if (!allData || !currentUser) return;

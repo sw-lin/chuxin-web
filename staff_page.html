@@ -331,36 +331,6 @@ async function sendAttendanceToLine() {
             }).join('');
         }
 
-async function apiPost(data) {
-    const overlay = document.getElementById('loadingOverlay');
-    if(overlay) overlay.classList.remove('hidden');
-    
-    data.key = adminKey;
-    try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
-        const result = await res.json();
-        
-        if (result.result === "SUCCESS") {
-            // 這裡改成直接等待同步完成，不要用 setTimeout 比較穩
-            await syncData(false); 
-            
-            if (overlay) overlay.classList.add('hidden');
-            
-            // 如果是新增會員，自動捲動到底部
-            if (data.type === "add_member") {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }
-        } else {
-            if (overlay) overlay.classList.add('hidden');
-            alert("❌ 失敗：" + result.message);
-        }
-    } catch (e) {
-        console.error("API 錯誤:", e);
-        if (overlay) overlay.classList.add('hidden');
-        alert("連線失敗，請稍後再試");
-    }
-}
-
         
 function renderAll() {
     if (!cachedData) return;
@@ -383,6 +353,41 @@ function renderAll() {
     updatePaymentSelect();  // 讓下拉選單出現項目
     renderPaymentDetail();  // 讓清單畫出來
 }
+// 確保開頭有 async
+async function apiPost(data) {
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay) overlay.classList.remove('hidden');
+    
+    // 確保有定義 adminKey
+    data.key = sessionStorage.getItem('adminKey') || window.adminKey;
+    
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(data) 
+        });
+        const result = await res.json();
+        
+        if (result.result === "SUCCESS") {
+            // 這裡呼叫同步，更新快取資料
+            await window.syncData(false); 
+            
+            if (overlay) overlay.classList.add('hidden');
+            
+            // 如果是新增會員，自動捲動到底部
+            if (data.type === "add_member") {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        } else {
+            if (overlay) overlay.classList.add('hidden');
+            alert("❌ 失敗：" + result.message);
+        }
+    } catch (e) {
+        console.error("API 錯誤:", e);
+        if (overlay) overlay.classList.add('hidden');
+        alert("連線失敗，請稍後再試");
+    }
+}        
         
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
@@ -392,6 +397,7 @@ async function addMember(event) {
     const nameInput = document.getElementById('mName');
     const phoneInput = document.getElementById('mPhone');
     const emailInput = document.getElementById('mEmail');
+    const searchInput = document.getElementById('userSearch'); // 搜尋框
     
     const name = nameInput.value.trim();
     const phone = phoneInput.value.trim();
@@ -402,7 +408,6 @@ async function addMember(event) {
         return;
     }
 
-    // 這裡現在能正確抓到 btn 了
     const btn = event ? (event.currentTarget || event.target) : null;
     if (btn) {
         btn.disabled = true;
@@ -426,15 +431,31 @@ async function addMember(event) {
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
+            // --- 關鍵修復 1：清空搜尋框，確保新成員不會被過濾掉 ---
+            if (searchInput) searchInput.value = ""; 
+
+            // --- 關鍵修復 2：樂觀更新 (Optimistic Update) ---
+            // 直接把新成員塞進本地快取，讓畫面「瞬間」出現
+            if (window.cachedData && window.cachedData.users) {
+                window.cachedData.users.unshift({ name, phone, email }); 
+            }
+            
+            // 立即重畫畫面
+            if (typeof renderUsers === "function") renderUsers();
+            
             alert("✅ 新增成功！");
             
-            // 清空欄位
+            // 清空輸入框
             nameInput.value = "";
             phoneInput.value = "";
             emailInput.value = "";
             
-            // 同步資料並重新渲染
-            await window.syncData(false); 
+            // --- 關鍵修復 3：背景同步 (稍微延遲 1 秒確保資料庫已穩定) ---
+            console.log("正在背景同步正式名單...");
+            setTimeout(() => {
+                window.syncData(false); 
+            }, 1000);
+
         } else {
             alert("❌ 失敗：" + (result.message || "未知錯誤"));
         }
@@ -447,7 +468,7 @@ async function addMember(event) {
             btn.innerText = "新增至名冊";
         }
     }
-}    
+}
         
         function deleteMember(p) { if(confirm("刪除？")) apiPost({ type: "delete_member", currentPhone: p }); }
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); }

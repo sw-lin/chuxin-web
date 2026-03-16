@@ -516,9 +516,11 @@ if (!container) {
         </div>
     `).join('');
 }   
-        // 修正後的刪除函式
+       
+// 修正後的刪除函式
 function deleteMember(name, phone, key) {
     if(confirm(`確定要刪除會員：${name} 嗎？`)) {
+        // 直接呼叫 apiPost
         apiPost({ 
             type: "delete_member", 
             currentPhone: phone,
@@ -526,7 +528,7 @@ function deleteMember(name, phone, key) {
         });
     }
 }
-
+        
 // 確保這些函式獨立分開，不要互相嵌套
 function addEvent() { 
     apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); 
@@ -754,12 +756,18 @@ window.syncData = async function(showLoading = true) {
         const res = await fetch(GAS_URL + "?type=all&t=" + Date.now());
         const data = await res.json();
         window.cachedData = data;
-        console.log("資料同步成功，準備渲染畫面...");
+        console.log("資料同步成功:", data);
 
-        // --- 核心修正：同步完必須執行畫圖函式 ---
-        if (typeof renderUsers === "function") renderUsers();
-        if (typeof updatePaymentSelect === "function") updatePaymentSelect();
-        if (typeof renderEvents === "function") renderEvents();
+        // --- 核心修正：同步完必須立刻執行畫圖 ---
+        if (typeof renderUsers === "function") {
+            renderUsers();
+        }
+        if (typeof updatePaymentSelect === "function") {
+            updatePaymentSelect();
+        }
+        if (typeof renderEvents === "function") {
+            renderEvents();
+        }
 
     } catch (e) {
         console.error("同步失敗:", e);

@@ -213,7 +213,7 @@
 
         window.onload = async () => {
             adminKey = sessionStorage.getItem('adminKey') || prompt("請輸入金鑰：");
-            if (adminKey) { sessionStorage.setItem('adminKey', adminKey); fetchData(); }
+            if (adminKey) { sessionStorage.setItem('adminKey', adminKey); syncData(false); }
             else { location.href = 'member_zone.html'; }
         };
 
@@ -346,7 +346,7 @@ async function apiPost(data) {
         if (result.result === "SUCCESS") {
             setTimeout(async () => {
                 overlay.classList.add('hidden');
-                await fetchData(); // 等待重新抓取並渲染完成
+                await syncData(false)(); // 等待重新抓取並渲染完成
                 
                 // 如果是新增會員，自動捲動到底部
                 if (data.type === "add_member") {
@@ -363,15 +363,11 @@ async function apiPost(data) {
     } catch (e) {
         setTimeout(() => {
             overlay.classList.add('hidden');
-            fetchData(); 
+            syncData(false);
         }, 1000);
     }
 }
-        async function fetchData() {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            cachedData = await res.json();
-            renderAll();
-        }
+
         
 function renderAll() {
     if (!cachedData) return;
@@ -399,7 +395,6 @@ function renderAll() {
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
         
 async function addMember() {
-    // 1. 抓取 HTML 裡設定的 ID
     const name = document.getElementById('mName').value.trim();
     const phone = document.getElementById('mPhone').value.trim();
     const email = document.getElementById('mEmail').value.trim();
@@ -409,7 +404,6 @@ async function addMember() {
         return;
     }
 
-    // 防止重複點擊 (抓取點擊的按鈕)
     const btn = event.currentTarget || event.target;
     const originalText = btn.innerText;
     btn.innerText = "處理中...";
@@ -434,31 +428,23 @@ async function addMember() {
         if (result.result === "SUCCESS") {
             alert("✅ 新增成功！");
             
-            // 1. 清空欄位
             document.getElementById('mName').value = "";
             document.getElementById('mPhone').value = "";
             document.getElementById('mEmail').value = "";
             
-            // 2. 呼叫我們剛改好的 syncData (傳入 false 代表不要跳同步成功的 alert)
-            if (typeof syncData === "function") {
-                console.log("開始等待同步最新資料...");
-                // 這裡的 await 現在真的會等資料抓回來、並且畫好畫面了！
-                await syncData(false); 
-                console.log("名冊已用最新資料重新渲染完畢");
+            // 關鍵：呼叫同步，傳入 false 代表不要跳同步完成的 Alert
+            if (typeof window.syncData === "function") {
+                await window.syncData(false); 
+                console.log("名冊已刷新");
             } else {
                 location.reload(); 
             }
         } else {
-            // 補充：如果後端回傳失敗 (例如手機號碼重複)，也要跳通知
             alert("❌ 失敗：" + (result.message || "未知錯誤"));
         }
-        
-    // 👇👇👇 這裡就是您漏掉的 catch 與 finally 👇👇👇
     } catch (e) {
-        console.error("錯誤詳情:", e);
-        alert("連線失敗，請檢查網路");
+        alert("連線失敗");
     } finally {
-        // 無論成功或失敗，都要把按鈕恢復原狀
         btn.innerText = originalText;
         btn.disabled = false;
     }
@@ -676,40 +662,33 @@ window.switchTab = function(tab, title) {
 window.syncData = async function(showModal = true) {
     if (!GAS_URL) return alert("未設定 GAS_URL");
     
-    // 如果需要顯示讀取畫面，可以把這段打開
     const overlay = document.getElementById('loadingOverlay');
     if(overlay && showModal) overlay.classList.remove('hidden');
     
-    console.log("強效同步中...");
+    console.log("正在從雲端同步最新資料...");
     
     try {
-        const res = await fetch(GAS_URL + "?type=all");
+        // 加上 &t= 防止瀏覽器抓舊快取
+        const res = await fetch(GAS_URL + "?type=all&t=" + Date.now());
         const data = await res.json();
         
         window.cachedData = data;
-        console.log("✅ 同步成功，最新資料已存入 cachedData");
+        console.log("✅ 資料已同步：", data);
         
-        updatePaymentSelect(); 
+        if (typeof updatePaymentSelect === "function") updatePaymentSelect();
+        if (typeof renderAll === "function") renderAll();
         
-        // 確保名冊畫面一定會被重新渲染
-        if (typeof renderAll === "function") {
-            renderAll();
-        }
-        
-        if (showModal) {
-            alert("✅ 同步完成！");
-        }
-        
-        return true; // 回傳成功，讓 await 知道做完了
-        
+        if (showModal) alert("✅ 同步完成！");
+        return true;
     } catch (err) {
-        alert("同步失敗：" + err);
+        console.error("同步失敗:", err);
+        if (showModal) alert("同步失敗，請檢查網路");
         return false;
     } finally {
         if(overlay && showModal) overlay.classList.add('hidden');
     }
 };
-
+        
 // 更新選單邏輯
 window.updatePaymentSelect = function() {
     const select = document.getElementById('pay-item-select');

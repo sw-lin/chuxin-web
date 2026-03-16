@@ -519,25 +519,41 @@ async function addMember(event) {
     }
 }
 
-function renderUsers() {
+window.renderUsers = function() {
     const container = document.getElementById('memberList');
-    if (!container) return;
+    if (!container) {
+        console.warn("找不到 id='memberList' 的容器，跳過會員渲染");
+        return;
+    }
     
-    // 增加一個包裝層來置中，避免 PC 太靠左
-    container.className = "max-w-2xl mx-auto px-2"; 
+    // 1. 安全套用樣式：使用 add 而不是直接覆蓋 className，避免原本的樣式消失
+    container.classList.add("max-w-2xl", "mx-auto", "px-2"); 
 
-    const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
+    // 2. 安全讀取：使用 ?. 防止 userSearch 沒出現時報錯
+    const searchInput = document.getElementById('userSearch');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
     const adminKey = sessionStorage.getItem('adminKey'); 
     
-    if (!window.cachedData || !window.cachedData.users) return;
+    // 3. 資料來源檢查：確保有資料才畫圖
+    if (!window.cachedData || !window.cachedData.users) {
+        container.innerHTML = '<div class="text-center p-10 text-gray-400">尚未載入會員資料...</div>';
+        return;
+    }
 
+    // 4. 過濾邏輯
     const filtered = window.cachedData.users.filter(u => 
-        u.name.toLowerCase().includes(searchTerm) || 
-        u.phone.includes(searchTerm)
+        (u.name && u.name.toLowerCase().includes(searchTerm)) || 
+        (u.phone && u.phone.includes(searchTerm))
     );
 
+    // 5. 渲染 HTML (加入防錯處理與空名單提示)
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center p-10 text-gray-400">找不到符合的會員</div>';
+        return;
+    }
+
     container.innerHTML = filtered.map(u => `
-        <div class="list-card flex justify-between items-center shadow-sm mb-3 bg-white p-4 rounded-xl border border-gray-100">
+        <div class="list-card flex justify-between items-center shadow-sm mb-3 bg-white p-4 rounded-xl border border-gray-100 hover:border-emerald-200 transition-all">
             <div class="flex-1 min-w-0">
                 <div class="flex items-center">
                     <span class="font-bold text-xl text-slate-800 w-24 inline-block truncate">${u.name}</span>
@@ -553,7 +569,9 @@ function renderUsers() {
             </div>
         </div>
     `).join('');
-}        
+
+    console.log("✅ 會員名單渲染完成，數量：", filtered.length);
+};      
 // 修正後的刪除函式
 function deleteMember(name, phone, key) { 
     if(confirm(`確定要刪除會員 ${name} 嗎？`)) {
@@ -623,15 +641,43 @@ function toggleSystemEdit() {
 } 
         
 // 1. 公布欄與連結讀取 (對應 GAS 的 news 與 config)
-function renderConfig() {
-    if (!window.cachedData) return;
+window.renderConfig = function() {
+    // 1. 核心資料檢查：沒大腦就沒動作
+    if (!window.cachedData) {
+        console.warn("renderConfig: 尚未取得快取資料");
+        return;
+    }
+
+    // 2. 公告內容安全填入
     const newsArea = document.getElementById('conf-news');
-    if (newsArea) newsArea.value = window.cachedData.news || '';
-    
+    if (newsArea) {
+        // 使用 || '' 確保即使 GAS 沒給資料，也不會出現 "undefined" 字樣
+        newsArea.value = window.cachedData.news || '';
+    }
+
+    // 3. 設定參數安全填入 (加上防錯機制)
     const conf = window.cachedData.config || {};
-    if (document.getElementById('conf-reading')) document.getElementById('conf-reading').value = conf['reading_folder_url'] || '';
-    if (document.getElementById('conf-photo')) document.getElementById('conf-photo').value = conf['photo_gallery_url'] || '';
-}
+    
+    // 定義「設定 ID」與「資料欄位」的對應表
+    // 這樣未來如果您要增加設定項，只要加一行就好，不會動到邏輯
+    const configMap = {
+        'conf-reading': 'reading_folder_url',
+        'conf-photo': 'photo_gallery_url'
+    };
+
+    Object.keys(configMap).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const dataKey = configMap[id];
+            el.value = conf[dataKey] || '';
+        } else {
+            // 如果找不到 ID，只會在控制台報備，不會拖累其他功能
+            console.log(`設定項渲染提示：頁面中找不到元素 ID '${id}'`);
+        }
+    });
+
+    console.log("✅ 公告與設定區塊更新完成");
+};
 
 // 2. 更新公布欄 (對應 GAS 的 params.content)
 async function updateNews() {
@@ -789,24 +835,26 @@ function sendPaidToLine() {
     <script>
 // --- 全域唯一正確邏輯區 ---
 
-// 切換分頁邏輯
 window.switchTab = function(tab, title) {
     console.log("切換分頁至：", tab);
     
-    // --- 新增：切換分頁時，強制關閉所有編輯模式 (安全性考量) ---
+    // 1. 安全檢查：確保基礎 UI 存在
+    const currentTitle = document.getElementById('current-title');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    // 2. 強制關閉所有編輯模式 (維持您的優良安全性邏輯)
     document.body.classList.remove('edit-mode-active');
     document.querySelectorAll('.tab-content').forEach(c => {
         c.classList.remove('active', 'edit-mode-active');
-        // 重設按鈕文字與顏色 (如果是橘色則變回預設)
         const editBtn = c.querySelector('button[onclick*="toggleSectionEdit"]');
         if (editBtn) {
             editBtn.innerHTML = '<i class="fas fa-lock"></i> 編輯模式';
             editBtn.className = 'text-orange-600 font-bold border border-orange-200 px-4 py-2 rounded-lg bg-orange-50';
         }
     });
-    // ---------------------------------------------------
 
-    // 顯示目標分頁
+    // 3. 顯示目標分頁
     let target = document.getElementById('sec-' + tab) || document.getElementById(tab);
     if (target) {
         target.classList.add('active');
@@ -814,40 +862,71 @@ window.switchTab = function(tab, title) {
         console.error("找不到分頁 ID:", tab);
     }
 
-    // 更新標題與側邊欄
-    document.getElementById('current-title').innerText = title;
+    // 4. UI 更新
+    if (currentTitle) currentTitle.innerText = title;
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
     
-    // 關閉側邊欄選單 (手機版常用)
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
+    // 5. 手機版收合選單
     if (sidebar) sidebar.classList.add('-translate-x-full');
     if (overlay) overlay.classList.add('hidden');
     
-    // 重新渲染資料
-    if (typeof renderAll === "function") renderAll();
+    // 6. 【關鍵改良】精準渲染：不要 renderAll，改為「誰壞了誰負責」
+    try {
+        if (tab === 'users' && typeof renderUsers === "function") renderUsers();
+        if (tab === 'events' && typeof renderEvents === "function") renderEvents();
+        if (tab === 'config' && typeof renderConfig === "function") renderConfig();
+        if (tab === 'payments') {
+             if (typeof updatePaymentSelect === "function") updatePaymentSelect();
+             if (typeof renderPaymentDetail === "function") renderPaymentDetail();
+        }
+        if (tab === 'attendance' && typeof renderAttendance === "function") renderAttendance();
+        
+        // 保留原有的 renderAll 作為後備（如果它還存在）
+        if (tab === 'all' && typeof renderAll === "function") renderAll();
+    } catch (e) {
+        console.error(`渲染分頁 ${tab} 時出錯:`, e);
+    }
 };
 
-// 同步資料邏輯 (改寫為 async 讓其他函式可以等待它完成)
 window.syncData = async function(showLoading = true) {
     const overlay = document.getElementById('loadingOverlay');
     if (showLoading && overlay) overlay.classList.remove('hidden');
 
     try {
         const res = await fetch(GAS_URL + "?type=all&t=" + Date.now());
+        if (!res.ok) throw new Error("網路請求失敗");
+        
         const data = await res.json();
         window.cachedData = data;
-        console.log("資料同步成功，內容為:", data);
+        console.log("✅ 資料同步成功:", data);
 
-        // 啟動所有渲染
-        renderUsers();
-        renderEvents();  // 行事曆
-        renderConfig();  // 公告與設定
-        if (typeof updatePaymentSelect === "function") updatePaymentSelect(); // 繳費
-        if (typeof renderAttendance === "function") renderAttendance();     // 出席
+        // --- 安全渲染區：加上 typeof 檢查，壞了一個，另一個還是會跑 ---
+        
+        console.log("正在更新畫面...");
+
+        if (typeof renderUsers === "function") {
+            try { renderUsers(); } catch(e) { console.error("會員渲染出錯:", e); }
+        }
+        
+        if (typeof renderEvents === "function") {
+            try { renderEvents(); } catch(e) { console.error("行事曆渲染出錯:", e); }
+        }
+
+        if (typeof renderConfig === "function") {
+            try { renderConfig(); } catch(e) { console.error("公告渲染出錯:", e); }
+        }
+
+        if (typeof updatePaymentSelect === "function") {
+            try { updatePaymentSelect(); } catch(e) { console.error("繳費選單更新出錯:", e); }
+        }
+
+        if (typeof renderAttendance === "function") {
+            try { renderAttendance(); } catch(e) { console.error("出席渲染出錯:", e); }
+        }
 
     } catch (e) {
-        console.error("同步失敗:", e);
+        console.error("❌ 同步核心發生錯誤:", e);
+        alert("資料同步失敗，請檢查 GAS 網址或網路狀態");
     } finally {
         if (overlay) overlay.classList.add('hidden');
     }

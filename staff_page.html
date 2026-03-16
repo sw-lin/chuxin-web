@@ -321,23 +321,33 @@ async function sendAttendanceToLine() {
         }
 
 function renderConfig() {
-    if (!window.cachedData || !window.cachedData.config) return;
-    const conf = window.cachedData.config;
+    if (!window.cachedData) return;
+    
+    // 1. 公告內容 (來自 GAS 的 news)
+    const newsArea = document.getElementById('conf-news'); // 假設您的公告輸入框 ID 是這個
+    if (newsArea) newsArea.value = window.cachedData.news || '';
+
+    // 2. 外部連結 (來自 GAS 的 config 物件)
+    const conf = window.cachedData.config || {};
     const reading = document.getElementById('conf-reading');
     const photo = document.getElementById('conf-photo');
-    if (reading) reading.value = conf.reading_folder_url || '';
-    if (photo) photo.value = conf.photo_gallery_url || '';
-}
+    
+    if (reading) reading.value = conf['reading_folder_url'] || '';
+    if (photo) photo.value = conf['photo_gallery_url'] || '';
+}   
         
 function renderEvents() {
     const container = document.getElementById('eventList');
     const select = document.getElementById('attendEventSelect');
     if (!container) return;
+    
+    container.className = "max-w-2xl mx-auto px-2";
 
-    const events = (window.cachedData && window.cachedData.events) ? window.cachedData.events : [];
+    // 💡 注意：GAS 傳來的是 .calendar 而不是 .events
+    const events = (window.cachedData && window.cachedData.calendar) ? window.cachedData.calendar : [];
     
     container.innerHTML = events.map(ev => {
-        const d = ev.dateText || ev.date;
+        const d = ev.dateText || "無日期";
         return `
             <div class="list-card flex justify-between items-center mb-3">
                 <div>
@@ -357,12 +367,9 @@ function renderEvents() {
             </div>`;
     }).join('');
 
-    // 同步更新出席下拉選單
     if (select) {
-        const currentVal = select.value;
         select.innerHTML = '<option value="">請選擇活動...</option>' + 
-            events.map(ev => `<option value="${ev.dateText || ev.date}">${ev.dateText || ev.date} ${ev.title}</option>`).join('');
-        select.value = currentVal;
+            events.map(ev => `<option value="${ev.dateText}">${ev.dateText} ${ev.title}</option>`).join('');
     }
 }        
 function renderAll() {
@@ -506,6 +513,9 @@ async function addMember(event) {
 function renderUsers() {
     const container = document.getElementById('memberList');
     if (!container) return;
+    
+    // 增加一個包裝層來置中，避免 PC 太靠左
+    container.className = "max-w-2xl mx-auto px-2"; 
 
     const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
     const adminKey = sessionStorage.getItem('adminKey'); 
@@ -520,11 +530,11 @@ function renderUsers() {
     container.innerHTML = filtered.map(u => `
         <div class="list-card flex justify-between items-center shadow-sm mb-3 bg-white p-4 rounded-xl border border-gray-100">
             <div class="flex-1 min-w-0">
-                <div class="flex items-baseline gap-4">
-                    <span class="font-bold text-xl text-slate-800">${u.name}</span>
-                    <span class="font-bold text-xl text-slate-600">${u.phone}</span>
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-slate-800 w-24 inline-block truncate">${u.name}</span>
+                    <span class="font-bold text-xl text-slate-600 ml-4">${u.phone}</span>
                 </div>
-                <div class="text-[11px] text-slate-400 mt-1 truncate pr-2">${u.email || '未設定 Email'}</div>
+                <div class="text-[11px] text-slate-400 mt-1 truncate pl-[112px]">${u.email || ''}</div>
             </div>
             <div class="flex gap-2 edit-only">
                 <button onclick="deleteMember('${u.name}', '${u.phone}', '${adminKey}')" 
@@ -534,8 +544,7 @@ function renderUsers() {
             </div>
         </div>
     `).join('');
-}
-        
+}        
 // 修正後的刪除函式
 function deleteMember(name, phone, key) { 
     if(confirm(`確定要刪除會員 ${name} 嗎？`)) {
@@ -794,18 +803,14 @@ window.syncData = async function(showLoading = true) {
         const res = await fetch(GAS_URL + "?type=all&t=" + Date.now());
         const data = await res.json();
         window.cachedData = data;
-        console.log("資料同步成功:", data);
+        console.log("資料同步成功，內容為:", data);
 
-        // --- 核心修正：同步完必須立刻執行畫圖 ---
-        if (typeof renderUsers === "function") {
-            renderUsers();
-        }
-        if (typeof updatePaymentSelect === "function") {
-            updatePaymentSelect();
-        }
-        if (typeof renderEvents === "function") {
-            renderEvents();
-        }
+        // 啟動所有渲染
+        renderUsers();
+        renderEvents();  // 行事曆
+        renderConfig();  // 公告與設定
+        if (typeof updatePaymentSelect === "function") updatePaymentSelect(); // 繳費
+        if (typeof renderAttendance === "function") renderAttendance();     // 出席
 
     } catch (e) {
         console.error("同步失敗:", e);

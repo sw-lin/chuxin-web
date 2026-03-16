@@ -202,57 +202,68 @@ async function syncData(user) {
         console.log("開始同步資料，目前登入者手機：", user.phone);
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
-        console.log("雲端回傳資料：", data);
-
+        
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎。";
 
-        // --- 強力匹配邏輯 ---
-        // 把手機號碼統一轉成字串，並只取最後 9 碼進行比對 (避開 09 或 +886)
+        // 1. 強力匹配會員 (只取後 9 碼避開 09/+886 差異)
         const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
-        const liveUser = data.users.find(u => {
-            if (!u.phone) return false;
-            return String(u.phone).replace(/\D/g, "").slice(-9) === myMatch;
-        });
+        const liveUser = data.users.find(u => 
+            u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
+        );
 
         if (liveUser) {
-            console.log("成功找到對應會員：", liveUser.name);
+            // 2. 處理出席紀錄：將所有日期統一轉為 YYYY-MM-DD 字串格式
+            // 這是修復「沒打勾」的關鍵：確保 logs 裡的格式跟 calendar 裡的 dateText 完全一致
+            const logs = (liveUser.attendLog || []).map(l => {
+                const d = new Date(l);
+                return isNaN(d) ? "" : d.toISOString().split('T')[0];
+            }).filter(d => d !== "");
+
+            // 3. 計算分母：今天以前 (含今日) 的活動
+            const todayStr = new Date().toLocaleDateString('sv-SE'); // 取得 YYYY-MM-DD
+            const pastEvents = (data.calendar || []).filter(ev => ev.dateText <= todayStr);
             
-            // 處理日期：抓取今天以前的所有活動
-            const today = new Date().toISOString().split('T')[0];
-            const events = (data.calendar || []).filter(ev => ev.dateText <= today);
+            // 4. 計算分子：在已發生活動中，有出席紀錄的數量
+            const attendCount = pastEvents.filter(ev => logs.includes(ev.dateText)).length;
+            const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
+
+            // 5. 更新 UI
+            document.getElementById('attPercent').innerText = `${rate}%`;
+            document.getElementById('attCountDisplay').innerText = `${attendCount} / ${pastEvents.length}`;
             
-            // 處理出席記錄：確保格式統一為 YYYY-MM-DD
-            // 注意：如果你的 GAS 回傳的是 ISO 字串，這行 .split('T')[0] 很重要
-            const logs = (liveUser.attendLog || []).map(l => String(l).split('T')[0]);
-            
-            // 計算出席數
-            let count = events.filter(ev => logs.includes(ev.dateText)).length;
-            
-            // 更新 UI
-            document.getElementById('attPercent').innerText = (events.length ? Math.round(count / events.length * 100) : 0) + "%";
-            document.getElementById('attCountDisplay').innerText = `${count} / ${events.length}`;
-            
-            // 渲染學習歷程 (由新到舊)
-            document.getElementById('historyList').innerHTML = [...events].reverse().map(ev => {
+            // 6. 參與率 > 50% 噴彩花
+            if (rate >= 50) {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#064E3B', '#F97316', '#FBBF24']
+                });
+            }
+
+            // 7. 渲染學習歷程 (由新到舊，並加入勾選邏輯)
+            document.getElementById('historyList').innerHTML = [...data.calendar].reverse().map(ev => {
+                const isPast = ev.dateText <= todayStr;
                 const isAttended = logs.includes(ev.dateText);
+                
+                // 未來活動顯示灰色，過去活動顯示打勾或叉叉
+                const iconClass = isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200';
+                
                 return `
-                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3 ${!isPast ? 'opacity-50' : ''}">
                         <div>
-                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText} ${!isPast ? '(預計)' : ''}</div>
                             <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                         </div>
-                        <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
+                        <i class="fas ${isPast ? iconClass : 'fa-calendar-day text-gray-100'} text-2xl"></i>
                     </div>`;
             }).join('');
-        } else {
-            console.error("在資料庫中找不到匹配的手機號碼！");
-            document.getElementById('historyList').innerHTML = "<p class='text-center text-gray-400'>找不到您的活動紀錄</p>";
         }
     } catch (e) {
-        console.error("同步過程中發生錯誤：", e);
+        console.error("同步錯誤:", e);
     }
-}
+}   
         
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {

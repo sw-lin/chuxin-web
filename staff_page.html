@@ -482,7 +482,13 @@ async function addMember(event) {
 }
 
 function renderUsers() {
-    const container = document.getElementById('userList');
+    const container = document.getElementById('memberList');
+
+if (!container) {
+        console.error("找不到 ID 為 memberList 的容器");
+        return;
+    }    
+    
     const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
     
     // --- 關鍵修復：補上這一行，否則下面的 deleteMember(..., adminKey) 會崩潰 ---
@@ -736,14 +742,12 @@ window.syncData = async function(showLoading = true) {
     if (showLoading && overlay) overlay.classList.remove('hidden');
 
     try {
-        // 加上 t=... 防止瀏覽器快取舊資料
         const res = await fetch(GAS_URL + "?type=all&t=" + Date.now());
         const data = await res.json();
         window.cachedData = data;
-        console.log("資料同步成功:", data);
 
-        // --- 核心修正：同步完一定要執行這兩行，畫面才會畫出來 ---
-        if (typeof renderUsers === "function") renderUsers();
+        // --- 核心修正：叫它畫圖 ---
+        renderUsers(); 
         if (typeof updatePaymentSelect === "function") updatePaymentSelect();
         if (typeof renderEvents === "function") renderEvents();
 
@@ -752,8 +756,7 @@ window.syncData = async function(showLoading = true) {
     } finally {
         if (overlay) overlay.classList.add('hidden');
     }
-};
-        
+};        
 // 更新選單邏輯
 window.updatePaymentSelect = function() {
     const select = document.getElementById('pay-item-select');

@@ -234,7 +234,7 @@ async function syncData(user) {
         const liveUser = data.users.find(u => 
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
-
+         console.log("目前匹配到的會員資料：", liveUser);
         if (liveUser) {
             // --- 【關鍵修正：顯示幹部按鈕】 ---
             const staffBtn = document.getElementById('staffBtn');
@@ -292,14 +292,7 @@ async function syncData(user) {
         console.error("同步錯誤:", e);
     }
 }    
-        
-function checkStaffRole(role) {
-    const staffBtn = document.getElementById('staffBtn');
-    // 只要 role 不是空的，也不是 "學員" (C 欄有內容)
-    if (role && role !== "學員" && role !== "") {
-        staffBtn.classList.remove('hidden'); // 顯示按鈕
-    }
-}   
+ 
         
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {

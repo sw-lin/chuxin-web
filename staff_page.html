@@ -327,17 +327,15 @@ function renderConfig() {
     const photo = document.getElementById('conf-photo');
     if (reading) reading.value = conf.reading_folder_url || '';
     if (photo) photo.value = conf.photo_gallery_url || '';
-    console.log("系統設定已填入");
 }
         
 function renderEvents() {
     const container = document.getElementById('eventList');
-    const select = document.getElementById('attendEventSelect'); // 出席系統的選單
+    const select = document.getElementById('attendEventSelect');
     if (!container) return;
 
     const events = (window.cachedData && window.cachedData.events) ? window.cachedData.events : [];
     
-    // 渲染行事曆清單
     container.innerHTML = events.map(ev => {
         const d = ev.dateText || ev.date;
         return `
@@ -356,14 +354,15 @@ function renderEvents() {
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
 
-    // 💡 同步更新「出席狀況」區塊的活動下拉選單
+    // 同步更新出席下拉選單
     if (select) {
+        const currentVal = select.value;
         select.innerHTML = '<option value="">請選擇活動...</option>' + 
             events.map(ev => `<option value="${ev.dateText || ev.date}">${ev.dateText || ev.date} ${ev.title}</option>`).join('');
+        select.value = currentVal;
     }
 }        
 function renderAll() {
@@ -521,9 +520,11 @@ function renderUsers() {
     container.innerHTML = filtered.map(u => `
         <div class="list-card flex justify-between items-center shadow-sm mb-3 bg-white p-4 rounded-xl border border-gray-100">
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-xl text-slate-800">${u.name}</div>
-                <div class="text-slate-500 text-sm">${u.phone}</div>
-                <div class="text-[11px] text-slate-400 mt-0.5 truncate pr-2">${u.email || '未設定 Email'}</div>
+                <div class="flex items-baseline gap-4">
+                    <span class="font-bold text-xl text-slate-800">${u.name}</span>
+                    <span class="font-bold text-xl text-slate-600">${u.phone}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-1 truncate pr-2">${u.email || '未設定 Email'}</div>
             </div>
             <div class="flex gap-2 edit-only">
                 <button onclick="deleteMember('${u.name}', '${u.phone}', '${adminKey}')" 
@@ -533,7 +534,7 @@ function renderUsers() {
             </div>
         </div>
     `).join('');
-}   
+}
         
 // 修正後的刪除函式
 function deleteMember(name, phone, key) { 
@@ -602,22 +603,35 @@ function toggleSystemEdit() {
         lockBtn.className = "text-sm bg-gray-100 text-gray-600 px-4 py-2 rounded-lg border";
     }
 } 
-function renderAttendanceOptions() {
-    const select = document.getElementById('event-select');
-    if (!select) return;
-    
-    // 只取出行事曆中有舉辦過的活動 (按時間由新到舊排)
-    const events = [...cachedData.calendar].sort((a,b) => new Date(b.dateText) - new Date(a.dateText));
-    
-    // 保留第一個預設選項，其餘清空
-    select.innerHTML = '<option value="">-- 請選擇一場活動 --</option>';
-    events.forEach(ev => {
-        const opt = document.createElement('option');
-        opt.value = ev.dateText; // 這裡暫時用日期當辨識，若有 ID 更好
-        opt.innerText = `${ev.dateText} ${ev.title}`;
-        select.appendChild(opt);
-    });
-}
+        
+function renderAttendance() {
+    const select = document.getElementById('attendEventSelect');
+    const container = document.getElementById('attendList');
+    if (!select || !container) return;
+
+    const targetDate = select.value;
+    if (!targetDate) {
+        container.innerHTML = '<div class="text-center text-slate-400 py-8">請先選擇活動項目</div>';
+        return;
+    }
+
+    const logs = (window.cachedData && window.cachedData.attendance) ? 
+                 window.cachedData.attendance.filter(l => l.dateText === targetDate) : [];
+
+    if (logs.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-400 py-8">目前尚無人簽到</div>';
+    } else {
+        container.innerHTML = logs.map(l => `
+            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+                <div>
+                    <div class="font-bold text-lg text-slate-800">${l.name}</div>
+                    <div class="text-sm text-slate-500">${l.phone}</div>
+                </div>
+                <div class="text-emerald-600 font-bold">${l.time || ''} 簽到</div>
+            </div>
+        `).join('');
+    }
+}        
 
 function renderAttendanceDetail() {
     const selectedDate = document.getElementById('event-select').value;

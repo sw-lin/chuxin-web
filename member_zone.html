@@ -197,74 +197,78 @@ async function handleUpdateProfile() {
             }
         }
 
-async function syncData(user) {
+  async function syncData(user) {
     try {
-        console.log("開始同步資料，目前登入者手機：", user.phone);
+        console.log("開始同步資料...");
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎。";
 
-        // 1. 強力匹配會員 (只取後 9 碼避開 09/+886 差異)
+        // 1. 會員比對 (後 9 碼)
         const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
         const liveUser = data.users.find(u => 
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
 
         if (liveUser) {
-            // 2. 處理出席紀錄：將所有日期統一轉為 YYYY-MM-DD 字串格式
-            // 這是修復「沒打勾」的關鍵：確保 logs 裡的格式跟 calendar 裡的 dateText 完全一致
-            const logs = (liveUser.attendLog || []).map(l => {
-                const d = new Date(l);
-                return isNaN(d) ? "" : d.toISOString().split('T')[0];
-            }).filter(d => d !== "");
+            // 2. 日期格式標準化函式 (確保 YYYY-MM-DD 格式正確)
+            const toDateString = (dateInput) => {
+                if (!dateInput) return "";
+                const d = new Date(dateInput);
+                if (isNaN(d)) return "";
+                const Y = d.getFullYear();
+                const M = String(d.getMonth() + 1).padStart(2, '0');
+                const D = String(d.getDate()).padStart(2, '0');
+                return `${Y}-${M}-${D}`;
+            };
 
-            // 3. 計算分母：今天以前 (含今日) 的活動
-            const todayStr = new Date().toLocaleDateString('sv-SE'); // 取得 YYYY-MM-DD
+            const todayStr = toDateString(new Date());
+            
+            // 處理該會員的出席紀錄
+            const logs = (liveUser.attendLog || []).map(l => toDateString(l)).filter(l => l !== "");
+
+            // 3. 過濾出「已發生(含今日)」的活動作為分母
+            // 這是決定哪些活動會出現在清單上的「過濾器」
             const pastEvents = (data.calendar || []).filter(ev => ev.dateText <= todayStr);
             
-            // 4. 計算分子：在已發生活動中，有出席紀錄的數量
+            // 4. 計算分子：在過去活動中，有出席紀錄的
             const attendCount = pastEvents.filter(ev => logs.includes(ev.dateText)).length;
             const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
 
-            // 5. 更新 UI
+            // 5. 更新 UI 數字
             document.getElementById('attPercent').innerText = `${rate}%`;
             document.getElementById('attCountDisplay').innerText = `${attendCount} / ${pastEvents.length}`;
             
-            // 6. 參與率 > 50% 噴彩花
+            // 6. 參與率過門檻噴彩花
             if (rate >= 50) {
-                confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#064E3B', '#F97316', '#FBBF24']
-                });
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
 
-            // 7. 渲染學習歷程 (由新到舊，並加入勾選邏輯)
-            document.getElementById('historyList').innerHTML = [...data.calendar].reverse().map(ev => {
-                const isPast = ev.dateText <= todayStr;
+            // 7. 渲染「已發生」的學習歷程清單 (隱藏未來活動)
+            // 就像 C 語言的 for 迴圈中加了 if 判斷
+            document.getElementById('historyList').innerHTML = [...pastEvents].reverse().map(ev => {
                 const isAttended = logs.includes(ev.dateText);
                 
-                // 未來活動顯示灰色，過去活動顯示打勾或叉叉
-                const iconClass = isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200';
-                
                 return `
-                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3 ${!isPast ? 'opacity-50' : ''}">
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
                         <div>
-                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText} ${!isPast ? '(預計)' : ''}</div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
                             <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                         </div>
-                        <i class="fas ${isPast ? iconClass : 'fa-calendar-day text-gray-100'} text-2xl"></i>
+                        <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
                     </div>`;
             }).join('');
+            
+            if (pastEvents.length === 0) {
+                document.getElementById('historyList').innerHTML = '<p class="text-center text-gray-400 py-10">目前尚無活動紀錄</p>';
+            }
         }
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}   
-        
+}        
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {
     try {

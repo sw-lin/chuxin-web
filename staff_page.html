@@ -79,9 +79,7 @@
                 </button>
             </div>
             
-            <button onclick="syncData()" class="w-full mb-6 p-4 flex items-center justify-center text-lg text-emerald-700 font-bold bg-white border-2 border-emerald-100 rounded-2xl hover:bg-emerald-50 transition-all">
-                <i class="fas fa-sync-alt mr-2"></i> 重新整理名冊
-            </button>
+
             
             <div class="edit-only bg-orange-100 p-6 rounded-[2rem] mb-6 border-2 border-orange-200">
           <div class="grid grid-cols-1 gap-3">
@@ -441,18 +439,23 @@ async function addMember() {
             document.getElementById('mPhone').value = "";
             document.getElementById('mEmail').value = "";
             
-            // 重新讀取資料以更新下方的清單
-            if (typeof syncData === "function") syncData(); 
-            else location.reload(); 
-        } else {
-            alert("❌ 失敗：" + (result.message || "未知錯誤"));
-        }
-    } catch (e) {
-        alert("連線失敗，請檢查網路");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-      }
+            // 2. 強效更新資料
+            if (typeof syncData === "function") {
+                // 這裡我們用 await 確保資料真的從雲端抓回來了再往下走
+                await syncData(); 
+                
+                // 3. 關鍵：手動觸發會員名冊的渲染函式
+                // 假設你的會員名冊渲染函式叫做 renderUsers
+                if (typeof renderUsers === "function") {
+                    renderUsers(); 
+                } else {
+                    // 如果沒有獨立的 renderUsers，就執行全域渲染
+                    renderAll();
+                }
+                console.log("名冊已同步並重新渲染");
+            } else {
+                location.reload(); 
+            }
     }
         
         

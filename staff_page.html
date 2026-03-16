@@ -320,28 +320,37 @@ async function sendAttendanceToLine() {
             }).join('');
         }
 
-        function renderEvents(events) {
-            const list = document.getElementById('eventList');
-            const isEdit = document.getElementById('sec-calendar').classList.contains('edit-mode-active');
-            const today = new Date(); today.setHours(0,0,0,0);
-            const sorted = [...events].sort((a,b) => new Date(a.dateText) - new Date(b.dateText));
-            
-            list.innerHTML = sorted.map(ev => {
-                const canQR = new Date(ev.dateText) <= today;
-                return `
-                <div class="list-card flex justify-between items-center mb-3">
-                    <div class="flex-1">
-                        <div class="text-sm font-bold text-emerald-600 font-mono">${ev.dateText}</div>
-                        <div class="text-huge font-bold text-emerald-900">${ev.title}</div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        ${canQR ? `<button onclick="showQR('${ev.dateText}','${ev.title}')" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold">QR</button>` : ''}
-                        ${isEdit ? `<button onclick="deleteEvent('${ev.dateText}')" class="text-red-400 p-2 text-2xl"><i class="fas fa-trash-alt"></i></button>` : ''}
-                    </div>
-                </div>`;
-            }).join('');
-        }
+function renderEvents() {
+    const container = document.getElementById('eventList');
+    const select = document.getElementById('attendEventSelect'); // 出席系統選單
+    if (!container) return;
 
+    const events = (window.cachedData && window.cachedData.events) ? window.cachedData.events : [];
+    
+    // 更新活動清單 HTML
+    container.innerHTML = events.map(ev => `
+        <div class="list-card flex justify-between items-center">
+            <div>
+                <div class="text-emerald-600 font-bold">${ev.dateText || ev.date}</div>
+                <div class="text-xl font-bold">${ev.title}</div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="showQR('${ev.dateText || ev.date}', '${ev.title}')" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <i class="fas fa-qrcode"></i>
+                </button>
+                <button onclick="deleteEvent('${ev.dateText || ev.date}')" class="edit-only p-3 bg-rose-50 text-rose-600 rounded-xl">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    // 更新出席活動下拉選單
+    if (select) {
+        select.innerHTML = '<option value="">請選擇活動...</option>' + 
+            events.map(ev => `<option value="${ev.dateText || ev.date}">${ev.dateText || ev.date} ${ev.title}</option>`).join('');
+    }
+}
         
 function renderAll() {
     if (!cachedData) return;
@@ -483,15 +492,9 @@ async function addMember(event) {
 
 function renderUsers() {
     const container = document.getElementById('memberList');
+    if (!container) return;
 
-if (!container) {
-        console.error("找不到 ID 為 memberList 的容器");
-        return;
-    }    
-    
     const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
-    
-    // --- 關鍵修復：補上這一行，否則下面的 deleteMember(..., adminKey) 會崩潰 ---
     const adminKey = sessionStorage.getItem('adminKey'); 
     
     if (!window.cachedData || !window.cachedData.users) return;
@@ -502,12 +505,12 @@ if (!container) {
     );
 
     container.innerHTML = filtered.map(u => `
-        <div class="list-card flex justify-between items-center">
+        <div class="list-card flex justify-between items-center shadow-sm">
             <div>
                 <div class="font-bold text-xl text-slate-800">${u.name}</div>
                 <div class="text-slate-500">${u.phone}</div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 edit-only">
                 <button onclick="deleteMember('${u.name}', '${u.phone}', '${adminKey}')" 
                         class="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg font-medium hover:bg-rose-100 transition-colors">
                     <i class="fa-solid fa-trash-can"></i>
@@ -515,7 +518,7 @@ if (!container) {
             </div>
         </div>
     `).join('');
-}   
+}
        
 // 修正後的刪除函式
 function deleteMember(name, phone, key) {
@@ -542,13 +545,24 @@ function saveSystemConfig() {
     apiPost({ type: "update_config", reading_folder_url: document.getElementById('conf-reading').value, photo_gallery_url: document.getElementById('conf-photo').value }); 
 }        
 
-        function showQR(date, title) {
-            document.getElementById('qrModal').classList.remove('hidden');
-            document.getElementById('qrModal').classList.add('flex');
-            document.getElementById('qrcode').innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: "CHECKIN:" + date, width: 200, height: 200 });
-        }
-        function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }
+    function showQR(date, title) {
+    const modal = document.getElementById('qrModal');
+    const qrContainer = document.getElementById('qrcode');
+    if (!modal || !qrContainer) return;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    qrContainer.innerHTML = "";
+    
+    // 這裡生成 QR Code 內容
+    new QRCode(qrContainer, {
+        text: "CHECKIN:" + date,
+        width: 256,
+        height: 256
+    });
+}
+        
+function closeQR() { document.getElementById('qrModal').classList.add('hidden'); }
         
 let isSystemEditing = false;
 function toggleSystemEdit() {

@@ -399,7 +399,7 @@ function renderAll() {
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
         
 async function addMember() {
-    // 1. 抓取剛才 HTML 裡設定的 ID (mName, mPhone, mEmail)
+    // 1. 抓取 HTML 裡設定的 ID
     const name = document.getElementById('mName').value.trim();
     const phone = document.getElementById('mPhone').value.trim();
     const email = document.getElementById('mEmail').value.trim();
@@ -409,8 +409,8 @@ async function addMember() {
         return;
     }
 
-    // 防止重複點擊
-    const btn = event.target;
+    // 防止重複點擊 (抓取點擊的按鈕)
+    const btn = event.currentTarget || event.target;
     const originalText = btn.innerText;
     btn.innerText = "處理中...";
     btn.disabled = true;
@@ -423,8 +423,8 @@ async function addMember() {
                 key: sessionStorage.getItem('adminKey'),
                 name: name,
                 phone: phone,
-                email: email, // 送出 Email 資訊
-                password: phone.slice(-4), // 預設密碼
+                email: email, 
+                password: phone.slice(-4), 
                 role: ''
             })
         });
@@ -434,29 +434,36 @@ async function addMember() {
         if (result.result === "SUCCESS") {
             alert("✅ 新增成功！");
             
-            // --- 2. 關鍵：清空欄位 ---
+            // 清空欄位
             document.getElementById('mName').value = "";
             document.getElementById('mPhone').value = "";
             document.getElementById('mEmail').value = "";
             
-            // 2. 強效更新資料
+            // 強效更新資料
             if (typeof syncData === "function") {
-                // 這裡我們用 await 確保資料真的從雲端抓回來了再往下走
                 await syncData(); 
                 
-                // 3. 關鍵：手動觸發會員名冊的渲染函式
-                // 假設你的會員名冊渲染函式叫做 renderUsers
+                // 檢查具體的渲染函式名稱
                 if (typeof renderUsers === "function") {
                     renderUsers(); 
-                } else {
-                    // 如果沒有獨立的 renderUsers，就執行全域渲染
+                } else if (typeof renderAll === "function") {
                     renderAll();
                 }
                 console.log("名冊已同步並重新渲染");
             } else {
                 location.reload(); 
             }
+        } else {
+            alert("❌ 失敗：" + (result.message || "未知錯誤"));
+        } // <--- 補上這個結束 SUCCESS 區塊的大括號
+    } catch (e) {
+        console.error("錯誤詳情:", e);
+        alert("連線失敗，請檢查網路");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
+}
         
         
         function deleteMember(p) { if(confirm("刪除？")) apiPost({ type: "delete_member", currentPhone: p }); }

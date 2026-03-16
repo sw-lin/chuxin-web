@@ -125,10 +125,7 @@
         <button onclick="sendAttendanceToLine()" class="w-full md:w-auto bg-[#00B900] text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg hover:bg-[#009900] active:scale-95 transition-all flex items-center justify-center">
             <i class="fab fa-line text-2xl mr-2"></i>一鍵發送名單
         </button>
-    </div>
-</div>
-        
-        
+    </div>        
     </div>
 
     <div id="attendance-detail-list" class="space-y-3">
@@ -152,8 +149,8 @@
         <div class="flex flex-col gap-4">
             <input type="text" id="payItemTitle" placeholder="項目名稱 (例如：115年會費)" class="p-4 rounded-xl text-xl w-full">
             <div class="flex gap-4">
-                <button onclick="initPayment('未繳')" class="flex-1 bg-gray-500 text-white py-4 rounded-xl font-bold text-lg">預設：所有人未繳</button>
-                <button onclick="initPayment('已繳')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg">預設：所有人已繳</button>
+                <button onclick="initPayment('未繳', event)" class="flex-1 bg-gray-500 text-white py-4 rounded-xl font-bold text-lg">預設：所有人未繳</button>
+                <button onclick="initPayment('已繳', event)" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg">預設：所有人已繳</button>
             </div>
         </div>
     </div>
@@ -390,8 +387,8 @@ function renderAll() {
         function updateNews() { apiPost({ type: "update_news", content: document.getElementById('input-news').value }); }
         function saveLineMsg() { apiPost({ type: "send_line", message: document.getElementById('line-msg').value }); }
         
-async function addMember() {
-    // 1. 抓取輸入框
+// 補上 (event) 參數
+async function addMember(event) {
     const nameInput = document.getElementById('mName');
     const phoneInput = document.getElementById('mPhone');
     const emailInput = document.getElementById('mEmail');
@@ -405,7 +402,7 @@ async function addMember() {
         return;
     }
 
-    // 2. 抓取觸發的按鈕 (避免重複點擊)
+    // 這裡現在能正確抓到 btn 了
     const btn = event ? (event.currentTarget || event.target) : null;
     if (btn) {
         btn.disabled = true;
@@ -548,20 +545,22 @@ function renderAttendanceDetail() {
     }
 }   
 
-// 強化版：初始化繳費項目
-window.initPayment = async function(defaultStatus) {
+// 補上 (defaultStatus, event) 參數
+window.initPayment = async function(defaultStatus, event) {
     const title = document.getElementById('payItemTitle').value.trim();
     if (!title) return alert("請輸入項目名稱");
     
-    // 關鍵：確保抓得到會員名冊
     const users = window.cachedData ? window.cachedData.users : [];
     if (users.length === 0) return alert("❌ 錯誤：目前名冊中沒有會員，請先同步資料！");
 
     if (!confirm(`確定要為 ${users.length} 位會員建立「${title}」紀錄嗎？`)) return;
 
-    const btn = event.target;
-    btn.disabled = true;
-    btn.innerText = "處理中...";
+    // 現在 event.target 不會報錯了
+    const btn = event ? event.target : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "處理中...";
+    }
 
     try {
         // 使用序列化處理，避免同時對 GAS 發出過多請求

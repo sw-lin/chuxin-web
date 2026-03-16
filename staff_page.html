@@ -320,18 +320,7 @@ async function sendAttendanceToLine() {
             }).join('');
         }
 
-function renderConfig() {
-    if (!window.cachedData) return;
-    
-    // 填入公佈欄內容 (對應 GAS 的 news 標籤)
-    const newsArea = document.getElementById('conf-news');
-    if (newsArea) newsArea.value = window.cachedData.news || '';
-    
-    // 填入連結設定
-    const conf = window.cachedData.config || {};
-    if (document.getElementById('conf-reading')) document.getElementById('conf-reading').value = conf['reading_folder_url'] || '';
-    if (document.getElementById('conf-photo')) document.getElementById('conf-photo').value = conf['photo_gallery_url'] || '';
-}  
+
         
 function renderEvents() {
     const container = document.getElementById('eventList');
@@ -428,25 +417,7 @@ async function apiPost(data) {
     }
 }        
 
- async function updateNews() {
-    const content = document.getElementById('conf-news').value;
-    const adminKey = sessionStorage.getItem('adminKey');
-    
-    // 💡 type 必須跟 GAS 的 switch case 一致 (update_news)
-    // 💡 內容必須叫 content，因為 GAS 寫的是 params.content
-    const res = await apiPost({ 
-        type: 'update_news', 
-        content: content, 
-        key: adminKey 
-    });
-    
-    if (res.result === 'SUCCESS') {
-        alert('公告更新成功！');
-        syncData(false); // 重新讀取資料
-    } else {
-        alert('更新失敗：' + (res.message || '請確認金鑰'));
-    }
-} 
+
         
 async function saveLineMsg() {
     const msg = document.getElementById('line-msg').value;
@@ -651,18 +622,43 @@ function toggleSystemEdit() {
     }
 } 
         
+// 1. 公布欄與連結讀取 (對應 GAS 的 news 與 config)
+function renderConfig() {
+    if (!window.cachedData) return;
+    const newsArea = document.getElementById('conf-news');
+    if (newsArea) newsArea.value = window.cachedData.news || '';
+    
+    const conf = window.cachedData.config || {};
+    if (document.getElementById('conf-reading')) document.getElementById('conf-reading').value = conf['reading_folder_url'] || '';
+    if (document.getElementById('conf-photo')) document.getElementById('conf-photo').value = conf['photo_gallery_url'] || '';
+}
+
+// 2. 更新公布欄 (對應 GAS 的 params.content)
+async function updateNews() {
+    const content = document.getElementById('conf-news').value;
+    const adminKey = sessionStorage.getItem('adminKey');
+    const res = await apiPost({ type: 'update_news', content: content, key: adminKey });
+    if (res.result === 'SUCCESS') {
+        alert('公告更新成功！');
+        syncData(false);
+    } else {
+        alert('更新失敗，請檢查權限');
+    }
+}
+
+// 3. 出席紀錄渲染 (修正 Defined 錯誤)
 function renderAttendance() {
     const select = document.getElementById('attendEventSelect');
     const container = document.getElementById('attendList');
     if (!select || !container) return;
 
-    const targetId = select.value; // 日期
+    const targetId = select.value; 
     if (!targetId) {
         container.innerHTML = '<div class="text-center text-slate-400 py-8">請先選擇活動項目</div>';
         return;
     }
 
-    // 💡 關鍵：對應 GAS 回傳的 eventId 欄位
+    // 💡 關鍵：GAS 回傳的是 eventId，我們用它來過濾
     const logs = (window.cachedData && window.cachedData.attendance) ? 
                  window.cachedData.attendance.filter(l => l.eventId === targetId) : [];
 
@@ -679,8 +675,7 @@ function renderAttendance() {
             </div>
         `).join('');
     }
-}
-        
+}        
 function renderAttendanceDetail() {
     const selectedDate = document.getElementById('event-select').value;
     const listContainer = document.getElementById('attendance-detail-list');

@@ -469,6 +469,36 @@ async function addMember(event) {
         }
     }
 }
+
+function renderUsers() {
+    const container = document.getElementById('userList');
+    const searchTerm = document.getElementById('userSearch')?.value.toLowerCase() || '';
+    
+    // --- 關鍵修復：補上這一行，否則下面的 deleteMember(..., adminKey) 會崩潰 ---
+    const adminKey = sessionStorage.getItem('adminKey'); 
+    
+    if (!window.cachedData || !window.cachedData.users) return;
+
+    const filtered = window.cachedData.users.filter(u => 
+        u.name.toLowerCase().includes(searchTerm) || 
+        u.phone.includes(searchTerm)
+    );
+
+    container.innerHTML = filtered.map(u => `
+        <div class="list-card flex justify-between items-center">
+            <div>
+                <div class="font-bold text-xl text-slate-800">${u.name}</div>
+                <div class="text-slate-500">${u.phone}</div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="deleteMember('${u.name}', '${u.phone}', '${adminKey}')" 
+                        class="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg font-medium hover:bg-rose-100 transition-colors">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}   
         
         function deleteMember(p) { if(confirm("刪除？")) apiPost({ type: "delete_member", currentPhone: p }); }
         function addEvent() { apiPost({ type: "add_event", date: document.getElementById('calDate').value, title: document.getElementById('calTitle').value }); }

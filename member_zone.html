@@ -197,30 +197,63 @@ async function handleUpdateProfile() {
             }
         }
 
-        async function syncData(user) {
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                remoteConfig = data.config || {};
-                document.getElementById('news').innerText = data.news || "歡迎。";
-                const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
-                const liveUser = data.users.find(u => String(u.phone).slice(-9) === myMatch);
-                if (liveUser) {
-                    const today = new Date().toISOString().split('T')[0];
-                    const events = data.calendar.filter(ev => ev.dateText <= today);
-                    const logs = liveUser.attendLog.map(l => l.split('T')[0]);
-                    let count = events.filter(ev => logs.includes(ev.dateText)).length;
-                    document.getElementById('attPercent').innerText = (events.length ? Math.round(count/events.length*100) : 0) + "%";
-                    document.getElementById('attCountDisplay').innerText = `${count} / ${events.length}`;
-                    document.getElementById('historyList').innerHTML = [...events].reverse().map(ev => `
-                        <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
-                            <div><div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div><div class="text-emerald-900 font-bold text-sm">${ev.title}</div></div>
-                            <i class="fas ${logs.includes(ev.dateText) ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
-                        </div>`).join('');
-                }
-            } catch (e) {}
-        }
+async function syncData(user) {
+    try {
+        console.log("開始同步資料，目前登入者手機：", user.phone);
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        console.log("雲端回傳資料：", data);
 
+        remoteConfig = data.config || {};
+        document.getElementById('news').innerText = data.news || "歡迎。";
+
+        // --- 強力匹配邏輯 ---
+        // 把手機號碼統一轉成字串，並只取最後 9 碼進行比對 (避開 09 或 +886)
+        const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
+        const liveUser = data.users.find(u => {
+            if (!u.phone) return false;
+            return String(u.phone).replace(/\D/g, "").slice(-9) === myMatch;
+        });
+
+        if (liveUser) {
+            console.log("成功找到對應會員：", liveUser.name);
+            
+            // 處理日期：抓取今天以前的所有活動
+            const today = new Date().toISOString().split('T')[0];
+            const events = (data.calendar || []).filter(ev => ev.dateText <= today);
+            
+            // 處理出席記錄：確保格式統一為 YYYY-MM-DD
+            // 注意：如果你的 GAS 回傳的是 ISO 字串，這行 .split('T')[0] 很重要
+            const logs = (liveUser.attendLog || []).map(l => String(l).split('T')[0]);
+            
+            // 計算出席數
+            let count = events.filter(ev => logs.includes(ev.dateText)).length;
+            
+            // 更新 UI
+            document.getElementById('attPercent').innerText = (events.length ? Math.round(count / events.length * 100) : 0) + "%";
+            document.getElementById('attCountDisplay').innerText = `${count} / ${events.length}`;
+            
+            // 渲染學習歷程 (由新到舊)
+            document.getElementById('historyList').innerHTML = [...events].reverse().map(ev => {
+                const isAttended = logs.includes(ev.dateText);
+                return `
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                        <div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                        </div>
+                        <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
+                    </div>`;
+            }).join('');
+        } else {
+            console.error("在資料庫中找不到匹配的手機號碼！");
+            document.getElementById('historyList').innerHTML = "<p class='text-center text-gray-400'>找不到您的活動紀錄</p>";
+        }
+    } catch (e) {
+        console.error("同步過程中發生錯誤：", e);
+    }
+}
+        
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {
     try {

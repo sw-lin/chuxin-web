@@ -427,13 +427,20 @@ async function updateNews() {
     const content = document.getElementById('conf-news').value;
     const adminKey = sessionStorage.getItem('adminKey');
     
-    // 這裡的 key 必須叫 content，因為你的 GAS doPost 是寫 data.content
-    const res = await apiPost({ type: 'update_news', content: content, key: adminKey });
+    // 💡 注意：type 必須是 update_news，且內容必須叫 content
+    const res = await apiPost({ 
+        type: 'update_news', 
+        content: content, 
+        key: adminKey 
+    });
+    
     if (res.result === 'SUCCESS') {
-        alert('公告已更新！');
+        alert('公告更新成功！');
         syncData(false);
+    } else {
+        alert('更新失敗：' + (res.message || '金鑰錯誤'));
     }
-}   
+}  
         
 async function saveLineMsg() {
     const msg = document.getElementById('line-msg').value;
@@ -642,21 +649,19 @@ function renderAttendance() {
     const select = document.getElementById('attendEventSelect');
     const container = document.getElementById('attendList');
     if (!select || !container) return;
-    
-    container.className = "max-w-2xl mx-auto px-2";
 
-    const targetEventId = select.value; // 這通常是日期
-    if (!targetEventId) {
+    const targetId = select.value; // 這在您的資料中對應的是日期字串
+    if (!targetId) {
         container.innerHTML = '<div class="text-center text-slate-400 py-8">請先選擇活動項目</div>';
         return;
     }
 
-    // 💡 這裡改用 eventId 來比對
+    // 💡 關鍵：對應 GAS 回傳的 eventId 欄位
     const logs = (window.cachedData && window.cachedData.attendance) ? 
-                 window.cachedData.attendance.filter(l => l.eventId === targetEventId) : [];
+                 window.cachedData.attendance.filter(l => l.eventId === targetId) : [];
 
     if (logs.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-400 py-8">此活動尚無人簽到</div>';
+        container.innerHTML = '<div class="text-center text-slate-400 py-8">此活動目前無人簽到</div>';
     } else {
         container.innerHTML = logs.map(l => `
             <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm mb-2">
@@ -664,12 +669,11 @@ function renderAttendance() {
                     <div class="font-bold text-lg text-slate-800">${l.name}</div>
                     <div class="text-sm text-slate-500">${l.phone}</div>
                 </div>
-                <div class="text-emerald-600 font-bold text-sm">已簽到</div>
+                <div class="text-emerald-600 font-bold">已簽到</div>
             </div>
         `).join('');
     }
 }
-
 function renderAttendanceDetail() {
     const selectedDate = document.getElementById('event-select').value;
     const listContainer = document.getElementById('attendance-detail-list');

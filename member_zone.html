@@ -220,7 +220,7 @@ async function handleUpdateProfile() {
             }
         }
 
-  async function syncData(user) {
+async function syncData(user) {
     try {
         console.log("開始同步資料...");
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
@@ -236,7 +236,21 @@ async function handleUpdateProfile() {
         );
 
         if (liveUser) {
-            // 2. 日期格式標準化函式 (確保 YYYY-MM-DD 格式正確)
+            // --- 【關鍵修正：在此處執行權限檢查】 ---
+            const staffBtn = document.getElementById('staffBtn');
+            const role = liveUser.role || "";
+            // 只要 role 不是空的，且不是 "學員"，就移除 hidden 類別並設定顯示
+            if (role && role !== "學員") {
+                staffBtn.classList.remove('hidden');
+                staffBtn.style.display = 'inline-block';
+                // 為了美觀，加上您喜歡的樣式類別
+                staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full ml-2";
+                staffBtn.innerText = "幹部專區";
+                // 確保點擊時執行您剛才寫好的驗證跳轉
+                staffBtn.onclick = enterStaffMode; 
+            }
+
+            // 2. 日期格式標準化
             const toDateString = (dateInput) => {
                 if (!dateInput) return "";
                 const d = new Date(dateInput);
@@ -248,32 +262,21 @@ async function handleUpdateProfile() {
             };
 
             const todayStr = toDateString(new Date());
-            
-            // 處理該會員的出席紀錄
             const logs = (liveUser.attendLog || []).map(l => toDateString(l)).filter(l => l !== "");
-
-            // 3. 過濾出「已發生(含今日)」的活動作為分母
-            // 這是決定哪些活動會出現在清單上的「過濾器」
             const pastEvents = (data.calendar || []).filter(ev => ev.dateText <= todayStr);
             
-            // 4. 計算分子：在過去活動中，有出席紀錄的
             const attendCount = pastEvents.filter(ev => logs.includes(ev.dateText)).length;
             const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
 
-            // 5. 更新 UI 數字
             document.getElementById('attPercent').innerText = `${rate}%`;
             document.getElementById('attCountDisplay').innerText = `${attendCount} / ${pastEvents.length}`;
             
-            // 6. 參與率過門檻噴彩花
             if (rate >= 50) {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
 
-            // 7. 渲染「已發生」的學習歷程清單 (隱藏未來活動)
-            // 就像 C 語言的 for 迴圈中加了 if 判斷
             document.getElementById('historyList').innerHTML = [...pastEvents].reverse().map(ev => {
                 const isAttended = logs.includes(ev.dateText);
-                
                 return `
                     <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
                         <div>
@@ -283,16 +286,11 @@ async function handleUpdateProfile() {
                         <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
                     </div>`;
             }).join('');
-            
-            if (pastEvents.length === 0) {
-                document.getElementById('historyList').innerHTML = '<p class="text-center text-gray-400 py-10">目前尚無活動紀錄</p>';
-            }
         }
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}   
-        
+}        
 function checkStaffRole(role) {
     const staffBtn = document.getElementById('staffBtn');
     // 只要 role 不是空的，也不是 "學員" (C 欄有內容)

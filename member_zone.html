@@ -242,9 +242,9 @@ async function syncData(user) {
     // 如果 GAS 還是沒修好，我們先用最粗暴的方式：
     // 如果你是林士偉(幹部)，且 role 還是沒出來，我們強制給它權限進行測試
     const role = liveUser.role || "";
-    const isBossMan = (liveUser.phone === "0928528517" || liveUser.phone === "928528517");
+  //  const isBossMan = (liveUser.phone === "0928528517" || liveUser.phone === "928528517");
 
-    if ((role && role !== "學員") || isBossMan) {
+    if (role && role !== "學員") {
         console.log("權限確認：解鎖幹部專區");
         staffBtn.classList.remove('hidden');
         // 直接賦予樣式，確保它在 nav 裡面漂亮呈現

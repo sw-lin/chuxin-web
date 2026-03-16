@@ -431,37 +431,24 @@ async function addMember() {
 
         const result = await res.json();
 
-        if (result.result === "SUCCESS") {
+if (result.result === "SUCCESS") {
             alert("✅ 新增成功！");
             
-            // 清空欄位
+            // 1. 清空欄位
             document.getElementById('mName').value = "";
             document.getElementById('mPhone').value = "";
             document.getElementById('mEmail').value = "";
             
-            // 強效更新資料
+            // 2. 呼叫我們剛改好的 syncData (傳入 false 代表不要跳同步成功的 alert)
             if (typeof syncData === "function") {
-                await syncData(); 
-                
-                // 檢查具體的渲染函式名稱
-                if (typeof renderUsers === "function") {
-                    renderUsers(); 
-                } else if (typeof renderAll === "function") {
-                    renderAll();
-                }
-                console.log("名冊已同步並重新渲染");
+                console.log("開始等待同步最新資料...");
+                // 這裡的 await 現在真的會等資料抓回來、並且畫好畫面了！
+                await syncData(false); 
+                console.log("名冊已用最新資料重新渲染完畢");
             } else {
                 location.reload(); 
             }
-        } else {
-            alert("❌ 失敗：" + (result.message || "未知錯誤"));
-        } // <--- 補上這個結束 SUCCESS 區塊的大括號
-    } catch (e) {
-        console.error("錯誤詳情:", e);
-        alert("連線失敗，請檢查網路");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
+        } 
     }
 }
         
@@ -674,20 +661,42 @@ window.switchTab = function(tab, title) {
     if (typeof renderAll === "function") renderAll();
 };
 
-// 同步資料邏輯
-window.syncData = function() {
+// 同步資料邏輯 (改寫為 async 讓其他函式可以等待它完成)
+window.syncData = async function(showModal = true) {
     if (!GAS_URL) return alert("未設定 GAS_URL");
+    
+    // 如果需要顯示讀取畫面，可以把這段打開
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay && showModal) overlay.classList.remove('hidden');
+    
     console.log("強效同步中...");
-    fetch(GAS_URL + "?type=all")
-        .then(res => res.json())
-        .then(data => {
-            window.cachedData = data;
-            console.log("✅ 同步成功");
-            updatePaymentSelect(); // 立即更新選單
+    
+    try {
+        const res = await fetch(GAS_URL + "?type=all");
+        const data = await res.json();
+        
+        window.cachedData = data;
+        console.log("✅ 同步成功，最新資料已存入 cachedData");
+        
+        updatePaymentSelect(); 
+        
+        // 確保名冊畫面一定會被重新渲染
+        if (typeof renderAll === "function") {
             renderAll();
+        }
+        
+        if (showModal) {
             alert("✅ 同步完成！");
-        })
-        .catch(err => alert("同步失敗：" + err));
+        }
+        
+        return true; // 回傳成功，讓 await 知道做完了
+        
+    } catch (err) {
+        alert("同步失敗：" + err);
+        return false;
+    } finally {
+        if(overlay && showModal) overlay.classList.add('hidden');
+    }
 };
 
 // 更新選單邏輯

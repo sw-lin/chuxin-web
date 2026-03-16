@@ -236,21 +236,21 @@ async function syncData(user) {
         );
 
         if (liveUser) {
-            // --- 【關鍵修正：在此處執行權限檢查】 ---
+            // --- 【關鍵修正：顯示幹部按鈕】 ---
             const staffBtn = document.getElementById('staffBtn');
             const role = liveUser.role || "";
-            // 只要 role 不是空的，且不是 "學員"，就移除 hidden 類別並設定顯示
+            // 如果 Role 有內容且不是學員，就顯示按鈕
             if (role && role !== "學員") {
                 staffBtn.classList.remove('hidden');
                 staffBtn.style.display = 'inline-block';
-                // 為了美觀，加上您喜歡的樣式類別
+                // 補上樣式
                 staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full ml-2";
                 staffBtn.innerText = "幹部專區";
-                // 確保點擊時執行您剛才寫好的驗證跳轉
-                staffBtn.onclick = enterStaffMode; 
+                // 綁定剛才寫好的驗證跳轉函式
+                staffBtn.onclick = enterStaffMode;
             }
 
-            // 2. 日期格式標準化
+            // 2. 日期與出席統計
             const toDateString = (dateInput) => {
                 if (!dateInput) return "";
                 const d = new Date(dateInput);
@@ -275,6 +275,7 @@ async function syncData(user) {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
 
+            // 3. 渲染歷史紀錄
             document.getElementById('historyList').innerHTML = [...pastEvents].reverse().map(ev => {
                 const isAttended = logs.includes(ev.dateText);
                 return `
@@ -290,7 +291,8 @@ async function syncData(user) {
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}        
+}    
+        
 function checkStaffRole(role) {
     const staffBtn = document.getElementById('staffBtn');
     // 只要 role 不是空的，也不是 "學員" (C 欄有內容)

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出席統計 | 築心讀書會</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .loader { border-top-color: #064E3B; animation: spinner 0.6s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #064E3B; color: white; padding: 12px 24px; border-radius: 99px; font-size: 14px; z-index: 300; transition: opacity 0.3s; }
+    </style>
+</head>
+<body class="pb-24">
+
+    <div class="sticky top-0 z-50 p-4 flex items-center justify-between glass-card shadow-sm">
+        <button onclick="location.href='staff_menu.html'" class="text-emerald-800"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+        <h1 class="font-bold text-emerald-900 text-lg">出席狀況統計</h1>
+        <div class="w-10"></div>
+    </div>
+
+    <div class="p-4 space-y-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50">
+            <label class="text-xs text-gray-400 block mb-2">選擇已結束或今日活動</label>
+            <select id="eventSelector" onchange="fetchReport()" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none text-emerald-900 font-bold">
+                <option value="">-- 請選擇活動 --</option>
+            </select>
+        </div>
+
+        <div id="statsCard" class="hidden grid grid-cols-2 gap-3">
+            <div class="bg-emerald-50 p-4 rounded-2xl text-center border border-emerald-100">
+                <div class="text-xs text-emerald-600 mb-1">出席人數</div>
+                <div id="presentCount" class="text-2xl font-bold text-emerald-900">0</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
+                <div class="text-xs text-gray-400 mb-1">未出席</div>
+                <div id="absentCount" class="text-2xl font-bold text-gray-600">0</div>
+            </div>
+        </div>
+
+        <div id="reportList" class="space-y-2"></div>
+    </div>
+
+    <div id="actionArea" class="fixed bottom-6 left-0 w-full px-6 space-y-3 hidden">
+        <button onclick="confirmSendLine()" class="w-full py-4 btn-emerald text-white rounded-2xl font-bold shadow-xl flex items-center justify-center">
+            <i class="fab fa-line mr-2 text-xl"></i> 送出出席名單至 LINE
+        </button>
+    </div>
+
+    <div id="manualModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-emerald-900 mb-4 text-center">手動補登</h3>
+            <div class="space-y-4">
+                <p id="manualEventInfo" class="text-center text-sm text-gray-500"></p>
+                <select id="memberSelector" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
+                    </select>
+            </div>
+            <div class="flex space-x-3 mt-8">
+                <button onclick="closeManualModal()" class="flex-1 py-3 text-gray-400">取消</button>
+                <button onclick="submitManualCheckin()" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold">確認補登</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/20 hidden z-[200] items-center justify-center">
+        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
+            <div class="loader h-12 w-12 mb-4"></div>
+            <p class="text-emerald-900 font-bold">讀取中...</p>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = '你的_GAS_DEPLOY_URL';
+        const STAFF_KEY = sessionStorage.getItem('staff_key');
+        let currentReport = [];
+
+        window.onload = async () => {
+            if (!STAFF_KEY) location.href = "index.html";
+            await loadFinishedEvents();
+        };
+
+        async function loadFinishedEvents() {
+            showLoading(true);
+            const res = await fetch(GAS_URL);
+            const data = await res.json();
+            const today = new Date().toISOString().split('T')[0];
+            const selector = document.getElementById('eventSelector');
+            
+            // 篩選今日或以前的活動
+            const pastEvents = data.calendar.filter(ev => ev.dateText <= today)
+                                           .sort((a,b) => b.dateText.localeCompare(a.dateText));
+            
+            pastEvents.forEach(ev => {
+                const opt = document.createElement('option');
+                opt.value = `${ev.dateText}:${ev.title}`;
+                opt.innerText = `${ev.dateText} | ${ev.title}`;
+                selector.appendChild(opt);
+            });
+            showLoading(false);
+        }
+
+        async function fetchReport() {
+            const eventVal = document.getElementById('eventSelector').value;
+            if (!eventVal) return;
+            
+            showLoading(true);
+            const [date, title] = eventVal.split(':');
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: 'get_attendance_data', key: STAFF_KEY, eventTitle: `EVENT:${date}|${title}` })
+            });
+            const data = await res.json();
+            currentReport = data.report;
+            renderReport();
+            showLoading(false);
+        }
+
+        function renderReport() {
+            const list = document.getElementById('reportList');
+            const presentCount = currentReport.filter(r => r.status === "出席").length;
+            const absentCount = currentReport.length - presentCount;
+
+            document.getElementById('presentCount').innerText = presentCount;
+            document.getElementById('absentCount').innerText = absentCount;
+            document.getElementById('statsCard').classList.remove('hidden');
+            document.getElementById('actionArea').classList.remove('hidden');
+
+            list.innerHTML = currentReport.map(r => `
+                <div class="bg-white p-4 rounded-xl flex justify-between items-center border border-gray-50 shadow-sm">
+                    <div>
+                        <span class="font-bold text-emerald-900">${r.name}</span>
+                        <span class="text-[10px] text-gray-400 ml-2">${r.phone}</span>
+                    </div>
+                    ${r.status === "出席" 
+                        ? '<span class="text-emerald-600 text-sm font-bold"><i class="fas fa-check-circle mr-1"></i>已簽到</span>' 
+                        : `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="text-orange-500 text-sm border border-orange-200 px-3 py-1 rounded-full bg-orange-50">補登</button>`}
+                </div>
+            `).join('');
+        }
+
+        function openManualModal(phone, name) {
+            const selector = document.getElementById('memberSelector');
+            selector.innerHTML = `<option value="${phone}">${name} (${phone})</option>`;
+            document.getElementById('manualModal').style.display = 'flex';
+        }
+
+        async function submitManualCheckin() {
+            const eventVal = document.getElementById('eventSelector').value;
+            const [date, title] = eventVal.split(':');
+            const phone = document.getElementById('memberSelector').value;
+            const name = document.getElementById('memberSelector').options[0].text.split(' ')[0];
+
+            closeManualModal();
+            showLoading(true);
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    type: 'manual_checkin', 
+                    key: STAFF_KEY, 
+                    phone, name, 
+                    eventTitle: `EVENT:${date}|${title}` 
+                })
+            });
+            const result = await res.json();
+            showLoading(false);
+            if (result.result === "SUCCESS") {
+                showToast("✅ 補登成功");
+                fetchReport(); // 重新整理
+            }
+        }
+
+        function confirmSendLine() {
+            const eventVal = document.getElementById('eventSelector').options[document.getElementById('eventSelector').selectedIndex].text;
+            const presentNames = currentReport.filter(r => r.status === "出席").map(r => r.name);
+            const msg = `📝 ${eventVal}\n出席人數：${presentNames.length}人\n出席名單：\n${presentNames.join('、')}`;
+
+            if (confirm(`即將發送名單至 LINE 群組，確定嗎？\n\n${msg}`)) {
+                sendToLine(msg);
+            }
+        }
+
+        async function sendToLine(message) {
+            showLoading(true);
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: message })
+            });
+            const result = await res.json();
+            showLoading(false);
+            if (result.result === "SUCCESS") showToast("🚀 名單已送出");
+        }
+
+        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        function showToast(m) { /* 同之前的 Toast 函式 */ }
+        function closeManualModal() { document.getElementById('manualModal').style.display = 'none'; }
+    </script>
+</body>
+</html>

@@ -273,74 +273,85 @@ async function handleUpdateProfile() {
 async function syncData(user) {
     try {
         console.log("開始同步資料...");
+        // 加上時間戳記避免瀏覽器快取舊資料
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎。";
 
-        // 1. 會員比對 (後 9 碼)
+        // 1. 會員比對 (使用手機號碼後 9 碼)
         const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
         const liveUser = data.users.find(u => 
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
         
         if (liveUser) {
+            // 更新目前使用者資料
+            currentUser = liveUser;
+
+            // 處理幹部權限按鈕
             const staffBtn = document.getElementById('staffBtn');
-            const role = liveUser.role || "";
-            if (role && role !== "學員") {
+            if (liveUser.role && liveUser.role !== "學員") {
                 staffBtn.classList.remove('hidden');
-                staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full mr-2";
                 staffBtn.style.display = "inline-block";
-                staffBtn.innerText = "幹部專區";
                 staffBtn.onclick = enterStaffMode;
             }
 
-            // 2. 出席統計 (關鍵修正點)
+            // 2. 出席紀錄與參與率計算
             const todayStr = new Date().toISOString().split('T')[0];
-            
-            // 直接取用資料庫的紀錄，不刻意轉換成 Date
-            const logs = liveUser.attendLog || []; 
+            const logs = liveUser.attendLog || []; // 格式如 ["EVENT:2026-03-17|主題", ...]
             const calendar = data.calendar || [];
             
-            // 僅計算今天以前的活動作為參與率基數
+            // 找出「今天以前」的所有活動作為分母
             const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
             
-            // 核心比對：拼出與資料庫一模一樣的 Key (EVENT:日期|標題)
-            const attendCount = pastEvents.filter(ev => {
+            // 核心比對：直接用資料庫原始字串比對，不進行 Date 轉換
+            const attendedEvents = pastEvents.filter(ev => {
                 const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
                 return logs.includes(matchKey);
-            }).length;
+            });
 
-            const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
+            const attendCount = attendedEvents.length;
+            const totalPast = pastEvents.length;
+            const rate = totalPast ? Math.round((attendCount / totalPast) * 100) : 0;
 
+            // 更新介面上的數據
             document.getElementById('attPercent').innerText = `${rate}%`;
-            document.getElementById('attCountDisplay').innerText = `${attendCount} / ${pastEvents.length}`;
+            document.getElementById('attCountDisplay').innerText = `${attendCount} / ${totalPast}`;
             
-            if (rate >= 50) {
+            if (rate >= 50 && attendCount > 0) {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
 
-            // 3. 渲染歷史紀錄 (顯示所有活動，未來的反灰)
-            document.getElementById('historyList').innerHTML = [...calendar].reverse().map(ev => {
+            // 3. 渲染學習歷程 (修改：僅顯示有參加的活動)
+            const historyList = document.getElementById('historyList');
+            
+            // 先過濾出「有參加」的活動，再進行渲染
+            const onlyAttended = calendar.filter(ev => {
                 const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
-                const isAttended = logs.includes(matchKey); // 判斷是否在此次紀錄中
-                const isPast = ev.dateText <= todayStr;
+                return logs.includes(matchKey);
+            });
 
-                return `
-                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3 ${!isPast ? 'opacity-50' : ''}">
+            if (onlyAttended.length === 0) {
+                historyList.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
+            } else {
+                // 由新到舊排序
+                historyList.innerHTML = onlyAttended.slice().reverse().map(ev => `
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
                         <div>
-                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText} ${!isPast ? '(即將到來)' : ''}</div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
                             <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                         </div>
-                        <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
-                    </div>`;
-            }).join('');
+                        <i class="fas fa-check-circle text-emerald-600 text-2xl"></i>
+                    </div>
+                `).join('');
+            }
         }
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-} 
+}
         
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {

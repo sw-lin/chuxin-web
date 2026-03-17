@@ -16,6 +16,21 @@
         .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); transition: all 0.2s; }
         .btn-emerald:active { transform: scale(0.98); opacity: 0.9; }
         .btn-line { background: #00B900; color: white; }
+        /* 成功提示小標籤 */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #064E3B;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 99px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 300;
+    transition: opacity 0.3s;
+}    
     </style>
 </head>
 <body class="h-screen flex flex-col">
@@ -102,11 +117,13 @@ async function updateNews() {
             })
         });
         const result = await res.json();
-        if (result.result === "SUCCESS") alert("更新成功！");
+        if (result.result === "SUCCESS") {
+          showToast("✅ 公告更新成功");
+        }
         else alert("更新失敗：" + result.message);
-    } catch (e) {
-        alert("網路連線錯誤");
-    }
+        } catch (e) {
+            alert("網路連線錯誤");
+        }
     showLoading(false); // <--- 結束轉圈
 }
         // 3. 發送 LINE 訊息邏輯
@@ -127,8 +144,8 @@ async function sendLine() {
         });
         const result = await res.json();
         if (result.result === "SUCCESS") {
-            alert("LINE 發送成功！");
-            document.getElementById('lineMsg').value = '';
+             showToast("🚀 LINE 訊息已發出");
+             document.getElementById('lineMsg').value = '';
         } else {
             alert("發送失敗");
         }
@@ -137,6 +154,19 @@ async function sendLine() {
     }
     showLoading(false); // <--- 結束轉圈
 }  
+        
+        function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    
+    // 2秒後自動消失
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
+} 
         
         // 控制等待訊號的顯示/隱藏
     function showLoading(show) {

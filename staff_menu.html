@@ -109,6 +109,8 @@
         function navTo(page) {
             const key = sessionStorage.getItem('staff_key');
             // 跳轉至 檔名.html?key=...
+            const targetUrl = `${page}.html?key=${encodeURIComponent(key)}`;
+            console.log("導航至：", targetUrl);
             location.href = `${page}.html?key=${encodeURIComponent(key)}`;
         }
     </script>

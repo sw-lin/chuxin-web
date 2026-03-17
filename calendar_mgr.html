@@ -126,8 +126,7 @@ async function loadEvents() {
                         </button>
                         ` : ''}
                        ${isEditMode ? `
-                            <button onclick="deleteEvent('${ev.dateText}', '${ev.title}')" class="text-red-400 p-2 hover:bg-red-50 rounded-full transition-colors">
-                                <i class="fas fa-trash-alt"></i>
+                            <button onclick="deleteEvent('${ev.dateText}', '${ev.title}')" class="...">
                             </button>
                         ` : ''}
                     </div>
@@ -163,30 +162,58 @@ async function loadEvents() {
             if (result.result === "SUCCESS") { showToast("✅ 活動建立成功"); loadEvents(); }
         }
 
-        async function deleteEvent(date, title) {
-            if (!confirm(`確定刪除 ${date} 的活動嗎？`)) return;
-            showLoading(true);
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: 'delete_event', key: STAFF_KEY, date: date, title: title })
-            });
-            const result = await res.json();
-            showLoading(false);
-            if (result.result === "SUCCESS") { showToast("🗑️ 活動已移除"); loadEvents(); }
-        }
-        
-        function showQRCode(date, title) {
-           document.getElementById('qrTitle').innerText = title;
-           document.getElementById('qrDate').innerText = date;
+       async function deleteEvent(dateText, title) {
+       // 診斷 1：確認有沒有抓到資料
+        console.log("按下刪除鍵，收到參數：", {dateText, title});
     
-           // 生成 QR Code 網址 (內容：日期|標題，可供簽到頁面解析)
-           const qrData = encodeURIComponent(`EVENT:${date}|${title}`);
-           const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${qrData}`;
-    
-           document.getElementById('qrImg').src = qrUrl;
-           document.getElementById('qrModal').style.display = 'flex';
-        }
+    if (!confirm(`確定要刪除「${title}」嗎？`)) return;
 
+    showLoading(true);
+    try {
+        const payload = {
+            type: 'delete_event',
+            key: STAFF_KEY,
+            dateText: dateText,
+            title: title
+        };
+        console.log("傳送給 GAS 的資料：", payload);
+
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await res.json();
+        console.log("GAS 回傳結果：", result);
+
+        if (result.result === "SUCCESS") {
+            showToast("🗑️ 活動已移除");
+            loadEvents();
+        } else {
+            alert("刪除失敗回報：" + result.message);
+        }
+    } catch (e) {
+        console.error("Fetch 過程出錯：", e);
+        alert("網路連線或伺服器錯誤");
+    }
+    showLoading(false);
+}
+        
+ function showQRCode(date, title) {
+    document.getElementById('qrTitle').innerText = title;
+    document.getElementById('qrDate').innerText = date;
+    
+    // 1. 內容編碼
+    const qrPayload = `CHECKIN:${date}:${title}`;
+    const encodedData = encodeURIComponent(qrPayload);
+    
+    // 2. 更換為 QRServer 的 API (這個保證能跑！)
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
+    
+    document.getElementById('qrImg').src = qrUrl;
+    document.getElementById('qrModal').style.display = 'flex';
+}
+        
 function closeQRModal() {
     document.getElementById('qrModal').style.display = 'none';
 }

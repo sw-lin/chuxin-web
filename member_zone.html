@@ -306,6 +306,9 @@ async function syncData(user) {
             // 找出「今天以前」的所有活動作為分母
             const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
             
+            // --- 偵錯重點：查看這兩組資料 ---
+            console.log("1. 資料庫回傳的報到紀錄 (logs):", logs);
+            
             // 核心比對：直接用資料庫原始字串比對，不進行 Date 轉換
             const attendedEvents = pastEvents.filter(ev => {
                 const matchKey = `EVENT:${ev.dateText}|${ev.title}`;

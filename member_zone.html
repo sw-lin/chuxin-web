@@ -147,18 +147,21 @@ async function enterStaffMode() {
 }
 
         // --- 恢復與昨日版本一致的掃描呼叫方式 ---
-        function startScanner() {
-            document.getElementById('scannerModal').classList.remove('hidden');
-            document.getElementById('scannerModal').style.display = 'flex';
-            // 使用穩定的大寫 Q 小寫 d 版本
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: 250 }, 
-                (text) => { stopScanner(); window.location.href = text; }
-            ).catch(() => stopScanner());
+      function startScanner() {
+          document.getElementById('scannerModal').classList.remove('hidden');
+          document.getElementById('scannerModal').style.display = 'flex';
+    
+          html5QrCode = new Html5Qrcode("reader");
+          html5QrCode.start(
+          { facingMode: "environment" }, 
+          { fps: 10, qrbox: 250 }, 
+          (text) => { 
+            stopScanner();      // 1. 先關閉相機
+            processCheckin(text); // 2. 執行報到邏輯
+          }
+        ).catch(() => stopScanner());
         }
-
+        
         function stopScanner() {
             if (html5QrCode) {
                 html5QrCode.stop().finally(() => {
@@ -171,7 +174,54 @@ async function enterStaffMode() {
                 document.getElementById('scannerModal').style.display = 'none';
             }
         }
+        
+    async function processCheckin(scanData) {
+        if (!scanData.startsWith("CHECKIN:")) {
+           alert("⚠️ 這不是有效的報到條碼喔！");
+           return;
+        }
 
+    // 1. 解析條碼資料 (格式: CHECKIN:日期:活動標題)
+    const parts = scanData.split(':');
+    if (parts.length < 3) return;
+    
+    const date = parts[1];
+    const title = parts.slice(2).join(':'); // 防止標題內含冒號
+    
+    // 2. 轉換為資料庫對齊格式 (配合您之前的 EVENT:日期|標題)
+    const eventID = `EVENT:${date}|${title}`;
+
+    // 3. 顯示簡單的讀取狀態 (可選)
+    console.log("正在為您報到:", eventID);
+
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'checkin',
+                phone: currentUser.phone,
+                name: currentUser.name,
+                eventTitle: eventID // 這裡叫 eventTitle，GAS 端也要叫 eventTitle
+            })
+        });
+        
+        const result = await res.json();
+        
+        if (result.result === "SUCCESS") {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            alert(`✅ ${title}\n報到成功！`);
+            syncData(currentUser); 
+        } else if (result.result === "ALREADY_DONE") {
+            // 處理重複報到的情況
+            alert(`😊 提醒：\n您已經報到過「${title}」囉！`);
+        } else {
+            alert("報到失敗：" + (result.message || "系統錯誤"));
+        }
+    } catch (e) {
+        alert("網路連線失敗");
+    }
+}
+        
         // --- 精準對接 GAS: 使用 'password' 而非 'oldPassword' ---
 async function handleUpdateProfile() {
             // 抓取彈窗中的輸入值

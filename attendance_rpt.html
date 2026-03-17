@@ -13,7 +13,7 @@
         .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .loader { border-top-color: #064E3B; animation: spinner 0.6s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #064E3B; color: white; padding: 12px 24px; border-radius: 99px; font-size: 14px; z-index: 300; transition: opacity 0.3s; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 50px; z-index: 9999; transition: opacity 0.5s; font-size: 14px; pointer-events: none; }
     </style>
 </head>
 <body class="pb-24">
@@ -62,238 +62,213 @@
     <div id="manualModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
             <h3 class="text-xl font-bold text-emerald-900 mb-4 text-center">手動補登</h3>
-            <div id="manualMemberInfo" class="text-center mb-6">
+            <div id="manualMemberInfo" class="text-center mb-6 text-emerald-800 font-bold">
                 </div>
             <div class="flex space-x-3">
                 <button onclick="closeManualModal()" class="flex-1 py-3 text-gray-400">取消</button>
-                <button id="confirmManualBtn" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold">確認補登</button>
+                <button onclick="submitManualCheckin()" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold shadow-md">確認補登</button>
             </div>
         </div>
     </div>
 
     <div id="loadingOverlay" class="fixed inset-0 bg-black/20 hidden z-[200] items-center justify-center">
         <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
-            <div class="loader h-12 w-12 mb-4 animate-spin rounded-full border-4 border-gray-200 border-t-emerald-600"></div>
+            <div class="loader h-12 w-12 mb-4 animate-spin rounded-full border-4 border-gray-100 border-t-emerald-600"></div>
             <p class="text-emerald-900 font-bold">處理中...</p>
         </div>
     </div>
     
     <script>
-        const GAS_URL = ' https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        // 修正：移除 URL 前方的空格
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         const STAFF_KEY = sessionStorage.getItem('staff_key');
+        
         let currentReport = [];
+        let isEditMode = false;
+        let pendingCheckin = { phone: '', name: '' }; // 暫存要補登的人員
 
         window.onload = async () => {
-            if (!STAFF_KEY) location.href = "index.html";
+            if (!STAFF_KEY) {
+                alert("權限過期，請重新登入");
+                location.href = "index.html";
+                return;
+            }
             await loadFinishedEvents();
         };
 
-// --- 1. 活動排序修正 ---
-async function loadFinishedEvents() {
-    showLoading(true);
-    const res = await fetch(GAS_URL);
-    const data = await res.json();
-    const today = new Date().toISOString().split('T')[0];
-    const selector = document.getElementById('eventSelector');
-    
-    // 排序：a - b 是由舊到新 (越早越前面)
-    const pastEvents = data.calendar.filter(ev => ev.dateText <= today)
-                                   .sort((a, b) => a.dateText.localeCompare(b.dateText));
-    
-    selector.innerHTML = '<option value="">-- 請選擇活動 --</option>'; // 清空
-    pastEvents.forEach(ev => {
-        const opt = document.createElement('option');
-        opt.value = `${ev.dateText}:${ev.title}`;
-        opt.innerText = `${ev.dateText} | ${ev.title}`;
-        selector.appendChild(opt);
-    });
-    showLoading(false);
-}
-        
-async function fetchReport() {
-    const val = document.getElementById('eventSelector').value;
-    if (!val) return;
-
-    showLoading(true);
-    try {
-        const res = await fetch(`${GAS_URL}?type=get_attendance&eventTitle=EVENT:${val.replace(':', '|')}`);
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-            currentReport = result.report;
-            renderReport();
-            
-            // --- 確保這兩行有跑，元件才會現身 ---
-            document.getElementById('statsCard').classList.remove('hidden');
-            document.getElementById('actionArea').classList.remove('hidden');
+        // 載入活動清單 (越早越前面)
+        async function loadFinishedEvents() {
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                const today = new Date().toISOString().split('T')[0];
+                const selector = document.getElementById('eventSelector');
+                
+                const pastEvents = data.calendar
+                    .filter(ev => ev.dateText <= today)
+                    .sort((a, b) => a.dateText.localeCompare(b.dateText));
+                
+                selector.innerHTML = '<option value="">-- 請選擇活動 --</option>';
+                pastEvents.forEach(ev => {
+                    const opt = document.createElement('option');
+                    opt.value = `${ev.dateText}:${ev.title}`;
+                    opt.innerText = `${ev.dateText} | ${ev.title}`;
+                    selector.appendChild(opt);
+                });
+            } catch(e) { showToast("連線失敗"); }
+            showLoading(false);
         }
-    } catch (e) {
-        showToast("讀取失敗");
-    }
-    showLoading(false);
-}    
         
-function renderReport() {
-    const list = document.getElementById('reportList');
-    
-    // 統計人數
-    const presentCount = currentReport.filter(r => r.status === "出席").length;
-    document.getElementById('presentCount').innerText = presentCount;
-    document.getElementById('absentCount').innerText = currentReport.length - presentCount;
+        // 抓取出席報告
+        async function fetchReport() {
+            const val = document.getElementById('eventSelector').value;
+            if (!val) return;
 
-    // --- 排序邏輯：已出席(0) 排在 未出席(1) 前面 ---
-    const sortedReport = [...currentReport].sort((a, b) => {
-        const scoreA = a.status === "出席" ? 0 : 1;
-        const scoreB = b.status === "出席" ? 0 : 1;
-        return scoreA - scoreB;
-    });
+            showLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_attendance&eventTitle=EVENT:${val.replace(':', '|')}`);
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    currentReport = result.report;
+                    renderReport();
+                    
+                    document.getElementById('statsCard').classList.remove('hidden');
+                    document.getElementById('actionArea').classList.remove('hidden');
+                }
+            } catch (e) { showToast("讀取失敗"); }
+            showLoading(false);
+        }    
+        
+        // 渲染名單 (已到排前面)
+        function renderReport() {
+            const list = document.getElementById('reportList');
+            const presentCount = currentReport.filter(r => r.status === "出席").length;
+            document.getElementById('presentCount').innerText = presentCount;
+            document.getElementById('absentCount').innerText = currentReport.length - presentCount;
 
-    list.innerHTML = sortedReport.map(r => {
-        const isAttended = r.status === "出席";
-        return `
-            <div class="bg-white p-4 rounded-xl flex justify-between items-center border border-gray-50 shadow-sm ${isAttended ? 'opacity-100' : 'opacity-70'}">
-                <div>
-                    <span class="font-bold ${isAttended ? 'text-emerald-900' : 'text-gray-500'}">${r.name}</span>
-                    <span class="text-[10px] text-gray-400 ml-2">${r.phone}</span>
-                </div>
-                <div class="flex items-center">
-                    ${isAttended 
-                        ? '<span class="text-emerald-600 text-sm font-bold"><i class="fas fa-check-circle mr-1"></i>已報到</span>' 
-                        : (isEditMode 
-                            ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="text-orange-500 text-xs border border-orange-200 px-3 py-1 rounded-full bg-orange-50 active:scale-95">補登</button>`
-                            : '<span class="text-gray-300 text-sm italic">未到</span>'
-                          )
-                    }
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+            const sortedReport = [...currentReport].sort((a, b) => {
+                const scoreA = a.status === "出席" ? 0 : 1;
+                const scoreB = b.status === "出席" ? 0 : 1;
+                return scoreA - scoreB;
+            });
 
-let isEditMode = false;
+            list.innerHTML = sortedReport.map(r => {
+                const isAttended = r.status === "出席";
+                return `
+                    <div class="bg-white p-4 rounded-xl flex justify-between items-center border border-gray-100 shadow-sm ${isAttended ? 'opacity-100 border-l-4 border-l-emerald-500' : 'opacity-70'}">
+                        <div>
+                            <span class="font-bold ${isAttended ? 'text-emerald-900' : 'text-gray-500'}">${r.name}</span>
+                            <span class="text-[10px] text-gray-400 ml-2">${r.phone}</span>
+                        </div>
+                        <div class="flex items-center">
+                            ${isAttended 
+                                ? '<span class="text-emerald-600 text-sm font-bold"><i class="fas fa-check-circle mr-1"></i>已報到</span>' 
+                                : (isEditMode 
+                                    ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="text-orange-600 text-xs border border-orange-200 px-3 py-1 rounded-full bg-orange-50 active:scale-95 font-bold">補登</button>`
+                                    : '<span class="text-gray-300 text-sm italic">未報到</span>'
+                                  )
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-function toggleEditMode() {
-    isEditMode = !isEditMode;
-    const btn = document.getElementById('editBtn');
-    if (isEditMode) {
-        btn.classList.replace('bg-gray-100', 'bg-orange-100');
-        btn.classList.replace('text-gray-600', 'text-orange-600');
-        btn.innerHTML = '<i class="fas fa-user-edit mr-1"></i>退出編輯';
-        showToast("進入編輯模式：可進行補登");
-    } else {
-        btn.classList.replace('bg-orange-100', 'bg-orange-600');
-        btn.classList.replace('text-orange-600', 'text-gray-600');
-        btn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
-    }
-    renderReport(); // 重新渲染畫面
-}        
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editBtn');
+            if (isEditMode) {
+                btn.className = "text-xs bg-orange-100 text-orange-600 px-3 py-1 rounded-lg border border-orange-200 shadow-sm transition-all";
+                btn.innerHTML = '<i class="fas fa-user-edit mr-1"></i>退出編輯';
+                showToast("編輯模式已開啟");
+            } else {
+                btn.className = "text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-lg border border-gray-200 shadow-sm transition-all";
+                btn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
+            }
+            renderReport();
+        }        
+
         function openManualModal(phone, name) {
-            const selector = document.getElementById('memberSelector');
-            selector.innerHTML = `<option value="${phone}">${name} (${phone})</option>`;
+            pendingCheckin = { phone, name }; // 儲存當前要補登的人
+            document.getElementById('manualMemberInfo').innerText = `${name} (${phone})`;
+            document.getElementById('manualModal').classList.remove('hidden');
             document.getElementById('manualModal').style.display = 'flex';
         }
 
         async function submitManualCheckin() {
             const eventVal = document.getElementById('eventSelector').value;
+            if(!eventVal) return;
             const [date, title] = eventVal.split(':');
-            const phone = document.getElementById('memberSelector').value;
-            const name = document.getElementById('memberSelector').options[0].text.split(' ')[0];
 
             closeManualModal();
             showLoading(true);
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    type: 'manual_checkin', 
-                    key: STAFF_KEY, 
-                    phone, name, 
-                    eventTitle: `EVENT:${date}|${title}` 
-                })
-            });
-            const result = await res.json();
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        type: 'manual_checkin', 
+                        key: STAFF_KEY, 
+                        phone: pendingCheckin.phone, 
+                        name: pendingCheckin.name, 
+                        eventTitle: `EVENT:${date}|${title}` 
+                    })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("✅ 補登成功");
+                    await fetchReport(); 
+                } else {
+                    alert("補登失敗：" + result.message);
+                }
+            } catch(e) { showToast("網路錯誤"); }
             showLoading(false);
-            if (result.result === "SUCCESS") {
-                showToast("✅ 補登成功");
-                fetchReport(); // 重新整理
-            }
         }
 
-        function confirmSendLine() {
-            const eventVal = document.getElementById('eventSelector').options[document.getElementById('eventSelector').selectedIndex].text;
-            const presentNames = currentReport.filter(r => r.status === "出席").map(r => r.name);
-            const msg = `📝 ${eventVal}\n出席人數：${presentNames.length}人\n出席名單：\n${presentNames.join('、')}`;
-
-            if (confirm(`即將發送名單至 LINE 群組，確定嗎？\n\n${msg}`)) {
-                sendToLine(msg);
+        async function sendLineReport() {
+            const selector = document.getElementById('eventSelector');
+            if (!selector.value) return;
+            const eventText = selector.options[selector.selectedIndex].text;
+            
+            const presentList = currentReport.filter(r => r.status === "出席").map(r => r.name);
+            if (presentList.length === 0) {
+                showToast("目前無人報到");
+                return;
             }
-        }
 
-        async function sendToLine(message) {
+            const reportMsg = `📝 出席彙整：${eventText}\n----------------\n總人數：${presentList.length} 位\n\n${presentList.join('\n')}`;
+
+            if (!confirm(`確定送出名單？\n\n${reportMsg}`)) return;
+
             showLoading(true);
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: message })
-            });
-            const result = await res.json();
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: reportMsg })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") showToast("🚀 名單已發送至 LINE");
+            } catch (e) { showToast("❌ 發送失敗"); }
             showLoading(false);
-            if (result.result === "SUCCESS") showToast("🚀 名單已送出");
         }
 
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-        function showToast(m) { /* 同之前的 Toast 函式 */ }
-        function closeManualModal() { document.getElementById('manualModal').style.display = 'none'; }
-
         
-        // 彙整並送出至 LINE
-     async function sendLineReport() {
-      const selector = document.getElementById('eventSelector');
-      if (!selector.value) return;
-      const eventText = selector.options[selector.selectedIndex].text;
-    
-    // 篩選出席者
-    const presentList = currentReport.filter(r => r.status === "出席").map(r => r.name);
-    if (presentList.length === 0) {
-        showToast("目前無人報到");
-        return;
-    }
-
-    // 格式化：每行一人 (\n)
-    const nameListString = presentList.join('\n');
-    const reportMsg = `📝 出席彙整：${eventText}\n----------------\n總人數：${presentList.length} 位\n\n${nameListString}`;
-
-    if (!confirm(`確定送出名單？\n\n${reportMsg}`)) return;
-
-    showLoading(true); // 顯示等待狀態
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: reportMsg })
-        });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-            showToast("🚀 名單已發送至 LINE");
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            }, 2500);
         }
-    } catch (e) {
-        showToast("❌ 發送失敗");
-    }
-    showLoading(false);
-}
-// 確保有這個 Toast 函式
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast'; // 確保您的 CSS 有定義 .toast 樣式
-    toast.style.cssText = `
-        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-        background: #333; color: white; padding: 12px 24px; border-radius: 50px;
-        z-index: 9999; transition: opacity 0.5s; font-size: 14px; pointer-events: none;
-    `;
-    toast.innerText = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 500);
-    }, 2500);
-}        
+        
+        function closeManualModal() {
+            document.getElementById('manualModal').style.display = 'none';
+            document.getElementById('manualModal').classList.add('hidden');
+        }
     </script>
 </body>
 </html>

@@ -24,14 +24,18 @@
         <div class="w-10"></div>
     </div>
 
-    <div class="p-4 space-y-4">
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50">
-            <label class="text-xs text-gray-400 block mb-2">選擇已結束或今日活動</label>
-            <select id="eventSelector" onchange="fetchReport()" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none text-emerald-900 font-bold">
-                <option value="">-- 請選擇活動 --</option>
-            </select>
-        </div>
-
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50">
+    <div class="flex justify-between items-end mb-2">
+        <label class="text-xs text-gray-400 block">選擇已結束或今日活動</label>
+        <button id="editBtn" onclick="toggleEditMode()" class="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-lg transition-all border border-gray-200 shadow-sm">
+            <i class="fas fa-edit mr-1"></i>編輯模式
+        </button>
+    </div>
+    <select id="eventSelector" onchange="fetchReport()" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none text-emerald-900 font-bold">
+        <option value="">-- 請選擇活動 --</option>
+    </select>
+    </div>
+        
         <div id="statsCard" class="hidden grid grid-cols-2 gap-3">
             <div class="bg-emerald-50 p-4 rounded-2xl text-center border border-emerald-100">
                 <div class="text-xs text-emerald-600 mb-1">出席人數</div>
@@ -84,26 +88,28 @@
             await loadFinishedEvents();
         };
 
-        async function loadFinishedEvents() {
-            showLoading(true);
-            const res = await fetch(GAS_URL);
-            const data = await res.json();
-            const today = new Date().toISOString().split('T')[0];
-            const selector = document.getElementById('eventSelector');
-            
-            // 篩選今日或以前的活動
-            const pastEvents = data.calendar.filter(ev => ev.dateText <= today)
-                                           .sort((a,b) => b.dateText.localeCompare(a.dateText));
-            
-            pastEvents.forEach(ev => {
-                const opt = document.createElement('option');
-                opt.value = `${ev.dateText}:${ev.title}`;
-                opt.innerText = `${ev.dateText} | ${ev.title}`;
-                selector.appendChild(opt);
-            });
-            showLoading(false);
-        }
-
+// --- 1. 活動排序修正 ---
+async function loadFinishedEvents() {
+    showLoading(true);
+    const res = await fetch(GAS_URL);
+    const data = await res.json();
+    const today = new Date().toISOString().split('T')[0];
+    const selector = document.getElementById('eventSelector');
+    
+    // 排序：a - b 是由舊到新 (越早越前面)
+    const pastEvents = data.calendar.filter(ev => ev.dateText <= today)
+                                   .sort((a, b) => a.dateText.localeCompare(b.dateText));
+    
+    selector.innerHTML = '<option value="">-- 請選擇活動 --</option>'; // 清空
+    pastEvents.forEach(ev => {
+        const opt = document.createElement('option');
+        opt.value = `${ev.dateText}:${ev.title}`;
+        opt.innerText = `${ev.dateText} | ${ev.title}`;
+        selector.appendChild(opt);
+    });
+    showLoading(false);
+}
+        
         async function fetchReport() {
             const eventVal = document.getElementById('eventSelector').value;
             if (!eventVal) return;
@@ -120,29 +126,60 @@
             showLoading(false);
         }
 
-        function renderReport() {
-            const list = document.getElementById('reportList');
-            const presentCount = currentReport.filter(r => r.status === "出席").length;
-            const absentCount = currentReport.length - presentCount;
+function renderReport() {
+    const list = document.getElementById('reportList');
+    
+    // 統計人數
+    const presentCount = currentReport.filter(r => r.status === "出席").length;
+    document.getElementById('presentCount').innerText = presentCount;
+    document.getElementById('absentCount').innerText = currentReport.length - presentCount;
 
-            document.getElementById('presentCount').innerText = presentCount;
-            document.getElementById('absentCount').innerText = absentCount;
-            document.getElementById('statsCard').classList.remove('hidden');
-            document.getElementById('actionArea').classList.remove('hidden');
+    // --- 排序邏輯：已出席(0) 排在 未出席(1) 前面 ---
+    const sortedReport = [...currentReport].sort((a, b) => {
+        const scoreA = a.status === "出席" ? 0 : 1;
+        const scoreB = b.status === "出席" ? 0 : 1;
+        return scoreA - scoreB;
+    });
 
-            list.innerHTML = currentReport.map(r => `
-                <div class="bg-white p-4 rounded-xl flex justify-between items-center border border-gray-50 shadow-sm">
-                    <div>
-                        <span class="font-bold text-emerald-900">${r.name}</span>
-                        <span class="text-[10px] text-gray-400 ml-2">${r.phone}</span>
-                    </div>
-                    ${r.status === "出席" 
-                        ? '<span class="text-emerald-600 text-sm font-bold"><i class="fas fa-check-circle mr-1"></i>已簽到</span>' 
-                        : `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="text-orange-500 text-sm border border-orange-200 px-3 py-1 rounded-full bg-orange-50">補登</button>`}
+    list.innerHTML = sortedReport.map(r => {
+        const isAttended = r.status === "出席";
+        return `
+            <div class="bg-white p-4 rounded-xl flex justify-between items-center border border-gray-50 shadow-sm ${isAttended ? 'opacity-100' : 'opacity-70'}">
+                <div>
+                    <span class="font-bold ${isAttended ? 'text-emerald-900' : 'text-gray-500'}">${r.name}</span>
+                    <span class="text-[10px] text-gray-400 ml-2">${r.phone}</span>
                 </div>
-            `).join('');
-        }
+                <div class="flex items-center">
+                    ${isAttended 
+                        ? '<span class="text-emerald-600 text-sm font-bold"><i class="fas fa-check-circle mr-1"></i>已報到</span>' 
+                        : (isEditMode 
+                            ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="text-orange-500 text-xs border border-orange-200 px-3 py-1 rounded-full bg-orange-50 active:scale-95">補登</button>`
+                            : '<span class="text-gray-300 text-sm italic">未到</span>'
+                          )
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
+let isEditMode = false;
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const btn = document.getElementById('editBtn');
+    if (isEditMode) {
+        btn.classList.replace('bg-gray-100', 'bg-orange-100');
+        btn.classList.replace('text-gray-600', 'text-orange-600');
+        btn.innerHTML = '<i class="fas fa-user-edit mr-1"></i>退出編輯';
+        showToast("進入編輯模式：可進行補登");
+    } else {
+        btn.classList.replace('bg-orange-100', 'bg-orange-600');
+        btn.classList.replace('text-orange-600', 'text-gray-600');
+        btn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
+    }
+    renderReport(); // 重新渲染畫面
+}        
         function openManualModal(phone, name) {
             const selector = document.getElementById('memberSelector');
             selector.innerHTML = `<option value="${phone}">${name} (${phone})</option>`;
@@ -198,6 +235,8 @@
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { /* 同之前的 Toast 函式 */ }
         function closeManualModal() { document.getElementById('manualModal').style.display = 'none'; }
+
+        
     </script>
 </body>
 </html>

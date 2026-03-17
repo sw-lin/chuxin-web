@@ -50,7 +50,7 @@
         </div>
 
         <div id="reportList" class="space-y-3">
-            </div>
+        </div>
 
         <div id="actionArea" class="hidden py-6">
             <button onclick="sendLineReport()" class="w-full py-4 bg-[#06C755] hover:bg-[#05a346] text-white rounded-2xl font-bold shadow-lg flex items-center justify-center active:scale-95 transition-all">
@@ -63,7 +63,7 @@
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
             <h3 class="text-xl font-bold text-emerald-900 mb-4 text-center">手動補登</h3>
             <div id="manualMemberInfo" class="text-center mb-6 text-emerald-800 font-bold">
-                </div>
+            </div>
             <div class="flex space-x-3">
                 <button onclick="closeManualModal()" class="flex-1 py-3 text-gray-400">取消</button>
                 <button onclick="submitManualCheckin()" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold shadow-md">確認補登</button>
@@ -79,13 +79,12 @@
     </div>
     
     <script>
-        // 修正：移除 URL 前方的空格
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         const STAFF_KEY = sessionStorage.getItem('staff_key');
         
         let currentReport = [];
         let isEditMode = false;
-        let pendingCheckin = { phone: '', name: '' }; // 暫存要補登的人員
+        let pendingCheckin = { phone: '', name: '' }; 
 
         window.onload = async () => {
             if (!STAFF_KEY) {
@@ -96,7 +95,6 @@
             await loadFinishedEvents();
         };
 
-        // 載入活動清單 (越早越前面)
         async function loadFinishedEvents() {
             showLoading(true);
             try {
@@ -120,14 +118,24 @@
             showLoading(false);
         }
         
-        // 抓取出席報告
+        // 🚨 這裡已經修正回正確的 POST 方法與 type 🚨
         async function fetchReport() {
-            const val = document.getElementById('eventSelector').value;
-            if (!val) return;
+            const eventVal = document.getElementById('eventSelector').value;
+            if (!eventVal) return;
 
             showLoading(true);
+            const [date, title] = eventVal.split(':');
+            
             try {
-                const res = await fetch(`${GAS_URL}?type=get_attendance&eventTitle=EVENT:${val.replace(':', '|')}`);
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        type: 'get_attendance_data', // 確保對應到您 GAS 的 switch
+                        key: STAFF_KEY, 
+                        eventTitle: `EVENT:${date}|${title}` 
+                    })
+                });
+                
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
                     currentReport = result.report;
@@ -135,12 +143,13 @@
                     
                     document.getElementById('statsCard').classList.remove('hidden');
                     document.getElementById('actionArea').classList.remove('hidden');
+                } else {
+                    showToast("讀取失敗，請確認資料格式");
                 }
-            } catch (e) { showToast("讀取失敗"); }
+            } catch (e) { showToast("連線或讀取錯誤"); }
             showLoading(false);
         }    
         
-        // 渲染名單 (已到排前面)
         function renderReport() {
             const list = document.getElementById('reportList');
             const presentCount = currentReport.filter(r => r.status === "出席").length;
@@ -190,7 +199,7 @@
         }        
 
         function openManualModal(phone, name) {
-            pendingCheckin = { phone, name }; // 儲存當前要補登的人
+            pendingCheckin = { phone, name };
             document.getElementById('manualMemberInfo').innerText = `${name} (${phone})`;
             document.getElementById('manualModal').classList.remove('hidden');
             document.getElementById('manualModal').style.display = 'flex';

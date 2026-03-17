@@ -389,10 +389,19 @@ function renderUI() {
         }
 
         function openEditModal() {
-            document.getElementById('editEmail').value = currentUser.email || '';
-            document.getElementById('editProfileModal').classList.remove('hidden');
-            document.getElementById('editProfileModal').style.display = 'flex';
-        }
+    // 取得當前 Email，並設定為 placeholder (浮水文字)
+    const emailInput = document.getElementById('editEmail');
+    emailInput.placeholder = currentUser.email || '請輸入電子郵件';
+    emailInput.value = ''; // 清空輸入框內容，讓使用者看到浮水文字
+    
+    // 清空密碼欄位
+    document.getElementById('oldPass').value = '';
+    document.getElementById('newPass').value = '';
+    
+    document.getElementById('editProfileModal').classList.remove('hidden');
+    document.getElementById('editProfileModal').style.display = 'flex';
+    }
+        
         function closeEditModal() {
             document.getElementById('editProfileModal').classList.add('hidden');
             document.getElementById('editProfileModal').style.display = 'none';

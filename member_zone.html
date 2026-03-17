@@ -285,10 +285,7 @@ async function syncData(user) {
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
         
-        console.log("目前匹配到的會員資料：", liveUser);
-
         if (liveUser) {
-            // 處理幹部權限顯示
             const staffBtn = document.getElementById('staffBtn');
             const role = liveUser.role || "";
             if (role && role !== "學員") {
@@ -299,26 +296,24 @@ async function syncData(user) {
                 staffBtn.onclick = enterStaffMode;
             }
 
-            // 2. 日期與出席統計 (關鍵修正點)
+            // 2. 出席統計 (關鍵修正點)
             const todayStr = new Date().toISOString().split('T')[0];
             
-            // 這裡從 liveUser.attendLog 拿到的可能是 ["EVENT:2026-03-17|主題", ...]
+            // 直接取用資料庫的紀錄，不刻意轉換成 Date
             const logs = liveUser.attendLog || []; 
             const calendar = data.calendar || [];
             
-            // 僅計算今天以前的活動作為分母
+            // 僅計算今天以前的活動作為參與率基數
             const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
             
-            // 核心比對邏輯：建立 matchKey 與 logs 陣列比對
-            const attendedEvents = pastEvents.filter(ev => {
+            // 核心比對：拼出與資料庫一模一樣的 Key (EVENT:日期|標題)
+            const attendCount = pastEvents.filter(ev => {
                 const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
-                return logs.includes(matchKey); // 檢查是否有完整匹配的 Key
-            });
+                return logs.includes(matchKey);
+            }).length;
 
-            const attendCount = attendedEvents.length;
             const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
 
-            // 更新介面數值
             document.getElementById('attPercent').innerText = `${rate}%`;
             document.getElementById('attCountDisplay').innerText = `${attendCount} / ${pastEvents.length}`;
             
@@ -326,10 +321,10 @@ async function syncData(user) {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
 
-            // 3. 渲染歷史紀錄
+            // 3. 渲染歷史紀錄 (顯示所有活動，未來的反灰)
             document.getElementById('historyList').innerHTML = [...calendar].reverse().map(ev => {
                 const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
-                const isAttended = logs.includes(matchKey);
+                const isAttended = logs.includes(matchKey); // 判斷是否在此次紀錄中
                 const isPast = ev.dateText <= todayStr;
 
                 return `
@@ -345,8 +340,7 @@ async function syncData(user) {
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}
- 
+} 
         
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {
@@ -401,27 +395,42 @@ function renderUI() {
         document.getElementById('newsContent').innerText = allData.news || "歡迎參加築心讀書會";
     }
 
-    // 2. 出席紀錄統計 (使用 currentUser.attendLog)
+    // 2. 重新計算出席率 (同步使用最新的正確邏輯)
+    const todayStr = new Date().toISOString().split('T')[0];
     const logs = currentUser.attendLog || [];
-    const events = allData.calendar || [];
-    const count = logs.length;
+    const calendar = allData.calendar || [];
     
-    const attendDisplay = document.getElementById('attendDisplay');
+    // 只拿過去的活動算分母
+    const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
+    
+    const attendCount = pastEvents.filter(ev => {
+        const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
+        return logs.includes(matchKey);
+    }).length;
+
+    const attendDisplay = document.getElementById('attCountDisplay');
     if (attendDisplay) {
-        attendDisplay.innerText = `${count} / ${events.length}`;
+        attendDisplay.innerText = `${attendCount} / ${pastEvents.length}`;
+    }
+
+    const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
+    const rateDisplay = document.getElementById('attPercent');
+    if (rateDisplay) {
+        rateDisplay.innerText = `${rate}%`;
     }
 
     // 3. 渲染歷史紀錄清單
     const historyList = document.getElementById('historyList');
     if (historyList) {
-        // 由新到舊排列
-        historyList.innerHTML = [...events].reverse().map(ev => {
-            // 檢查該活動日期是否在會員的簽到記錄中
-            const isAttended = logs.includes(ev.dateText);
+        historyList.innerHTML = [...calendar].reverse().map(ev => {
+            const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
+            const isAttended = logs.includes(matchKey);
+            const isPast = ev.dateText <= todayStr;
+
             return `
-                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3 ${!isPast ? 'opacity-50' : ''}">
                     <div>
-                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText} ${!isPast ? '(即將到來)' : ''}</div>
                         <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                     </div>
                     <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
@@ -430,9 +439,10 @@ function renderUI() {
         }).join('');
     }
     
-    // 4. 更新遠端連結 (Config)
+    // 4. 更新遠端連結
     remoteConfig = allData.config || {};
 }
+        
         function openRemoteLink(key) {
             if (remoteConfig[key]) window.open(remoteConfig[key], '_blank');
             else alert("尚未設定連結");

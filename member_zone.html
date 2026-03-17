@@ -284,44 +284,41 @@ async function syncData(user) {
         const liveUser = data.users.find(u => 
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
-         console.log("目前匹配到的會員資料：", liveUser);
-      if (liveUser) {
-    console.log("完整會員資料：", liveUser); // 部署後檢查這裡有沒有出現 role
+        
+        console.log("目前匹配到的會員資料：", liveUser);
 
-    const staffBtn = document.getElementById('staffBtn');
-    // 如果 GAS 還是沒修好，我們先用最粗暴的方式：
-    // 如果你是林士偉(幹部)，且 role 還是沒出來，我們強制給它權限進行測試
-    const role = liveUser.role || "";
-  //  const isBossMan = (liveUser.phone === "0928528517" || liveUser.phone === "928528517");
+        if (liveUser) {
+            // 處理幹部權限顯示
+            const staffBtn = document.getElementById('staffBtn');
+            const role = liveUser.role || "";
+            if (role && role !== "學員") {
+                staffBtn.classList.remove('hidden');
+                staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full mr-2";
+                staffBtn.style.display = "inline-block";
+                staffBtn.innerText = "幹部專區";
+                staffBtn.onclick = enterStaffMode;
+            }
 
-    if (role && role !== "學員") {
-        console.log("權限確認：解鎖幹部專區");
-        staffBtn.classList.remove('hidden');
-        // 直接賦予樣式，確保它在 nav 裡面漂亮呈現
-        staffBtn.className = "text-[10px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-full mr-2";
-        staffBtn.style.display = "inline-block";
-        staffBtn.innerText = "幹部專區";
-        staffBtn.onclick = enterStaffMode;
-    }
-
-            // 2. 日期與出席統計
-            const toDateString = (dateInput) => {
-                if (!dateInput) return "";
-                const d = new Date(dateInput);
-                if (isNaN(d)) return "";
-                const Y = d.getFullYear();
-                const M = String(d.getMonth() + 1).padStart(2, '0');
-                const D = String(d.getDate()).padStart(2, '0');
-                return `${Y}-${M}-${D}`;
-            };
-
-            const todayStr = toDateString(new Date());
-            const logs = (liveUser.attendLog || []).map(l => toDateString(l)).filter(l => l !== "");
-            const pastEvents = (data.calendar || []).filter(ev => ev.dateText <= todayStr);
+            // 2. 日期與出席統計 (關鍵修正點)
+            const todayStr = new Date().toISOString().split('T')[0];
             
-            const attendCount = pastEvents.filter(ev => logs.includes(ev.dateText)).length;
+            // 這裡從 liveUser.attendLog 拿到的可能是 ["EVENT:2026-03-17|主題", ...]
+            const logs = liveUser.attendLog || []; 
+            const calendar = data.calendar || [];
+            
+            // 僅計算今天以前的活動作為分母
+            const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
+            
+            // 核心比對邏輯：建立 matchKey 與 logs 陣列比對
+            const attendedEvents = pastEvents.filter(ev => {
+                const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
+                return logs.includes(matchKey); // 檢查是否有完整匹配的 Key
+            });
+
+            const attendCount = attendedEvents.length;
             const rate = pastEvents.length ? Math.round((attendCount / pastEvents.length) * 100) : 0;
 
+            // 更新介面數值
             document.getElementById('attPercent').innerText = `${rate}%`;
             document.getElementById('attCountDisplay').innerText = `${attendCount} / ${pastEvents.length}`;
             
@@ -330,12 +327,15 @@ async function syncData(user) {
             }
 
             // 3. 渲染歷史紀錄
-            document.getElementById('historyList').innerHTML = [...pastEvents].reverse().map(ev => {
-                const isAttended = logs.includes(ev.dateText);
+            document.getElementById('historyList').innerHTML = [...calendar].reverse().map(ev => {
+                const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
+                const isAttended = logs.includes(matchKey);
+                const isPast = ev.dateText <= todayStr;
+
                 return `
-                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3 ${!isPast ? 'opacity-50' : ''}">
                         <div>
-                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText} ${!isPast ? '(即將到來)' : ''}</div>
                             <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                         </div>
                         <i class="fas ${isAttended ? 'fa-check-circle text-emerald-600' : 'fa-times-circle text-gray-200'} text-2xl"></i>
@@ -345,7 +345,7 @@ async function syncData(user) {
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}    
+}
  
         
         // 修正後的 fetchData (加入自動重試機制)

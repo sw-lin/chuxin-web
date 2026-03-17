@@ -17,24 +17,26 @@
     </style>
 </head>
 <body class="pb-24">
-
     <div class="sticky top-0 z-50 p-4 flex items-center justify-between glass-card shadow-sm">
-        <button onclick="location.href='staff_menu.html'" class="text-emerald-800"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+        <button onclick="location.href='staff_menu.html'" class="text-emerald-800">
+            <i class="fas fa-chevron-left mr-1"></i>返回
+        </button>
         <h1 class="font-bold text-emerald-900 text-lg">出席狀況統計</h1>
         <div class="w-10"></div>
     </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50">
-    <div class="flex justify-between items-end mb-2">
-        <label class="text-xs text-gray-400 block">選擇已結束或今日活動</label>
-        <button id="editBtn" onclick="toggleEditMode()" class="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-lg transition-all border border-gray-200 shadow-sm">
-            <i class="fas fa-edit mr-1"></i>編輯模式
-        </button>
-    </div>
-    <select id="eventSelector" onchange="fetchReport()" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none text-emerald-900 font-bold">
-        <option value="">-- 請選擇活動 --</option>
-    </select>
-    </div>
+    <div class="p-4 space-y-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50">
+            <div class="flex justify-between items-end mb-2">
+                <label class="text-xs text-gray-400 block">選擇已結束或今日活動</label>
+                <button id="editBtn" onclick="toggleEditMode()" class="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-lg transition-all border border-gray-200 shadow-sm">
+                    <i class="fas fa-edit mr-1"></i>編輯模式
+                </button>
+            </div>
+            <select id="eventSelector" onchange="fetchReport()" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none text-emerald-900 font-bold">
+                <option value="">-- 請選擇活動 --</option>
+            </select>
+        </div>
         
         <div id="statsCard" class="hidden grid grid-cols-2 gap-3">
             <div class="bg-emerald-50 p-4 rounded-2xl text-center border border-emerald-100">
@@ -47,37 +49,35 @@
             </div>
         </div>
 
-        <div id="reportList" class="space-y-3 mb-6">
+        <div id="reportList" class="space-y-3">
+            </div>
+
+        <div id="actionArea" class="hidden py-6">
+            <button onclick="sendLineReport()" class="w-full py-4 bg-[#06C755] hover:bg-[#05a346] text-white rounded-2xl font-bold shadow-lg flex items-center justify-center active:scale-95 transition-all">
+                <i class="fab fa-line mr-2 text-2xl"></i> 彙整名單並送出至 LINE
+            </button>
+        </div>
     </div>
 
-<div id="actionArea" class="hidden pb-10">
-    <button onclick="sendLineReport()" class="w-full py-4 bg-[#06C755] hover:bg-[#05a346] text-white rounded-2xl font-bold shadow-lg flex items-center justify-center active:scale-95 transition-all">
-        <i class="fab fa-line mr-2 text-2xl"></i> 彙整名單並送出至 LINE
-    </button>
-</div>
-    
     <div id="manualModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
             <h3 class="text-xl font-bold text-emerald-900 mb-4 text-center">手動補登</h3>
-            <div class="space-y-4">
-                <p id="manualEventInfo" class="text-center text-sm text-gray-500"></p>
-                <select id="memberSelector" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
-                    </select>
-            </div>
-            <div class="flex space-x-3 mt-8">
+            <div id="manualMemberInfo" class="text-center mb-6">
+                </div>
+            <div class="flex space-x-3">
                 <button onclick="closeManualModal()" class="flex-1 py-3 text-gray-400">取消</button>
-                <button onclick="submitManualCheckin()" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold">確認補登</button>
+                <button id="confirmManualBtn" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold">確認補登</button>
             </div>
         </div>
     </div>
 
     <div id="loadingOverlay" class="fixed inset-0 bg-black/20 hidden z-[200] items-center justify-center">
         <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
-            <div class="loader h-12 w-12 mb-4"></div>
-            <p class="text-emerald-900 font-bold">讀取中...</p>
+            <div class="loader h-12 w-12 mb-4 animate-spin rounded-full border-4 border-gray-200 border-t-emerald-600"></div>
+            <p class="text-emerald-900 font-bold">處理中...</p>
         </div>
     </div>
-
+    
     <script>
         const GAS_URL = ' https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         const STAFF_KEY = sessionStorage.getItem('staff_key');
@@ -122,14 +122,15 @@ async function fetchReport() {
             currentReport = result.report;
             renderReport();
             
-            // --- 關鍵：在此處將按鈕顯示出來 ---
+            // --- 確保這兩行有跑，元件才會現身 ---
+            document.getElementById('statsCard').classList.remove('hidden');
             document.getElementById('actionArea').classList.remove('hidden');
         }
     } catch (e) {
         showToast("讀取失敗");
     }
     showLoading(false);
-}
+}    
         
 function renderReport() {
     const list = document.getElementById('reportList');

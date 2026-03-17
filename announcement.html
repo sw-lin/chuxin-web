@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大聲公管理 | 築心讀書會</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(6, 78, 59, 0.1); }
+        .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); transition: all 0.2s; }
+        .btn-emerald:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-line { background: #00B900; color: white; }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <div class="p-4 flex items-center justify-between glass-card">
+        <button onclick="location.href='staff_menu.html'" class="text-emerald-800">
+            <i class="fas fa-chevron-left mr-2"></i>返回
+        </button>
+        <h1 class="font-bold text-emerald-900">大聲公管理</h1>
+        <div class="w-8"></div> 
+    </div>
+
+    <div class="flex-1 p-6 flex flex-col border-b border-emerald-100">
+        <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mr-3 text-emerald-700">
+                <i class="fas fa-scroll"></i>
+            </div>
+            <div>
+                <h2 class="font-bold text-emerald-900 text-lg">公布欄訊息</h2>
+                <p class="text-[10px] text-gray-400">更改後全體會員登入後可見</p>
+            </div>
+        </div>
+        <textarea id="newsContent" class="flex-1 w-full p-4 rounded-2xl border border-emerald-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-gray-700 shadow-inner" placeholder="讀取中..."></textarea>
+        <button onclick="updateNews()" class="mt-4 w-full py-3 rounded-xl btn-emerald text-white font-bold shadow-lg">
+            <i class="fas fa-paper-plane mr-2"></i>更新公告
+        </button>
+    </div>
+
+    <div class="flex-1 p-6 flex flex-col bg-emerald-50/30">
+        <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mr-3 text-green-600">
+                <i class="fab fa-line text-xl"></i>
+            </div>
+            <div>
+                <h2 class="font-bold text-emerald-900 text-lg">LINE 訊息發送</h2>
+                <p class="text-[10px] text-gray-400">訊息將直接推播至官方群組</p>
+            </div>
+        </div>
+        <textarea id="lineMsg" class="flex-1 w-full p-4 rounded-2xl border border-green-100 focus:ring-2 focus:ring-green-500 focus:outline-none text-gray-700 shadow-inner" placeholder="請輸入要發送給會員的訊息..."></textarea>
+        <button onclick="sendLine()" class="mt-4 w-full py-3 rounded-xl btn-line font-bold shadow-lg">
+            <i class="fab fa-line mr-2"></i>發送至 LINE 群組
+        </button>
+    </div>
+
+    <script>
+        const GAS_URL = '你的_GAS_DEPLOY_URL'; // <--- 請放入您的部署網址
+        const STAFF_KEY = sessionStorage.getItem('staff_key');
+
+        window.onload = async () => {
+            if (!STAFF_KEY) {
+                alert("權限失效，請重新登入");
+                location.href = "index.html";
+                return;
+            }
+            fetchCurrentNews();
+        };
+
+        // 1. 抓取目前公布欄訊息
+        async function fetchCurrentNews() {
+            try {
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                document.getElementById('newsContent').value = data.news || "";
+            } catch (e) {
+                console.error("讀取公告失敗", e);
+            }
+        }
+
+        // 2. 更新公告邏輯
+        async function updateNews() {
+            const content = document.getElementById('newsContent').value;
+            if (!content) return alert("內容不能為空");
+
+            if (!confirm("確定要更新全體公告嗎？")) return;
+
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    type: 'update_news',
+                    key: STAFF_KEY,
+                    content: content
+                })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") alert("更新成功！");
+            else alert("更新失敗：" + result.message);
+        }
+
+        // 3. 發送 LINE 訊息邏輯
+        async function sendLine() {
+            const msg = document.getElementById('lineMsg').value;
+            if (!msg) return alert("訊息內容不能為空");
+
+            if (!confirm("確定要對群組發送推播嗎？")) return;
+
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    type: 'send_line',
+                    key: STAFF_KEY,
+                    message: msg
+                })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") {
+                alert("LINE 發送成功！");
+                document.getElementById('lineMsg').value = ''; // 清空
+            } else {
+                alert("發送失敗");
+            }
+        }
+    </script>
+</body>
+</html>

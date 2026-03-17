@@ -8,7 +8,10 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        /* 等待動畫旋轉 */
+         .loader { border-top-color: #064E3B; animation: spinner 0.6s linear infinite; }
+                 @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }        
+                  body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(6, 78, 59, 0.1); }
         .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); transition: all 0.2s; }
         .btn-emerald:active { transform: scale(0.98); opacity: 0.9; }
@@ -83,48 +86,68 @@
         }
 
         // 2. 更新公告邏輯
-        async function updateNews() {
-            const content = document.getElementById('newsContent').value;
-            if (!content) return alert("內容不能為空");
+async function updateNews() {
+    const content = document.getElementById('newsContent').value;
+    if (!content) return alert("內容不能為空");
+    if (!confirm("確定要更新全體公告嗎？")) return;
 
-            if (!confirm("確定要更新全體公告嗎？")) return;
-
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    type: 'update_news',
-                    key: STAFF_KEY,
-                    content: content
-                })
-            });
-            const result = await res.json();
-            if (result.result === "SUCCESS") alert("更新成功！");
-            else alert("更新失敗：" + result.message);
-        }
-
+    showLoading(true); // <--- 開始轉圈
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'update_news',
+                key: STAFF_KEY,
+                content: content
+            })
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") alert("更新成功！");
+        else alert("更新失敗：" + result.message);
+    } catch (e) {
+        alert("網路連線錯誤");
+    }
+    showLoading(false); // <--- 結束轉圈
+}
         // 3. 發送 LINE 訊息邏輯
-        async function sendLine() {
-            const msg = document.getElementById('lineMsg').value;
-            if (!msg) return alert("訊息內容不能為空");
+async function sendLine() {
+    const msg = document.getElementById('lineMsg').value;
+    if (!msg) return alert("訊息內容不能為空");
+    if (!confirm("確定要對群組發送推播嗎？")) return;
 
-            if (!confirm("確定要對群組發送推播嗎？")) return;
-
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    type: 'send_line',
-                    key: STAFF_KEY,
-                    message: msg
-                })
-            });
-            const result = await res.json();
-            if (result.result === "SUCCESS") {
-                alert("LINE 發送成功！");
-                document.getElementById('lineMsg').value = ''; // 清空
-            } else {
-                alert("發送失敗");
-            }
+    showLoading(true); // <--- 開始轉圈
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'send_line',
+                key: STAFF_KEY,
+                message: msg
+            })
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            alert("LINE 發送成功！");
+            document.getElementById('lineMsg').value = '';
+        } else {
+            alert("發送失敗");
         }
+    } catch (e) {
+        alert("網路連線錯誤");
+    }
+    showLoading(false); // <--- 結束轉圈
+}  
+        
+        // 控制等待訊號的顯示/隱藏
+    function showLoading(show) {
+       const overlay = document.getElementById('loadingOverlay');
+       overlay.style.display = show ? 'flex' : 'none';
+     }    
     </script>
-</body>
+        <div id="loadingOverlay" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-[200] items-center justify-center">
+        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-12 w-12 mb-4"></div>
+        <p class="text-emerald-900 font-bold">處理中，請稍候...</p>
+    </div>
+</div></body>
 </html>

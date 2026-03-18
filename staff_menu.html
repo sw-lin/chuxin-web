@@ -5,32 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理控制台 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/沒問題，我看到了。這是因為在導航欄 `nav` 標籤內，為了維持標題居中，左右兩側通常會放對稱的物件。
-
-我已經把右邊那個帶有 `Verified` 字樣的空按鈕（標籤）完全移除，並調整了標題的定位方式，確保它依然能完美居中且不會被兩側影響。
-
-### 🛠️ 幹部管理中心 - 修正版
-
-```html
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理控制台 | 築心會館</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap](https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
+        /* 選單卡片基礎樣式 */
         .staff-card { 
             background: white;
             border-radius: 2rem;
             border: 1px solid #f0f0f0;
             transition: all 0.2s ease;
             cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
+        
+        /* 點擊時的縮放反饋 */
         .staff-card:active { transform: scale(0.95); background-color: #f9f9f9; }
+        
+        /* 統一的 Icon 背景深綠色漸層 */
         .icon-box {
             background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
             box-shadow: 0 8px 20px rgba(6, 78, 59, 0.2);
@@ -39,22 +32,20 @@
 </head>
 <body class="pb-16">
 
-    <!-- 導航欄：已刪除右側 Verified 標籤 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center">
-        <!-- 左側按鈕 -->
         <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors z-10">
             <i class="fas fa-chevron-left mr-1"></i> 會員中心
         </button>
         
-        <!-- 標題：絕對居中 -->
         <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
             管理控制台
         </h1>
-    </nav>
+        
+        </nav>
 
     <main class="p-6 max-w-2xl mx-auto grid grid-cols-2 gap-5 mt-6">
         
-        <div onclick="navTo('announcement')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
+        <div onclick="navTo('announcement')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-bullhorn text-white text-2xl"></i>
             </div>
@@ -62,7 +53,7 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">公告與 LINE</span>
         </div>
 
-        <div onclick="navTo('member_mgr')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
+        <div onclick="navTo('member_mgr')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-users text-white text-2xl"></i>
             </div>
@@ -70,7 +61,7 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">名單增刪改</span>
         </div>
 
-        <div onclick="navTo('calendar_mgr')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
+        <div onclick="navTo('calendar_mgr')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-calendar-alt text-white text-2xl"></i>
             </div>
@@ -78,7 +69,7 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">活動排程</span>
         </div>
 
-        <div onclick="navTo('attendance_rpt')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
+        <div onclick="navTo('attendance_rpt')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-clipboard-check text-white text-2xl"></i>
             </div>
@@ -86,7 +77,7 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">簽到數據查詢</span>
         </div>
 
-        <div onclick="navTo('payment_mgr')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
+        <div onclick="navTo('payment_mgr')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-hand-holding-usd text-white text-2xl"></i>
             </div>
@@ -94,7 +85,7 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">會費與雜支</span>
         </div>
 
-        <div onclick="navTo('event_reg')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
+        <div onclick="navTo('event_reg')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-file-signature text-white text-2xl"></i>
             </div>
@@ -102,8 +93,8 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">報名名單管理</span>
         </div>
 
-        <div onclick="navTo('system_config')" class="staff-card p-5 col-span-2 flex items-center justify-center gap-5 shadow-sm bg-emerald-50/20 border-dash border-2 border-emerald-100/50">
-            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+        <div onclick="navTo('system_config')" class="staff-card p-5 col-span-2 flex items-center justify-center gap-5 bg-emerald-50/20 border-dash border-2 border-emerald-100/50">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center shrink-0">
                 <i class="fas fa-link text-white text-2xl"></i>
             </div>
             <div class="text-left">
@@ -115,20 +106,25 @@
     </main>
 
     <script>
+        // 初始化權限檢查
         window.onload = function() {
             var key = sessionStorage.getItem('staff_key');
+            // 相容性處理：嘗試從網址抓取
             if (!key) {
                 const urlParams = new URLSearchParams(window.location.search);
                 key = urlParams.get('key');
             }
+            
             if (!key) {
                 alert("非法進入！請先驗證金鑰。");
                 location.href = 'index.html';
             } else {
+                // 確保 sessionStorage 存有金鑰供子頁面使用
                 sessionStorage.setItem('staff_key', key);
             }
         };
 
+        // 跳轉功能：子頁面將自行抓取 sessionStorage 中的金鑰
         function navTo(page) {
             location.href = page + '.html';
         }

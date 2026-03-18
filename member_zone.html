@@ -256,21 +256,21 @@ async function handleReg(eventTitle) {
     btn.innerText = "處理中...";
     btn.disabled = true;
 
-    try {
-        var res = await fetch(GAS_URL, {
-            method: 'POST',
-            mode: 'no-cors', // 如果持續失敗，可以嘗試暫時開啟 no-cors 測試
-            body: JSON.stringify({
-                type: 'register_event', 
-                phone: currentUser.phone,
-                name: currentUser.name,
-                eventTitle: eventTitle,
-                timestamp: new Date().toLocaleString()
-            })
-        });
-        
-        // 由於 no-cors 無法讀取回傳值，建議後端 GAS 也要同步更新
-        alert("申請已送出，請稍後查看出席紀錄或聯絡幹部確認。");
+// 在 member_zone.html 裡的 handleReg
+var res = await fetch(GAS_URL, {
+    method: 'POST',
+    // 移除 mode: 'no-cors'
+    body: JSON.stringify({
+        type: 'register_event', 
+        phone: currentUser.phone,
+        name: currentUser.name,
+        eventTitle: eventTitle
+    })
+});
+
+// 現在這行終於能派上用場了！
+var result = await res.json(); 
+alert(result.message);
         syncData();
     } catch (e) { 
         alert("連線異常，請檢查網路。"); 

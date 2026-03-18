@@ -270,74 +270,87 @@ async function handleUpdateProfile() {
             }
         }
 
-    async function syncData(user) {
+async function syncData(user) {
     try {
-        console.log("=== 偵錯開始 ===");
+        console.log("開始同步資料...");
+        // 加上時間戳記避免瀏覽器快取舊資料
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
-        // 1. 檢查手機號碼比對 (關鍵：確保 liveUser 有抓到)
+        remoteConfig = data.config || {};
+        document.getElementById('news').innerText = data.news || "歡迎。";
+
+        // 1. 會員比對 (使用手機號碼後 9 碼)
         const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
-        console.log("我的手機後9碼:", myMatch);
+        const liveUser = data.users.find(u => 
+            u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
+        );
         
-        const liveUser = data.users.find(u => {
-            const dbPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
-            return dbPhone === myMatch;
-        });
+        if (liveUser) {
+            // 更新目前使用者資料
+            currentUser = liveUser;
 
-        if (!liveUser) {
-            console.error("❌ 找不到此會員資料，請檢查手機號碼是否一致");
-            return;
-        }
-        console.log("✅ 找到會員:", liveUser.name, "紀錄數:", liveUser.attendLog ? liveUser.attendLog.length : 0);
+            // 處理幹部權限按鈕 (保留原本功能：包含 enterStaffMode 指令)
+            const staffBtn = document.getElementById('staffBtn');
+            if (liveUser.role && liveUser.role !== "學員") {
+                staffBtn.classList.remove('hidden');
+                staffBtn.style.display = "inline-block";
+                staffBtn.onclick = enterStaffMode; // 重要：保留此點擊事件
+            }
 
-        // 2. 處理資料與比對
-        const todayStr = new Date().toISOString().split('T')[0];
-        const logs = liveUser.attendLog || []; 
-        const calendar = data.calendar || [];
-        const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
-        
-        console.log("資料庫回傳的原始紀錄 (logs):", JSON.stringify(logs));
-        console.log("過去的活動日期:", pastEvents.map(ev => ev.dateText));
-
-        // 3. 核心比對邏輯 (加入更多 Console Log)
-        const attendedEvents = pastEvents.filter(ev => {
-            const hasMatch = logs.some(log => {
-                const sLog = String(log).trim();
-                const sDate = String(ev.dateText).trim();
-                // 檢查是否包含日期 (不管是 2026-03-06 還是 2026/03/06)
-                const dateMatch = sLog.includes(sDate) || sLog.includes(sDate.replace(/-/g, '/'));
-                return dateMatch;
+            // 2. 出席紀錄與參與率計算
+            const todayStr = new Date().toISOString().split('T')[0];
+            const logs = liveUser.attendLog || []; 
+            const calendar = data.calendar || [];
+            
+            // 找出「今天以前」的所有活動作為分母
+            const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
+            
+            // 【核心修正點】：改用「寬鬆比對」，只要日期或標題對上就算出席
+            const attendedEvents = pastEvents.filter(ev => {
+                const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
+                return logs.some(log => {
+                    const sLog = String(log).trim();
+                    // 比對邏輯：完全符合、包含標題、或包含日期
+                    return sLog === standardKey || 
+                           sLog.includes(ev.title) || 
+                           sLog.includes(ev.dateText);
+                });
             });
-            if (hasMatch) console.log(`👉 匹配成功: ${ev.dateText} | ${ev.title}`);
-            return hasMatch;
-        });
 
-        // 4. 更新介面
-        const attendCount = attendedEvents.length;
-        const totalPast = pastEvents.length;
-        const rate = totalPast ? Math.round((attendCount / totalPast) * 100) : 0;
+            const attendCount = attendedEvents.length;
+            const totalPast = pastEvents.length;
+            const rate = totalPast ? Math.round((attendCount / totalPast) * 100) : 0;
 
-        document.getElementById('attPercent').innerText = `${rate}%`;
-        document.getElementById('attCountDisplay').innerText = `${attendCount} / ${totalPast}`;
-        
-        // 5. 渲染學習歷程
-        const historyList = document.getElementById('historyList');
-        if (attendedEvents.length === 0) {
-            historyList.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄 (請檢查後端資料)</div>';
-        } else {
-            historyList.innerHTML = attendedEvents.slice().reverse().map(ev => `
-                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
-                    <div>
-                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
-                        <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+            // 更新介面上的數據
+            document.getElementById('attPercent').innerText = `${rate}%`;
+            document.getElementById('attCountDisplay').innerText = `${attendCount} / ${totalPast}`;
+            
+            if (rate >= 50 && attendCount > 0) {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            }
+
+            // 3. 渲染學習歷程 (同步使用寬鬆比對邏輯過濾)
+            const historyList = document.getElementById('historyList');
+            
+            // 這裡直接使用剛才計算出席率時過濾出的 attendedEvents
+            const onlyAttended = attendedEvents;
+
+            if (onlyAttended.length === 0) {
+                historyList.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
+            } else {
+                // 由新到舊排序
+                historyList.innerHTML = onlyAttended.slice().reverse().map(ev => `
+                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                        <div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                        </div>
+                        <i class="fas fa-check-circle text-emerald-600 text-2xl"></i>
                     </div>
-                    <i class="fas fa-check-circle text-emerald-600 text-2xl"></i>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
-        console.log("=== 偵錯結束 ===");
-
     } catch (e) {
         console.error("同步錯誤:", e);
     }

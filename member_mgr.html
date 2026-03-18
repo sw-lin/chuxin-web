@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>會員名冊管理 | 築心會館</title>
+    <title>會員名冊 | 築心</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -11,89 +11,57 @@
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
         .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
-        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.5s; }
-        .member-card { transition: all 0.2s; border: 1px solid #f0f0f0; }
-        .member-card:active { transform: scale(0.98); }
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 50px; font-size: 13px; z-index: 10000; transition: opacity 0.5s; }
     </style>
 </head>
 <body class="min-h-screen pb-32">
 
-    <div id="loadingOverlay">
-        <div class="loading-card">
-            <div class="spinner"></div>
-            <div class="text-emerald-900 font-bold text-lg tracking-widest">同步中...</div>
-        </div>
-    </div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <div class="flex-1 flex items-center">
-            <button onclick="location.href='staff_menu.html'" class="flex items-center gap-1 hover:text-emerald-300 transition-colors">
-                <i class="fas fa-chevron-left"></i>
-                <span class="text-sm font-bold">返回</span>
-            </button>
-        </div>
-        <div class="absolute left-1/2 -translate-x-1/2">
-            <h1 class="text-lg font-black tracking-widest whitespace-nowrap">會員名冊管理</h1>
-        </div>
-        <div class="flex-1 flex justify-end">
-            <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">
-                開啟編輯
-            </button>
-        </div>
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left"></i> 返回</button>
+        <h1 class="text-lg font-black tracking-widest">會員名冊管理</h1>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
     </nav>
 
     <main class="p-4 max-w-2xl mx-auto">
         <div class="flex items-center justify-between mb-6 px-2">
-            <h2 class="text-sm font-bold text-emerald-900/60 uppercase tracking-widest">Member Directory</h2>
+            <h2 class="text-xs font-bold text-emerald-900/60 uppercase tracking-widest">Member Directory</h2>
             <span id="memberCount" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">0 位成員</span>
         </div>
         <div id="memberList" class="space-y-4"></div>
     </main>
 
     <div id="bottomAddArea" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xs px-6 hidden z-30">
-        <button onclick="openModal('addMemberModal')" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-            <i class="fas fa-user-plus text-xl"></i> 新增新會員項目
+        <button onclick="openModal('addMemberModal')" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2">
+            <i class="fas fa-user-plus"></i> 新增新會員
         </button>
     </div>
 
     <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增新會員</h3>
+            <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增會員</h3>
             <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">會員姓名</label>
-                    <input type="text" id="newName" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">手機號碼</label>
-                    <input type="tel" id="newPhone" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold font-mono">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">預設密碼 (選填)</label>
-                    <input type="text" id="newPass" placeholder="123" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">角色</label>
-                    <select id="newRole" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold appearance-none">
-                        <option value="學員">學員</option>
-                        <option value="工程">工程</option>
-                        <option value="管理員">管理員</option>
-                    </select>
-                </div>
+                <input type="text" id="newName" placeholder="姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <input type="tel" id="newPhone" placeholder="手機" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <select id="newRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                    <option value="學員">學員</option>
+                    <option value="管理員">管理員</option>
+                </select>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-8">
                 <button onclick="closeModal('addMemberModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                <button onclick="submitAddMember()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg">確認增加</button>
+                <button onclick="submitAddMember()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認增加</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 確保這行語法正確，兩端只有單引號
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
-        const STAFF_KEY = sessionStorage.getItem('staff_key');
+        // 核心設定
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';[cite: 4]
+        const STAFF_KEY = sessionStorage.getItem('staff_key');[cite: 4]
         let isEditMode = false;
 
         window.onload = () => {
@@ -103,86 +71,67 @@
 
         function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
-        async function loadMembers(scrollToBottom = false) {
+        async function loadMembers() {
             toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL);
+                const res = await fetch(GAS_URL);[cite: 4]
                 const data = await res.json();
                 const list = document.getElementById('memberList');
                 document.getElementById('memberCount').innerText = (data.users ? data.users.length : 0) + ' 位成員';
-
                 if (data.users) {
                     list.innerHTML = data.users.map(u => `
-                        <div class="member-card bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center">
-                            <div class="flex-1 min-w-0">
+                        <div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100">
+                            <div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-lg font-black text-emerald-900 truncate">${u.name}</span>
-                                    <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100">${u.role}</span>
+                                    <span class="text-lg font-black text-emerald-900">${u.name}</span>
+                                    <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">${u.role}</span>
                                 </div>
-                                <div class="text-[13px] font-mono text-gray-500 font-bold">${u.phone}</div>
+                                <div class="text-xs font-mono text-gray-400 font-bold">${u.phone}</div>
                             </div>
-                            ${isEditMode ? `
-                                <button onclick="deleteMember('${u.phone}', '${u.name}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
-                                    <i class="fas fa-trash-alt text-sm"></i>
-                                </button>
-                            ` : ''}
+                            ${isEditMode ? `<button onclick="deleteMember('${u.phone}', '${u.name}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full"><i class="fas fa-trash-alt text-sm"></i></button>` : ''}
                         </div>
                     `).join('');
                 }
-                if (scrollToBottom) {
-                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 300);
-                }
-            } catch (e) { showToast("載入失敗"); }
+            } catch (e) { showToast("讀取失敗"); }
             toggleLoading(false);
         }
 
         function toggleEditMode() {
             isEditMode = !isEditMode;
-            const btn = document.getElementById('editToggleBtn');
-            const addArea = document.getElementById('bottomAddArea');
-            btn.innerText = isEditMode ? "結束編輯" : "開啟編輯";
-            btn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-            addArea.classList.toggle('hidden', !isEditMode);
-            loadMembers(false);[cite: 4]
+            document.getElementById('editToggleBtn').innerText = isEditMode ? "結束編輯" : "開啟編輯";
+            document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
+            loadMembers();
         }
 
         async function submitAddMember() {
-            const name = document.getElementById('newName').value.trim();
-            const phone = document.getElementById('newPhone').value.trim();
-            const password = document.getElementById('newPass').value.trim() || "123";
-            const role = document.getElementById('newRole').value;
-            if (!name || !phone) return alert("姓名與電話為必填");
+            const name = document.getElementById('newName').value;
+            const phone = document.getElementById('newPhone').value;
+            if (!name || !phone) return alert("必填項目缺失");
             closeModal('addMemberModal');
             toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'add_member', key: STAFF_KEY, name, phone, password, role })
-                });[cite: 4]
-                const result = await res.json();
-                if (result.result === "SUCCESS") { showToast("✅ 會員已新增"); loadMembers(true); }
+                const payload = { type: 'add_member', key: STAFF_KEY, name: name, phone: phone, password: '123', role: document.getElementById('newRole').value };[cite: 4]
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });[cite: 4]
+                showToast("✅ 已新增"); loadMembers();
             } catch (e) { showToast("網路錯誤"); }
             toggleLoading(false);
         }
 
-        async function deleteMember(phone, name) {
-            if (!confirm("確定刪除 " + name + "？")) return;
+        async function deleteMember(p, n) {
+            if (!confirm("確定刪除 " + n + "？")) return;
             toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'delete_member', key: STAFF_KEY, phone: phone })
-                });[cite: 4]
-                const result = await res.json();
-                if (result.result === "SUCCESS") { showToast("🗑️ 已移除"); loadMembers(false); }
+                const payload = { type: 'delete_member', key: STAFF_KEY, phone: p };[cite: 4]
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });[cite: 4]
+                showToast("🗑️ 已移除"); loadMembers();
             } catch (e) { showToast("刪除失敗"); }
             toggleLoading(false);
         }
 
-        function showToast(msg) {
-            const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
+        function showToast(m) {
+            const t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
             document.body.appendChild(t);
-            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2000);
         }
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }

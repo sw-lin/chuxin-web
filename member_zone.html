@@ -40,19 +40,57 @@
 
 <main class="max-w-xl mx-auto p-6 space-y-6">
     <!-- 個人狀態卡片 -->
-    <div class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
-        <h2 id="userName" class="text-3xl font-black mb-6 italic tracking-tight">...</h2>
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-black/10 p-5 rounded-[2rem] text-center border border-white/10">
-                <div class="text-[10px] opacity-60 mb-1 uppercase tracking-widest font-bold">參與率</div>
-                <div id="attPercent" class="text-3xl font-black text-orange-200">0%</div>
+<!-- 會員卡片區：點擊後會彈出歷程 -->
+<div id="memberCard" class="card shadow-sm mb-3" style="background: linear-gradient(135deg, #1b4d3e, #2d6a4f); color: white; cursor: pointer;">
+    <div class="card-body text-center">
+        <h4 id="userName">載入中...</h4>
+        <div class="d-flex justify-content-around mt-3">
+            <div>
+                <small>出席次數</small>
+                <h3 id="attendCount">0</h3>
             </div>
-            <div class="bg-black/10 p-5 rounded-[2rem] text-center border border-white/10">
-                <div class="text-[10px] opacity-60 mb-1 uppercase tracking-widest font-bold">出席數</div>
-                <div id="attCountDisplay" class="text-2xl font-black">0 / 0</div>
+            <div>
+                <small>參與率</small>
+                <h3 id="attendRate">0%</h3>
+            </div>
+        </div>
+        <p class="mt-2" style="font-size: 0.8rem; opacity: 0.8;">(點擊查看詳細歷程)</p>
+    </div>
+</div>
+
+<!-- 新增：動態活動海報區 (預設隱藏，有活動才顯示) -->
+<div id="eventSection" class="mb-3" style="display: none;">
+    <!-- 這裡會由 JS 自動填入海報或生成的文字海報 -->
+</div>
+
+<!-- 功能按鈕區：改為並排以節省空間 -->
+<div class="row g-2 mb-3">
+    <div class="col-6">
+        <a id="dbLink" href="#" target="_blank" class="btn btn-outline-success w-100 py-2">
+            <i class="bi bi-database"></i> 課程資料庫
+        </a>
+    </div>
+    <div class="col-6">
+        <a id="albumLink" href="#" target="_blank" class="btn btn-outline-success w-100 py-2">
+            <i class="bi bi-images"></i> 活動剪影
+        </a>
+    </div>
+</div>
+
+<!-- 彈窗 (Modal)：顯示詳細出席紀錄 -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">學習歷程清單</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="historyList" style="max-height: 400px; overflow-y: auto;">
+                <!-- 這裡會動態填入日期與標題 -->
             </div>
         </div>
     </div>
+</div>    
 
     <!-- 掃碼按鈕 -->
     <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all">
@@ -80,13 +118,7 @@
         </button>
     </div>
 
-    <!-- 學習歷程[cite: 4] -->
-    <div class="px-2">
-        <h3 class="font-black text-emerald-900 text-lg mb-4 tracking-widest">學習歷程</h3>
-        <div id="historyList" class="space-y-3">
-            <div class="text-center py-10 text-gray-300 text-sm italic">載入紀錄中...</div>
-        </div>
-    </div>
+
 </main>
 
 <!-- 掃描與修改資料彈窗[cite: 4] -->

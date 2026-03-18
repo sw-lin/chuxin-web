@@ -273,53 +273,50 @@ async function handleUpdateProfile() {
 async function syncData(user) {
     try {
         console.log("開始同步資料...");
-        // 加上時間戳記避免瀏覽器快取舊資料
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎。";
 
-        // 1. 會員比對 (使用手機號碼後 9 碼)
+        // 1. 尋找目前登入的會員資料
         const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
         const liveUser = data.users.find(u => 
             u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
         );
         
         if (liveUser) {
-            // 更新目前使用者資料
-            currentUser = liveUser;
+            currentUser = liveUser; // 更新全域變數
 
-            // 處理幹部權限按鈕
+            // 處理幹部按鈕顯示
             const staffBtn = document.getElementById('staffBtn');
             if (liveUser.role && liveUser.role !== "學員") {
                 staffBtn.classList.remove('hidden');
                 staffBtn.style.display = "inline-block";
-                staffBtn.onclick = enterStaffMode;
             }
 
-            // 2. 出席紀錄與參與率計算
+            // --- 核心修正開始 ---
             const todayStr = new Date().toISOString().split('T')[0];
-            const logs = liveUser.attendLog || []; // 格式如 ["EVENT:2026-03-17|主題", ...]
+            const logs = liveUser.attendLog || []; 
             const calendar = data.calendar || [];
             
             // 找出「今天以前」的所有活動作為分母
             const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
             
-            // --- 偵錯重點：查看這兩組資料 ---
-            console.log("1. 資料庫回傳的報到紀錄 (logs):", logs);
-            
-            // 核心比對：直接用資料庫原始字串比對，不進行 Date 轉換
+            // 使用「寬鬆比對」計算出席的活動
             const attendedEvents = pastEvents.filter(ev => {
-                const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
-                return logs.includes(matchKey);
+                const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
+                return logs.some(log => {
+                    const sLog = String(log);
+                    return sLog === standardKey || sLog.includes(ev.dateText);
+                });
             });
 
             const attendCount = attendedEvents.length;
             const totalPast = pastEvents.length;
             const rate = totalPast ? Math.round((attendCount / totalPast) * 100) : 0;
 
-            // 更新介面上的數據
+            // 更新介面數據
             document.getElementById('attPercent').innerText = `${rate}%`;
             document.getElementById('attCountDisplay').innerText = `${attendCount} / ${totalPast}`;
             
@@ -327,19 +324,16 @@ async function syncData(user) {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
 
-            // 3. 渲染學習歷程 (修改：僅顯示有參加的活動)
+            // 3. 渲染學習歷程（同樣使用寬鬆比對過濾）
             const historyList = document.getElementById('historyList');
-            
-            // 先過濾出「有參加」的活動，再進行渲染
             const onlyAttended = calendar.filter(ev => {
-                const matchKey = `EVENT:${ev.dateText}|${ev.title}`;
-                return logs.includes(matchKey);
+                const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
+                return logs.some(log => String(log).includes(ev.dateText));
             });
 
             if (onlyAttended.length === 0) {
                 historyList.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
             } else {
-                // 由新到舊排序
                 historyList.innerHTML = onlyAttended.slice().reverse().map(ev => `
                     <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
                         <div>
@@ -350,12 +344,12 @@ async function syncData(user) {
                     </div>
                 `).join('');
             }
+            // --- 核心修正結束 ---
         }
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}
-        
+}        
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {
     try {

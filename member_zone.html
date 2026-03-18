@@ -164,40 +164,37 @@
     }
 
 function updateUI(user, calendar, events) {
-    var logs = user.attendLog || [];
-    var today = new Date().toISOString().split('T')[0];
+    // 1. 取得使用者所有的出席紀錄 (logs)
+    const logs = user.attendLog || [];
+    const today = new Date().toISOString().split('T')[0];
     
-    // 1. 找出今天以前（含今天）的所有活動作為分母
-    var pastEvents = calendar.filter(ev => ev.dateText <= today);
+    // 2. 過濾出今天以前的活動 (分母)
+    const pastEvents = calendar.filter(ev => ev.dateText <= today);
     
-    // 2. 修正比對邏輯：改為「寬鬆比對」
-    var attended = pastEvents.filter(ev => {
-        // 標準格式：EVENT:2026-03-28|春季演講
-        var standardKey = "EVENT:" + ev.dateText + "|" + ev.title;
+    // 3. 全面比對：不論 logs 的順序，只要裡面有 match 就算數
+    const attended = pastEvents.filter(ev => {
+        const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
         
-        // 只要 logs 陣列中任一筆符合「完整格式」或「包含標題」就算出席
+        // 核心修正：確保檢查 logs 裡的每一個項目
         return logs.some(log => {
-            var sLog = String(log).trim();
-            return sLog === standardKey || sLog.includes(ev.title);
+            const sLog = String(log).trim();
+            // 只要紀錄裡包含「日期」或「標題」或「完整格式」
+            return sLog === standardKey || 
+                   sLog.includes(ev.title) || 
+                   sLog.includes(ev.dateText);
         });
     });
 
-    // 3. 更新介面上的數據
-    var attPercentElem = document.getElementById('attPercent');
-    var attCountElem = document.getElementById('attCountDisplay');
-    
-    var rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
-    
-    if (attPercentElem) attPercentElem.innerText = rate + "%";
-    if (attCountElem) attCountElem.innerText = attended.length + " / " + pastEvents.length;
+    // 4. 更新 UI
+    const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
+    document.getElementById('attPercent').innerText = rate + "%";
+    document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
 
-    // 4. 渲染活動宣傳區
     renderEventSection(events);
     
-    // 5. 儲存已出席資料供「學習歷程彈窗」使用
+    // 將「已出席」的活動清單存起來，供學習歷程視窗顯示
     window.currentAttendedData = attended; 
-}
-    
+}    
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];

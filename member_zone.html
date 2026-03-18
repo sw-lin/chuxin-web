@@ -132,7 +132,6 @@
         </div>
     </div>
 </div>
-
 <script>
     var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     var html5QrCode = null;
@@ -148,119 +147,149 @@
         syncData();
     };
 
-function syncData() {
-    // 1. 顯示全螢幕加載動畫
-    const loader = document.getElementById('loadingOverlay');
-    if (loader) loader.style.display = 'flex';
+    // --- 核心功能：同步資料 ---
+    function syncData() {
+        const loader = document.getElementById('loadingOverlay');
+        if (loader) loader.style.display = 'flex';
 
-    fetch(GAS_URL + "?t=" + Date.now())
-        .then(res => res.json())
-        .then(data => {
-            lastSyncData = data;
-            // 保留原本的 remoteConfig
-            remoteConfig = data.config || {};
-            document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
-            
-            // 找出當前使用者最新資料 (手機後9碼比對)
-            var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
-            var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
-            
-            if (liveUser) {
-                currentUser = liveUser;
+        fetch(GAS_URL + "?t=" + Date.now())
+            .then(res => res.json())
+            .then(data => {
+                lastSyncData = data;
+                remoteConfig = data.config || {};
+                document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
                 
-                // 🏆 保留：檢查幹部身份判斷
-                if (liveUser.role && liveUser.role !== "學員") {
-                    const staffBtn = document.getElementById('staffBtn');
-                    if (staffBtn) {
-                        staffBtn.classList.remove('hidden');
-                        staffBtn.onclick = enterStaffMode;
+                var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
+                var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
+                
+                if (liveUser) {
+                    currentUser = liveUser;
+                    // 檢查幹部身份
+                    if (liveUser.role && liveUser.role !== "學員") {
+                        const staffBtn = document.getElementById('staffBtn');
+                        if (staffBtn) {
+                            staffBtn.classList.remove('hidden');
+                            staffBtn.onclick = enterStaffMode;
+                        }
                     }
+                    // 更新 UI 數據 (這會呼叫下方的 updateUI)
+                    updateUI(liveUser, data.calendar, data.events);
                 }
-                
-                // 更新 UI 數據 (內含 50% 彩花邏輯)
-                updateUI(liveUser, data.calendar, data.events);
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            showToast("數據同步失敗，請檢查網路", "error");
-        })
-        .finally(() => {
-            // 2. 隱藏全螢幕加載動畫
-            if (loader) loader.style.display = 'none';
-        });
-}
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("數據同步失敗", "error");
+            })
+            .finally(() => {
+                if (loader) loader.style.display = 'none';
+            });
+    }
 
-function syncData() {
-    // 1. 顯示全螢幕加載動畫
-    const loader = document.getElementById('loadingOverlay');
-    if (loader) loader.style.display = 'flex';
-
-    fetch(GAS_URL + "?t=" + Date.now())
-        .then(res => res.json())
-        .then(data => {
-            lastSyncData = data;
-            // 保留原本的 remoteConfig
-            remoteConfig = data.config || {};
-            document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
-            
-            // 找出當前使用者最新資料 (手機後9碼比對)
-            var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
-            var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
-            
-            if (liveUser) {
-                currentUser = liveUser;
-                
-                // 🏆 保留：檢查幹部身份判斷
-                if (liveUser.role && liveUser.role !== "學員") {
-                    const staffBtn = document.getElementById('staffBtn');
-                    if (staffBtn) {
-                        staffBtn.classList.remove('hidden');
-                        staffBtn.onclick = enterStaffMode;
-                    }
-                }
-                
-                // 更新 UI 數據 (內含 50% 彩花邏輯)
-                updateUI(liveUser, data.calendar, data.events);
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            showToast("數據同步失敗，請檢查網路", "error");
-        })
-        .finally(() => {
-            // 2. 隱藏全螢幕加載動畫
-            if (loader) loader.style.display = 'none';
+    // --- 核心功能：更新界面與出席比對 (修正消失的部分) ---
+    function updateUI(user, calendar, events) {
+        const logs = user.attendLog || [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        // 找出今天以前的所有活動 (分母)
+        const pastEvents = calendar.filter(ev => ev.dateText <= today);
+        
+        // 比對出席紀錄 (分子)
+        const attended = pastEvents.filter(ev => {
+            const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
+            return logs.some(log => {
+                const sLog = String(log).trim();
+                return sLog === standardKey || sLog.includes(ev.title);
+            });
         });
-}    
+
+        const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
+        
+        // 更新顯示
+        document.getElementById('attPercent').innerText = rate + "%";
+        document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
+
+        // 🎉 達標彩花 (超過 50%)
+        if (rate >= 50 && pastEvents.length > 0) {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.7 },
+                colors: ['#064E3B', '#10B981', '#F59E0B']
+            });
+        }
+
+        renderEventSection(events);
+        window.currentAttendedData = attended; 
+    }
+
+    // --- 掃碼報到處理 ---
+    async function processCheckin(scanData) {
+        if (!scanData.startsWith("CHECKIN:")) {
+            showToast("無效的條碼格式", "error");
+            return;
+        }
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const parts = scanData.split(':');
+            const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    type: 'checkin', 
+                    phone: currentUser.phone, 
+                    name: currentUser.name, 
+                    eventTitle: eventID 
+                })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") {
+                showToast("報到成功！歡迎參與");
+                confetti({ particleCount: 150, spread: 60 });
+                syncData(); 
+            } else {
+                showToast(result.message || "報到失敗", "error");
+            }
+        } catch (e) {
+            showToast("網路連線失敗", "error");
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    // --- 其他 UI 控制函數 ---
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];
-        // 過濾出日期範圍內的活動
         var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
-
-        if (activeEvents.length === 0) {
-            container.innerHTML = "";
-            return;
-        }
-
+        if (activeEvents.length === 0) { container.innerHTML = ""; return; }
         container.innerHTML = activeEvents.map(ev => {
             if (ev.poster_url && ev.poster_url.includes('http')) {
-                return `
-                    <div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50 mb-4">
+                return `<div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50 mb-4">
                         <img src="${ev.poster_url}" class="w-full object-cover">
                         ${ev.reg_url ? `<button onclick="handleReg('${ev.title}')" class="w-full py-4 bg-emerald-800 text-white font-black tracking-widest active:bg-emerald-900">立即報名</button>` : ''}
                     </div>`;
             } else {
-                return `
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 space-y-2">
+                return `<div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 space-y-2">
                         <h4 class="font-black text-emerald-900">${ev.title}</h4>
                         <p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.dateText}</p>
-                        <p class="text-xs text-gray-400">${ev.desc || ''}</p>
                         ${ev.reg_url ? `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3 bg-emerald-100 text-emerald-800 rounded-xl font-bold text-sm">點我報名</button>` : ''}
                     </div>`;
             }
         }).join('');
+    }
+
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-emerald-800' : 'bg-red-800';
+        toast.className = `${bgColor} text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-bold transition-all duration-500 opacity-0 translate-y-2`;
+        toast.innerText = msg;
+        container.appendChild(toast);
+        setTimeout(() => { toast.classList.remove('opacity-0', 'translate-y-2'); }, 100);
+        setTimeout(() => {
+            toast.classList.add('opacity-0', '-translate-y-2');
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
     }
 
     function openHistoryModal() {
@@ -270,7 +299,7 @@ function syncData() {
             list.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
         } else {
             list.innerHTML = data.slice().reverse().map(ev => `
-                <div class="bg-emerald-50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100">
+                <div class="bg-emerald-50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100 mb-2">
                     <div>
                         <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
                         <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
@@ -283,131 +312,56 @@ function syncData() {
     }
 
     function closeHistoryModal() { document.getElementById('historyModal').style.display = 'none'; }
-
-async function handleReg(eventTitle) {
-    if(!confirm("確認要報名「" + eventTitle + "」嗎？")) return;
-    
-    // 1. 取得按鈕元件（增加防錯處理）
-    const btn = window.event ? window.event.target : null; 
-    const originalText = btn ? btn.innerText : "點我報名";
-
-    if (btn) {
-        btn.innerText = "處理中...";
-        btn.disabled = true;
-    }
-
-    try {
-        // 2. 發送請求
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                type: 'register_event', 
-                phone: currentUser.phone,
-                name: currentUser.name,
-                eventTitle: eventTitle
-            })
-        });
-
-        // 3. 解析結果
-        const result = await res.json(); 
-        
-        if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
-            alert(result.message || "報名成功！");
-            syncData(); // 重新整理出席率與數據
-        } else {
-            alert("失敗：" + (result.message || "發生未知錯誤"));
-        }
-
-    } catch (e) { 
-        console.error("報名出錯:", e);
-        alert("連線異常，請檢查網路。"); 
-    } finally {
-        // 4. 恢復按鈕狀態
-        if (btn) {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
-    }
-}
-
-    function openEditModal() {
-        document.getElementById('editEmail').placeholder = currentUser.email || '電子郵件';
-        document.getElementById('editProfileModal').style.display = 'flex';
-    }
+    function openEditModal() { document.getElementById('editProfileModal').style.display = 'flex'; }
     function closeEditModal() { document.getElementById('editProfileModal').style.display = 'none'; }
-    function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else alert("尚未設定: " + key); }
+    function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else showToast("連結尚未設定", "error"); }
     function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+    
+    // --- 掃描控制 ---
+    function startScanner() {
+        document.getElementById('scannerModal').style.display = 'flex';
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+            (text) => { stopScanner(); processCheckin(text); }, 
+            () => {}
+        ).catch(err => { showToast("無法開啟相機", "error"); stopScanner(); });
+    }
+    function stopScanner() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode = null;
+                document.getElementById('scannerModal').style.display = 'none';
+            });
+        } else {
+            document.getElementById('scannerModal').style.display = 'none';
+        }
+    }
+
+    async function handleReg(eventTitle) {
+        if(!confirm("確認要報名「" + eventTitle + "」嗎？")) return;
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: 'register_event', phone: currentUser.phone, name: currentUser.name, eventTitle: eventTitle })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
+                showToast(result.message || "報名成功！");
+                syncData();
+            } else { showToast(result.message, "error"); }
+        } catch (e) { showToast("連連異常", "error"); }
+    }
+
     async function enterStaffMode() {
         var key = prompt("請輸入幹部管理金鑰：");
         if (!key) return;
         try {
-            var res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: 'verify_staff_key', key: key })
-            });
+            var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'verify_staff_key', key: key }) });
             var result = await res.json();
-            if (result.result === "SUCCESS") {
-                sessionStorage.setItem('staff_key', key);
-                location.href = "staff_menu.html"; 
-            } else { alert("金鑰錯誤！"); }
-        } catch (e) { alert("連線失敗"); }
+            if (result.result === "SUCCESS") { sessionStorage.setItem('staff_key', key); location.href = "staff_menu.html"; } 
+            else { showToast("金鑰錯誤！", "error"); }
+        } catch (e) { showToast("連線失敗", "error"); }
     }
-
-    function showToast(msg, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-emerald-800' : 'bg-red-800';
-    toast.className = `${bgColor} text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-bold transition-all duration-500 opacity-0 translate-y-2`;
-    toast.innerText = msg;
-    container.appendChild(toast);
-    
-    // 動畫進入
-    setTimeout(() => { toast.classList.remove('opacity-0', 'translate-y-2'); }, 100);
-    // 自動消失
-    setTimeout(() => {
-        toast.classList.add('opacity-0', '-translate-y-2');
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
-}
-
-    // --- 修正報到按鈕點擊沒反應的問題 ---
-// 請確認 HTML 裡的按鈕是 onclick="startScanner()"
-async function processCheckin(scanData) {
-    if (!scanData.startsWith("CHECKIN:")) {
-        showToast("無效的條碼格式", "error");
-        return;
-    }
-    
-    // 顯示加載中
-    document.getElementById('loadingOverlay').style.display = 'flex';
-
-    try {
-        const parts = scanData.split(':');
-        const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
-        
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ 
-                type: 'checkin', 
-                phone: currentUser.phone, 
-                name: currentUser.name, 
-                eventTitle: eventID 
-            })
-        });
-        const result = await res.json();
-        
-        if (result.result === "SUCCESS") {
-            showToast("報到成功！歡迎參與");
-            confetti({ particleCount: 150, spread: 60 });
-            syncData(); // 重新整理資料
-        } else {
-            showToast(result.message || "報到失敗", "error");
-        }
-    } catch (e) {
-        showToast("網路連線失敗", "error");
-    } finally {
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }
-}</script>
+</script>
 </body>
 </html>

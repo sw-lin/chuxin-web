@@ -3,181 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大聲公管理 | 築心讀書會</title>
+    <title>大聲公管理 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        /* 等待動畫旋轉 */
-         .loader { border-top-color: #064E3B; animation: spinner 0.6s linear infinite; }
-                 @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }        
-                  body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(6, 78, 59, 0.1); }
-        .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); transition: all 0.2s; }
-        .btn-emerald:active { transform: scale(0.98); opacity: 0.9; }
-        .btn-line { background: #00B900; color: white; }
-        /* 成功提示小標籤 */
-.toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #064E3B;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 99px;
-    font-size: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 300;
-    transition: opacity 0.3s;
-}    
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
+        /* 統一 Loading 遮罩 */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(2px);
+        }
+        .loading-card {
+            background: white; padding: 40px; border-radius: 32px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid #065F46; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; transition: opacity 0.5s; pointer-events: none; }
+        
+        .action-card { background: white; border-radius: 2.5rem; border: 1px solid #f0f0f0; transition: all 0.3s; }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<body class="min-h-screen pb-20">
 
-    <div class="p-4 flex items-center justify-between glass-card">
-        <button onclick="location.href='staff_menu.html'" class="text-emerald-800">
-            <i class="fas fa-chevron-left mr-2"></i>返回
-        </button>
-        <h1 class="font-bold text-emerald-900">大聲公管理</h1>
-        <div class="w-8"></div> 
-    </div>
-
-    <div class="flex-1 p-6 flex flex-col border-b border-emerald-100">
-        <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mr-3 text-emerald-700">
-                <i class="fas fa-scroll"></i>
-            </div>
-            <div>
-                <h2 class="font-bold text-emerald-900 text-lg">公布欄訊息</h2>
-                <p class="text-[10px] text-gray-400">更改後全體會員登入後可見</p>
-            </div>
+    <div id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <div class="text-emerald-900 font-bold tracking-widest">發送中...</div>
         </div>
-        <textarea id="newsContent" class="flex-1 w-full p-4 rounded-2xl border border-emerald-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-gray-700 shadow-inner" placeholder="讀取中..."></textarea>
-        <button onclick="updateNews()" class="mt-4 w-full py-3 rounded-xl btn-emerald text-white font-bold shadow-lg">
-            <i class="fas fa-paper-plane mr-2"></i>更新公告
-        </button>
     </div>
 
-    <div class="flex-1 p-6 flex flex-col bg-emerald-50/30">
-        <div class="flex items-center mb-4">
-            <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mr-3 text-green-600">
-                <i class="fab fa-line text-xl"></i>
-            </div>
-            <div>
-                <h2 class="font-bold text-emerald-900 text-lg">LINE 訊息發送</h2>
-                <p class="text-[10px] text-gray-400">訊息將直接推播至官方群組</p>
-            </div>
-        </div>
-        <textarea id="lineMsg" class="flex-1 w-full p-4 rounded-2xl border border-green-100 focus:ring-2 focus:ring-green-500 focus:outline-none text-gray-700 shadow-inner" placeholder="請輸入要發送給會員的訊息..."></textarea>
-        <button onclick="sendLine()" class="mt-4 w-full py-3 rounded-xl btn-line font-bold shadow-lg">
-            <i class="fab fa-line mr-2"></i>發送至 LINE 群組
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
+            <i class="fas fa-chevron-left mr-1"></i> 返回
         </button>
-    </div>
+        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2 whitespace-nowrap">大聲公管理</h1>
+        <div class="w-12"></div> </nav>
+
+    <main class="p-6 max-w-xl mx-auto">
+        
+        <header class="mb-8 text-center">
+            <div class="inline-block p-4 bg-emerald-50 rounded-full mb-4">
+                <i class="fas fa-bullhorn text-3xl text-emerald-700"></i>
+            </div>
+            <h2 class="text-xl font-black text-emerald-900">群發廣播通知</h2>
+            <p class="text-xs text-gray-400 mt-2 font-bold uppercase tracking-tighter">Line Group Announcement</p>
+        </header>
+
+        <div class="action-card p-8 shadow-sm">
+            <div class="mb-6">
+                <label class="text-[10px] font-bold text-gray-400 ml-2 mb-2 block uppercase tracking-widest">Message Content</label>
+                <textarea id="lineMsg" rows="6" 
+                    placeholder="請輸入欲發送至 LINE 群組的內容..." 
+                    class="w-full p-6 bg-gray-50 rounded-[1.5rem] border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
+            </div>
+
+            <button onclick="sendLineMessage()" 
+                class="w-full py-5 bg-[#064E3B] text-white rounded-2xl font-black shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+                <i class="fab fa-line text-2xl"></i>
+                <span class="tracking-widest">立即發送廣播</span>
+            </button>
+            
+            <p class="text-[10px] text-gray-400 text-center mt-4 font-medium">
+                * 點擊發送後，訊息將透過 LINE Notify 推送至讀書會群組
+            </p>
+        </div>
+
+    </main>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        // 拆解法定義 URL，防止環境偵測錯誤
+        var u1 = 'https://script.google.com';
+        var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        var GAS_URL = u1 + u2;
+        var STAFF_KEY = sessionStorage.getItem('staff_key');
 
-        const STAFF_KEY = sessionStorage.getItem('staff_key');
-
-        window.onload = async () => {
-            if (!STAFF_KEY) {
-                alert("權限失效，請重新登入");
-                location.href = "index.html";
-                return;
-            }
-            fetchCurrentNews();
+        window.onload = function() {
+            if (!STAFF_KEY) { window.location.href = "index.html"; return; }
         };
 
-        // 1. 抓取目前公布欄訊息
-        async function fetchCurrentNews() {
-            try {
-                const res = await fetch(GAS_URL);
-                const data = await res.json();
-                document.getElementById('newsContent').value = data.news || "";
-            } catch (e) {
-                console.error("讀取公告失敗", e);
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function sendLineMessage() {
+            var msg = document.getElementById('lineMsg').value.trim();
+            if (!msg) {
+                alert("請先輸入訊息內容");
+                return;
             }
-        }
 
-        // 2. 更新公告邏輯
-async function updateNews() {
-    const content = document.getElementById('newsContent').value;
-    if (!content) return alert("內容不能為空");
-    if (!confirm("確定要更新全體公告嗎？")) return;
+            if (!confirm("確定要將此訊息發送至 LINE 群組嗎？")) return;
 
-    showLoading(true); // <--- 開始轉圈
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                type: 'update_news',
-                key: STAFF_KEY,
-                content: content
-            })
-        });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-          showToast("✅ 公告更新成功");
-        }
-        else alert("更新失敗：" + result.message);
-        } catch (e) {
-            alert("網路連線錯誤");
-        }
-    showLoading(false); // <--- 結束轉圈
-}
-        // 3. 發送 LINE 訊息邏輯
-async function sendLine() {
-    const msg = document.getElementById('lineMsg').value;
-    if (!msg) return alert("訊息內容不能為空");
-    if (!confirm("確定要對群組發送推播嗎？")) return;
+            showLoading(true);
 
-    showLoading(true); // <--- 開始轉圈
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
+            var payload = {
                 type: 'send_line',
                 key: STAFF_KEY,
                 message: msg
+            };
+
+            fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
             })
-        });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-             showToast("🚀 LINE 訊息已發出");
-             document.getElementById('lineMsg').value = '';
-        } else {
-            alert("發送失敗");
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                if (result.result === "SUCCESS") {
+                    showToast("🚀 訊息已成功發出");
+                    document.getElementById('lineMsg').value = ''; // 清空輸入框
+                } else {
+                    alert("發送失敗：" + (result.message || "原因不明"));
+                }
+            })
+            .catch(function(err) {
+                alert("網路連線錯誤，請檢查網路狀態");
+            })
+            .finally(function() {
+                showLoading(false);
+            });
         }
-    } catch (e) {
-        alert("網路連線錯誤");
-    }
-    showLoading(false); // <--- 結束轉圈
-}  
-        
-        function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerText = message;
-    document.body.appendChild(toast);
-    
-    // 2秒後自動消失
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 2000);
-} 
-        
-        // 控制等待訊號的顯示/隱藏
-    function showLoading(show) {
-       const overlay = document.getElementById('loadingOverlay');
-       overlay.style.display = show ? 'flex' : 'none';
-     }    
+
+        function showToast(m) {
+            var t = document.createElement('div');
+            t.className = 'toast';
+            t.innerText = m;
+            document.body.appendChild(t);
+            setTimeout(function() {
+                t.style.opacity = '0';
+                setTimeout(function() { t.remove(); }, 500);
+            }, 2500);
+        }
     </script>
-        <div id="loadingOverlay" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-[200] items-center justify-center">
-        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
-        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-12 w-12 mb-4"></div>
-        <p class="text-emerald-900 font-bold">處理中，請稍候...</p>
-    </div>
-</div></body>
+</body>
 </html>

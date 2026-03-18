@@ -167,23 +167,37 @@ function updateUI(user, calendar, events) {
     var logs = user.attendLog || [];
     var today = new Date().toISOString().split('T')[0];
     
-    // 過濾出今天以前（含今天）的所有活動
+    // 1. 找出今天以前（含今天）的所有活動作為分母
     var pastEvents = calendar.filter(ev => ev.dateText <= today);
     
-    // 修正比對邏輯：檢查 logs 陣列中是否包含該活動的 ID
+    // 2. 修正比對邏輯：改為「寬鬆比對」
     var attended = pastEvents.filter(ev => {
-        // 這邊的 Key 必須與後端寫入的格式完全一致
-        var key = "EVENT:" + ev.dateText + "|" + ev.title;
-        // 增加一個模糊比對，避免空格影響
-        return logs.some(log => log.trim() === key.trim());
+        // 標準格式：EVENT:2026-03-28|春季演講
+        var standardKey = "EVENT:" + ev.dateText + "|" + ev.title;
+        
+        // 只要 logs 陣列中任一筆符合「完整格式」或「包含標題」就算出席
+        return logs.some(log => {
+            var sLog = String(log).trim();
+            return sLog === standardKey || sLog.includes(ev.title);
+        });
     });
 
-    document.getElementById('attPercent').innerText = (pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0) + "%";
-    document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
+    // 3. 更新介面上的數據
+    var attPercentElem = document.getElementById('attPercent');
+    var attCountElem = document.getElementById('attCountDisplay');
+    
+    var rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
+    
+    if (attPercentElem) attPercentElem.innerText = rate + "%";
+    if (attCountElem) attCountElem.innerText = attended.length + " / " + pastEvents.length;
 
+    // 4. 渲染活動宣傳區
     renderEventSection(events);
-    window.currentAttendedData = attended; // 儲存給彈窗使用
+    
+    // 5. 儲存已出席資料供「學習歷程彈窗」使用
+    window.currentAttendedData = attended; 
 }
+    
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];

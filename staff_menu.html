@@ -17,114 +17,108 @@
             cursor: pointer;
         }
         .staff-card:active { transform: scale(0.95); background-color: #f9f9f9; }
+        /* 統一的 Icon 樣式 */
         .icon-box {
             background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
             box-shadow: 0 8px 20px rgba(6, 78, 59, 0.2);
         }
     </style>
 </head>
-<body class="pb-10">
+<body class="pb-16">
 
-    <!-- 頂部導航 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center">
+        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors">
             <i class="fas fa-chevron-left mr-1"></i> 會員中心
         </button>
         <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2 whitespace-nowrap">管理控制台</h1>
-        <div class="text-[10px] bg-emerald-500/20 border border-emerald-400/30 px-2 py-1 rounded text-emerald-200 font-bold">
-            已授權
+        <div class="text-[10px] bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-1.5 rounded-full text-emerald-200 font-bold uppercase tracking-tight">
+            Verified
         </div>
     </nav>
 
-    <!-- 標題區 -->
-    <div class="px-8 mt-8 mb-8 text-center">
-        <h2 class="text-2xl font-black text-emerald-900 mb-2">築心會館管理中心</h2>
-        <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Staff Command Center</p>
-    </div>
-
-    <!-- 功能網格 -->
-    <div class="px-6 grid grid-cols-2 gap-4">
+    <main class="p-6 max-w-2xl mx-auto grid grid-cols-2 gap-5 mt-6">
         
-        <!-- 大聲公 -->
         <div onclick="navTo('announcement')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-bullhorn text-white text-2xl"></i>
             </div>
-            <span class="text-emerald-900 font-black text-sm">大聲公</span>
-            <span class="text-[10px] text-gray-400 mt-1 font-bold">公告與 LINE</span>
+            <span class="text-emerald-900 font-black text-base">大聲公</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">公告與 LINE</span>
         </div>
 
-        <!-- 會員名冊 -->
         <div onclick="navTo('member_mgr')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-users text-white text-2xl"></i>
             </div>
-            <span class="text-emerald-900 font-black text-sm">會員名冊</span>
-            <span class="text-[10px] text-gray-400 mt-1 font-bold">名單增刪改</span>
+            <span class="text-emerald-900 font-black text-base">會員名冊</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">名單增刪改</span>
         </div>
 
-        <!-- 行事曆[cite: 5] -->
         <div onclick="navTo('calendar_mgr')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-calendar-alt text-white text-2xl"></i>
             </div>
-            <span class="text-emerald-900 font-black text-sm">行事曆</span>
-            <span class="text-[10px] text-gray-400 mt-1 font-bold">活動排程</span>
+            <span class="text-emerald-900 font-black text-base">行事曆</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">活動排程</span>
         </div>
 
-        <!-- 出席紀錄[cite: 5] -->
         <div onclick="navTo('attendance_rpt')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-clipboard-check text-white text-2xl"></i>
             </div>
-            <span class="text-emerald-900 font-black text-sm">出席紀錄</span>
-            <span class="text-[10px] text-gray-400 mt-1 font-bold">簽到數據查詢</span>
+            <span class="text-emerald-900 font-black text-base">出席紀錄</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">簽到數據查詢</span>
         </div>
 
-        <!-- 繳費記錄[cite: 5] -->
         <div onclick="navTo('payment_mgr')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-hand-holding-usd text-white text-2xl"></i>
             </div>
-            <span class="text-emerald-900 font-black text-sm">繳費記錄</span>
-            <span class="text-[10px] text-gray-400 mt-1 font-bold">會費與雜支</span>
+            <span class="text-emerald-900 font-black text-base">繳費記錄</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">會費與雜支</span>
         </div>
 
-        <!-- 活動報名[cite: 5] -->
         <div onclick="navTo('event_reg')" class="staff-card p-6 flex flex-col items-center text-center shadow-sm">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-file-signature text-white text-2xl"></i>
             </div>
-            <span class="text-emerald-900 font-black text-sm">活動報名</span>
-            <span class="text-[10px] text-gray-400 mt-1 font-bold">報名名單管理</span>
+            <span class="text-emerald-900 font-black text-base">活動報名</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">報名名單管理</span>
         </div>
 
-        <!-- 系統設定[cite: 5] -->
-        <div onclick="navTo('system_config')" class="staff-card p-4 col-span-2 flex items-center justify-center gap-4 shadow-sm border-dashed border-2 border-emerald-100 bg-emerald-50/20">
-            <div class="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center text-gray-500">
-                <i class="fas fa-cog"></i>
+        <div onclick="navTo('system_config')" class="staff-card p-5 col-span-2 flex items-center justify-center gap-5 shadow-sm bg-emerald-50/20 border-dash border-2 border-emerald-100/50">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+                <i class="fas fa-link text-white text-2xl"></i>
             </div>
             <div class="text-left">
-                <div class="text-emerald-900 font-black text-sm">系統設定</div>
-                <div class="text-[10px] text-gray-400 font-bold">參數與金鑰管理系統</div>
+                <div class="text-emerald-900 font-black text-base">資料庫連結</div>
+                <div class="text-[11px] text-gray-400 font-bold mt-1">系統參數與後端金鑰管理</div>
             </div>
         </div>
 
-    </div>
+    </main>
 
     <script>
-        // 權限檢查[cite: 5]
+        // 初始化檢查：如果沒有金鑰，踢回登入頁
         window.onload = function() {
             var key = sessionStorage.getItem('staff_key');
             if (!key) {
+                // 如果環境不支援 sessionStorage，嘗試從網址抓 (相容之前邏輯)
+                const urlParams = new URLSearchParams(window.location.search);
+                key = urlParams.get('key');
+            }
+            
+            if (!key) {
                 alert("非法進入！請先驗證金鑰。");
                 location.href = 'index.html';
+            } else {
+                // 確保 sessionStorage 有存，方便子頁面呼叫
+                sessionStorage.setItem('staff_key', key);
             }
         };
 
-        // 統一跳轉功能[cite: 5]
+        // 跳轉功能：子頁面會自行去 sessionStorage 抓 key，不需帶參數
         function navTo(page) {
-            // 直接跳轉，金鑰已存在 sessionStorage，各子頁面會自行讀取
             location.href = page + '.html';
         }
     </script>

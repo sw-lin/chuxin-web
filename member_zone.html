@@ -270,86 +270,79 @@ async function handleUpdateProfile() {
             }
         }
 
-async function syncData(user) {
+    async function syncData(user) {
     try {
-        console.log("開始同步資料...");
+        console.log("=== 偵錯開始 ===");
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
-        remoteConfig = data.config || {};
-        document.getElementById('news').innerText = data.news || "歡迎。";
-
-        // 1. 尋找目前登入的會員資料
+        // 1. 檢查手機號碼比對 (關鍵：確保 liveUser 有抓到)
         const myMatch = String(user.phone).replace(/\D/g, "").slice(-9);
-        const liveUser = data.users.find(u => 
-            u.phone && String(u.phone).replace(/\D/g, "").slice(-9) === myMatch
-        );
+        console.log("我的手機後9碼:", myMatch);
         
-        if (liveUser) {
-            currentUser = liveUser; // 更新全域變數
+        const liveUser = data.users.find(u => {
+            const dbPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
+            return dbPhone === myMatch;
+        });
 
-            // 處理幹部按鈕顯示
-            const staffBtn = document.getElementById('staffBtn');
-            if (liveUser.role && liveUser.role !== "學員") {
-                staffBtn.classList.remove('hidden');
-                staffBtn.style.display = "inline-block";
-            }
-
-            // --- 核心修正開始 ---
-            const todayStr = new Date().toISOString().split('T')[0];
-            const logs = liveUser.attendLog || []; 
-            const calendar = data.calendar || [];
-            
-            // 找出「今天以前」的所有活動作為分母
-            const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
-            
-            // 使用「寬鬆比對」計算出席的活動
-            const attendedEvents = pastEvents.filter(ev => {
-                const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
-                return logs.some(log => {
-                    const sLog = String(log);
-                    return sLog === standardKey || sLog.includes(ev.dateText);
-                });
-            });
-
-            const attendCount = attendedEvents.length;
-            const totalPast = pastEvents.length;
-            const rate = totalPast ? Math.round((attendCount / totalPast) * 100) : 0;
-
-            // 更新介面數據
-            document.getElementById('attPercent').innerText = `${rate}%`;
-            document.getElementById('attCountDisplay').innerText = `${attendCount} / ${totalPast}`;
-            
-            if (rate >= 50 && attendCount > 0) {
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            }
-
-            // 3. 渲染學習歷程（同樣使用寬鬆比對過濾）
-            const historyList = document.getElementById('historyList');
-            const onlyAttended = calendar.filter(ev => {
-                const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
-                return logs.some(log => String(log).includes(ev.dateText));
-            });
-
-            if (onlyAttended.length === 0) {
-                historyList.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
-            } else {
-                historyList.innerHTML = onlyAttended.slice().reverse().map(ev => `
-                    <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
-                        <div>
-                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
-                            <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
-                        </div>
-                        <i class="fas fa-check-circle text-emerald-600 text-2xl"></i>
-                    </div>
-                `).join('');
-            }
-            // --- 核心修正結束 ---
+        if (!liveUser) {
+            console.error("❌ 找不到此會員資料，請檢查手機號碼是否一致");
+            return;
         }
+        console.log("✅ 找到會員:", liveUser.name, "紀錄數:", liveUser.attendLog ? liveUser.attendLog.length : 0);
+
+        // 2. 處理資料與比對
+        const todayStr = new Date().toISOString().split('T')[0];
+        const logs = liveUser.attendLog || []; 
+        const calendar = data.calendar || [];
+        const pastEvents = calendar.filter(ev => ev.dateText <= todayStr);
+        
+        console.log("資料庫回傳的原始紀錄 (logs):", JSON.stringify(logs));
+        console.log("過去的活動日期:", pastEvents.map(ev => ev.dateText));
+
+        // 3. 核心比對邏輯 (加入更多 Console Log)
+        const attendedEvents = pastEvents.filter(ev => {
+            const hasMatch = logs.some(log => {
+                const sLog = String(log).trim();
+                const sDate = String(ev.dateText).trim();
+                // 檢查是否包含日期 (不管是 2026-03-06 還是 2026/03/06)
+                const dateMatch = sLog.includes(sDate) || sLog.includes(sDate.replace(/-/g, '/'));
+                return dateMatch;
+            });
+            if (hasMatch) console.log(`👉 匹配成功: ${ev.dateText} | ${ev.title}`);
+            return hasMatch;
+        });
+
+        // 4. 更新介面
+        const attendCount = attendedEvents.length;
+        const totalPast = pastEvents.length;
+        const rate = totalPast ? Math.round((attendCount / totalPast) * 100) : 0;
+
+        document.getElementById('attPercent').innerText = `${rate}%`;
+        document.getElementById('attCountDisplay').innerText = `${attendCount} / ${totalPast}`;
+        
+        // 5. 渲染學習歷程
+        const historyList = document.getElementById('historyList');
+        if (attendedEvents.length === 0) {
+            historyList.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄 (請檢查後端資料)</div>';
+        } else {
+            historyList.innerHTML = attendedEvents.slice().reverse().map(ev => `
+                <div class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-emerald-50 mb-3">
+                    <div>
+                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                        <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                    </div>
+                    <i class="fas fa-check-circle text-emerald-600 text-2xl"></i>
+                </div>
+            `).join('');
+        }
+        console.log("=== 偵錯結束 ===");
+
     } catch (e) {
         console.error("同步錯誤:", e);
     }
-}        
+}
+        
         // 修正後的 fetchData (加入自動重試機制)
 async function fetchData() {
     try {

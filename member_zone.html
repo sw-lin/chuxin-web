@@ -185,42 +185,44 @@ function syncData() {
         });
 }
     // --- 核心功能：更新界面與出席比對 (修正消失的部分) ---
-    function updateUI(user, calendar, events) {
-        const logs = user.attendLog || [];
-        const today = new Date().toISOString().split('T')[0];
-        
-        // 找出今天以前的所有活動 (分母)
-        const pastEvents = calendar.filter(ev => ev.dateText <= today);
-        
-        // 比對出席紀錄 (分子)
-        const attended = pastEvents.filter(ev => {
-            const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
-            return logs.some(log => {
-                const sLog = String(log).trim();
-                return sLog === standardKey || sLog.includes(ev.title);
-            });
+// --- 核心功能：更新界面與出席比對 (強化容錯版) ---
+function updateUI(user, calendar, events) {
+    // 1. 確保 logs 是陣列，並統一轉成字串且去空格
+    const logs = (user.attendLog || []).map(log => String(log).trim());
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 2. 找出今天以前的所有活動 (分母)
+    const pastEvents = (calendar || []).filter(ev => ev.dateText <= today);
+    
+    // 3. 強化比對邏輯 (分子)
+    const attended = pastEvents.filter(ev => {
+        const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
+        return logs.some(log => {
+            // 只要完全符合 ID，或是紀錄中包含該活動標題，就判定為出席
+            return log === standardKey || log.includes(ev.title);
         });
+    });
 
-        const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
-        
-        // 更新顯示
-        document.getElementById('attPercent').innerText = rate + "%";
-        document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
+    const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
+    
+    // 更新畫面上方的數據
+    document.getElementById('attPercent').innerText = rate + "%";
+    document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
 
-        // 🎉 達標彩花 (超過 50%)
-        if (rate >= 50 && pastEvents.length > 0) {
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.7 },
-                colors: ['#064E3B', '#10B981', '#F59E0B']
-            });
-        }
-
-        renderEventSection(events);
-        window.currentAttendedData = attended; 
+    // 噴發彩花邏輯
+    if (rate >= 50 && pastEvents.length > 0) {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.7 },
+            colors: ['#064E3B', '#10B981', '#F59E0B']
+        });
     }
 
+    renderEventSection(events);
+    // 存入全域變數供歷程清單使用，確保數據同步
+    window.currentAttendedData = attended; 
+}
     // --- 掃碼報到處理 ---
 async function processCheckin(scanData) {
     if (!scanData.startsWith("CHECKIN:")) {
@@ -297,25 +299,29 @@ async function processCheckin(scanData) {
         }, 3000);
     }
 
-    function openHistoryModal() {
-        var list = document.getElementById('historyList');
-        var data = window.currentAttendedData || [];
-        if (data.length === 0) {
-            list.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
-        } else {
-            list.innerHTML = data.slice().reverse().map(ev => `
-                <div class="bg-emerald-50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100 mb-2">
-                    <div>
-                        <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
-                        <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
-                    </div>
-                    <i class="fas fa-check-circle text-emerald-600"></i>
+// --- 修正：學習歷程清單 (與上方的比對邏輯同步) ---
+function openHistoryModal() {
+    var list = document.getElementById('historyList');
+    var data = window.currentAttendedData || []; // 直接抓取 updateUI 計算出的出席陣列
+    
+    if (data.length === 0) {
+        list.innerHTML = '<div class="text-center py-10 text-gray-400 text-sm italic">尚無出席紀錄</div>';
+    } else {
+        // 由新到舊排列
+        list.innerHTML = data.slice().reverse().map(ev => `
+            <div class="bg-emerald-50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100 mb-2">
+                <div>
+                    <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                    <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                 </div>
-            `).join('');
-        }
-        document.getElementById('historyModal').style.display = 'flex';
+                <div class="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-sm">
+                    <i class="fas fa-check text-[10px]"></i>
+                </div>
+            </div>
+        `).join('');
     }
-
+    document.getElementById('historyModal').style.display = 'flex';
+}
     function closeHistoryModal() { document.getElementById('historyModal').style.display = 'none'; }
     function openEditModal() { document.getElementById('editProfileModal').style.display = 'flex'; }
     function closeEditModal() { document.getElementById('editProfileModal').style.display = 'none'; }

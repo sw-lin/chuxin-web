@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>會員名冊 | 築心</title>
+    <title>會員名冊管理</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -13,15 +13,15 @@
         .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 50px; font-size: 13px; z-index: 10000; transition: opacity 0.5s; }
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 50px; font-size: 13px; z-index: 10000; opacity: 1; transition: opacity 0.5s; }
     </style>
 </head>
 <body class="min-h-screen pb-32">
 
-    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">資料同步中...</div></div></div>
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left"></i> 返回</button>
+        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left"></i> 返回</button>
         <h1 class="text-lg font-black tracking-widest">會員名冊管理</h1>
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
     </nav>
@@ -53,47 +53,56 @@
             </div>
             <div class="grid grid-cols-2 gap-3 mt-8">
                 <button onclick="closeModal('addMemberModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                <button onclick="submitAddMember()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認增加</button>
+                <button id="submitBtn" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認增加</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 核心設定
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';[cite: 4]
-        const STAFF_KEY = sessionStorage.getItem('staff_key');[cite: 4]
-        let isEditMode = false;
+        // 全部使用最傳統的宣告方式以避開語法解析錯誤
+        var GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        var STAFF_KEY = sessionStorage.getItem('staff_key');
+        var isEditMode = false;
 
-        window.onload = () => {
-            if (!STAFF_KEY) { location.href = "index.html"; return; }
+        window.onload = function() {
+            if (!STAFF_KEY) { window.location.href = "index.html"; return; }
             loadMembers();
+            document.getElementById('submitBtn').onclick = submitAddMember;
         };
 
-        function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        function toggleLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
 
-        async function loadMembers() {
+        function loadMembers() {
             toggleLoading(true);
-            try {
-                const res = await fetch(GAS_URL);[cite: 4]
-                const data = await res.json();
-                const list = document.getElementById('memberList');
-                document.getElementById('memberCount').innerText = (data.users ? data.users.length : 0) + ' 位成員';
-                if (data.users) {
-                    list.innerHTML = data.users.map(u => `
-                        <div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-lg font-black text-emerald-900">${u.name}</span>
-                                    <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">${u.role}</span>
-                                </div>
-                                <div class="text-xs font-mono text-gray-400 font-bold">${u.phone}</div>
-                            </div>
-                            ${isEditMode ? `<button onclick="deleteMember('${u.phone}', '${u.name}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full"><i class="fas fa-trash-alt text-sm"></i></button>` : ''}
-                        </div>
-                    `).join('');
-                }
-            } catch (e) { showToast("讀取失敗"); }
-            toggleLoading(false);
+            fetch(GAS_URL)[cite: 4]
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var list = document.getElementById('memberList');
+                    var users = data.users || [];
+                    document.getElementById('memberCount').innerText = users.length + ' 位成員';
+                    
+                    var html = '';
+                    for (var i = 0; i < users.length; i++) {
+                        var u = users[i];
+                        html += '<div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100">';
+                        html += '  <div>';
+                        html += '    <div class="flex items-center gap-2 mb-1">';
+                        html += '      <span class="text-lg font-black text-emerald-900">' + u.name + '</span>';
+                        html += '      <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">' + u.role + '</span>';
+                        html += '    </div>';
+                        html += '    <div class="text-xs font-mono text-gray-400 font-bold">' + u.phone + '</div>';
+                        html += '  </div>';
+                        if (isEditMode) {
+                            html += '  <button onclick="deleteMember(\'' + u.phone + '\', \'' + u.name + '\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full"><i class="fas fa-trash-alt text-sm"></i></button>';
+                        }
+                        html += '</div>';
+                    }
+                    list.innerHTML = html;
+                })
+                .catch(function(err) { showToast("讀取失敗"); })
+                .finally(function() { toggleLoading(false); });
         }
 
         function toggleEditMode() {
@@ -103,35 +112,49 @@
             loadMembers();
         }
 
-        async function submitAddMember() {
-            const name = document.getElementById('newName').value;
-            const phone = document.getElementById('newPhone').value;
-            if (!name || !phone) return alert("必填項目缺失");
+        function submitAddMember() {
+            var n = document.getElementById('newName').value;
+            var p = document.getElementById('newPhone').value;
+            var r = document.getElementById('newRole').value;
+            if (!n || !p) { alert("必填項目缺失"); return; }
+            
             closeModal('addMemberModal');
             toggleLoading(true);
-            try {
-                const payload = { type: 'add_member', key: STAFF_KEY, name: name, phone: phone, password: '123', role: document.getElementById('newRole').value };[cite: 4]
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });[cite: 4]
-                showToast("✅ 已新增"); loadMembers();
-            } catch (e) { showToast("網路錯誤"); }
-            toggleLoading(false);
+            
+            var payload = { 
+                type: 'add_member', 
+                key: STAFF_KEY, 
+                name: n, 
+                phone: p, 
+                password: '123', 
+                role: r 
+            };[cite: 4]
+
+            fetch(GAS_URL, { 
+                method: 'POST', 
+                body: JSON.stringify(payload) 
+            })[cite: 4]
+            .then(function() { showToast("✅ 已新增"); loadMembers(); })
+            .catch(function() { showToast("連線失敗"); })
+            .finally(function() { toggleLoading(false); });
         }
 
-        async function deleteMember(p, n) {
-            if (!confirm("確定刪除 " + n + "？")) return;
+        function deleteMember(phone, name) {
+            if (!confirm("確定刪除 " + name + "？")) return;
             toggleLoading(true);
-            try {
-                const payload = { type: 'delete_member', key: STAFF_KEY, phone: p };[cite: 4]
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });[cite: 4]
-                showToast("🗑️ 已移除"); loadMembers();
-            } catch (e) { showToast("刪除失敗"); }
-            toggleLoading(false);
+            var payload = { type: 'delete_member', key: STAFF_KEY, phone: phone };[cite: 4]
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })[cite: 4]
+                .then(function() { showToast("🗑️ 已移除"); loadMembers(); })
+                .catch(function() { showToast("網路錯誤"); })
+                .finally(function() { toggleLoading(false); });
         }
 
         function showToast(m) {
-            const t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
+            var t = document.createElement('div');
+            t.className = 'toast';
+            t.innerText = m;
             document.body.appendChild(t);
-            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2000);
+            setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 500); }, 2000);
         }
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }

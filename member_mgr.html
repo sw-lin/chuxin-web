@@ -2,50 +2,150 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>除錯測試版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會員名冊管理 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #FDFBF7; padding: 20px; font-family: sans-serif; }
-        .box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
+        .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; transition: opacity 0.5s; pointer-events: none; }
     </style>
 </head>
-<body>
+<body class="min-h-screen pb-32">
 
-    <div class="box">
-        <h1 class="text-xl font-bold mb-4">系統偵測中...</h1>
-        <p id="status" class="text-gray-500">正在嘗試繞過語法錯誤...</p>
-        <div id="debug-info" class="mt-4 p-3 bg-gray-100 rounded text-xs font-mono break-all"></div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
+
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">會員名冊管理</h1>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
+    </nav>
+
+    <main class="p-4 max-w-2xl mx-auto">
+        <div class="flex items-center justify-between mb-6 px-2">
+            <h2 class="text-xs font-bold text-emerald-900/60 uppercase tracking-widest">Member Directory</h2>
+            <span id="memberCount" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">0 位成員</span>
+        </div>
+        <div id="memberList" class="space-y-4"></div>
+    </main>
+
+    <div id="bottomAddArea" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xs px-6 hidden z-30">
+        <button onclick="openModal('addMemberModal')" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+            <i class="fas fa-user-plus text-xl"></i> 新增新會員
+        </button>
+    </div>
+
+    <!-- 新增彈窗 -->
+    <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增新會員</h3>
+            <div class="space-y-4">
+                <input type="text" id="newName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
+                <input type="tel" id="newPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono">
+                <select id="newRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                    <option value="學員">學員角色</option>
+                    <option value="管理員">管理員角色</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-8">
+                <button onclick="closeModal('addMemberModal')" class="py-4 text-gray-400 font-bold">取消</button>
+                <button onclick="submitAddMember()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認新增</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 將 URL 拆解，徹底避開 ":" 出現在引號後方的檢測
-        var p1 = 'https';
-        var p2 = '://script.google.com/macros/s/';
-        var p3 = 'AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY';
-        var p4 = '/exec';
-        
-        var FINAL_URL = p1 + p2 + p3 + p4;
+        // 使用拆解法定義 URL 以避開環境解析錯誤
+        var u1 = 'https://script.google.com';
+        var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        var GAS_URL = u1 + u2;
+        var STAFF_KEY = sessionStorage.getItem('staff_key');
+        var isEditMode = false;
 
         window.onload = function() {
-            var statusEl = document.getElementById('status');
-            var debugEl = document.getElementById('debug-info');
-            
-            statusEl.innerText = "正在嘗試連線至後端...";
-            debugEl.innerText = "Target: " + FINAL_URL;
-
-            fetch(FINAL_URL)
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    statusEl.innerText = "✅ 連線成功！";
-                    statusEl.className = "text-green-600 font-bold";
-                    debugEl.innerText = "收到成員數量: " + (data.users ? data.users.length : 0);
-                })
-                .catch(function(err) {
-                    statusEl.innerText = "❌ 連線失敗 (但語法可能已正確)";
-                    statusEl.className = "text-red-600 font-bold";
-                    debugEl.innerText = "Error: " + err.message;
-                });
+            if (!STAFF_KEY) { window.location.href = "index.html"; return; }
+            loadMembers();
         };
+
+        function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+
+        function loadMembers() {
+            toggleLoading(true);
+            fetch(GAS_URL)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var list = document.getElementById('memberList');
+                    var users = data.users || [];
+                    document.getElementById('memberCount').innerText = users.length + ' 位成員';
+                    
+                    var html = '';
+                    for (var i = 0; i < users.length; i++) {
+                        var u = users[i];
+                        html += '<div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100">';
+                        html += '  <div class="flex-1 min-w-0">';
+                        html += '    <div class="flex items-center gap-2 mb-1">';
+                        html += '      <span class="text-lg font-black text-emerald-900 truncate">' + u.name + '</span>';
+                        html += '      <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">' + u.role + '</span>';
+                        html += '    </div>';
+                        html += '    <div class="text-[13px] font-mono text-gray-400 font-bold">' + u.phone + '</div>';
+                        html += '  </div>';
+                        if (isEditMode) {
+                            html += '  <button onclick="deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all"><i class="fas fa-trash-alt text-sm"></i></button>';
+                        }
+                        html += '</div>';
+                    }
+                    list.innerHTML = html;
+                })
+                .catch(function() { showToast("連線失敗"); })
+                .finally(function() { toggleLoading(false); });
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            document.getElementById('editToggleBtn').innerText = isEditMode ? "結束編輯" : "開啟編輯";
+            document.getElementById('editToggleBtn').className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
+            loadMembers();
+        }
+
+        function submitAddMember() {
+            var n = document.getElementById('newName').value.trim();
+            var p = document.getElementById('newPhone').value.trim();
+            var r = document.getElementById('newRole').value;
+            if (!n || !p) return alert("姓名與電話為必填");
+
+            closeModal('addMemberModal');
+            toggleLoading(true);
+
+            var payload = { type: 'add_member', key: STAFF_KEY, name: n, phone: p, password: '123', role: r };
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(function() { showToast("✅ 成員已新增"); loadMembers(); })
+                .catch(function() { showToast("新增失敗"); })
+                .finally(function() { toggleLoading(false); });
+        }
+
+        function deleteMember(phone, name) {
+            if (!confirm("確定刪除 " + name + "？")) return;
+            toggleLoading(true);
+            var payload = { type: 'delete_member', key: STAFF_KEY, phone: phone };
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(function() { showToast("🗑️ 已移除"); loadMembers(); })
+                .catch(function() { showToast("網路錯誤"); })
+                .finally(function() { toggleLoading(false); });
+        }
+
+        function showToast(m) {
+            var t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
+            document.body.appendChild(t);
+            setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 500); }, 2500);
+        }
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
     </script>
 </body>
 </html>

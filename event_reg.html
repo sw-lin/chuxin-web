@@ -120,7 +120,8 @@
     <div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-[100] hidden flex items-center justify-center">
         <div class="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
-
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full opacity-0 transition-opacity pointer-events-none z-50"></div>    
+    
     <script>
         var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         var allData = {};
@@ -252,22 +253,53 @@ async function submitNewEvent() {
                 sendLineAPI(message);
             }
         }
+     
+    async function submitListToLine() {
+    const title = document.getElementById('currentEventTitle').innerText;
+    // 假設您已經過濾出該活動的人員名單
+    const names = currentRegList.map((r, i) => `${i+1}. ${r.會員姓名}`).join('\n');
+    const message = `【${title}】最終報名名單：\n${names}`;
 
-        async function sendLineAPI(msg) {
-            showLoading(true);
-            try {
-                await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'push_line', message: msg })
-                });
-                alert("名單已成功傳送至 LINE！");
-            } catch (e) { alert("LINE 傳送失敗"); }
-            showLoading(false);
-        }
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            type: 'send_line',
+            key: sessionStorage.getItem('staff_key'),
+            message: message
+        })
+    });
+    const json = await res.json();
+    if (json.result === 'SUCCESS') showToast('名單已傳送到群組！');
+    }
 
         function showLoading(show) {
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
+
+        function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.opacity = '1';
+        setTimeout(() => { t.style.opacity = '0'; }, 3000);
+        }  
+
+        async function deleteReg(title, phone) {
+        if (!confirm('確定要刪除此報名人員嗎？')) return;
+        const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            type: 'delete_registration',
+            key: sessionStorage.getItem('staff_key'),
+            eventTitle: title,
+            phone: phone
+         })
+      });
+    const json = await res.json();
+    if (json.result === 'SUCCESS') {
+        showToast('人員已刪除');
+        loadData(); // 重新整理資料
+    }
+    }
     </script>
 </body>
 </html>

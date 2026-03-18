@@ -3,84 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>出席統計 | 築心讀書會</title>
+    <title>出席統計 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .loader { border-top-color: #064E3B; animation: spinner 0.6s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 50px; z-index: 9999; transition: opacity 0.5s; font-size: 14px; pointer-events: none; }
+        
+        /* 統一 Loading 遮罩 */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(2px);
+        }
+        .loading-card {
+            background: white; padding: 40px; border-radius: 32px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid #065F46; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.5s; }
     </style>
 </head>
-<body class="pb-24">
-    <div class="sticky top-0 z-50 p-4 flex items-center justify-between glass-card shadow-sm">
-        <button onclick="location.href='staff_menu.html'" class="text-emerald-800">
-            <i class="fas fa-chevron-left mr-1"></i>返回
-        </button>
-        <h1 class="font-bold text-emerald-900 text-lg">出席狀況統計</h1>
-        <div class="w-10"></div>
+<body class="min-h-screen pb-24">
+
+    <!-- 1. 處理中遮罩 -->
+    <div id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <div class="text-emerald-900 font-bold text-lg tracking-widest">處理中...</div>
+        </div>
     </div>
 
-    <div class="p-4 space-y-4">
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50">
-            <div class="flex justify-between items-end mb-2">
-                <label class="text-xs text-gray-400 block">選擇已結束或今日活動</label>
-                <button id="editBtn" onclick="toggleEditMode()" class="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-lg transition-all border border-gray-200 shadow-sm">
-                    <i class="fas fa-edit mr-1"></i>編輯模式
-                </button>
+    <!-- 2. 統一風格導航欄 (標題置中版) -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <!-- 左側：返回導航 -->
+        <div class="flex-1 flex items-center">
+            <button onclick="location.href='staff_menu.html'" class="flex items-center gap-1 hover:text-emerald-300 transition-colors">
+                <i class="fas fa-chevron-left"></i>
+                <span class="text-sm font-bold">返回</span>
+            </button>
+        </div>
+
+        <!-- 中間：頁面標題 -->
+        <div class="absolute left-1/2 -translate-x-1/2">
+            <h1 class="text-lg font-black tracking-widest whitespace-nowrap">出席狀況統計</h1>
+        </div>
+
+        <!-- 右側：功能按鈕 -->
+        <div class="flex-1 flex justify-end">
+            <button id="editBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold active:bg-white/20 border border-white/20">
+                開啟編輯
+            </button>
+        </div>
+    </nav>
+
+    <!-- 3. 內容區 -->
+    <div class="p-4 space-y-4 max-w-2xl mx-auto">
+        
+        <!-- 活動選擇器 -->
+        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
+            <label class="text-[10px] text-gray-400 font-bold block mb-2 px-1">選擇已結束或今日活動</label>
+            <div class="relative">
+                <select id="eventSelector" onchange="fetchReport()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-emerald-100/50 focus:border-emerald-600 transition-all">
+                    <option value="">-- 請選擇活動 --</option>
+                </select>
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
             </div>
-            <select id="eventSelector" onchange="fetchReport()" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none text-emerald-900 font-bold">
-                <option value="">-- 請選擇活動 --</option>
-            </select>
         </div>
         
-        <div id="statsCard" class="hidden grid grid-cols-2 gap-3">
-            <div class="bg-emerald-50 p-4 rounded-2xl text-center border border-emerald-100">
-                <div class="text-xs text-emerald-600 mb-1">出席人數</div>
-                <div id="presentCount" class="text-2xl font-bold text-emerald-900">0</div>
+        <!-- 統計卡片 -->
+        <div id="statsCard" class="hidden grid grid-cols-2 gap-4">
+            <div class="bg-white p-5 rounded-[2rem] text-center border border-emerald-100 shadow-sm">
+                <div class="text-xs text-emerald-600 font-bold mb-1">出席人數</div>
+                <div id="presentCount" class="text-3xl font-black text-emerald-900">0</div>
             </div>
-            <div class="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
-                <div class="text-xs text-gray-400 mb-1">未出席</div>
-                <div id="absentCount" class="text-2xl font-bold text-gray-600">0</div>
+            <div class="bg-white p-5 rounded-[2rem] text-center border border-gray-100 shadow-sm">
+                <div class="text-xs text-gray-400 font-bold mb-1">未出席</div>
+                <div id="absentCount" class="text-3xl font-black text-gray-400">0</div>
             </div>
         </div>
 
+        <!-- 出席名單 -->
         <div id="reportList" class="space-y-3">
+            <div class="text-center py-20 text-gray-400 italic">尚未選取活動</div>
         </div>
 
+        <!-- LINE 發送按鈕 -->
         <div id="actionArea" class="hidden py-6">
-            <button onclick="sendLineReport()" class="w-full py-4 bg-[#06C755] hover:bg-[#05a346] text-white rounded-2xl font-bold shadow-lg flex items-center justify-center active:scale-95 transition-all">
-                <i class="fab fa-line mr-2 text-2xl"></i> 彙整名單並送出至 LINE
+            <button onclick="sendLineReport()" class="w-full py-4 bg-[#06C755] text-white rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-all gap-2">
+                <i class="fab fa-line text-2xl"></i> 彙整名單並送出至 LINE
             </button>
         </div>
     </div>
 
+    <!-- 補登彈窗 -->
     <div id="manualModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
-        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
-            <h3 class="text-xl font-bold text-emerald-900 mb-4 text-center">手動補登</h3>
-            <div id="manualMemberInfo" class="text-center mb-6 text-emerald-800 font-bold">
-            </div>
-            <div class="flex space-x-3">
-                <button onclick="closeManualModal()" class="flex-1 py-3 text-gray-400">取消</button>
-                <button onclick="submitManualCheckin()" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold shadow-md">確認補登</button>
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">手動補登</h3>
+            <p class="text-gray-400 text-xs text-center mb-6">確認將此會員設為「已出席」嗎？</p>
+            <div id="manualMemberInfo" class="bg-emerald-50 p-4 rounded-2xl text-center mb-8 text-emerald-900 font-black"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeManualModal()" class="py-4 text-gray-400 font-bold">取消</button>
+                <button onclick="submitManualCheckin()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-md">確認補登</button>
             </div>
         </div>
     </div>
 
-    <div id="loadingOverlay" class="fixed inset-0 bg-black/20 hidden z-[200] items-center justify-center">
-        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
-            <div class="loader h-12 w-12 mb-4 animate-spin rounded-full border-4 border-gray-100 border-t-emerald-600"></div>
-            <p class="text-emerald-900 font-bold">處理中...</p>
-        </div>
-    </div>
-    
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
-        const STAFF_KEY = sessionStorage.getItem('staff_key');
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec'; //
+        const STAFF_KEY = sessionStorage.getItem('staff_key'); //
         
         let currentReport = [];
         let isEditMode = false;
@@ -95,10 +135,12 @@
             await loadFinishedEvents();
         };
 
+        function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+
         async function loadFinishedEvents() {
-            showLoading(true);
+            toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL);
+                const res = await fetch(GAS_URL); //
                 const data = await res.json();
                 const today = new Date().toISOString().split('T')[0];
                 const selector = document.getElementById('eventSelector');
@@ -107,30 +149,24 @@
                     .filter(ev => ev.dateText <= today)
                     .sort((a, b) => a.dateText.localeCompare(b.dateText));
                 
-                selector.innerHTML = '<option value="">-- 請選擇活動 --</option>';
-                pastEvents.forEach(ev => {
-                    const opt = document.createElement('option');
-                    opt.value = `${ev.dateText}:${ev.title}`;
-                    opt.innerText = `${ev.dateText} | ${ev.title}`;
-                    selector.appendChild(opt);
-                });
+                selector.innerHTML = '<option value="">-- 請選擇活動 --</option>' + 
+                    pastEvents.map(ev => `<option value="${ev.dateText}:${ev.title}">${ev.dateText} | ${ev.title}</option>`).join('');
             } catch(e) { showToast("連線失敗"); }
-            showLoading(false);
+            toggleLoading(false);
         }
         
-        // 🚨 這裡已經修正回正確的 POST 方法與 type 🚨
         async function fetchReport() {
             const eventVal = document.getElementById('eventSelector').value;
-            if (!eventVal) return;
+            if (!eventVal) { hideUI(); return; }
 
-            showLoading(true);
+            toggleLoading(true);
             const [date, title] = eventVal.split(':');
             
             try {
-                const res = await fetch(GAS_URL, {
+                const res = await fetch(GAS_URL, { //[cite: 4]
                     method: 'POST',
                     body: JSON.stringify({ 
-                        type: 'get_attendance_data', // 確保對應到您 GAS 的 switch
+                        type: 'get_attendance_data', 
                         key: STAFF_KEY, 
                         eventTitle: `EVENT:${date}|${title}` 
                     })
@@ -140,14 +176,11 @@
                 if (result.result === "SUCCESS") {
                     currentReport = result.report;
                     renderReport();
-                    
                     document.getElementById('statsCard').classList.remove('hidden');
                     document.getElementById('actionArea').classList.remove('hidden');
-                } else {
-                    showToast("讀取失敗，請確認資料格式");
                 }
-            } catch (e) { showToast("連線或讀取錯誤"); }
-            showLoading(false);
+            } catch (e) { showToast("讀取錯誤"); }
+            toggleLoading(false);
         }    
         
         function renderReport() {
@@ -156,26 +189,22 @@
             document.getElementById('presentCount').innerText = presentCount;
             document.getElementById('absentCount').innerText = currentReport.length - presentCount;
 
-            const sortedReport = [...currentReport].sort((a, b) => {
-                const scoreA = a.status === "出席" ? 0 : 1;
-                const scoreB = b.status === "出席" ? 0 : 1;
-                return scoreA - scoreB;
-            });
+            const sortedReport = [...currentReport].sort((a, b) => (a.status === "出席" ? 0 : 1) - (b.status === "出席" ? 0 : 1));
 
             list.innerHTML = sortedReport.map(r => {
                 const isAttended = r.status === "出席";
                 return `
-                    <div class="bg-white p-4 rounded-xl flex justify-between items-center border border-gray-100 shadow-sm ${isAttended ? 'opacity-100 border-l-4 border-l-emerald-500' : 'opacity-70'}">
+                    <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-gray-100 ${isAttended ? 'bg-emerald-50/20' : 'opacity-70'}">
                         <div>
-                            <span class="font-bold ${isAttended ? 'text-emerald-900' : 'text-gray-500'}">${r.name}</span>
-                            <span class="text-[10px] text-gray-400 ml-2">${r.phone}</span>
+                            <div class="font-black text-base ${isAttended ? 'text-emerald-900' : 'text-gray-500'}">${r.name}</div>
+                            <div class="text-[11px] text-gray-400 font-mono mt-1">${r.phone}</div>
                         </div>
                         <div class="flex items-center">
                             ${isAttended 
-                                ? '<span class="text-emerald-600 text-sm font-bold"><i class="fas fa-check-circle mr-1"></i>已報到</span>' 
+                                ? '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>' 
                                 : (isEditMode 
-                                    ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="text-orange-600 text-xs border border-orange-200 px-3 py-1 rounded-full bg-orange-50 active:scale-95 font-bold">補登</button>`
-                                    : '<span class="text-gray-300 text-sm italic">未報到</span>'
+                                    ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="bg-orange-500 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-sm active:scale-95">補登</button>`
+                                    : '<i class="far fa-circle text-gray-200 text-2xl"></i>'
                                   )
                             }
                         </div>
@@ -187,33 +216,28 @@
         function toggleEditMode() {
             isEditMode = !isEditMode;
             const btn = document.getElementById('editBtn');
-            if (isEditMode) {
-                btn.className = "text-xs bg-orange-100 text-orange-600 px-3 py-1 rounded-lg border border-orange-200 shadow-sm transition-all";
-                btn.innerHTML = '<i class="fas fa-user-edit mr-1"></i>退出編輯';
-                showToast("編輯模式已開啟");
-            } else {
-                btn.className = "text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-lg border border-gray-200 shadow-sm transition-all";
-                btn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
-            }
+            btn.innerText = isEditMode ? "退出編輯" : "開啟編輯";
+            btn.className = isEditMode 
+                ? "bg-orange-500 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md text-white"
+                : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold active:bg-white/20 border border-white/20";
             renderReport();
+            showToast(isEditMode ? "編輯模式已開啟" : "已結束編輯");
         }        
 
         function openManualModal(phone, name) {
             pendingCheckin = { phone, name };
             document.getElementById('manualMemberInfo').innerText = `${name} (${phone})`;
             document.getElementById('manualModal').classList.remove('hidden');
-            document.getElementById('manualModal').style.display = 'flex';
+            document.getElementById('manualModal').classList.add('flex');
         }
 
         async function submitManualCheckin() {
             const eventVal = document.getElementById('eventSelector').value;
-            if(!eventVal) return;
             const [date, title] = eventVal.split(':');
-
             closeManualModal();
-            showLoading(true);
+            toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
+                const res = await fetch(GAS_URL, { //[cite: 4]
                     method: 'POST',
                     body: JSON.stringify({ 
                         type: 'manual_checkin', 
@@ -227,57 +251,41 @@
                 if (result.result === "SUCCESS") {
                     showToast("✅ 補登成功");
                     await fetchReport(); 
-                } else {
-                    alert("補登失敗：" + result.message);
                 }
             } catch(e) { showToast("網路錯誤"); }
-            showLoading(false);
+            toggleLoading(false);
         }
 
         async function sendLineReport() {
             const selector = document.getElementById('eventSelector');
-            if (!selector.value) return;
             const eventText = selector.options[selector.selectedIndex].text;
+            const presentList = currentReport.filter(r => r.status === "出席").map(r => `▫️ ${r.name}`);
             
-            const presentList = currentReport.filter(r => r.status === "出席").map(r => r.name);
-            if (presentList.length === 0) {
-                showToast("目前無人報到");
-                return;
-            }
+            const reportMsg = `【築心會館 - 出席通報】\n活動：${eventText}\n──────────────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
 
-            const reportMsg = `📝 出席彙整：${eventText}\n----------------\n總人數：${presentList.length} 位\n\n${presentList.join('\n')}`;
+            if (!confirm(`確定送出名單？`)) return;
 
-            if (!confirm(`確定送出名單？\n\n${reportMsg}`)) return;
-
-            showLoading(true);
+            toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
+                await fetch(GAS_URL, { //[cite: 4]
                     method: 'POST',
                     body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: reportMsg })
                 });
-                const result = await res.json();
-                if (result.result === "SUCCESS") showToast("🚀 名單已發送至 LINE");
+                showToast("🚀 名單已發送");
             } catch (e) { showToast("❌ 發送失敗"); }
-            showLoading(false);
+            toggleLoading(false);
         }
 
-        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-        
         function showToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = message;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 500);
-            }, 2500);
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.innerText = message;
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
         }
         
-        function closeManualModal() {
-            document.getElementById('manualModal').style.display = 'none';
-            document.getElementById('manualModal').classList.add('hidden');
-        }
+        function closeManualModal() { document.getElementById('manualModal').classList.add('hidden'); document.getElementById('manualModal').classList.remove('flex'); }
+        function hideUI() { document.getElementById('statsCard').classList.add('hidden'); document.getElementById('actionArea').classList.add('hidden'); document.getElementById('reportList').innerHTML = '<div class="text-center py-20 text-gray-400 italic">尚未選取活動</div>'; }
     </script>
 </body>
 </html>

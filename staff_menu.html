@@ -5,9 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理控制台 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/沒問題，我看到了。這是因為在導航欄 `nav` 標籤內，為了維持標題居中，左右兩側通常會放對稱的物件。
+
+我已經把右邊那個帶有 `Verified` 字樣的空按鈕（標籤）完全移除，並調整了標題的定位方式，確保它依然能完美居中且不會被兩側影響。
+
+### 🛠️ 幹部管理中心 - 修正版
+
+```html
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理控制台 | 築心會館</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        @import url('[https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap](https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap)');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .staff-card { 
             background: white;
@@ -17,7 +31,6 @@
             cursor: pointer;
         }
         .staff-card:active { transform: scale(0.95); background-color: #f9f9f9; }
-        /* 統一的 Icon 樣式 */
         .icon-box {
             background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
             box-shadow: 0 8px 20px rgba(6, 78, 59, 0.2);
@@ -26,14 +39,17 @@
 </head>
 <body class="pb-16">
 
-    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors">
+    <!-- 導航欄：已刪除右側 Verified 標籤 -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center">
+        <!-- 左側按鈕 -->
+        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors z-10">
             <i class="fas fa-chevron-left mr-1"></i> 會員中心
         </button>
-        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2 whitespace-nowrap">管理控制台</h1>
-        <div class="text-[10px] bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-1.5 rounded-full text-emerald-200 font-bold uppercase tracking-tight">
-            Verified
-        </div>
+        
+        <!-- 標題：絕對居中 -->
+        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
+            管理控制台
+        </h1>
     </nav>
 
     <main class="p-6 max-w-2xl mx-auto grid grid-cols-2 gap-5 mt-6">
@@ -99,25 +115,20 @@
     </main>
 
     <script>
-        // 初始化檢查：如果沒有金鑰，踢回登入頁
         window.onload = function() {
             var key = sessionStorage.getItem('staff_key');
             if (!key) {
-                // 如果環境不支援 sessionStorage，嘗試從網址抓 (相容之前邏輯)
                 const urlParams = new URLSearchParams(window.location.search);
                 key = urlParams.get('key');
             }
-            
             if (!key) {
                 alert("非法進入！請先驗證金鑰。");
                 location.href = 'index.html';
             } else {
-                // 確保 sessionStorage 有存，方便子頁面呼叫
                 sessionStorage.setItem('staff_key', key);
             }
         };
 
-        // 跳轉功能：子頁面會自行去 sessionStorage 抓 key，不需帶參數
         function navTo(page) {
             location.href = page + '.html';
         }

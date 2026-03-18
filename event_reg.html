@@ -59,25 +59,53 @@
         </div>
     </main>
 
-    <!-- 4. 發布新活動彈窗 (僅編輯模式點擊右上鈕後出現) -->
-    <div id="addModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4">
-            <h3 class="text-xl font-black text-emerald-900 mb-2">發布新活動</h3>
-            <input type="text" id="ev_title" placeholder="活動標題" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm">
-            <div class="grid grid-cols-2 gap-3">
-                <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="展示開始日">
-                <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="下架日期">
+   
+<!-- 優化後的發布新活動彈窗 -->
+<div id="addModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4">
+        <h3 class="text-xl font-black text-emerald-900 mb-2">發布新活動</h3>
+        
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
+            <input type="text" id="ev_title" placeholder="例如：春季健康講座" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">發布日期 (App顯示)</label>
+                <div class="relative">
+                    <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs appearance-none">
+                    <i class="fas fa-calendar-alt absolute right-4 top-4 text-emerald-600 pointer-events-none"></i>
+                </div>
             </div>
-            <input type="text" id="ev_poster" placeholder="海報連結 (可留空)" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm">
-            <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="活動實際日期">
-            
-            <div class="flex gap-3 pt-2">
-                <button onclick="closeAddModal()" class="flex-1 py-4 text-gray-400 font-bold">取消</button>
-                <button onclick="submitNewEvent()" class="flex-[2] py-4 emerald-gradient text-white rounded-2xl font-black shadow-lg">確認上架</button>
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">下架日期 (App消失)</label>
+                <div class="relative">
+                    <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs appearance-none">
+                    <i class="fas fa-calendar-alt absolute right-4 top-4 text-emerald-600 pointer-events-none"></i>
+                </div>
             </div>
         </div>
-    </div>
 
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">海報圖片連結 (可留空)</label>
+            <input type="text" id="ev_poster" placeholder="https://..." class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動實際舉辦日期</label>
+            <div class="relative">
+                <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs appearance-none">
+                <i class="fas fa-calendar-check absolute right-5 top-4 text-emerald-600 pointer-events-none text-lg"></i>
+            </div>
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+            <button onclick="closeAddModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+            <button onclick="submitNewEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認上架</button>
+        </div>
+    </div>
+</div>
     <!-- Loading 遮罩 -->
     <div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-[100] hidden flex items-center justify-center">
         <div class="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>

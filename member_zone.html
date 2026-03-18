@@ -185,45 +185,39 @@ function syncData() {
         });
 }
     // --- 核心功能：更新界面與出席比對 (修正消失的部分) ---
-// --- 核心功能：更新界面與出席比對 (強化容錯版) ---
 function updateUI(user, calendar, events) {
-    // 1. 確保 logs 是陣列，並統一轉成字串且去空格
+    // 1. 取得該會員所有的出席紀錄 (logs)
     const logs = (user.attendLog || []).map(log => String(log).trim());
     const today = new Date().toISOString().split('T')[0];
     
     // 2. 找出今天以前的所有活動 (分母)
     const pastEvents = (calendar || []).filter(ev => ev.dateText <= today);
     
-    // 3. 強化比對邏輯 (分子)
+    // 3. 地毯式比對：確保 3/06 與 3/13 都能被抓出來
     const attended = pastEvents.filter(ev => {
         const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
+        
+        // 只要 logs 裡面「任何一項」符合日期或標題，就判定為出席
         return logs.some(log => {
-            // 只要完全符合 ID，或是紀錄中包含該活動標題，就判定為出席
-            return log === standardKey || log.includes(ev.title);
+            return log === standardKey || 
+                   log.includes(ev.dateText) || 
+                   log.includes(ev.title);
         });
     });
 
+    // 4. 更新數據顯示
     const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
-    
-    // 更新畫面上方的數據
     document.getElementById('attPercent').innerText = rate + "%";
     document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
 
-    // 噴發彩花邏輯
+    // 5. 噴彩花邏輯
     if (rate >= 50 && pastEvents.length > 0) {
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.7 },
-            colors: ['#064E3B', '#10B981', '#F59E0B']
-        });
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.7 } });
     }
 
     renderEventSection(events);
-    // 存入全域變數供歷程清單使用，確保數據同步
-    window.currentAttendedData = attended; 
-}
-    // --- 掃碼報到處理 ---
+    window.currentAttendedData = attended; // 同步給歷程彈窗使用
+}    // --- 掃碼報到處理 ---
 async function processCheckin(scanData) {
     if (!scanData.startsWith("CHECKIN:")) {
         showToast("無效的條碼格式", "error");

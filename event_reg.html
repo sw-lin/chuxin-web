@@ -175,30 +175,36 @@
         function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
         function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
 
-        async function submitNewEvent() {
-            const payload = {
-                type: 'add_new_event',
-                title: document.getElementById('ev_title').value,
-                start_date: document.getElementById('ev_start').value,
-                display_until: document.getElementById('ev_until').value,
-                poster_url: document.getElementById('ev_poster').value,
-                date: document.getElementById('ev_date').value
-            };
+async function submitNewEvent() {
+    const staffKey = sessionStorage.getItem('staff_key'); // 從 Session 抓取金鑰
+    
+    const payload = {
+        type: 'add_new_event',
+        key: staffKey, // <-- 務必帶上這行！
+        title: document.getElementById('ev_title').value,
+        start_date: document.getElementById('ev_start').value,
+        display_until: document.getElementById('ev_until').value,
+        poster_url: document.getElementById('ev_poster').value,
+        date: document.getElementById('ev_date').value
+    };
 
-            if(!payload.title || !payload.date) return alert("請填寫標題與活動日期");
+    if(!payload.title || !payload.date || !payload.start_date) {
+        return alert("請填寫活動標題、發布日期與活動日期");
+    }
 
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await res.json();
-                if (result.result === "SUCCESS") {
-                    alert("新活動已成功上架！");
-                    location.reload();
-                }
-            } catch (e) { alert("發送失敗"); }
-            showLoading(false);
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            alert("新活動已成功上架！");
+            location.reload();
+        } else {
+            alert("錯誤：" + result.message);
         }
-
+    } catch (e) { alert("發送失敗，請檢查網路連線"); }
+    showLoading(false);
+}
         function sendToLine() {
             const selectedTitle = document.getElementById('eventSelector').value;
             const filtered = (allData.registrations || []).filter(r => r.活動標題 === selectedTitle);

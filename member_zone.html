@@ -258,27 +258,51 @@ async function processCheckin(scanData) {
     }
 }
     // --- 其他 UI 控制函數 ---
+// --- UI 控制函數：渲染活動宣傳區 (判斷報名開關) ---
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];
+        
+        // 過濾出目前在展示期間內的活動
         var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
-        if (activeEvents.length === 0) { container.innerHTML = ""; return; }
+        
+        if (activeEvents.length === 0) { 
+            container.innerHTML = ""; 
+            return; 
+        }
+
         container.innerHTML = activeEvents.map(ev => {
+            // 判斷是否要開啟報名功能 (只要不是 NONE 且不是空的，就顯示報名)
+            const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
+
             if (ev.poster_url && ev.poster_url.includes('http')) {
-                return `<div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50 mb-4">
+                // 有海報的樣式
+                return `
+                    <div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50 mb-6">
                         <img src="${ev.poster_url}" class="w-full object-cover">
-                        ${ev.reg_url ? `<button onclick="handleReg('${ev.title}')" class="w-full py-4 bg-emerald-800 text-white font-black tracking-widest active:bg-emerald-900">立即報名</button>` : ''}
+                        <div class="p-4 bg-white text-center">
+                            <h4 class="font-black text-emerald-900 mb-1">${ev.title}</h4>
+                            <p class="text-[10px] text-gray-400 mb-3"><i class="far fa-calendar-alt mr-1"></i>活動日期：${ev.dateText || '另行通知'}</p>
+                            ${isRegEnabled ? 
+                                `<button onclick="handleReg('${ev.title}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all shadow-md">立即報名</button>` : 
+                                `<div class="w-full py-3 bg-gray-50 text-gray-400 rounded-2xl font-bold text-xs border border-dashed border-gray-200">僅供資訊展示，不需報名</div>`
+                            }
+                        </div>
                     </div>`;
             } else {
-                return `<div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 space-y-2">
-                        <h4 class="font-black text-emerald-900">${ev.title}</h4>
-                        <p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.dateText}</p>
-                        ${ev.reg_url ? `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3 bg-emerald-100 text-emerald-800 rounded-xl font-bold text-sm">點我報名</button>` : ''}
+                // 純文字卡片樣式
+                return `
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 space-y-2 relative overflow-hidden">
+                        <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
+                        <p class="text-xs text-gray-500"><i class="far fa-calendar-alt mr-1"></i> 活動日期：${ev.dateText || '未定'}</p>
+                        ${isRegEnabled ? 
+                            `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200 transition-colors">點我報名</button>` : 
+                            `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic tracking-widest uppercase">Promotion Only</div>`
+                        }
                     </div>`;
             }
         }).join('');
     }
-
     function showToast(msg, type = 'success') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');

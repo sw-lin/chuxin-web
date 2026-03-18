@@ -17,8 +17,18 @@
     </style>
 </head>
 <body class="min-h-screen pb-10">
+<!-- 加載動畫層 -->
+<div id="loadingOverlay" class="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
+    <div class="flex flex-col items-center">
+        <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+        <p class="mt-4 text-emerald-900 font-bold animate-pulse">資料同步中...</p>
+    </div>
+</div>
 
-<!-- 導覽列 -->
+<!-- Toast 通知容器 -->
+<div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div><!-- 導覽列 -->
+
+    
 <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
     <div class="flex items-center gap-2">
         <i class="fas fa-leaf text-emerald-400 text-xl"></i>
@@ -138,62 +148,90 @@
         syncData();
     };
 
-    function syncData() {
-        fetch(GAS_URL + "?t=" + Date.now())
-            .then(res => res.json())
-            .then(data => {
-                lastSyncData = data;
-                remoteConfig = data.config || {};
-                document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
+function syncData() {
+    // 1. 顯示全螢幕加載動畫
+    const loader = document.getElementById('loadingOverlay');
+    if (loader) loader.style.display = 'flex';
+
+    fetch(GAS_URL + "?t=" + Date.now())
+        .then(res => res.json())
+        .then(data => {
+            lastSyncData = data;
+            // 保留原本的 remoteConfig
+            remoteConfig = data.config || {};
+            document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
+            
+            // 找出當前使用者最新資料 (手機後9碼比對)
+            var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
+            var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
+            
+            if (liveUser) {
+                currentUser = liveUser;
                 
-                // 找出當前使用者最新資料
-                var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
-                var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
-                
-                if (liveUser) {
-                    currentUser = liveUser;
-                    // 檢查幹部身份
-                    if (liveUser.role && liveUser.role !== "學員") {
-                        document.getElementById('staffBtn').classList.remove('hidden');
-                        document.getElementById('staffBtn').onclick = enterStaffMode;
+                // 🏆 保留：檢查幹部身份判斷
+                if (liveUser.role && liveUser.role !== "學員") {
+                    const staffBtn = document.getElementById('staffBtn');
+                    if (staffBtn) {
+                        staffBtn.classList.remove('hidden');
+                        staffBtn.onclick = enterStaffMode;
                     }
-                    // 更新 UI 數據
-                    updateUI(liveUser, data.calendar, data.events);
                 }
-            });
-    }
-
-function updateUI(user, calendar, events) {
-    // 1. 取得使用者所有的出席紀錄 (logs)
-    const logs = user.attendLog || [];
-    const today = new Date().toISOString().split('T')[0];
-    
-    // 2. 過濾出今天以前的活動 (分母)
-    const pastEvents = calendar.filter(ev => ev.dateText <= today);
-    
-    // 3. 全面比對：不論 logs 的順序，只要裡面有 match 就算數
-    const attended = pastEvents.filter(ev => {
-        const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
-        
-        // 核心修正：確保檢查 logs 裡的每一個項目
-        return logs.some(log => {
-            const sLog = String(log).trim();
-            // 只要紀錄裡包含「日期」或「標題」或「完整格式」
-            return sLog === standardKey || 
-                   sLog.includes(ev.title) || 
-                   sLog.includes(ev.dateText);
+                
+                // 更新 UI 數據 (內含 50% 彩花邏輯)
+                updateUI(liveUser, data.calendar, data.events);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("數據同步失敗，請檢查網路", "error");
+        })
+        .finally(() => {
+            // 2. 隱藏全螢幕加載動畫
+            if (loader) loader.style.display = 'none';
         });
-    });
+}
 
-    // 4. 更新 UI
-    const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
-    document.getElementById('attPercent').innerText = rate + "%";
-    document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
+function syncData() {
+    // 1. 顯示全螢幕加載動畫
+    const loader = document.getElementById('loadingOverlay');
+    if (loader) loader.style.display = 'flex';
 
-    renderEventSection(events);
-    
-    // 將「已出席」的活動清單存起來，供學習歷程視窗顯示
-    window.currentAttendedData = attended; 
+    fetch(GAS_URL + "?t=" + Date.now())
+        .then(res => res.json())
+        .then(data => {
+            lastSyncData = data;
+            // 保留原本的 remoteConfig
+            remoteConfig = data.config || {};
+            document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
+            
+            // 找出當前使用者最新資料 (手機後9碼比對)
+            var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
+            var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
+            
+            if (liveUser) {
+                currentUser = liveUser;
+                
+                // 🏆 保留：檢查幹部身份判斷
+                if (liveUser.role && liveUser.role !== "學員") {
+                    const staffBtn = document.getElementById('staffBtn');
+                    if (staffBtn) {
+                        staffBtn.classList.remove('hidden');
+                        staffBtn.onclick = enterStaffMode;
+                    }
+                }
+                
+                // 更新 UI 數據 (內含 50% 彩花邏輯)
+                updateUI(liveUser, data.calendar, data.events);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("數據同步失敗，請檢查網路", "error");
+        })
+        .finally(() => {
+            // 2. 隱藏全螢幕加載動畫
+            if (loader) loader.style.display = 'none';
+        });
 }    
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
@@ -314,6 +352,62 @@ async function handleReg(eventTitle) {
             } else { alert("金鑰錯誤！"); }
         } catch (e) { alert("連線失敗"); }
     }
-</script>
+
+    function showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-emerald-800' : 'bg-red-800';
+    toast.className = `${bgColor} text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-bold transition-all duration-500 opacity-0 translate-y-2`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    
+    // 動畫進入
+    setTimeout(() => { toast.classList.remove('opacity-0', 'translate-y-2'); }, 100);
+    // 自動消失
+    setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+    // --- 修正報到按鈕點擊沒反應的問題 ---
+// 請確認 HTML 裡的按鈕是 onclick="startScanner()"
+async function processCheckin(scanData) {
+    if (!scanData.startsWith("CHECKIN:")) {
+        showToast("無效的條碼格式", "error");
+        return;
+    }
+    
+    // 顯示加載中
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    try {
+        const parts = scanData.split(':');
+        const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
+        
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                type: 'checkin', 
+                phone: currentUser.phone, 
+                name: currentUser.name, 
+                eventTitle: eventID 
+            })
+        });
+        const result = await res.json();
+        
+        if (result.result === "SUCCESS") {
+            showToast("報到成功！歡迎參與");
+            confetti({ particleCount: 150, spread: 60 });
+            syncData(); // 重新整理資料
+        } else {
+            showToast(result.message || "報到失敗", "error");
+        }
+    } catch (e) {
+        showToast("網路連線失敗", "error");
+    } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+}</script>
 </body>
 </html>

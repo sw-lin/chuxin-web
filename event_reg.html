@@ -10,42 +10,66 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        select { -webkit-appearance: none; }
+        .edit-mode-active { border: 2px solid #10B981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
     </style>
 </head>
 <body class="pb-20">
+    <!-- 導覽列 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i> 返回</button>
-        <h1 class="text-lg font-black tracking-widest">活動報名管理</h1>
-        <button onclick="openAddModal()" class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-plus"></i></button>
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center z-10">
+            <i class="fas fa-chevron-left mr-1"></i> 返回
+        </button>
+        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">活動報名管理</h1>
+        <button id="editToggle" onclick="toggleEditMode()" class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg text-xs font-bold transition-all z-10">
+            <i class="fas fa-edit mr-1"></i> 編輯模式
+        </button>
     </nav>
 
     <main class="p-6 max-w-2xl mx-auto space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 text-center">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">進行中活動</p>
-                <p id="activeCount" class="text-2xl font-black text-emerald-900">載入中</p>
-            </div>
-            <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 text-center">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">總報名人次</p>
-                <p id="totalReg" class="text-2xl font-black text-emerald-900">載入中</p>
+        <!-- 1. 下拉選擇區 (仿繳費管理) -->
+        <div class="relative">
+            <label class="text-[10px] font-bold text-gray-400 mb-2 block ml-2">請選擇要查看的活動項目</label>
+            <select id="eventSelector" onchange="filterRegistrations()" class="w-full bg-white border-2 border-emerald-600/30 rounded-[1.5rem] px-6 py-4 text-emerald-900 font-bold focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm outline-none">
+                <option value="">載入中...</option>
+            </select>
+            <div class="absolute right-6 bottom-4 pointer-events-none text-emerald-600">
+                <i class="fas fa-chevron-down"></i>
             </div>
         </div>
 
-        <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-list-ul mr-2"></i>最新報名名單</h3>
-        <div id="regList" class="space-y-3">
+        <!-- 2. 統計區塊 -->
+        <div id="statsBox" class="hidden grid grid-cols-2 gap-4">
+            <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 text-center">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">報名總人數</p>
+                <p id="statCount" class="text-3xl font-black text-emerald-900">0</p>
             </div>
+            <div onclick="sendToLine()" class="emerald-gradient p-5 rounded-[2rem] shadow-lg text-center cursor-pointer active:scale-95 transition-all flex flex-col items-center justify-center">
+                <i class="fab fa-line text-white text-xl mb-1"></i>
+                <p class="text-white text-[10px] font-bold">送出名單</p>
+            </div>
+        </div>
+
+        <!-- 3. 名單列表 -->
+        <div class="space-y-3">
+            <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
+            <div id="regList" class="space-y-3">
+                <div class="text-center py-20 text-gray-300 italic text-sm">請先選擇活動</div>
+            </div>
+        </div>
     </main>
 
+    <!-- 4. 發布新活動彈窗 (僅編輯模式點擊右上鈕後出現) -->
     <div id="addModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4">
             <h3 class="text-xl font-black text-emerald-900 mb-2">發布新活動</h3>
-            <input type="text" id="ev_title" placeholder="活動標題 (如: 春季演講)" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm">
+            <input type="text" id="ev_title" placeholder="活動標題" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm">
             <div class="grid grid-cols-2 gap-3">
                 <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="展示開始日">
                 <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="下架日期">
             </div>
             <input type="text" id="ev_poster" placeholder="海報連結 (可留空)" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm">
-            <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="實際活動日期">
+            <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs" title="活動實際日期">
             
             <div class="flex gap-3 pt-2">
                 <button onclick="closeAddModal()" class="flex-1 py-4 text-gray-400 font-bold">取消</button>
@@ -54,45 +78,76 @@
         </div>
     </div>
 
+    <!-- Loading 遮罩 -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-[100] hidden flex items-center justify-center">
+        <div class="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+
     <script>
         var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+        var allData = {};
 
-        window.onload = function() {
-            loadRegData();
-        };
+        window.onload = loadAllData;
 
-        async function loadRegData() {
+        async function loadAllData() {
+            showLoading(true);
             try {
                 const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
+                allData = await res.json();
                 
-                // 渲染名單 (對應您截圖中的 registrations 分頁)
-                const list = document.getElementById('regList');
-                const regs = data.registrations || [];
-                
-                document.getElementById('activeCount').innerText = data.events.length;
-                document.getElementById('totalReg').innerText = regs.length;
+                // 填充下拉選單 (events)
+                const selector = document.getElementById('eventSelector');
+                if (allData.events && allData.events.length > 0) {
+                    selector.innerHTML = '<option value="">請選擇要查看的活動項目...</option>' + 
+                        allData.events.map(ev => `<option value="${ev.title}">${ev.date} | ${ev.title}</option>`).join('');
+                } else {
+                    selector.innerHTML = '<option value="">目前尚無活動</option>';
+                }
+            } catch (e) { alert("資料讀取失敗"); }
+            showLoading(false);
+        }
 
-                list.innerHTML = regs.slice().reverse().map(r => `
-                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center">
+        function filterRegistrations() {
+            const selectedTitle = document.getElementById('eventSelector').value;
+            const listContainer = document.getElementById('regList');
+            const statsBox = document.getElementById('statsBox');
+            
+            if (!selectedTitle) {
+                listContainer.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選擇活動</div>';
+                statsBox.classList.add('hidden');
+                return;
+            }
+
+            // 過濾 registrations 分頁資料
+            const filtered = (allData.registrations || []).filter(r => r.活動標題 === selectedTitle);
+            
+            document.getElementById('statCount').innerText = filtered.length;
+            statsBox.classList.remove('hidden');
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">此活動尚無人報名</div>';
+            } else {
+                listContainer.innerHTML = filtered.map(r => `
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center animate-fadeIn">
                         <div>
-                            <div class="text-[10px] font-bold text-emerald-600">${r.活動標題}</div>
                             <div class="font-black text-emerald-900">${r.會員姓名}</div>
-                            <div class="text-[10px] text-gray-400">${r.手機號碼}</div>
+                            <div class="text-[10px] text-gray-400 tracking-widest mt-1">${r.手機號碼}</div>
                         </div>
-                        <span class="bg-emerald-100 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold">${r.狀態 || '已報名'}</span>
+                        <div class="bg-emerald-50 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100">${r.狀態 || '已報名'}</div>
                     </div>
                 `).join('');
-            } catch (e) { alert("讀取失敗"); }
+            }
+        }
+
+        function toggleEditMode() {
+            // 直接打開新增彈窗
+            openAddModal();
         }
 
         function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
         function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
 
         async function submitNewEvent() {
-            const btn = event.target;
-            btn.innerText = "處理中...";
-            
             const payload = {
                 type: 'add_new_event',
                 title: document.getElementById('ev_title').value,
@@ -102,14 +157,56 @@
                 date: document.getElementById('ev_date').value
             };
 
+            if(!payload.title || !payload.date) return alert("請填寫標題與活動日期");
+
+            showLoading(true);
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    alert("上架成功！");
+                    alert("新活動已成功上架！");
                     location.reload();
                 }
             } catch (e) { alert("發送失敗"); }
+            showLoading(false);
+        }
+
+        function sendToLine() {
+            const selectedTitle = document.getElementById('eventSelector').value;
+            const filtered = (allData.registrations || []).filter(r => r.活動標題 === selectedTitle);
+            
+            if (filtered.length === 0) return alert("沒有名單可以傳送");
+
+            let message = `📊 【築心會館】活動報名清單\n━━━━━━━━━━━━\n活動：${selectedTitle}\n總計：${filtered.length} 人\n\n`;
+            filtered.forEach((r, i) => {
+                message += `${i+1}. ${r.會員姓名} (${r.手機號碼.slice(-4)})\n`;
+            });
+            message += `\n━━━━━━━━━━━━\n更新時間：${new Date().toLocaleString('zh-TW')}`;
+
+            // 呼叫您系統原有的 LINE 推送 function
+            // 假設您的系統已有全局的 pushLineMessage(msg)
+            if (typeof pushLineMessage === "function") {
+                pushLineMessage(message);
+            } else {
+                // 如果沒有全域 function，則調用 fetch 到後端
+                sendLineAPI(message);
+            }
+        }
+
+        async function sendLineAPI(msg) {
+            showLoading(true);
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'push_line', message: msg })
+                });
+                alert("名單已成功傳送至 LINE！");
+            } catch (e) { alert("LINE 傳送失敗"); }
+            showLoading(false);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
     </script>
 </body>

@@ -143,7 +143,7 @@
             if (!confirm("確定刪除 " + name + "？")) return;
             toggleLoading(true);
             var payload = { type: 'delete_member', key: STAFF_KEY, phone: phone };[cite: 4]
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });[cite: 4]
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })[cite: 4]
                 .then(function() { showToast("🗑️ 已移除"); loadMembers(); })
                 .catch(function() { showToast("網路錯誤"); })
                 .finally(function() { toggleLoading(false); });

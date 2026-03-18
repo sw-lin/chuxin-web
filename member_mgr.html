@@ -40,17 +40,14 @@
         </button>
     </div>
 
-    <!-- 新增彈窗 -->
+    <!-- 新增彈窗：姓名、手機、Email -->
     <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
         <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
             <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增新會員</h3>
             <div class="space-y-4">
                 <input type="text" id="newName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
                 <input type="tel" id="newPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono">
-                <select id="newRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
-                    <option value="學員">學員角色</option>
-                    <option value="管理員">管理員角色</option>
-                </select>
+                <input type="email" id="newEmail" placeholder="電子郵件 Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
             </div>
             <div class="grid grid-cols-2 gap-3 mt-8">
                 <button onclick="closeModal('addMemberModal')" class="py-4 text-gray-400 font-bold">取消</button>
@@ -60,7 +57,7 @@
     </div>
 
     <script>
-        // 使用拆解法定義 URL 以避開環境解析錯誤
+        // 保持拆解法 URL
         var u1 = 'https://script.google.com';
         var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         var GAS_URL = u1 + u2;
@@ -90,9 +87,13 @@
                         html += '  <div class="flex-1 min-w-0">';
                         html += '    <div class="flex items-center gap-2 mb-1">';
                         html += '      <span class="text-lg font-black text-emerald-900 truncate">' + u.name + '</span>';
-                        html += '      <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">' + u.role + '</span>';
+                        // 這裡可以顯示 Email 或手機
+                        html += '      <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">' + (u.role || '學員') + '</span>';
                         html += '    </div>';
                         html += '    <div class="text-[13px] font-mono text-gray-400 font-bold">' + u.phone + '</div>';
+                        if(u.email) {
+                            html += '    <div class="text-[11px] text-gray-400 truncate italic">' + u.email + '</div>';
+                        }
                         html += '  </div>';
                         if (isEditMode) {
                             html += '  <button onclick="deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all"><i class="fas fa-trash-alt text-sm"></i></button>';
@@ -116,25 +117,42 @@
         function submitAddMember() {
             var n = document.getElementById('newName').value.trim();
             var p = document.getElementById('newPhone').value.trim();
-            var r = document.getElementById('newRole').value;
-            if (!n || !p) return alert("姓名與電話為必填");
+            var e = document.getElementById('newEmail').value.trim();
+            if (!n || !p) return alert("姓名與手機為必填");
 
             closeModal('addMemberModal');
             toggleLoading(true);
 
-            var payload = { type: 'add_member', key: STAFF_KEY, name: n, phone: p, password: '123', role: r };
+            // 預設密碼為 123，角色預設為學員
+            var payload = { 
+                type: 'add_member', 
+                key: STAFF_KEY, 
+                name: n, 
+                phone: p, 
+                email: e,
+                password: '123', 
+                role: '學員' 
+            };
+            
             fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(function() { showToast("✅ 成員已新增"); loadMembers(); })
+                .then(function() { 
+                    showToast("✅ 會員 " + n + " 已新增"); 
+                    // 清空輸入框
+                    document.getElementById('newName').value = '';
+                    document.getElementById('newPhone').value = '';
+                    document.getElementById('newEmail').value = '';
+                    loadMembers(); 
+                })
                 .catch(function() { showToast("新增失敗"); })
                 .finally(function() { toggleLoading(false); });
         }
 
         function deleteMember(phone, name) {
-            if (!confirm("確定刪除 " + name + "？")) return;
+            if (!confirm("確定要刪除「" + name + "」嗎？此動作無法復原。")) return;
             toggleLoading(true);
             var payload = { type: 'delete_member', key: STAFF_KEY, phone: phone };
             fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(function() { showToast("🗑️ 已移除"); loadMembers(); })
+                .then(function() { showToast("🗑️ 已移除成員"); loadMembers(); })
                 .catch(function() { showToast("網路錯誤"); })
                 .finally(function() { toggleLoading(false); });
         }

@@ -70,18 +70,20 @@
         <p id="news" class="text-gray-500 text-xs font-bold truncate">同步最新公告中...</p>
     </div>
 
-    <!-- 快速連結 (改為並排) -->
-    <div class="grid grid-cols-2 gap-4">
-        <button onclick="openRemoteLink('資料庫連結')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center space-y-2 active:bg-gray-50 transition-all">
-            <i class="fas fa-book-open text-emerald-700 text-xl"></i>
-            <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
-        </button>
-        <button onclick="openRemoteLink('活動剪影')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center space-y-2 active:bg-gray-50 transition-all">
-            <i class="fas fa-images text-emerald-700 text-xl"></i>
-            <span class="font-black text-emerald-900 text-sm">活動剪影</span>
-        </button>
-    </div>
-
+<!-- 快速連結修正 -->
+<div class="grid grid-cols-2 gap-4">
+    <!-- 參數改為對應試算表的 reading_folder_url -->
+    <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center space-y-2 active:bg-gray-50 transition-all">
+        <i class="fas fa-book-open text-emerald-700 text-xl"></i>
+        <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
+    </button>
+    <!-- 參數改為對應試算表的 photo_gallery_url -->
+    <button onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center space-y-2 active:bg-gray-50 transition-all">
+        <i class="fas fa-images text-emerald-700 text-xl"></i>
+        <span class="font-black text-emerald-900 text-sm">活動剪影</span>
+    </button>
+</div>
+    
 </main>
 
 <!-- 歷程彈窗 (Modal) -->
@@ -161,26 +163,27 @@
             });
     }
 
-    function updateUI(user, calendar, events) {
-        // 1. 計算出席率
-        var logs = user.attendLog || [];
-        var today = new Date().toISOString().split('T')[0];
-        var pastEvents = calendar.filter(ev => ev.dateText <= today);
-        var attended = pastEvents.filter(ev => {
-            var key = "EVENT:" + ev.dateText + "|" + ev.title;
-            return logs.indexOf(key) !== -1;
-        });
+function updateUI(user, calendar, events) {
+    var logs = user.attendLog || [];
+    var today = new Date().toISOString().split('T')[0];
+    
+    // 過濾出今天以前（含今天）的所有活動
+    var pastEvents = calendar.filter(ev => ev.dateText <= today);
+    
+    // 修正比對邏輯：檢查 logs 陣列中是否包含該活動的 ID
+    var attended = pastEvents.filter(ev => {
+        // 這邊的 Key 必須與後端寫入的格式完全一致
+        var key = "EVENT:" + ev.dateText + "|" + ev.title;
+        // 增加一個模糊比對，避免空格影響
+        return logs.some(log => log.trim() === key.trim());
+    });
 
-        document.getElementById('attPercent').innerText = (pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0) + "%";
-        document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
+    document.getElementById('attPercent').innerText = (pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0) + "%";
+    document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
 
-        // 2. 渲染活動海報區
-        renderEventSection(events);
-
-        // 3. 準備歷程列表 (存入全域變數待點擊開啟)
-        window.currentAttendedData = attended;
-    }
-
+    renderEventSection(events);
+    window.currentAttendedData = attended; // 儲存給彈窗使用
+}
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];
@@ -232,25 +235,36 @@
 
     function closeHistoryModal() { document.getElementById('historyModal').style.display = 'none'; }
 
-    async function handleReg(eventTitle) {
-        if(!confirm("確認要報名「" + eventTitle + "」嗎？")) return;
-        try {
-            var res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    type: 'register_event', // 您待會需要新增這個後端分支
-                    phone: currentUser.phone,
-                    name: currentUser.name,
-                    eventTitle: eventTitle
-                })
-            });
-            var result = await res.json();
-            if (result.result === "SUCCESS") {
-                alert("報名成功！");
-            } else { alert(result.message || "報名失敗"); }
-        } catch (e) { alert("連線異常"); }
-    }
+async function handleReg(eventTitle) {
+    if(!confirm("確認要報名「" + eventTitle + "」嗎？")) return;
+    
+    const btn = event.target; // 抓取點擊的按鈕
+    btn.innerText = "處理中...";
+    btn.disabled = true;
 
+    try {
+        var res = await fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors', // 如果持續失敗，可以嘗試暫時開啟 no-cors 測試
+            body: JSON.stringify({
+                type: 'register_event', 
+                phone: currentUser.phone,
+                name: currentUser.name,
+                eventTitle: eventTitle,
+                timestamp: new Date().toLocaleString()
+            })
+        });
+        
+        // 由於 no-cors 無法讀取回傳值，建議後端 GAS 也要同步更新
+        alert("申請已送出，請稍後查看出席紀錄或聯絡幹部確認。");
+        syncData();
+    } catch (e) { 
+        alert("連線異常，請檢查網路。"); 
+    } finally {
+        btn.innerText = "點我報名";
+        btn.disabled = false;
+    }
+}
     // 掃描與其他功能維持原本邏輯
     function startScanner() {
         document.getElementById('scannerModal').style.display = 'flex';

@@ -3,85 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>會員名冊管理 | 築心讀書會</title>
+    <title>會員名冊管理 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        .btn-emerald { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        /* 等待動畫旋轉 */
-        .loader { border-top-color: #064E3B; animation: spinner 0.6s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 統一 Loading 遮罩 */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(2px);
+        }
+        .loading-card {
+            background: white; padding: 40px; border-radius: 32px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid #065F46; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.5s; }
+        
+        .member-card { transition: all 0.2s; border: 1px solid #f0f0f0; }
+        .member-card:active { transform: scale(0.98); }
     </style>
 </head>
-<body class="bg-gray-50 pb-24">
+<body class="min-h-screen pb-32">
 
-    <div class="sticky top-0 z-50 p-4 flex items-center justify-between glass-card shadow-sm">
-    <button onclick="location.href='staff_menu.html'" class="text-emerald-800 flex items-center shrink-0">
-        <i class="fas fa-chevron-left mr-1"></i>返回
-    </button>
-    
-    <h1 class="font-bold text-emerald-900 text-lg flex-1 text-center">會員名冊管理</h1>
-    
-    <button id="editModeBtn" onclick="toggleEditMode()" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-sm font-bold border border-emerald-200 shadow-sm shrink-0">
-        編輯模式
-    </button>
-</div>
-    
-    <div id="memberList" class="p-4 space-y-3">
-        <div class="text-center py-10 text-gray-400">讀取中...</div>
-    </div>
-
-    <div id="bottomAddArea" class="fixed bottom-6 left-0 w-full px-6 hidden">
-        <button onclick="openAddModal()" class="w-full py-4 btn-emerald text-white rounded-2xl font-bold shadow-xl flex items-center justify-center">
-            <i class="fas fa-user-plus mr-2"></i> 新增新會員
-        </button>
-    </div>
-
-    <div id="loadingOverlay" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-[200] items-center justify-center">
-        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-12 w-12 mb-4"></div>
-            <p class="text-emerald-900 font-bold">處理中，請稍候...</p>
+    <!-- 1. 處理中遮罩 -->
+    <div id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <div class="text-emerald-900 font-bold text-lg tracking-widest">同步中...</div>
         </div>
     </div>
 
-    <div id="addModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
-        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
-            <h3 class="text-xl font-bold text-emerald-900 mb-4 text-center">新增新會員</h3>
+    <!-- 2. 統一風格導航欄 -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <div class="flex-1 flex items-center">
+            <button onclick="location.href='staff_menu.html'" class="flex items-center gap-1 hover:text-emerald-300 transition-colors">
+                <i class="fas fa-chevron-left"></i>
+                <span class="text-sm font-bold">返回</span>
+            </button>
+        </div>
+
+        <div class="absolute left-1/2 -translate-x-1/2">
+            <h1 class="text-lg font-black tracking-widest whitespace-nowrap">會員名冊管理</h1>
+        </div>
+
+        <div class="flex-1 flex justify-end">
+            <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold active:bg-white/20 border border-white/20 transition-all">
+                開啟編輯
+            </button>
+        </div>
+    </nav>
+
+    <!-- 3. 內容區 -->
+    <main class="p-4 max-w-2xl mx-auto">
+        <div class="flex items-center justify-between mb-6 px-2">
+            <h2 class="text-sm font-bold text-emerald-900/60 uppercase tracking-widest">Member Directory</h2>
+            <span id="memberCount" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">0 位成員</span>
+        </div>
+
+        <div id="memberList" class="space-y-4">
+            <!-- 會員清單將由 JS 渲染 -->
+        </div>
+    </main>
+
+    <!-- 4. 懸浮新增按鈕 (編輯模式開啟時顯示) -->
+    <div id="bottomAddArea" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xs px-6 hidden z-30">
+        <button onclick="openModal('addMemberModal')" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+            <i class="fas fa-user-plus text-xl"></i> 新增新會員項目
+        </button>
+    </div>
+
+    <!-- 5. 新增會員彈窗 -->
+    <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增新會員</h3>
+            
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs text-gray-400 ml-1">姓名</label>
-                    <input id="newName" type="text" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
+                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">會員姓名</label>
+                    <input type="text" id="newName" placeholder="請輸入姓名" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold">
                 </div>
                 <div>
-                    <label class="text-xs text-gray-400 ml-1">手機號碼 (登入帳號)</label>
-                    <input id="newPhone" type="tel" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
+                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">手機號碼 (登入帳號)</label>
+                    <input type="tel" id="newPhone" placeholder="0912345678" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold font-mono">
                 </div>
                 <div>
-                    <label class="text-xs text-gray-400 ml-1">預設密碼</label>
-                    <input id="newPass" type="text" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none" placeholder="預設 123">
+                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">預設密碼 (選填)</label>
+                    <input type="text" id="newPass" placeholder="預設為 123" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold">
                 </div>
                 <div>
-                    <label class="text-xs text-gray-400 ml-1">身分角色</label>
-                    <select id="newRole" class="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
+                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">身分角色</label>
+                    <select id="newRole" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold appearance-none">
                         <option value="學員">學員</option>
                         <option value="工程">工程</option>
                         <option value="管理員">管理員</option>
                     </select>
                 </div>
             </div>
-            <div class="flex space-x-3 mt-8">
-                <button onclick="closeAddModal()" class="flex-1 py-3 text-gray-400">取消</button>
-                <button onclick="submitAddMember()" class="flex-1 py-3 btn-emerald text-white rounded-xl font-bold">確認增加</button>
+
+            <div class="grid grid-cols-2 gap-3 mt-8">
+                <button onclick="closeModal('addMemberModal')" class="py-4 text-gray-400 font-bold">取消</button>
+                <button onclick="submitAddMember()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg">確認增加</button>
             </div>
         </div>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
-        const STAFF_KEY = sessionStorage.getItem('staff_key');
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';[cite: 5]
+        const STAFF_KEY = sessionStorage.getItem('staff_key');[cite: 5]
         let isEditMode = false;
 
         window.onload = () => {
@@ -89,76 +128,70 @@
             loadMembers();
         };
 
-        // 切換編輯模式
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            const btn = document.getElementById('editModeBtn');
-            const addArea = document.getElementById('bottomAddArea');
-            
-            if (isEditMode) {
-                btn.innerText = "退出編輯";
-                btn.className = "bg-red-500 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-sm active:scale-95 transition-all";
-                addArea.classList.remove('hidden');
-            } else {
-                btn.innerText = "編輯模式";
-                btn.className = "bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-sm font-bold border border-emerald-200 shadow-sm active:scale-95 transition-all";
-                addArea.classList.add('hidden');
-            }
-            loadMembers(false); // 重新渲染列表以切換刪除按鈕
-        }
-
-        function showLoading(show) {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.style.display = show ? 'flex' : 'none';
-        }
+        function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
         async function loadMembers(scrollToBottom = false) {
+            toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL);
+                const res = await fetch(GAS_URL);[cite: 5]
                 const data = await res.json();
-                const container = document.getElementById('memberList');
+                const list = document.getElementById('memberList');
                 
-                container.innerHTML = data.users.map(u => `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50 flex justify-between items-center transition-all">
+                document.getElementById('memberCount').innerText = `${data.users.length} 位成員`;[cite: 5]
+
+                list.innerHTML = data.users.map(u => `
+                    <div class="member-card bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center">
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-baseline gap-2">
-                                <span class="text-lg font-bold text-emerald-900 truncate max-w-[80px]">${u.name}</span>
-                                <span class="text-md font-mono text-gray-600">${u.phone}</span>
-                                <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 rounded-full border border-emerald-100 shrink-0">${u.role}</span>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-lg font-black text-emerald-900 truncate">${u.name}</span>
+                                <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100">${u.role}</span>
                             </div>
-                            <div class="text-[11px] text-gray-400 mt-0.5 truncate pr-4">
-                                <i class="far fa-envelope mr-1"></i> ${u.email || '未設定 Email'}
+                            <div class="flex flex-col gap-0.5">
+                                <div class="text-[13px] font-mono text-gray-500 font-bold tracking-tight">${u.phone}</div>
+                                <div class="text-[11px] text-gray-400 truncate pr-4">
+                                    <i class="far fa-envelope mr-1 text-[9px]"></i> ${u.email || '未設定 Email'}
+                                </div>
                             </div>
                         </div>
                         ${isEditMode ? `
-                            <button onclick="deleteMember('${u.phone}', '${u.name}')" class="text-red-400 p-2 active:scale-90 transition-transform">
-                                <i class="fas fa-trash-alt"></i>
+                            <button onclick="deleteMember('${u.phone}', '${u.name}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all">
+                                <i class="fas fa-trash-alt text-sm"></i>
                             </button>
                         ` : ''}
                     </div>
                 `).join('');
 
                 if (scrollToBottom) {
-                    setTimeout(() => {
-                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                    }, 300);
+                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 300);
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { showToast("連線失敗"); }
+            toggleLoading(false);
         }
 
-        function openAddModal() { document.getElementById('addModal').style.display='flex'; }
-        function closeAddModal() { document.getElementById('addModal').style.display='none'; }
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            const addArea = document.getElementById('bottomAddArea');
+            
+            btn.innerText = isEditMode ? "結束編輯" : "開啟編輯";
+            btn.className = isEditMode 
+                ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md"
+                : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            
+            addArea.classList.toggle('hidden', !isEditMode);
+            loadMembers(false);[cite: 5]
+        }
 
         async function submitAddMember() {
-            const name = document.getElementById('newName').value;
-            const phone = document.getElementById('newPhone').value;
-            const password = document.getElementById('newPass').value;
+            const name = document.getElementById('newName').value.trim();
+            const phone = document.getElementById('newPhone').value.trim();
+            const password = document.getElementById('newPass').value.trim() || "123";[cite: 5]
             const role = document.getElementById('newRole').value;
 
             if (!name || !phone) return alert("姓名與電話為必填");
 
-            closeAddModal();
-            showLoading(true);
+            closeModal('addMemberModal');
+            toggleLoading(true);
 
             try {
                 const res = await fetch(GAS_URL, {
@@ -167,38 +200,47 @@
                         type: 'add_member',
                         key: STAFF_KEY,
                         name, phone, password, role
-                    })
+                    })[cite: 5]
                 });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    await loadMembers(true); // 重新讀取並捲動到底部
+                    showToast("✅ 會員已新增");
+                    await loadMembers(true);
                 }
-            } catch (e) { alert("發生錯誤"); }
-            showLoading(false);
+            } catch (e) { showToast("網路錯誤"); }
+            toggleLoading(false);
         }
 
         async function deleteMember(phone, name) {
             if (!confirm(`確定要刪除會員「${name}」嗎？`)) return;
 
-            showLoading(true);
+            toggleLoading(true);
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({
                         type: 'delete_member',
                         key: STAFF_KEY,
-                        phone: phone // 與 GAS 參數對齊
-                    })
+                        phone: phone
+                    })[cite: 5]
                 });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
+                    showToast("🗑️ 會員已移除");
                     await loadMembers(false);
-                } else {
-                    alert("刪除失敗：" + result.message);
                 }
-            } catch (e) { alert("網路連線錯誤"); }
-            showLoading(false);
+            } catch (e) { showToast("刪除失敗"); }
+            toggleLoading(false);
         }
+
+        function showToast(msg) {
+            const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
     </script>
 </body>
 </html>

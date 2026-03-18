@@ -7,99 +7,157 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .tab-active { color: #065F46; border-bottom: 3px solid #065F46; font-weight: bold; }
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; z-index: 1000; opacity: 1; transition: opacity 0.5s; }
-        .loader-dots div { animation-timing-function: cubic-bezier(0, 1, 1, 0); }
-        @keyframes loader-dots1 { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        
+        /* Loading 遮罩樣式 */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(2px);
+        }
+        .loading-card {
+            background: white; padding: 40px; border-radius: 32px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid #065F46; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toast 樣式 */
+        .toast {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: #333; color: white; padding: 12px 28px;
+            border-radius: 50px; font-size: 14px; z-index: 10000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .status-card { transition: all 0.2s ease; border: 1px solid #eee; }
+        .status-card.active-edit { cursor: pointer; }
+        .status-card.active-edit:active { scale: 0.96; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-24">
+<body class="min-h-screen pb-20">
 
-    <nav class="flex justify-between items-center px-6 py-4 bg-[#064e3b] text-white shadow-md">
-        <div class="flex items-center gap-2">
-            <button onclick="location.href='staff_menu.html'" class="mr-2"><i class="fas fa-chevron-left"></i></button>
-            <h1 class="text-xl font-black">繳費帳簿</h1>
+    <!-- 1. 處理中遮罩 -->
+    <div id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <div class="text-emerald-900 font-bold text-lg tracking-widest">處理中...</div>
+        </div>
+    </div>
+
+    <!-- 2. 導航欄 -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 py-4 shadow-lg flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <button onclick="location.href='staff_menu.html'"><i class="fas fa-arrow-left"></i></button>
+            <h1 class="text-xl font-black tracking-tight">繳費管理</h1>
         </div>
         <div class="flex gap-2">
-            <button onclick="openCreateModal()" class="px-3 py-1.5 bg-emerald-600 rounded-lg text-xs font-bold">新增項目</button>
-            <button id="editToggle" onclick="toggleEditMode()" class="px-3 py-1.5 bg-white/10 rounded-lg text-xs font-bold">開啟編輯</button>
+            <button onclick="openModal('createModal')" class="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shadow-md active:bg-emerald-700">新增帳簿</button>
+            <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold active:bg-white/20">開啟編輯</button>
         </div>
     </nav>
 
-    <div class="p-4 bg-white border-b sticky top-0 z-10 shadow-sm">
-        <select id="itemSelector" onchange="loadLedger()" class="w-full bg-emerald-50 p-3 rounded-xl text-sm font-bold text-emerald-900 outline-none border-none">
-            <option value="">請選擇繳費項目...</option>
+    <!-- 3. 項目切換區 -->
+    <div class="p-4 bg-white border-b sticky top-[68px] z-30 shadow-sm">
+        <select id="itemSelector" onchange="loadLedger()" class="w-full bg-emerald-50 p-4 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
+            <option value="">請選擇要查看的繳費項目...</option>
         </select>
     </div>
 
+    <!-- 4. 統計與操作區 -->
     <main class="p-4 max-w-2xl mx-auto">
-        <div id="statsArea" class="hidden mb-4 flex justify-between items-center bg-emerald-50 p-4 rounded-2xl">
-            <div class="text-sm font-bold text-emerald-800">
-                已繳人數：<span id="paidCount">0</span> / <span id="totalCount">0</span>
+        <div id="statsArea" class="hidden mb-6 flex justify-between items-center bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-100">
+            <div>
+                <p class="text-xs text-gray-400 font-bold mb-1">收款進度</p>
+                <div class="text-lg font-black text-emerald-900">
+                    已繳 <span id="paidCount" class="text-emerald-600 text-2xl">0</span> / <span id="totalCount">0</span> 位
+                </div>
             </div>
-            <button onclick="prepareLineMessage()" class="text-emerald-700 text-sm font-bold">
-                <i class="fab fa-line mr-1"></i>發送名單
+            <button onclick="prepareLineMessage()" class="flex items-center gap-2 bg-[#00B900] text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-md active:scale-95 transition-all">
+                <i class="fab fa-line text-lg"></i>
+                發送名單
             </button>
         </div>
 
+        <!-- 名單列表 -->
         <div id="ledgerList" class="space-y-3">
-            <div class="text-center py-20 text-gray-400 italic text-sm">請先選取繳費項目</div>
+            <div class="text-center py-20 text-gray-400 italic">尚未選取項目</div>
         </div>
     </main>
 
-    <div id="createModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8">
-            <h3 class="text-xl font-bold text-emerald-900 mb-6 text-center">建立新繳費項目</h3>
-            <input type="text" id="newItemName" placeholder="例如：115年第一學期會費" class="w-full p-4 bg-gray-50 rounded-2xl mb-6 outline-none border-none">
+    <!-- 5. 彈窗：新增帳簿 -->
+    <div id="createModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">建立全新帳簿</h3>
+            <p class="text-gray-400 text-xs text-center mb-6">系統將導入全體會員名單至此項目</p>
+            <input type="text" id="newItemName" placeholder="例如：2026 第一季社費" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl mb-6 outline-none focus:border-emerald-500 font-bold">
             <div class="grid grid-cols-2 gap-3 mb-6">
-                <button onclick="createNewLedger('未繳')" class="py-4 bg-orange-50 text-orange-700 rounded-2xl font-bold text-sm">預設全部未繳</button>
-                <button onclick="createNewLedger('已繳')" class="py-4 bg-emerald-50 text-emerald-700 rounded-2xl font-bold text-sm">預設全部已繳</button>
+                <button onclick="createNewLedger('未繳')" class="py-4 bg-orange-50 text-orange-700 rounded-2xl font-black text-sm active:bg-orange-100">預設未繳</button>
+                <button onclick="createNewLedger('已繳')" class="py-4 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-sm active:bg-emerald-100">預設已繳</button>
             </div>
-            <button onclick="closeModal('createModal')" class="w-full text-gray-400 text-sm">取消</button>
+            <button onclick="closeModal('createModal')" class="w-full text-gray-400 text-sm font-bold">取消返回</button>
         </div>
     </div>
 
-    <div id="linePreviewModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8">
-            <h3 class="text-lg font-bold text-emerald-900 mb-4">發送預覽</h3>
-            <div id="lineContent" class="bg-gray-50 p-4 rounded-2xl text-sm text-gray-600 whitespace-pre-wrap max-h-60 overflow-y-auto mb-6"></div>
-            <button onclick="sendToLine()" class="w-full py-4 bg-[#00B900] text-white rounded-2xl font-bold mb-3 shadow-lg">確認發送至 LINE</button>
-            <button onclick="closeModal('linePreviewModal')" class="w-full text-gray-400 text-sm">返回修改</button>
+    <!-- 6. 彈窗：LINE 預覽 -->
+    <div id="linePreviewModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-lg font-black text-emerald-900 mb-4 flex items-center gap-2">
+                <i class="fab fa-line text-[#00B900]"></i> 訊息預覽
+            </h3>
+            <div id="lineContent" class="bg-gray-50 p-5 rounded-2xl text-sm text-gray-700 whitespace-pre-wrap max-h-64 overflow-y-auto mb-6 leading-relaxed border border-gray-100"></div>
+            <button onclick="sendToLine()" class="w-full py-4 bg-[#00B900] text-white rounded-2xl font-black mb-3 shadow-lg active:bg-[#009900]">確認發送至群組</button>
+            <button onclick="closeModal('linePreviewModal')" class="w-full text-gray-400 text-sm font-bold">再檢查一下</button>
         </div>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';        const STAFF_KEY = sessionStorage.getItem('staff_key');
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+        const STAFF_KEY = sessionStorage.getItem('staff_key');
         let currentLedger = [];
         let isEditMode = false;
 
         window.onload = () => {
-            if (!STAFF_KEY) { alert("驗證過期"); location.href='index.html'; return; }
+            if (!STAFF_KEY) { alert("驗證過期，請重新登入"); location.href='index.html'; return; }
             fetchItems();
         };
 
-        // 1. 抓取項目清單
-        async function fetchItems() {
-            showToast("正在同步項目...");
-            const res = await fetch(`${GAS_URL}?type=get_payment_items&key=${STAFF_KEY}`);
-            const data = await res.json();
-            const selector = document.getElementById('itemSelector');
-            selector.innerHTML = '<option value="">請選擇繳費項目...</option>' + 
-                data.items.map(it => `<option value="${it}">${it}</option>`).join('');
+        function toggleLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
-        // 2. 載入特定帳簿
+        async function fetchItems() {
+            toggleLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_payment_items&key=${STAFF_KEY}`);
+                const data = await res.json();
+                const selector = document.getElementById('itemSelector');
+                selector.innerHTML = '<option value="">請選擇要查看的繳費項目...</option>' + 
+                    data.items.map(it => `<option value="${it}">${it}</option>`).join('');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
         async function loadLedger() {
             const itemName = document.getElementById('itemSelector').value;
             if (!itemName) { hideStats(); return; }
             
-            showToast("載入帳簿中...");
-            const res = await fetch(`${GAS_URL}?type=get_ledger&itemName=${itemName}&key=${STAFF_KEY}`);
-            const data = await res.json();
-            currentLedger = data.ledger;
-            renderLedger();
+            toggleLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_ledger&itemName=${itemName}&key=${STAFF_KEY}`);
+                const data = await res.json();
+                currentLedger = data.ledger;
+                renderLedger();
+            } finally {
+                toggleLoading(false);
+            }
         }
 
         function renderLedger() {
@@ -112,91 +170,105 @@
 
             container.innerHTML = currentLedger.map((m, idx) => `
                 <div onclick="${isEditMode ? `toggleStatus(${idx})` : ''}" 
-                     class="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border ${m.status === '已繳' ? 'border-emerald-100' : 'border-gray-100'} transition-all ${isEditMode ? 'active:scale-95 cursor-pointer' : ''}">
-                    <div>
-                        <div class="font-bold ${m.status === '已繳' ? 'text-emerald-900' : 'text-gray-500'}">${m.name}</div>
-                        <div class="text-[10px] text-gray-300">${m.phone}</div>
+                     class="status-card bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm ${m.status === '已繳' ? 'bg-emerald-50/30 border-emerald-100' : 'border-gray-100'} ${isEditMode ? 'active-edit' : ''}">
+                    <div class="${!isEditMode && m.status === '未繳' ? 'opacity-50' : ''}">
+                        <div class="font-black text-base ${m.status === '已繳' ? 'text-emerald-900' : 'text-gray-700'}">${m.name}</div>
+                        <div class="text-[11px] text-gray-400 font-mono mt-1">${m.phone}</div>
                     </div>
-                    <i class="fas ${m.status === '已繳' ? 'fa-check-circle text-emerald-600' : 'fa-circle text-gray-100'} text-xl"></i>
+                    <div class="flex items-center">
+                        ${m.status === '已繳' 
+                            ? '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>' 
+                            : '<i class="far fa-circle text-gray-200 text-2xl"></i>'}
+                    </div>
                 </div>
             `).join('');
         }
 
-        // 3. 建立帳簿 (初始化)
         async function createNewLedger(defaultStatus) {
             const name = document.getElementById('newItemName').value.trim();
-            if (!name) return alert("請輸入名稱");
+            if (!name) return alert("請輸入項目名稱");
             
-            showToast("正在建立全體帳簿...");
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: 'init_ledger', itemName: name, status: defaultStatus, key: STAFF_KEY })
-            });
-            const result = await res.json();
-            if (result.result === "SUCCESS") {
-                closeModal('createModal');
-                await fetchItems();
-                document.getElementById('itemSelector').value = name;
-                await loadLedger();
+            closeModal('createModal');
+            toggleLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'init_ledger', itemName: name, status: defaultStatus, key: STAFF_KEY })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("✅ 帳簿初始化完成");
+                    await fetchItems();
+                    document.getElementById('itemSelector').value = name;
+                    await loadLedger();
+                }
+            } finally {
+                toggleLoading(false);
             }
         }
 
-        // 4. 切換狀態 (編輯模式)
         async function toggleStatus(index) {
             const item = currentLedger[index];
             const newStatus = item.status === '已繳' ? '未繳' : '已繳';
             
-            // 先在前端更新（體驗流暢）
+            // UI 先行更新
             currentLedger[index].status = newStatus;
             renderLedger();
 
-            // 同步後端
-            await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    type: 'update_payment_status',
-                    phone: item.phone,
-                    itemName: document.getElementById('itemSelector').value,
-                    status: newStatus,
-                    key: STAFF_KEY
-                })
-            });
+            // 背景同步
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'update_payment_status',
+                        phone: item.phone,
+                        itemName: document.getElementById('itemSelector').value,
+                        status: newStatus,
+                        key: STAFF_KEY
+                    })
+                });
+            } catch (e) {
+                showToast("❌ 同步失敗，請檢查網路");
+            }
         }
 
-        // 5. LINE 預覽與發送
         function prepareLineMessage() {
             const itemName = document.getElementById('itemSelector').value;
-            const paidList = currentLedger.filter(p => p.status === '已繳').map(p => `• ${p.name}`);
+            const paidNames = currentLedger.filter(p => p.status === '已繳').map(p => `▫️ ${p.name}`);
             
-            const msg = `💰 繳費彙整：${itemName}\n----------------\n已完成繳費名單：\n${paidList.join('\n')}\n\n(總計 ${paidList.length} 位)`;
+            const msg = `【築心會館 - 繳費通報】\n項目：${itemName}\n──────────────\n已完成繳費名單：\n${paidNames.length > 0 ? paidNames.join('\n') : '(尚無人繳費)'}\n\n📊 目前進度：${paidNames.length} / ${currentLedger.length} 位`;
             
             document.getElementById('lineContent').innerText = msg;
-            document.getElementById('linePreviewModal').style.display = 'flex';
-            document.getElementById('linePreviewModal').classList.remove('hidden');
+            openModal('linePreviewModal');
         }
 
         async function sendToLine() {
             const message = document.getElementById('lineContent').innerText;
-            showToast("發送中...");
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: 'send_line', message: message, key: STAFF_KEY })
-            });
-            const result = await res.json();
-            if (result.result === "SUCCESS") {
-                showToast("🚀 已發送至 LINE");
-                closeModal('linePreviewModal');
+            closeModal('linePreviewModal');
+            toggleLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'send_line', message: message, key: STAFF_KEY })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("🚀 已發送至 LINE 群組");
+                }
+            } finally {
+                toggleLoading(false);
             }
         }
 
-        // 工具函式
         function toggleEditMode() {
             isEditMode = !isEditMode;
-            const btn = document.getElementById('editToggle');
+            const btn = document.getElementById('editToggleBtn');
             btn.innerText = isEditMode ? "完成編輯" : "開啟編輯";
-            btn.classList.toggle('bg-orange-500', isEditMode);
-            btn.classList.toggle('text-white', isEditMode);
+            btn.className = isEditMode 
+                ? "bg-orange-500 px-4 py-2 rounded-xl text-xs font-bold shadow-md text-white"
+                : "bg-white/10 px-4 py-2 rounded-xl text-xs font-bold";
             renderLedger();
+            showToast(isEditMode ? "進入編輯模式：點擊名單切換狀態" : "已結束編輯模式");
         }
 
         function showToast(msg) {
@@ -204,12 +276,16 @@
             t.className = 'toast';
             t.innerText = msg;
             document.body.appendChild(t);
-            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2000);
+            setTimeout(() => { 
+                t.style.opacity = '0'; 
+                t.style.transition = '0.5s';
+                setTimeout(() => t.remove(), 500); 
+            }, 2500);
         }
 
-        function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; document.getElementById('createModal').classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; document.getElementById(id).classList.add('hidden'); }
-        function hideStats() { document.getElementById('statsArea').classList.add('hidden'); document.getElementById('ledgerList').innerHTML = '<div class="text-center py-20 text-gray-400 italic text-sm">請先選取繳費項目</div>'; }
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function hideStats() { document.getElementById('statsArea').classList.add('hidden'); document.getElementById('ledgerList').innerHTML = '<div class="text-center py-20 text-gray-400 italic">尚未選取項目</div>'; }
     </script>
 </body>
 </html>

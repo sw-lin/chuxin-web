@@ -252,67 +252,48 @@ function updateUI(user, calendar, events) {
 async function handleReg(eventTitle) {
     if(!confirm("確認要報名「" + eventTitle + "」嗎？")) return;
     
-    const btn = event.target; // 抓取點擊的按鈕
-    btn.innerText = "處理中...";
-    btn.disabled = true;
+    // 1. 取得按鈕元件（增加防錯處理）
+    const btn = window.event ? window.event.target : null; 
+    const originalText = btn ? btn.innerText : "點我報名";
 
-// 在 member_zone.html 裡的 handleReg
-var res = await fetch(GAS_URL, {
-    method: 'POST',
-    // 移除 mode: 'no-cors'
-    body: JSON.stringify({
-        type: 'register_event', 
-        phone: currentUser.phone,
-        name: currentUser.name,
-        eventTitle: eventTitle
-    })
-});
+    if (btn) {
+        btn.innerText = "處理中...";
+        btn.disabled = true;
+    }
 
-// 現在這行終於能派上用場了！
-var result = await res.json(); 
-alert(result.message);
-        syncData();
+    try {
+        // 2. 發送請求
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'register_event', 
+                phone: currentUser.phone,
+                name: currentUser.name,
+                eventTitle: eventTitle
+            })
+        });
+
+        // 3. 解析結果
+        const result = await res.json(); 
+        
+        if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
+            alert(result.message || "報名成功！");
+            syncData(); // 重新整理出席率與數據
+        } else {
+            alert("失敗：" + (result.message || "發生未知錯誤"));
+        }
+
     } catch (e) { 
+        console.error("報名出錯:", e);
         alert("連線異常，請檢查網路。"); 
     } finally {
-        btn.innerText = "點我報名";
-        btn.disabled = false;
+        // 4. 恢復按鈕狀態
+        if (btn) {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
     }
 }
-    // 掃描與其他功能維持原本邏輯
-    function startScanner() {
-        document.getElementById('scannerModal').style.display = 'flex';
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, function(text) {
-            stopScanner();
-            processCheckin(text);
-        }).catch(() => stopScanner());
-    }
-    function stopScanner() {
-        if (html5QrCode) {
-            html5QrCode.stop().finally(() => {
-                document.getElementById('scannerModal').style.display = 'none';
-                html5QrCode = null;
-            });
-        } else { document.getElementById('scannerModal').style.display = 'none'; }
-    }
-    async function processCheckin(scanData) {
-        if (!scanData.startsWith("CHECKIN:")) return alert("無效條碼");
-        var parts = scanData.split(':');
-        var eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
-        try {
-            var res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ type: 'checkin', phone: currentUser.phone, name: currentUser.name, eventTitle: eventID })
-            });
-            var result = await res.json();
-            if (result.result === "SUCCESS") {
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                alert("報到成功！");
-                syncData();
-            } else { alert(result.message || "報到失敗"); }
-        } catch (e) { alert("網路失敗"); }
-    }
 
     function openEditModal() {
         document.getElementById('editEmail').placeholder = currentUser.email || '電子郵件';

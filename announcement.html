@@ -10,78 +10,61 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         
-        /* 統一 Loading 遮罩 */
-        #loadingOverlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 9999; backdrop-filter: blur(2px);
-        }
-        .loading-card {
-            background: white; padding: 40px; border-radius: 32px;
-            display: flex; flex-direction: column; align-items: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-        }
-        .spinner {
-            width: 40px; height: 40px; border: 4px solid #f3f3f3;
-            border-top: 4px solid #065F46; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 15px;
-        }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
+        .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; transition: opacity 0.5s; pointer-events: none; }
         
-        .action-card { background: white; border-radius: 2.5rem; border: 1px solid #f0f0f0; transition: all 0.3s; }
+        .action-card { background: white; border-radius: 2rem; border: 1px solid #f0f0f0; margin-bottom: 1.5rem; overflow: hidden; }
+        .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f8f8f8; display: flex; align-items: center; gap: 10px; }
     </style>
 </head>
 <body class="min-h-screen pb-20">
 
-    <div id="loadingOverlay">
-        <div class="loading-card">
-            <div class="spinner"></div>
-            <div class="text-emerald-900 font-bold tracking-widest">發送中...</div>
-        </div>
-    </div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div id="loadingText" class="text-emerald-900 font-bold">同步中...</div></div></div>
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
-            <i class="fas fa-chevron-left mr-1"></i> 返回
-        </button>
+        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i> 返回</button>
         <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2 whitespace-nowrap">大聲公管理</h1>
-        <div class="w-12"></div> </nav>
+        <div class="w-12"></div>
+    </nav>
 
-    <main class="p-6 max-w-xl mx-auto">
+    <main class="p-4 max-w-xl mx-auto">
         
-        <header class="mb-8 text-center">
-            <div class="inline-block p-4 bg-emerald-50 rounded-full mb-4">
-                <i class="fas fa-bullhorn text-3xl text-emerald-700"></i>
+        <!-- 區塊一：會員首頁公告欄 -->
+        <div class="action-card shadow-sm">
+            <div class="card-header bg-emerald-50/50">
+                <i class="fas fa-scroll text-emerald-700"></i>
+                <span class="font-bold text-emerald-900">1. 會員 App 公告欄</span>
             </div>
-            <h2 class="text-xl font-black text-emerald-900">群發廣播通知</h2>
-            <p class="text-xs text-gray-400 mt-2 font-bold uppercase tracking-tighter">Line Group Announcement</p>
-        </header>
-
-        <div class="action-card p-8 shadow-sm">
-            <div class="mb-6">
-                <label class="text-[10px] font-bold text-gray-400 ml-2 mb-2 block uppercase tracking-widest">Message Content</label>
-                <textarea id="lineMsg" rows="6" 
-                    placeholder="請輸入欲發送至 LINE 群組的內容..." 
-                    class="w-full p-6 bg-gray-50 rounded-[1.5rem] border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
+            <div class="p-5">
+                <p class="text-[11px] text-gray-400 mb-3 font-bold uppercase tracking-wider">更新後，全體會員登入後可見</p>
+                <textarea id="newsContent" rows="4" placeholder="讀取目前公告中..." class="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
+                <button onclick="updateAppNews()" class="w-full mt-4 py-4 bg-[#064E3B] text-white rounded-xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all">
+                    <i class="fas fa-save"></i> 儲存並更新公告
+                </button>
             </div>
+        </div>
 
-            <button onclick="sendLineMessage()" 
-                class="w-full py-5 bg-[#064E3B] text-white rounded-2xl font-black shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                <i class="fab fa-line text-2xl"></i>
-                <span class="tracking-widest">立即發送廣播</span>
-            </button>
-            
-            <p class="text-[10px] text-gray-400 text-center mt-4 font-medium">
-                * 點擊發送後，訊息將透過 LINE Notify 推送至讀書會群組
-            </p>
+        <!-- 區塊二：LINE 群組推播 -->
+        <div class="action-card shadow-sm">
+            <div class="card-header bg-green-50/50">
+                <i class="fab fa-line text-green-600 text-lg"></i>
+                <span class="font-bold text-emerald-900">2. LINE 群組即時廣播</span>
+            </div>
+            <div class="p-5">
+                <p class="text-[11px] text-gray-400 mb-3 font-bold uppercase tracking-wider">訊息將直接推播至官方群組</p>
+                <textarea id="lineMsg" rows="4" placeholder="請輸入欲推播的訊息內容..." class="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-green-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
+                <button onclick="sendLineBroadcast()" class="w-full mt-4 py-4 bg-[#00B900] text-white rounded-xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all">
+                    <i class="fab fa-line text-xl"></i> 立即發送 LINE 推播
+                </button>
+            </div>
         </div>
 
     </main>
 
     <script>
-        // 拆解法定義 URL，防止環境偵測錯誤
         var u1 = 'https://script.google.com';
         var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         var GAS_URL = u1 + u2;
@@ -89,48 +72,60 @@
 
         window.onload = function() {
             if (!STAFF_KEY) { window.location.href = "index.html"; return; }
+            fetchCurrentNews();
         };
 
-        function showLoading(show) {
+        function showLoading(show, text) {
+            document.getElementById('loadingText').innerText = text || "同步中...";
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
-        function sendLineMessage() {
+        // 讀取目前資料庫裡的公告內容
+        function fetchCurrentNews() {
+            fetch(GAS_URL)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    document.getElementById('newsContent').value = data.news || "";
+                });
+        }
+
+        // 更新 App 內部的公告欄[cite: 4]
+        function updateAppNews() {
+            var content = document.getElementById('newsContent').value.trim();
+            if (!content) return alert("公告內容不可為空");
+            if (!confirm("確定要更新全體會員首頁的公告嗎？")) return;
+
+            showLoading(true, "更新公告中...");
+            var payload = { type: 'update_news', key: STAFF_KEY, content: content };
+
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(function(res) { return res.json(); })
+                .then(function(result) {
+                    if (result.result === "SUCCESS") {
+                        showToast("✅ 會員公告已更新");
+                    } else { alert("更新失敗"); }
+                })
+                .finally(function() { showLoading(false); });
+        }
+
+        // 發送 LINE 訊息推播[cite: 4]
+        function sendLineBroadcast() {
             var msg = document.getElementById('lineMsg').value.trim();
-            if (!msg) {
-                alert("請先輸入訊息內容");
-                return;
-            }
+            if (!msg) return alert("請輸入 LINE 訊息內容");
+            if (!confirm("確定要將此訊息推播至 LINE 群組嗎？")) return;
 
-            if (!confirm("確定要將此訊息發送至 LINE 群組嗎？")) return;
+            showLoading(true, "LINE 發送中...");
+            var payload = { type: 'send_line', key: STAFF_KEY, message: msg };
 
-            showLoading(true);
-
-            var payload = {
-                type: 'send_line',
-                key: STAFF_KEY,
-                message: msg
-            };
-
-            fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(result) {
-                if (result.result === "SUCCESS") {
-                    showToast("🚀 訊息已成功發出");
-                    document.getElementById('lineMsg').value = ''; // 清空輸入框
-                } else {
-                    alert("發送失敗：" + (result.message || "原因不明"));
-                }
-            })
-            .catch(function(err) {
-                alert("網路連線錯誤，請檢查網路狀態");
-            })
-            .finally(function() {
-                showLoading(false);
-            });
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(function(res) { return res.json(); })
+                .then(function(result) {
+                    if (result.result === "SUCCESS") {
+                        showToast("🚀 LINE 廣播已發送");
+                        document.getElementById('lineMsg').value = '';
+                    } else { alert("發送失敗"); }
+                })
+                .finally(function() { showLoading(false); });
         }
 
         function showToast(m) {

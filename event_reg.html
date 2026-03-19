@@ -80,44 +80,57 @@
         </div>
     </main>
 
-    <!-- 活動彈窗 (新增/修改通用) -->
-    <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">發布新活動</h3>
-            <input type="hidden" id="old_title">
-            
-            <div>
-                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
-                <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">開始報名日期</label>
-                    <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">截止報名日期</label>
-                    <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
-                </div>
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動舉辦日期</label>
-                <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs font-bold">
-            </div>
-            
-            <div id="deleteZone" class="hidden pt-2">
-                <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
-                    <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動及所有紀錄
-                </button>
-            </div>
+<!-- 活動彈窗 (已加入海報與簡介欄位) -->
+<div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">發布活動內容</h3>
+        <input type="hidden" id="old_title">
+        
+        <!-- 標題 -->
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
+            <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
+        </div>
 
-            <div class="flex gap-3 pt-4">
-                <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
-                <button id="submitBtn" onclick="saveEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
+        <!-- 海報連結 (D欄) -->
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">海報圖片連結 (網址)</label>
+            <input type="text" id="ev_poster" placeholder="https://..." class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
+        </div>
+
+        <!-- 活動簡介 (G欄) -->
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動簡介 / 注意事項</label>
+            <textarea id="ev_desc" rows="3" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold" placeholder="請輸入活動說明..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">開始展示日期</label>
+                <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">下架日期</label>
+                <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
             </div>
         </div>
-    </div>
+        <div>
+            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動舉辦日期</label>
+            <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs font-bold">
+        </div>
+        
+        <div id="deleteZone" class="hidden pt-2">
+            <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
+                <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動及所有紀錄
+            </button>
+        </div>
 
+        <div class="flex gap-3 pt-4">
+            <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+            <button id="submitBtn" onclick="saveEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
+        </div>
+    </div>
+</div>
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let allData = {};

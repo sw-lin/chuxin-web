@@ -396,6 +396,14 @@
         } catch (e) { showToast("連線失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
+    
+    function getDirectImageUrl(url) {
+    if (!url || !url.includes('drive.google.com')) return url;
+    let id = "";
+    if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
+    else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
+    return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
+}    
 </script>
 </body>
 </html>

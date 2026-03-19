@@ -11,180 +11,210 @@
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
         .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
-        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.5s; }
-        .event-card { transition: transform 0.2s; border: 1px solid #f0f0f0; }
-        .event-card:active { transform: scale(0.98); }
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; transition: opacity 0.5s; pointer-events: none; }
     </style>
 </head>
-<body class="min-h-screen pb-24">
+<body class="min-h-screen pb-32">
 
-    <div id="loadingOverlay">
-        <div class="loading-card">
-            <div class="spinner"></div>
-            <div class="text-emerald-900 font-bold text-lg tracking-widest">同步中...</div>
-        </div>
-    </div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <div class="flex-1 flex items-center">
-            <button onclick="location.href='staff_menu.html'" class="flex items-center gap-1 hover:text-emerald-300 transition-colors">
-                <i class="fas fa-chevron-left"></i>
-                <span class="text-sm font-bold">返回</span>
-            </button>
-        </div>
-        <div class="absolute left-1/2 -translate-x-1/2">
-            <h1 class="text-lg font-black tracking-widest whitespace-nowrap">行事曆管理</h1>
-        </div>
-        <div class="flex-1 flex justify-end">
-            <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold active:bg-white/20 border border-white/20">
-                開啟編輯
-            </button>
-        </div>
+        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">行事曆管理</h1>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
     </nav>
 
     <main class="p-4 max-w-2xl mx-auto">
         <div class="flex items-center justify-between mb-6 px-2">
-            <h2 class="text-sm font-bold text-emerald-900/60 uppercase tracking-widest">Upcoming Events</h2>
+            <h2 class="text-xs font-bold text-emerald-900/60 uppercase tracking-widest">Activity Schedule</h2>
             <span id="eventCount" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">0 個活動</span>
         </div>
-        <div id="eventList" class="space-y-4"></div>
+        <div id="calendarList" class="space-y-4"></div>
     </main>
 
-    <!-- 懸浮新增按鈕 (僅編輯模式顯示) -->
     <div id="bottomAddArea" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xs px-6 hidden z-30">
-        <button onclick="openModal('addEventModal')" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-            <i class="fas fa-calendar-plus text-xl"></i> 新增活動項目
+        <button onclick="openAddModal()" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+            <i class="fas fa-calendar-plus text-xl"></i> 排定新活動
         </button>
     </div>
 
-    <!-- 新增彈窗與 QR 彈窗保持不變 ... -->
-    <div id="addEventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
-            <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">排定新活動</h3>
+    <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl overflow-hidden">
+            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-6 text-center">排定新活動</h3>
             <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">活動日期</label>
-                    <input type="date" id="eventDate" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 ml-2 mb-1 block">活動名稱</label>
-                    <input type="text" id="eventTitle" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold">
-                </div>
-                <div class="flex items-center gap-3 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-                    <input type="checkbox" id="needQR" checked class="w-5 h-5 accent-emerald-600">
-                    <label for="needQR" class="text-sm font-bold text-emerald-900">需要報到 QR Code</label>
-                </div>
+                <input type="date" id="eventDate" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <input type="text" id="eventTitle" placeholder="活動名稱" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
+                <input type="text" id="eventPoster" placeholder="海報鏈結 (選填)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
             </div>
-            <div class="grid grid-cols-2 gap-3 mt-8">
-                <button onclick="closeModal('addEventModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                <button onclick="addEvent()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg">確認新增</button>
+            
+            <div id="addActions" class="grid grid-cols-2 gap-3 mt-8">
+                <button onclick="closeModal('eventModal')" class="py-4 text-gray-400 font-bold">取消</button>
+                <button onclick="submitEvent('add')" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認排定</button>
+            </div>
+
+            <div id="editActions" class="space-y-3 mt-8 hidden">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="closeModal('eventModal')" class="py-4 text-gray-400 font-bold">取消</button>
+                    <button onclick="submitEvent('update')" class="py-4 bg-emerald-700 text-white rounded-2xl font-black">儲存變動</button>
+                </div>
+                <button onclick="confirmDeleteEvent()" class="w-full py-4 bg-red-50 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-trash-alt"></i> 刪除此活動與紀錄
+                </button>
             </div>
         </div>
     </div>
 
-    <div id="qrModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center">
-            <div class="text-xs bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full font-bold inline-block mb-2" id="qrDate"></div>
-            <h3 class="text-xl font-black text-emerald-900 mb-6" id="qrTitle"></h3>
-            <div class="bg-white p-4 rounded-3xl border-4 border-emerald-50 shadow-inner inline-block mb-6">
-                <img id="qrImg" src="" alt="QR Code" class="w-56 h-56 mx-auto">
+    <div id="qrModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[100] items-center justify-center p-6" onclick="closeModal('qrModal')">
+        <div class="bg-white p-8 rounded-[3rem] text-center w-full max-w-sm" onclick="event.stopPropagation()">
+            <h3 id="qrTitle" class="text-xl font-black text-emerald-900 mb-1">活動報到</h3>
+            <p id="qrDate" class="text-emerald-600 font-bold mb-6 text-sm"></p>
+            <div class="bg-gray-50 p-6 rounded-3xl mb-6 flex justify-center">
+                <img id="qrImg" class="w-full aspect-square max-w-[200px]" src="">
             </div>
-            <button onclick="closeModal('qrModal')" class="w-full py-4 bg-emerald-50 text-emerald-700 rounded-2xl font-black">關閉</button>
+            <button onclick="closeModal('qrModal')" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">關閉</button>
         </div>
     </div>
 
     <script>
-        // 修正後的 GAS URL
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         const STAFF_KEY = sessionStorage.getItem('staff_key');
         let isEditMode = false;
+        let currentEditData = null; // 暫存正在編輯的項目
 
-        window.onload = () => {
-            if (!STAFF_KEY) { location.href="index.html"; return; }
-            loadEvents();
-        };
+        window.onload = () => { if (!STAFF_KEY) window.location.href = "index.html"; loadEvents(); };
 
         function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+
+        // 核心功能：轉換 Google Drive 等網址為直接顯示連結
+        function getDirectImageUrl(url) {
+            if (!url || !url.includes('http')) return '';
+            if (url.includes('drive.google.com')) {
+                let id = '';
+                if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
+                else { id = url.split('/d/')[1].split('/')[0]; }
+                return `https://lh3.googleusercontent.com/u/0/d/${id}=w800`;
+            }
+            return url;
+        }
 
         async function loadEvents() {
             toggleLoading(true);
             try {
-                const res = await fetch(GAS_URL); //
+                const res = await fetch(GAS_URL + "?t=" + Date.now());
                 const data = await res.json();
-                const list = document.getElementById('eventList');
-                const today = new Date().toISOString().split('T')[0];
+                const list = document.getElementById('calendarList');
+                const events = data.calendar || [];
+                document.getElementById('eventCount').innerText = events.length + ' 個活動';
                 
-                // 排序：日期越接近現在排在越上面
-                const sorted = data.calendar.sort((a,b) => a.dateText.localeCompare(b.dateText));
-                document.getElementById('eventCount').innerText = `${sorted.length} 個活動`;
-
-                list.innerHTML = sorted.map(ev => {
-                    const isPastOrToday = ev.dateText <= today;
-                    return `
-                    <div class="event-card bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center">
-                        <div class="flex-1">
-                            <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full mb-2 inline-block">${ev.dateText}</span>
-                            <h3 class="text-lg font-black text-emerald-900 leading-tight">${ev.title}</h3>
+                list.innerHTML = events.map((ev, index) => `
+                    <div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100">
+                        <div class="flex items-center gap-4">
+                            <div class="text-center bg-emerald-50 px-3 py-2 rounded-2xl shrink-0 min-w-[70px]">
+                                <div class="text-[10px] text-emerald-600 font-black uppercase">${ev.dateText.split('-')[1]}月</div>
+                                <div class="text-xl font-black text-emerald-900">${ev.dateText.split('-')[2]}</div>
+                            </div>
+                            <div>
+                                <h3 class="font-black text-emerald-900 leading-tight">${ev.title}</h3>
+                                ${ev.poster_url ? `<div class="mt-1 text-[10px] text-emerald-500 font-bold"><i class="fas fa-image"></i> 已含海報</div>` : ''}
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            ${(ev.needQR === '是' && isPastOrToday) ? 
-                                `<button onclick="showQRCode('${ev.dateText}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
-                                    <i class="fas fa-qrcode"></i>
-                                </button>` : ''
+                            ${isEditMode ? 
+                                `<button onclick='openEditModal(${JSON.stringify(ev)})' class="w-12 h-12 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full shadow-sm"><i class="fas fa-pencil-alt"></i></button>` : 
+                                `<button onclick="showQRCode('${ev.dateText}', '${ev.title}')" class="w-12 h-12 flex items-center justify-center bg-white border border-gray-100 text-emerald-800 rounded-full shadow-sm active:scale-90 transition-all"><i class="fas fa-qrcode"></i></button>`
                             }
-                            ${isEditMode ? `
-                            <button onclick="deleteEvent('${ev.dateText}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
-                                <i class="fas fa-trash-alt text-sm"></i>
-                            </button>` : ''}
                         </div>
                     </div>
-                `}).join('');
+                `).join('');
             } catch(e) { showToast("載入失敗"); }
             toggleLoading(false);
         }
 
         function toggleEditMode() {
             isEditMode = !isEditMode;
-            const btn = document.getElementById('editToggleBtn');
-            const addArea = document.getElementById('bottomAddArea');
-            btn.innerText = isEditMode ? "結束編輯" : "開啟編輯";
-            btn.className = isEditMode 
-                ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md"
-                : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-            addArea.classList.toggle('hidden', !isEditMode);
+            document.getElementById('editToggleBtn').innerText = isEditMode ? "結束編輯" : "開啟編輯";
+            document.getElementById('editToggleBtn').className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
             loadEvents();
         }
 
-        async function addEvent() {
-            const date = document.getElementById('eventDate').value;
+        // 彈窗控制
+        function openAddModal() {
+            currentEditData = null;
+            document.getElementById('modalTitle').innerText = "排定新活動";
+            document.getElementById('eventDate').value = "";
+            document.getElementById('eventTitle').value = "";
+            document.getElementById('eventPoster').value = "";
+            document.getElementById('addActions').classList.remove('hidden');
+            document.getElementById('editActions').classList.add('hidden');
+            openModal('eventModal');
+        }
+
+        function openEditModal(ev) {
+            currentEditData = ev;
+            document.getElementById('modalTitle').innerText = "編輯活動內容";
+            document.getElementById('eventDate').value = ev.dateText;
+            document.getElementById('eventTitle').value = ev.title;
+            document.getElementById('eventPoster').value = ev.poster_url || "";
+            document.getElementById('addActions').classList.add('hidden');
+            document.getElementById('editActions').classList.remove('hidden');
+            openModal('eventModal');
+        }
+
+        async function submitEvent(actionType) {
+            const dateText = document.getElementById('eventDate').value;
             const title = document.getElementById('eventTitle').value.trim();
-            const needQR = document.getElementById('needQR').checked;
-            if (!date || !title) return alert("資訊不完整");
-            closeModal('addEventModal');
+            const poster = document.getElementById('eventPoster').value.trim();
+            if (!dateText || !title) return alert("日期與標題為必填");
+
+            closeModal('eventModal');
             toggleLoading(true);
+
+            // 如果是更新，需要傳遞舊的標題和日期給後端定位
+            const payload = {
+                type: actionType === 'add' ? 'add_calendar_event' : 'update_calendar_event',
+                key: STAFF_KEY,
+                dateText: dateText,
+                title: title,
+                poster_url: poster,
+                oldDateText: currentEditData ? currentEditData.dateText : null,
+                oldTitle: currentEditData ? currentEditData.title : null
+            };
+
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'add_event', key: STAFF_KEY, date, title, needQR })
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
-                if (result.result === "SUCCESS") { showToast("✅ 活動建立成功"); loadEvents(); }
-            } catch(e) { showToast("網路錯誤"); }
+                if (result.result === "SUCCESS") {
+                    showToast(actionType === 'add' ? "✅ 活動已排定" : "✅ 變動已儲存");
+                    loadEvents();
+                } else { showToast("失敗：" + result.message); }
+            } catch(e) { showToast("連線異常"); }
             toggleLoading(false);
         }
 
-        async function deleteEvent(dateText, title) {
-            if (!confirm(`確定刪除「${title}」？`)) return;
+        async function confirmDeleteEvent() {
+            if (!currentEditData) return;
+            if (!confirm(`⚠️ 確定要刪除「${currentEditData.title}」嗎？\n這將一併移除所有與此活動相關的學員報到紀錄！`)) return;
+
+            closeModal('eventModal');
             toggleLoading(true);
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ type: 'delete_event', key: STAFF_KEY, dateText, title })
+                    body: JSON.stringify({ 
+                        type: 'delete_calendar_event', 
+                        key: STAFF_KEY, 
+                        dateText: currentEditData.dateText, 
+                        title: currentEditData.title 
+                    })
                 });
                 const result = await res.json();
-                if (result.result === "SUCCESS") { showToast("🗑️ 已移除"); loadEvents(); }
+                if (result.result === "SUCCESS") {
+                    showToast("🗑️ 活動與報到紀錄已移除");
+                    loadEvents();
+                }
             } catch(e) { showToast("連線失敗"); }
             toggleLoading(false);
         }
@@ -192,7 +222,7 @@
         function showQRCode(date, title) {
             document.getElementById('qrTitle').innerText = title;
             document.getElementById('qrDate').innerText = date;
-            const qrPayload = `CHECKIN:${date}:${title}`; //
+            const qrPayload = `CHECKIN:${date}:${title}`;
             document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
             openModal('qrModal');
         }
@@ -202,8 +232,14 @@
             document.body.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
         }
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function openModal(id) { 
+            const el = document.getElementById(id);
+            el.classList.remove('hidden'); el.classList.add('flex'); 
+        }
+        function closeModal(id) { 
+            const el = document.getElementById(id);
+            el.classList.add('hidden'); el.classList.remove('flex'); 
+        }
     </script>
 </body>
 </html>

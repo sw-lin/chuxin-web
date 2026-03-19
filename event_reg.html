@@ -10,301 +10,314 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .edit-active { border: 2px solid #ef4444 !important; background-color: #fef2f2; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
     </style>
 </head>
-<body class="pb-20">
+<body class="pb-32">
+    <div id="loadingOverlay"><div class="spinner"></div></div>
+    <div id="toast"></div>
+
     <!-- 導覽列 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center z-10">
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
             <i class="fas fa-chevron-left mr-1"></i> 返回
         </button>
-        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">活動報名管理</h1>
-        <div class="flex gap-2 z-10">
-            <button onclick="openAddModal()" class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg text-xs font-bold transition-all">
-                <i class="fas fa-plus mr-1"></i> 新增
-            </button>
-            <button id="editBtn" onclick="toggleEditMode()" class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg text-xs font-bold transition-all">
-                <i class="fas fa-trash-alt mr-1"></i> 刪除模式
-            </button>
-        </div>
+        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">活動報名管理</h1>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all">開啟編輯</button>
     </nav>
 
-    <main class="p-6 max-w-2xl mx-auto space-y-6">
-        <!-- 1. 下拉選擇區 -->
-        <div class="relative">
-            <label class="text-[10px] font-bold text-gray-400 mb-2 block ml-2">請選擇要查看的活動項目</label>
+    <main class="p-4 max-w-2xl mx-auto space-y-4">
+        <!-- 1. 活動選擇區 -->
+        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
+            <label class="text-[10px] text-gray-400 font-black block mb-2 px-1 uppercase tracking-widest">Select Event</label>
             <div class="flex gap-2">
-                <select id="eventSelector" onchange="filterRegistrations()" class="flex-1 bg-white border-2 border-emerald-600/30 rounded-[1.5rem] px-6 py-4 text-emerald-900 font-bold focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm outline-none appearance-none">
-                    <option value="">載入中...</option>
-                </select>
-                <!-- 刪除整個活動的按鈕 (僅在編輯模式出現) -->
-                <button id="deleteEventBtn" onclick="deleteCurrentEvent()" class="hidden bg-red-50 text-red-600 border border-red-200 rounded-[1.5rem] px-4 items-center justify-center">
-                    <i class="fas fa-calendar-times"></i>
+                <div class="relative flex-grow">
+                    <select id="eventSelector" onchange="loadEventDetails()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
+                        <option value="">-- 請選擇活動項目 --</option>
+                    </select>
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <button id="manageEventBtn" onclick="openEditModal()" class="hidden bg-emerald-100 text-emerald-700 w-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all">
+                    <i class="fas fa-edit"></i>
                 </button>
             </div>
         </div>
 
-        <!-- 2. 統計區塊 -->
-        <div id="statsBox" class="hidden grid grid-cols-2 gap-4 animate-fadeIn">
-            <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 text-center">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">目前報名人數</p>
-                <p id="statCount" class="text-3xl font-black text-emerald-900">0</p>
+        <!-- 2. 統計與發送區 -->
+        <div id="statsSection" class="hidden bg-white p-6 rounded-[2.5rem] shadow-md border border-emerald-100 flex items-center justify-between">
+            <div class="space-y-1">
+                <span class="text-xs font-bold text-gray-400 block ml-1">報名進度</span>
+                <div class="flex items-baseline gap-2">
+                    <span id="statCount" class="text-4xl font-black text-emerald-900">0</span>
+                    <span class="text-xl font-bold text-gray-400">位成員報名</span>
+                </div>
             </div>
-            <div onclick="sendToLine()" class="emerald-gradient p-5 rounded-[2rem] shadow-lg text-center cursor-pointer active:scale-95 transition-all flex flex-col items-center justify-center group">
-                <i class="fab fa-line text-white text-xl mb-1 group-hover:scale-110 transition-transform"></i>
-                <p class="text-white text-[10px] font-bold">送出名單至 LINE</p>
-            </div>
+            <button onclick="sendToLine()" class="bg-[#06C755] text-white w-20 h-20 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
+                <i class="fab fa-line text-2xl mb-1"></i>
+                <span class="text-[10px]">發送名單</span>
+            </button>
         </div>
 
-        <!-- 3. 名單列表 -->
+        <!-- 3. 新增按鈕 (僅編輯模式) -->
+        <div id="adminActions" class="hidden justify-center py-2">
+            <button onclick="openAddModal()" class="bg-[#064E3B] text-white px-8 py-4 rounded-2xl font-black shadow-lg flex items-center gap-3 active:scale-95 border-2 border-emerald-400/30 transition-all">
+                <i class="fas fa-plus-circle text-xl"></i>
+                <span>發布全新活動表單</span>
+            </button>
+        </div>
+
+        <!-- 4. 名單列表 -->
         <div class="space-y-3">
             <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
             <div id="regList" class="space-y-3">
-                <div class="text-center py-20 text-gray-300 italic text-sm">請先選擇活動</div>
+                <div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>
             </div>
         </div>
     </main>
 
-    <!-- 新增活動彈窗 -->
-    <div id="addModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <!-- 活動彈窗 (新增/修改通用) -->
+    <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-black text-emerald-900 mb-2">發布新活動</h3>
+            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">發布新活動</h3>
+            <input type="hidden" id="old_title">
+            
             <div>
                 <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
-                <input type="text" id="ev_title" placeholder="例如：春季健康講座" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+                <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">發布日期</label>
-                    <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs">
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">開始報名日期</label>
+                    <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
                 </div>
                 <div>
-                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">下架日期</label>
-                    <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs">
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">截止報名日期</label>
+                    <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
                 </div>
             </div>
             <div>
                 <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動舉辦日期</label>
-                <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs">
+                <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs font-bold">
             </div>
-            <div class="flex items-center justify-between bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                <div>
-                    <span class="text-xs font-black text-emerald-900 block">開啟報名功能</span>
-                    <span class="text-[10px] text-gray-400">關閉則僅展示海報</span>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="ev_reg_enable" checked class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                </label>
+            
+            <div id="deleteZone" class="hidden pt-2">
+                <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
+                    <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動及所有紀錄
+                </button>
             </div>
+
             <div class="flex gap-3 pt-4">
-                <button onclick="closeAddModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
-                <button onclick="submitNewEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認上架</button>
+                <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+                <button id="submitBtn" onclick="saveEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
             </div>
         </div>
     </div>
 
-    <!-- UI 組件 -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-[100] hidden flex items-center justify-center">
-        <div class="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full opacity-0 transition-opacity pointer-events-none z-50 text-sm"></div>    
-    
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let allData = {};
         let isEditMode = false;
 
-        window.onload = loadAllData;
+        window.onload = loadData;
 
-        async function loadAllData() {
+        async function loadData() {
             showLoading(true);
             try {
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 allData = await res.json();
                 renderSelector();
-                if (document.getElementById('eventSelector').value) filterRegistrations();
-            } catch (e) { showToast("資料讀取失敗"); }
+                if (document.getElementById('eventSelector').value) loadEventDetails();
+            } catch (e) { showToast("連線失敗"); }
             showLoading(false);
         }
 
         function renderSelector() {
             const selector = document.getElementById('eventSelector');
+            const current = selector.value;
             if (allData.events && allData.events.length > 0) {
-                const options = allData.events.map(ev => `<option value="${ev.title}">${ev.date} | ${ev.title}</option>`).join('');
-                selector.innerHTML = '<option value="">請選擇要查看的活動項目...</option>' + options;
-            } else {
-                selector.innerHTML = '<option value="">目前尚無活動</option>';
+                selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
+                    allData.events.map(ev => `<option value="${ev.title}">${ev.date} | ${ev.title}</option>`).join('');
+                if (current) selector.value = current;
             }
         }
 
-        function filterRegistrations() {
-            const selectedTitle = document.getElementById('eventSelector').value;
-            const listContainer = document.getElementById('regList');
-            const statsBox = document.getElementById('statsBox');
-            
-            if (!selectedTitle) {
-                listContainer.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選擇活動</div>';
-                statsBox.classList.add('hidden');
-                document.getElementById('deleteEventBtn').classList.add('hidden');
+        function loadEventDetails() {
+            const title = document.getElementById('eventSelector').value;
+            const stats = document.getElementById('statsSection');
+            const list = document.getElementById('regList');
+            const manageBtn = document.getElementById('manageEventBtn');
+
+            if (!title) {
+                stats.classList.add('hidden');
+                manageBtn.classList.add('hidden');
+                list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>';
                 return;
             }
 
-            if (isEditMode) document.getElementById('deleteEventBtn').classList.remove('flex', 'hidden');
+            if (isEditMode) manageBtn.classList.remove('hidden');
+            stats.classList.remove('hidden');
 
-            const filtered = (allData.registrations || []).filter(r => r.活動標題 === selectedTitle);
+            const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
             document.getElementById('statCount').innerText = filtered.length;
-            statsBox.classList.remove('hidden');
 
             if (filtered.length === 0) {
-                listContainer.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">此活動尚無人報名</div>';
+                list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無人報名</div>';
             } else {
-                listContainer.innerHTML = filtered.map(r => `
-                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center animate-fadeIn ${isEditMode ? 'edit-active' : ''}">
+                list.innerHTML = filtered.map(r => `
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center">
                         <div>
                             <div class="font-black text-emerald-900">${r.會員姓名}</div>
-                            <div class="text-[10px] text-gray-400 tracking-widest mt-1">${r.手機號碼}</div>
+                            <div class="text-[10px] text-gray-400 font-mono tracking-widest mt-1">${r.手機號碼}</div>
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="bg-emerald-50 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100">${r.狀態 || '已報名'}</div>
-                            ${isEditMode ? `<button onclick="deleteReg('${r.活動標題}', '${r.手機號碼}')" class="text-red-500 p-2"><i class="fas fa-trash"></i></button>` : ''}
+                            ${isEditMode ? `<button onclick="deleteSingleReg('${r.活動標題}', '${r.手機號碼}')" class="text-red-400 p-2 active:scale-90"><i class="fas fa-trash-alt"></i></button>` : ''}
                         </div>
                     </div>
                 `).join('');
             }
         }
 
-        // 切換編輯模式
         function toggleEditMode() {
             isEditMode = !isEditMode;
-            const btn = document.getElementById('editBtn');
-            const delEvBtn = document.getElementById('deleteEventBtn');
-            
+            const btn = document.getElementById('editToggleBtn');
+            const adminActions = document.getElementById('adminActions');
+            const manageBtn = document.getElementById('manageEventBtn');
+
             if (isEditMode) {
-                btn.innerHTML = '<i class="fas fa-check mr-1"></i> 完成';
+                btn.innerText = "完成編輯";
                 btn.classList.replace('bg-white/10', 'bg-red-500');
-                if (document.getElementById('eventSelector').value) delEvBtn.classList.remove('hidden');
+                adminActions.classList.replace('hidden', 'flex');
+                if (document.getElementById('eventSelector').value) manageBtn.classList.remove('hidden');
             } else {
-                btn.innerHTML = '<i class="fas fa-trash-alt mr-1"></i> 刪除模式';
+                btn.innerText = "開啟編輯";
                 btn.classList.replace('bg-red-500', 'bg-white/10');
-                delEvBtn.classList.add('hidden');
+                adminActions.classList.replace('flex', 'hidden');
+                manageBtn.classList.add('hidden');
             }
-            filterRegistrations();
+            loadEventDetails();
         }
 
-        // 刪除報名人員
-        async function deleteReg(title, phone) {
-            if (!confirm(`確定要刪除 ${title} 的報名者嗎？`)) return;
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        type: 'delete_registration',
-                        key: sessionStorage.getItem('staff_key'),
-                        eventTitle: title,
-                        phone: phone
-                    })
-                });
-                const json = await res.json();
-                if (json.result === 'SUCCESS') {
-                    showToast('人員已刪除');
-                    await loadAllData();
-                } else {
-                    showToast('刪除失敗：' + json.message);
-                }
-            } catch (e) { showToast('網路錯誤'); }
-            showLoading(false);
+        // 彈窗控制
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "發布新活動";
+            document.getElementById('old_title').value = "";
+            document.getElementById('ev_title').value = "";
+            document.getElementById('ev_start').value = "";
+            document.getElementById('ev_until').value = "";
+            document.getElementById('ev_date').value = "";
+            document.getElementById('deleteZone').classList.add('hidden');
+            document.getElementById('eventModal').classList.remove('hidden');
         }
 
-        // 刪除整個活動
-        async function deleteCurrentEvent() {
+        function openEditModal() {
             const title = document.getElementById('eventSelector').value;
-            if (!title) return;
-            if (!confirm(`警告！這將刪除「${title}」活動及其海報，確定嗎？`)) return;
-            
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        type: 'delete_event_poster',
-                        key: sessionStorage.getItem('staff_key'),
-                        eventTitle: title
-                    })
-                });
-                const json = await res.json();
-                if (json.result === 'SUCCESS') {
-                    showToast('活動已移除');
-                    location.reload();
-                } else {
-                    showToast('移除失敗');
-                }
-            } catch (e) { showToast('網路錯誤'); }
-            showLoading(false);
+            const ev = allData.events.find(e => e.title === title);
+            if (!ev) return;
+
+            document.getElementById('modalTitle').innerText = "修改活動內容";
+            document.getElementById('old_title').value = ev.title;
+            document.getElementById('ev_title').value = ev.title;
+            document.getElementById('ev_start').value = ev.start_date;
+            document.getElementById('ev_until').value = ev.display_until;
+            document.getElementById('ev_date').value = ev.date;
+            document.getElementById('deleteZone').classList.remove('hidden');
+            document.getElementById('eventModal').classList.remove('hidden');
         }
 
-        // 送出名單到 LINE
-        async function sendToLine() {
-            const selectedTitle = document.getElementById('eventSelector').value;
-            const filtered = (allData.registrations || []).filter(r => r.活動標題 === selectedTitle);
-            
-            if (filtered.length === 0) return showToast("沒有名單可以傳送");
+        function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
 
-            let message = `📊 【築心會館】活動報名清單\n━━━━━━━━━━━━\n活動：${selectedTitle}\n總計：${filtered.length} 人\n\n`;
-            filtered.forEach((r, i) => {
-                message += `${i+1}. ${r.會員姓名} (${r.手機號碼.slice(-4)})\n`;
-            });
-            message += `\n━━━━━━━━━━━━\n更新時間：${new Date().toLocaleString('zh-TW')}`;
-
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        type: 'send_line',
-                        key: sessionStorage.getItem('staff_key'),
-                        message: message
-                    })
-                });
-                const json = await res.json();
-                if (json.result === 'SUCCESS') showToast('名單已傳送至群組');
-            } catch (e) { showToast('傳送失敗'); }
-            showLoading(false);
-        }
-
-        // 其他基礎 Function
-        function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
-        function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
-        function showLoading(show) { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; }
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg; t.style.opacity = '1';
-            setTimeout(() => { t.style.opacity = '0'; }, 3000);
-        }
-
-        async function submitNewEvent() {
-            const regCheckbox = document.getElementById('ev_reg_enable');
-            const isRegEnabled = regCheckbox ? regCheckbox.checked : true;
+        async function saveEvent() {
+            const oldTitle = document.getElementById('old_title').value;
             const payload = {
-                type: 'add_new_event',
+                type: oldTitle ? 'update_calendar_event' : 'add_new_event',
                 key: sessionStorage.getItem('staff_key'),
                 title: document.getElementById('ev_title').value,
                 start_date: document.getElementById('ev_start').value,
                 display_until: document.getElementById('ev_until').value,
                 date: document.getElementById('ev_date').value,
-                reg_url: isRegEnabled ? "INTERNAL" : "NONE"
+                oldTitle: oldTitle, // 用於修改模式定位
+                reg_url: "INTERNAL"
             };
-            if(!payload.title || !payload.date) return alert("請填寫必填欄位");
+
+            if(!payload.title || !payload.date) return alert("請填寫活動名稱與日期");
+            
             showLoading(true);
-            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.result === "SUCCESS") { alert("已上架！"); location.reload(); }
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("儲存成功");
+                    closeModal();
+                    await loadData();
+                }
+            } catch (e) { showToast("儲存失敗"); }
             showLoading(false);
         }
+
+        async function deleteCurrentEvent() {
+            const title = document.getElementById('old_title').value;
+            if (!confirm(`⚠️ 嚴重警告！\n這將永久刪除「${title}」活動，並連帶清除該活動的所有「報名清單」與「簽到紀錄」，此操作不可還原。確定嗎？`)) return;
+
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'delete_event_poster', key: sessionStorage.getItem('staff_key'), eventTitle: title })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("活動已撤除");
+                    closeModal();
+                    document.getElementById('eventSelector').value = "";
+                    await loadData();
+                }
+            } catch (e) { showToast("刪除失敗"); }
+            showLoading(false);
+        }
+
+        async function deleteSingleReg(title, phone) {
+            if (!confirm(`確定要刪除此位報名者嗎？`)) return;
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'delete_registration', key: sessionStorage.getItem('staff_key'), eventTitle: title, phone: phone })
+                });
+                if ((await res.json()).result === 'SUCCESS') {
+                    showToast('已移除該人員');
+                    await loadData();
+                }
+            } catch (e) { showToast('操作失敗'); }
+            showLoading(false);
+        }
+
+        async function sendToLine() {
+            const title = document.getElementById('eventSelector').value;
+            const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
+            if (filtered.length === 0) return showToast("目前無人報名");
+
+            let message = `📊 【築心會館】活動報名清單\n━━━━━━━━━━━━\n活動：${title}\n總計：${filtered.length} 人\n\n`;
+            filtered.forEach((r, i) => message += `${i+1}. ${r.會員姓名} (${r.手機號碼.slice(-4)})\n`);
+            
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message });
+                });
+                if ((await res.json()).result === 'SUCCESS') showToast('已發送至 LINE 群組');
+            } catch (e) { showToast('發送失敗'); }
+            showLoading(false);
+        }
+
+        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
     </script>
 </body>
 </html>

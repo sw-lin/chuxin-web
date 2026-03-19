@@ -131,13 +131,34 @@
 
 // 修改點 1：關於我讀取邏輯 (讀取 allData 裡的 content)
 function openAbout() {
-    document.getElementById('aboutModal').style.display = 'flex';
-    console.log("目前的 Config 資料：", allData.config);    // 直接顯示從 GAS 抓好的資料包內容
-    
-    const content = allData.config?.about_content || "歡迎來到築心會館。";
-    document.getElementById('aboutContent').innerHTML = content.replace(/\n/g, '<br>');
-}
+    const modal = document.getElementById('aboutModal');
+    const contentDiv = document.getElementById('aboutContent');
+    modal.style.display = 'flex';
+
+    // 檢查資料是否已經從 GAS 回傳
+    if (window.allData && allData.config && allData.config.about_content) {
+        // 資料已就緒，進行格式化後顯示
+        let text = allData.config.about_content
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        contentDiv.innerHTML = text;
+    } else {
+        // 資料還在路上的時候顯示這個
+        contentDiv.innerHTML = `
+            <div style="text-align:center; padding:20px;">
+                <p>內容加載中，請稍候...</p>
+            </div>
+        `;
         
+        // 可選：如果資料還沒來，我們可以設定一個小定時器，等資料一到自動更新視窗內容
+        const checkData = setInterval(() => {
+            if (window.allData && allData.config && allData.config.about_content) {
+                openAbout(); // 資料到了，重新呼叫一次自己來更新介面
+                clearInterval(checkData);
+            }
+        }, 500);
+    }
+}        
         function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 

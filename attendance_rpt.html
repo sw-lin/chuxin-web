@@ -113,34 +113,36 @@
         setTimeout(() => { t.style.opacity = '0'; }, 3000);
     }
 
-    async function loadFinishedEvents() {
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);[cite: 5]
-            const data = await res.json();
-            const selector = document.getElementById('eventSelector');
+async function loadFinishedEvents() {
+    toggleLoading(true);
+    try {
+        // 1. 確保 URL 後面沒有多餘標籤，並加上時間戳防止快取
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        const selector = document.getElementById('eventSelector');
+        
+        if (data && data.calendar && data.calendar.length > 0) {
+            // 2. 排序活動 (日期由新到舊)
+            const sortedEvents = data.calendar.sort((a, b) => b.dateText.localeCompare(a.dateText));
             
-            if (data.calendar && data.calendar.length > 0) {
-                // 不再做嚴格的日期過濾，直接顯示所有 Calendar 中的活動供管理員選擇
-                // 同時處理日期格式，確保顯示與比對一致
-                const sortedEvents = data.calendar.sort((a, b) => b.dateText.localeCompare(a.dateText));
-                
-                selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
-                    sortedEvents.map(ev => {
-                        // 統一日期格式為 YYYY-MM-DD
-                        const safeDate = ev.dateText.replace(/\//g, '-');
-                        return `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
-                    }).join('');
-            } else {
-                selector.innerHTML = '<option value="">-- 暫無活動資料 --</option>';
-            }
-        } catch(e) { 
-            console.error(e);
-            showToast("⚠️ 活動清單載入失敗"); 
+            // 3. 生成選項，統一處理日期符號
+            let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+            sortedEvents.forEach(ev => {
+                // 將日期中的 / 取代為 -
+                const safeDate = ev.dateText.toString().replace(/\//g, '-');
+                optionsHtml += `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
+            });
+            selector.innerHTML = optionsHtml;
+            console.log("活動清單已加載", sortedEvents);
+        } else {
+            selector.innerHTML = '<option value="">-- 暫無活動資料 --</option>';
         }
-        toggleLoading(false);
+    } catch(e) { 
+        console.error("載入失敗原因:", e);
+        showToast("⚠️ 活動清單載入失敗"); 
     }
-    
+    toggleLoading(false);
+}    
     async function fetchReport() {
         const eventVal = document.getElementById('eventSelector').value;
         if (!eventVal) { 

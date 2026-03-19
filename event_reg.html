@@ -228,51 +228,56 @@
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-        function openEditModal() {
-            const title = document.getElementById('eventSelector').value;
-            const ev = allData.events.find(e => e.title === title);
-            if (!ev) return;
+// 修改彈窗時帶入資料
+function openEditModal() {
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => e.title === title);
+    if (!ev) return;
 
-            document.getElementById('modalTitle').innerText = "修改活動內容";
-            document.getElementById('old_title').value = ev.title;
-            document.getElementById('ev_title').value = ev.title;
-            document.getElementById('ev_start').value = ev.start_date;
-            document.getElementById('ev_until').value = ev.display_until;
-            document.getElementById('ev_date').value = ev.date;
-            document.getElementById('deleteZone').classList.remove('hidden');
-            document.getElementById('eventModal').classList.remove('hidden');
-        }
-
+    document.getElementById('modalTitle').innerText = "修改活動內容";
+    document.getElementById('old_title').value = ev.title;
+    document.getElementById('ev_title').value = ev.title;
+    document.getElementById('ev_poster').value = ev.poster_url || ""; // 新增
+    document.getElementById('ev_desc').value = ev.desc || ""; // 新增
+    document.getElementById('ev_start').value = ev.start_date;
+    document.getElementById('ev_until').value = ev.display_until;
+    document.getElementById('ev_date').value = ev.date;
+    document.getElementById('deleteZone').classList.remove('hidden');
+    document.getElementById('eventModal').classList.remove('hidden');
+}
+        
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
 
-        async function saveEvent() {
-            const oldTitle = document.getElementById('old_title').value;
-            const payload = {
-                type: oldTitle ? 'update_calendar_event' : 'add_new_event',
-                key: sessionStorage.getItem('staff_key'),
-                title: document.getElementById('ev_title').value,
-                start_date: document.getElementById('ev_start').value,
-                display_until: document.getElementById('ev_until').value,
-                date: document.getElementById('ev_date').value,
-                oldTitle: oldTitle, // 用於修改模式定位
-                reg_url: "INTERNAL"
-            };
+// 儲存資料
+async function saveEvent() {
+    const oldTitle = document.getElementById('old_title').value;
+    const payload = {
+        type: oldTitle ? 'update_calendar_event' : 'add_new_event',
+        key: sessionStorage.getItem('staff_key'),
+        title: document.getElementById('ev_title').value,
+        poster_url: document.getElementById('ev_poster').value, // 新增
+        desc: document.getElementById('ev_desc').value, // 新增
+        start_date: document.getElementById('ev_start').value,
+        display_until: document.getElementById('ev_until').value,
+        date: document.getElementById('ev_date').value,
+        oldTitle: oldTitle,
+        reg_url: "INTERNAL"
+    };
 
-            if(!payload.title || !payload.date) return alert("請填寫活動名稱與日期");
-            
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await res.json();
-                if (result.result === "SUCCESS") {
-                    showToast("儲存成功");
-                    closeModal();
-                    await loadData();
-                }
-            } catch (e) { showToast("儲存失敗"); }
-            showLoading(false);
+    if(!payload.title || !payload.date) return alert("請填寫活動名稱與日期");
+    
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            showToast("儲存成功");
+            closeModal();
+            await loadData();
         }
-
+    } catch (e) { showToast("儲存失敗"); }
+    showLoading(false);
+}
         async function deleteCurrentEvent() {
             const title = document.getElementById('old_title').value;
             if (!confirm(`⚠️ 嚴重警告！\n這將永久刪除「${title}」活動，並連帶清除該活動的所有「報名清單」與「簽到紀錄」，此操作不可還原。確定嗎？`)) return;

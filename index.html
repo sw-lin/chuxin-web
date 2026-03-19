@@ -132,7 +132,8 @@
 // 修改點 1：關於我讀取邏輯 (讀取 allData 裡的 content)
 function openAbout() {
     document.getElementById('aboutModal').style.display = 'flex';
-    // 直接顯示從 GAS 抓好的資料包內容
+    console.log("目前的 Config 資料：", allData.config);    // 直接顯示從 GAS 抓好的資料包內容
+    
     const content = allData.config?.about_content || "歡迎來到築心會館。";
     document.getElementById('aboutContent').innerHTML = content.replace(/\n/g, '<br>');
 }

@@ -6,54 +6,119 @@
     <title>系統參數設定 | 築心會館</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .input-disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb !important; }
+        .input-enabled { background-color: #ffffff; color: #064E3B; border: 2px solid #059669 !important; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
+    </style>
 </head>
-<body class="bg-slate-50 p-6">
-    <div class="max-w-md mx-auto space-y-6">
-        <header class="flex items-center justify-between">
-            <h1 class="text-xl font-black text-emerald-900">系統參數設定</h1>
-            <button onclick="location.href='staff_menu.html'" class="text-sm text-gray-500">返回</button>
-        </header>
+<body class="pb-20">
+    <div id="loadingOverlay"><div class="spinner"></div></div>
+    <div id="toast"></div>
 
-        <div class="bg-white rounded-[2rem] p-6 shadow-sm space-y-6">
-            <!-- 導讀連結 -->
-            <div>
-                <label class="text-xs font-bold text-gray-400 block mb-2 ml-2">導讀資料夾連結 (Google Drive)</label>
-                <input type="text" id="reading_url" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+    <!-- 導覽列[cite: 5] -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
+            <i class="fas fa-chevron-left mr-1"></i> 返回
+        </button>
+        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">系統參數設定</h1>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all">開啟編輯</button>
+    </nav>
+
+    <main class="p-6 max-w-md mx-auto space-y-6">
+        <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-emerald-100 space-y-8">
+            
+            <!-- 導讀連結[cite: 5] -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Reading Folder (Drive)</label>
+                <input type="text" id="reading_url" disabled class="w-full input-disabled rounded-2xl px-5 py-4 text-sm transition-all outline-none" placeholder="未設定連結">
             </div>
 
-            <!-- 剪影連結 -->
-            <div>
-                <label class="text-xs font-bold text-gray-400 block mb-2 ml-2">活動剪影相簿連結</label>
-                <input type="text" id="photo_url" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+            <!-- 剪影連結[cite: 5] -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Photo Gallery Album</label>
+                <input type="text" id="photo_url" disabled class="w-full input-disabled rounded-2xl px-5 py-4 text-sm transition-all outline-none" placeholder="未設定連結">
             </div>
 
-            <!-- 關於我連結 -->
-            <div>
-                <label class="text-xs font-bold text-gray-400 block mb-2 ml-2">關於我 (about.txt) 檔案連結</label>
-                <input type="text" id="about_url" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
-                <p class="text-[10px] text-orange-500 mt-2 ml-2 leading-relaxed">
-                    <i class="fas fa-info-circle"></i> 請確保該 txt 檔案在雲端已設定為「知道連結的任何人皆可檢視」。
-                </p>
+            <!-- 關於我連結[cite: 5] -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">About Us (txt file)</label>
+                <input type="text" id="about_url" disabled class="w-full input-disabled rounded-2xl px-5 py-4 text-sm transition-all outline-none" placeholder="未設定連結">
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 mt-4">
+                    <p class="text-[10px] text-amber-700 font-bold leading-relaxed">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> 提示：txt 檔案必須在 Google Drive 設定為「知道連結的任何人皆可檢視」，系統才能正確讀取內容。[cite: 5]
+                    </p>
+                </div>
             </div>
 
-            <button onclick="saveConfigs()" class="w-full bg-emerald-600 text-white rounded-2xl py-4 font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-95">
-                儲存變更
-            </button>
+            <!-- 儲存按鈕 (預設隱藏)[cite: 5] -->
+            <div id="saveArea" class="hidden pt-4">
+                <button onclick="saveConfigs()" class="w-full emerald-gradient text-white rounded-2xl py-4 font-black shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i>
+                    確認儲存變更
+                </button>
+            </div>
         </div>
-    </div>
+
+        <p class="text-center text-[10px] text-gray-300 font-medium italic">
+            Last Updated: 2026-03-19
+        </p>
+    </main>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+        let isEditMode = false;
 
-        // 初始化載入現有設定
+        // 初始化載入現有設定[cite: 5]
         async function loadCurrentConfigs() {
-            const res = await fetch(GAS_URL);
-            const data = await res.json();
-            document.getElementById('reading_url').value = data.config.reading_folder_url || "";
-            document.getElementById('photo_url').value = data.config.photo_gallery_url || "";
-            document.getElementById('about_url').value = data.config.about_us_url || "";
+            showLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                document.getElementById('reading_url').value = data.config.reading_folder_url || "";
+                document.getElementById('photo_url').value = data.config.photo_gallery_url || "";
+                document.getElementById('about_url').value = data.config.about_us_url || "";
+            } catch (e) {
+                showToast("資料讀取失敗");
+            }
+            showLoading(false);
         }
 
+        // 切換編輯模式
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            const saveArea = document.getElementById('saveArea');
+            const inputs = ['reading_url', 'photo_url', 'about_url'];
+
+            if (isEditMode) {
+                btn.innerText = "取消編輯";
+                btn.classList.replace('bg-white/10', 'bg-red-500');
+                saveArea.classList.remove('hidden');
+                inputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    el.disabled = false;
+                    el.classList.replace('input-disabled', 'input-enabled');
+                });
+            } else {
+                btn.innerText = "開啟編輯";
+                btn.classList.replace('bg-red-500', 'bg-white/10');
+                saveArea.classList.add('hidden');
+                inputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    el.disabled = true;
+                    el.classList.replace('input-enabled', 'input-disabled');
+                });
+            }
+        }
+
+        // 儲存設定[cite: 5]
         async function saveConfigs() {
             const payload = {
                 type: 'update_config',
@@ -65,10 +130,28 @@
                 }
             };
             
-            // 發送 POST 到 GAS 執行更新 (需在 GAS 增加 update_config 處理邏輯)
-            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const result = await res.json();
-            if(result.result === "SUCCESS") alert("設定已更新！");
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if(result.result === "SUCCESS") {
+                    showToast("設定已成功同步至雲端");
+                    toggleEditMode(); // 存完自動關閉編輯模式
+                } else {
+                    showToast("儲存失敗：" + result.message);
+                }
+            } catch (e) {
+                showToast("連線異常，請稍後再試");
+            }
+            showLoading(false);
+        }
+
+        // 輔助組件
+        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        function showToast(m) { 
+            const t = document.getElementById('toast'); 
+            t.innerText = m; t.style.opacity = '1'; 
+            setTimeout(() => t.style.opacity = '0', 3000); 
         }
 
         window.onload = loadCurrentConfigs;

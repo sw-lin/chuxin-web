@@ -21,6 +21,7 @@
     <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <!-- 確保返回路徑正確 -->
         <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left mr-1"></i>返回</button>
         <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">會員名冊管理</h1>
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
@@ -41,8 +42,8 @@
     </div>
 
     <!-- 新增彈窗 -->
-    <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
-        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
+    <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6" onclick="closeModal('addMemberModal')">
+        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl" onclick="event.stopPropagation()">
             <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增新會員</h3>
             <div class="space-y-4">
                 <input type="text" id="newName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
@@ -60,11 +61,18 @@
         var u1 = 'https://script.google.com';
         var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         var GAS_URL = u1 + u2;
+        
+        // 核心修正：只做權限檢查，不做「已登入就跳回會員中心」的檢查
         var STAFF_KEY = sessionStorage.getItem('staff_key');
         var isEditMode = false;
 
         window.onload = function() {
-            if (!STAFF_KEY) { window.location.href = "index.html"; return; }
+            // 檢查是否具有幹部金鑰，沒有就踢回登入頁
+            if (!STAFF_KEY) { 
+                alert("請重新從管理區登入以驗證權限");
+                window.location.href = "index.html"; 
+                return; 
+            }
             loadMembers();
         };
 
@@ -72,7 +80,7 @@
 
         function loadMembers() {
             toggleLoading(true);
-            fetch(GAS_URL)
+            fetch(GAS_URL + "?t=" + Date.now()) // 加個時間戳防止快取
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     var list = document.getElementById('memberList');
@@ -84,7 +92,7 @@
                         var u = users[i];
                         html += '<div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100">';
                         
-                        // 左側資訊區 (姓名與 Email)
+                        // 左側：姓名與 Email
                         html += '  <div class="flex-1 min-w-0 pr-4">';
                         html += '    <div class="flex items-center gap-2 mb-0.5">';
                         html += '      <span class="text-lg font-black text-emerald-900 truncate">' + u.name + '</span>';
@@ -95,16 +103,14 @@
                         }
                         html += '  </div>';
 
-                        // 右側資訊區 (電話)
+                        // 右側：電話 (字體與姓名一樣大，靠右)
                         html += '  <div class="flex items-center gap-3">';
                         html += '    <div class="text-lg font-black text-emerald-800 font-mono text-right">' + u.phone + '</div>';
                         
-                        // 刪除按鈕 (僅編輯模式顯示)
                         if (isEditMode) {
                             html += '    <button onclick="deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>';
                         }
                         html += '  </div>';
-                        
                         html += '</div>';
                     }
                     list.innerHTML = html;
@@ -115,8 +121,9 @@
 
         function toggleEditMode() {
             isEditMode = !isEditMode;
-            document.getElementById('editToggleBtn').innerText = isEditMode ? "結束編輯" : "開啟編輯";
-            document.getElementById('editToggleBtn').className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            var btn = document.getElementById('editToggleBtn');
+            btn.innerText = isEditMode ? "結束編輯" : "開啟編輯";
+            btn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
             document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
             loadMembers();
         }
@@ -133,14 +140,19 @@
             var payload = { type: 'add_member', key: STAFF_KEY, name: n, phone: p, email: e, password: '123', role: '學員' };
             
             fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(function() { 
-                    showToast("✅ 會員 " + n + " 已新增"); 
-                    document.getElementById('newName').value = '';
-                    document.getElementById('newPhone').value = '';
-                    document.getElementById('newEmail').value = '';
-                    loadMembers(); 
+                .then(function(res) { return res.json(); })
+                .then(function(res) { 
+                    if(res.result === "SUCCESS") {
+                        showToast("✅ 會員 " + n + " 已新增"); 
+                        document.getElementById('newName').value = '';
+                        document.getElementById('newPhone').value = '';
+                        document.getElementById('newEmail').value = '';
+                        loadMembers(); 
+                    } else {
+                        showToast("❌ 新增失敗：" + res.message);
+                    }
                 })
-                .catch(function() { showToast("新增失敗"); })
+                .catch(function() { showToast("網路異常"); })
                 .finally(function() { toggleLoading(false); });
         }
 
@@ -159,8 +171,8 @@
             document.body.appendChild(t);
             setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 500); }, 2500);
         }
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     </script>
 </body>
 </html>

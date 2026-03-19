@@ -109,6 +109,7 @@
       </div>
     </div>
     <script>
+        let allData = {}; // 全域存放資料
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
         // 核心修正：將全形轉半形的工具
@@ -193,7 +194,7 @@ async function loadEvents() {
     } catch (e) { console.error("資料載入失敗", e); }
 }
         
-        let allData = {}; // 全域存放資料
+        
 
 // 修改點 4：行事曆跳轉邏輯 (考慮 Android/iOS)
 function addToCalendar(title, dateStr) {

@@ -9,14 +9,24 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
+        /* 加載動畫優化 */
         #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
         .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 彈窗樣式 */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 24px; }
+        
+        /* Toast 訊息樣式 */
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
     </style>
 </head>
 <body class="min-h-screen pb-32">
+
+    <!-- Toast 容器 -->
+    <div id="toast"></div>
 
     <!-- 加載動畫 -->
     <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
@@ -43,7 +53,7 @@
         </button>
     </div>
 
-    <!-- QR Code 彈窗 (修正 ID 名稱) -->
+    <!-- QR Code 彈窗 -->
     <div id="qrModal" class="modal-overlay" onclick="closeModal('qrModal')">
         <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 text-center shadow-2xl" onclick="event.stopPropagation()">
             <div class="mb-2 text-[10px] text-emerald-600 font-black uppercase tracking-widest" id="qrDate">DATE</div>
@@ -89,7 +99,6 @@
         </div>
     </div>
 
-<!-- 保持之前的 HTML 結構不變，替換 script 部分 -->
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     const STAFF_KEY = sessionStorage.getItem('staff_key');
@@ -103,8 +112,14 @@
     };
 
     function toggleLoading(s) { 
-        const loader = document.getElementById('loadingOverlay');
-        if (loader) loader.style.display = s ? 'flex' : 'none'; 
+        document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; 
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.opacity = '1';
+        setTimeout(() => { t.style.opacity = '0'; }, 3000);
     }
 
     async function loadEvents() {
@@ -114,20 +129,23 @@
             const data = await res.json();
             rawCalendarData = data.calendar || [];
             renderList(rawCalendarData);
-        } catch(e) { console.error(e); alert("資料載入失敗，請檢查網路連接。"); }
+        } catch(e) { showToast("❌ 資料載入失敗"); }
         toggleLoading(false);
     }
 
-    // 渲染列表邏輯 (省略重複部分，保持前次提供的內容)
     function renderList(events) {
         const list = document.getElementById('calendarList');
+        // 由遠到近排序
         events.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('eventCount').innerText = events.length + ' 個活動';
+        
         list.innerHTML = events.map((ev) => {
             const isFuture = ev.dateText > todayStr;
             const evString = encodeURIComponent(JSON.stringify(ev));
+            // 編輯模式下不套用淡出，方便修改
             const opacityClass = (isFuture && !isEditMode) ? 'opacity-40 grayscale' : 'opacity-100';
+            
             return `
             <div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center border border-gray-100 transition-all ${opacityClass}">
                 <div class="flex items-center gap-4">
@@ -150,89 +168,114 @@
         }).join('');
     }
 
-    // 修正核心：優化送出邏輯，防止 undefined 錯誤
     async function submitEvent(type) {
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
 
-        if (!date || !title) { alert("日期與名稱為必填"); return; }
+        if (!date || !title) { showToast("⚠️ 請填寫完整內容"); return; }
 
         toggleLoading(true);
         try {
             const payload = {
                 type: type === 'add' ? 'addEvent' : 'updateEvent',
-                staffKey: STAFF_KEY,
+                key: STAFF_KEY, // 改回 key 以匹配 GAS adminOnly 檢查
                 dateText: date,
                 title: title,
                 poster_url: poster,
-                oldDate: currentEditData ? currentEditData.dateText : null
+                // 更新時需要舊資料來查找正確的 row
+                oldDateText: currentEditData ? currentEditData.dateText : null,
+                oldTitle: currentEditData ? currentEditData.title : null
             };
 
             const res = await fetch(GAS_URL, { 
                 method: 'POST', 
-                mode: 'no-cors', // 關鍵：處理跨域請求
                 body: JSON.stringify(payload) 
             });
+            const result = await res.json();
 
-            // 由於使用 no-cors，無法讀取 res.json()，我們假設發送成功後延遲重新整理
-            alert("請求已送出，正在同步資料...");
-            setTimeout(() => {
+            if (result.result === "SUCCESS") {
+                showToast("✅ " + (type === 'add' ? "活動已排定" : "更新成功"));
                 closeModal('eventModal');
                 loadEvents();
-            }, 1500);
-
+            } else {
+                showToast("❌ 錯誤: " + result.message);
+            }
         } catch(e) { 
-            console.error(e);
-            alert("連線發生錯誤，請確認網路或管理金鑰。"); 
+            showToast("⚠️ 同步失敗，請檢查金鑰"); 
         } finally {
             toggleLoading(false);
         }
     }
 
     async function confirmDeleteEvent() {
-        if (!confirm("確定要刪除此活動嗎？")) return;
+        if (!confirm(`確定要刪除「${currentEditData.title}」嗎？`)) return;
+        
         toggleLoading(true);
         try {
-            await fetch(GAS_URL, { 
+            const res = await fetch(GAS_URL, { 
                 method: 'POST', 
-                mode: 'no-cors',
-                body: JSON.stringify({ type: 'deleteEvent', staffKey: STAFF_KEY, dateText: currentEditData.dateText }) 
+                body: JSON.stringify({ 
+                    type: 'deleteEvent', 
+                    key: STAFF_KEY, 
+                    dateText: currentEditData.dateText,
+                    title: currentEditData.title
+                }) 
             });
-            alert("刪除請求已送出");
-            setTimeout(() => { closeModal('eventModal'); loadEvents(); }, 1500);
-        } catch(e) { alert("刪除失敗"); }
-        finally { toggleLoading(false); }
+            const result = await res.json();
+            
+            if (result.result === "SUCCESS") {
+                showToast("✅ 活動已移除");
+                closeModal('eventModal');
+                loadEvents();
+            } else {
+                showToast("❌ 刪除失敗: " + result.message);
+            }
+        } catch(e) { 
+            showToast("⚠️ 網路連線發生錯誤"); 
+        } finally { 
+            toggleLoading(false); 
+        }
     }
 
-    // 其他 UI function (toggleEditMode, showQRCode, openAddModal, openEditModal, closeModal) 保持不變
     function toggleEditMode() {
         isEditMode = !isEditMode;
         document.getElementById('editToggleBtn').innerText = isEditMode ? "關閉編輯" : "開啟編輯";
+        document.getElementById('editToggleBtn').classList.toggle('bg-red-500');
         document.getElementById('bottomAddArea').style.display = isEditMode ? 'block' : 'none';
         renderList(rawCalendarData);
     }
+
     function showQRCode(date, title) {
         document.getElementById('qrTitle').innerText = title;
         document.getElementById('qrDate').innerText = date;
         document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent("CHECKIN:"+date+":"+title)}`;
         document.getElementById('qrModal').style.display = 'flex';
     }
+
     function openAddModal() {
         currentEditData = null;
         document.getElementById('modalTitle').innerText = "排定新活動";
-        document.getElementById('eventDate').value = ""; document.getElementById('eventTitle').value = ""; document.getElementById('eventPoster').value = "";
-        document.getElementById('addActions').classList.remove('hidden'); document.getElementById('editActions').classList.add('hidden');
+        document.getElementById('eventDate').value = ""; 
+        document.getElementById('eventTitle').value = ""; 
+        document.getElementById('eventPoster').value = "";
+        document.getElementById('addActions').classList.remove('hidden'); 
+        document.getElementById('editActions').classList.add('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
+
     function openEditModal(evString) {
         const ev = JSON.parse(decodeURIComponent(evString));
         currentEditData = ev;
-        document.getElementById('modalTitle').innerText = "編輯活動";
-        document.getElementById('eventDate').value = ev.dateText; document.getElementById('eventTitle').value = ev.title; document.getElementById('eventPoster').value = ev.poster_url || "";
-        document.getElementById('addActions').classList.add('hidden'); document.getElementById('editActions').classList.remove('hidden');
+        document.getElementById('modalTitle').innerText = "編輯活動項目";
+        document.getElementById('eventDate').value = ev.dateText; 
+        document.getElementById('eventTitle').value = ev.title; 
+        document.getElementById('eventPoster').value = ev.poster_url || "";
+        document.getElementById('addActions').classList.add('hidden'); 
+        document.getElementById('editActions').classList.remove('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
+
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 </script>
 </body>

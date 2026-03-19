@@ -68,7 +68,6 @@
                     <span id="totalCount" class="text-xl font-bold text-gray-400">0 位</span>
                 </div>
             </div>
-            <!-- LINE 發送按鈕置於右側 -->
             <button onclick="sendLineReport()" class="bg-[#06C755] text-white px-4 py-3 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
                 <i class="fab fa-line text-2xl mb-1"></i>
                 <span class="text-[10px]">發送名單</span>
@@ -117,36 +116,49 @@
     async function loadFinishedEvents() {
         toggleLoading(true);
         try {
-            const res = await fetch(GAS_URL);
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);[cite: 5]
             const data = await res.json();
-            const today = new Date().toISOString().split('T')[0];
             const selector = document.getElementById('eventSelector');
             
-            // 抓取今日及過去活動
-            const pastEvents = data.calendar
-                .filter(ev => ev.dateText <= today)
-                .sort((a, b) => b.dateText.localeCompare(a.dateText));
-            
-            selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
-                pastEvents.map(ev => `<option value="${ev.dateText}:${ev.title}">${ev.dateText} | ${ev.title}</option>`).join('');
-        } catch(e) { showToast("⚠️ 資料載入失敗"); }
+            if (data.calendar && data.calendar.length > 0) {
+                // 不再做嚴格的日期過濾，直接顯示所有 Calendar 中的活動供管理員選擇
+                // 同時處理日期格式，確保顯示與比對一致
+                const sortedEvents = data.calendar.sort((a, b) => b.dateText.localeCompare(a.dateText));
+                
+                selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
+                    sortedEvents.map(ev => {
+                        // 統一日期格式為 YYYY-MM-DD
+                        const safeDate = ev.dateText.replace(/\//g, '-');
+                        return `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
+                    }).join('');
+            } else {
+                selector.innerHTML = '<option value="">-- 暫無活動資料 --</option>';
+            }
+        } catch(e) { 
+            console.error(e);
+            showToast("⚠️ 活動清單載入失敗"); 
+        }
         toggleLoading(false);
     }
     
     async function fetchReport() {
         const eventVal = document.getElementById('eventSelector').value;
-        if (!eventVal) { document.getElementById('statsSection').classList.add('hidden'); return; }
+        if (!eventVal) { 
+            document.getElementById('statsSection').classList.add('hidden'); 
+            document.getElementById('reportList').innerHTML = '<div class="text-center py-20 text-gray-400 italic">請先選取活動以查看報表</div>';
+            return; 
+        }
 
         toggleLoading(true);
         const [date, title] = eventVal.split(':');
         
         try {
-            const res = await fetch(GAS_URL, {
+            const res = await fetch(GAS_URL, {[cite: 4]
                 method: 'POST',
                 body: JSON.stringify({ 
                     type: 'get_attendance_data', 
                     key: STAFF_KEY, 
-                    eventTitle: `EVENT:${date}|${title}` 
+                    eventTitle: `EVENT:${date}|${title}` // 這裡必須與 Attendance 表格的 D 欄格式完全一致
                 })
             });
             
@@ -155,6 +167,8 @@
                 currentReport = result.report;
                 renderReport();
                 document.getElementById('statsSection').classList.remove('hidden');
+            } else {
+                showToast("❌ " + result.message);
             }
         } catch (e) { showToast("❌ 讀取報表錯誤"); }
         toggleLoading(false);
@@ -167,7 +181,6 @@
         document.getElementById('presentCount').innerText = presentCount;
         document.getElementById('totalCount').innerText = currentReport.length;
 
-        // 排序：未出席的排前面，方便補登
         const sortedReport = [...currentReport].sort((a, b) => (a.status === "出席" ? 1 : -1));
 
         list.innerHTML = sortedReport.map(r => {
@@ -203,8 +216,60 @@
     function openManualModal(phone, name) {
         pendingCheckin = { phone, name };
         document.getElementById('manualMemberInfo').innerText = `${name} (${phone})`;
-        document.getElementById('manualModal').classList.replace('hidden', 'flex');
+        document.getElementById('manualModal').classList.remove('hidden');
+        document.getElementById('manualModal').classList.add('flex');
     }
 
     function closeManualModal() {
-        document.getElementById('manualModal').classList.replace('flex', 'hidden
+        document.getElementById('manualModal').classList.add('hidden');
+        document.getElementById('manualModal').classList.remove('flex');
+    }
+
+    async function submitManualCheckin() {
+        const eventVal = document.getElementById('eventSelector').value;
+        const [date, title] = eventVal.split(':');
+        closeManualModal();
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {[cite: 4]
+                method: 'POST',
+                body: JSON.stringify({ 
+                    type: 'manual_checkin', 
+                    key: STAFF_KEY, 
+                    phone: pendingCheckin.phone, 
+                    name: pendingCheckin.name, 
+                    eventTitle: `EVENT:${date}|${title}` 
+                })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") {
+                showToast("✅ 補登成功");
+                fetchReport(); 
+            }
+        } catch(e) { showToast("❌ 補登失敗"); }
+        toggleLoading(false);
+    }
+
+    async function sendLineReport() {
+        const selector = document.getElementById('eventSelector');
+        const eventText = selector.options[selector.selectedIndex].text;
+        const presentList = currentReport.filter(r => r.status === "出席").map(r => `▫️ ${r.name}`);
+        
+        const reportMsg = `【築心會館 - 出席通報】\n活動：${eventText}\n──────────────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
+
+        if (!confirm(`確定將出席名單發送至 LINE 群組？`)) return;
+
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {[cite: 4]
+                method: 'POST',
+                body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: reportMsg })
+            });
+            const result = await res.json();
+            showToast(result.result === "SUCCESS" ? "🚀 名單已發送" : "❌ 發送失敗");
+        } catch (e) { showToast("❌ 網路錯誤"); }
+        toggleLoading(false);
+    }
+</script>
+</body>
+</html>

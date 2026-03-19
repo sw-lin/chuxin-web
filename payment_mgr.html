@@ -36,7 +36,6 @@
     <div id="toast"></div>
     <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold text-lg">處理中...</div></div></div>
 
-    <!-- 導航欄：僅保留開啟編輯 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回</button>
         <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">繳費管理</h1>
@@ -45,20 +44,26 @@
 
     <main class="p-4 max-w-2xl mx-auto space-y-4">
         
-        <!-- 項目選擇器 -->
+        <!-- 項目選擇器與管理按鈕 -->
         <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
             <label class="text-[10px] text-gray-400 font-black block mb-2 px-1 uppercase tracking-widest">Select Ledger</label>
-            <div class="relative">
-                <select id="itemSelector" onchange="loadLedger()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
-                    <option value="">-- 請選擇繳費項目 --</option>
-                </select>
-                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
-                    <i class="fas fa-chevron-down"></i>
+            <div class="flex gap-2">
+                <div class="relative flex-grow">
+                    <select id="itemSelector" onchange="loadLedger()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
+                        <option value="">-- 請選擇繳費項目 --</option>
+                    </select>
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
                 </div>
+                <!-- 編輯按鈕：僅在編輯模式顯示 -->
+                <button id="manageItemBtn" onclick="openEditItemModal()" class="hidden bg-emerald-100 text-emerald-700 w-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all">
+                    <i class="fas fa-edit"></i>
+                </button>
             </div>
         </div>
 
-        <!-- 統計卡片：LINE 按鈕修為正方形格式 -->
+        <!-- 統計卡片 -->
         <div id="statsSection" class="hidden bg-white p-6 rounded-[2.5rem] shadow-md border border-emerald-100 flex items-center justify-between">
             <div class="space-y-1">
                 <span class="text-xs font-bold text-gray-400 block ml-1">目前進度</span>
@@ -69,7 +74,6 @@
                     <span id="totalCount" class="text-xl font-bold text-gray-400">0 位</span>
                 </div>
             </div>
-            <!-- 正方形 LINE 發送鍵 -->
             <button onclick="prepareLineMessage()" class="bg-[#06C755] text-white w-20 h-20 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all flex-shrink-0">
                 <i class="fab fa-line text-2xl mb-1"></i>
                 <span class="text-[10px]">發送名單</span>
@@ -82,7 +86,7 @@
         </div>
     </main>
 
-    <!-- 浮動按鈕：僅在編輯模式出現 -->
+    <!-- 底部浮動按鈕 (新增帳簿) -->
     <div id="adminActions" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 hidden">
         <button onclick="openModal('createModal')" class="bg-[#064E3B] text-white px-8 py-4 rounded-2xl font-black shadow-2xl flex items-center gap-3 active:scale-95 transition-all border-2 border-emerald-400/30">
             <i class="fas fa-plus-circle text-xl"></i>
@@ -90,7 +94,7 @@
         </button>
     </div>
 
-    <!-- 彈窗：新增項目 -->
+    <!-- 彈窗：新增帳簿 -->
     <div id="createModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
             <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">建立全新帳簿</h3>
@@ -100,6 +104,20 @@
                 <button onclick="createNewLedger('已繳')" class="py-4 bg-emerald-50 text-emerald-700 rounded-2xl font-black text-xs">預設已繳</button>
             </div>
             <button onclick="closeModal('createModal')" class="w-full text-gray-400 font-bold text-sm">取消</button>
+        </div>
+    </div>
+
+    <!-- 彈窗：修改/刪除項目 -->
+    <div id="editItemModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">管理帳簿項目</h3>
+            <p class="text-gray-400 text-[10px] text-center mb-6">您可以更名或永久移除此帳簿</p>
+            <input type="text" id="editItemName" class="w-full p-4 bg-gray-50 border-2 border-emerald-100 rounded-2xl mb-4 outline-none focus:border-emerald-500 font-bold">
+            
+            <button onclick="updateItemName()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black mb-3 shadow-md">儲存新名稱</button>
+            <button onclick="deleteLedger()" class="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-black mb-6 text-sm">永久刪除此帳簿</button>
+            
+            <button onclick="closeModal('editItemModal')" class="w-full text-gray-400 font-bold text-sm">取消返回</button>
         </div>
     </div>
 
@@ -115,7 +133,6 @@
         };
 
         function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-        
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg; t.style.opacity = '1';
@@ -128,8 +145,10 @@
                 const res = await fetch(`${GAS_URL}?type=get_payment_items&key=${STAFF_KEY}`);
                 const data = await res.json();
                 const selector = document.getElementById('itemSelector');
+                const currentVal = selector.value;
                 selector.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>' + 
                     data.items.map(it => `<option value="${it}">${it}</option>`).join('');
+                if (currentVal) selector.value = currentVal;
             } finally { toggleLoading(false); }
         }
 
@@ -156,14 +175,8 @@
             document.getElementById('paidCount').innerText = paid.length;
             document.getElementById('totalCount').innerText = currentLedger.length;
 
-            // 排序：已繳置頂
-            const sorted = [...currentLedger].sort((a, b) => {
-                if (a.status === "已繳" && b.status !== "已繳") return -1;
-                if (a.status !== "已繳" && b.status === "已繳") return 1;
-                return 0;
-            });
-
-            list.innerHTML = sorted.map((m, idx) => {
+            // 移除排序邏輯，直接使用原始順序
+            list.innerHTML = currentLedger.map((m, idx) => {
                 const isPaid = m.status === '已繳';
                 return `
                     <div onclick="${isEditMode ? `toggleStatus('${m.phone}')` : ''}" 
@@ -186,15 +199,18 @@
             isEditMode = !isEditMode;
             const btn = document.getElementById('editToggleBtn');
             const adminBox = document.getElementById('adminActions');
+            const manageBtn = document.getElementById('manageItemBtn');
             
             if (isEditMode) {
                 btn.innerText = "完成編輯";
                 btn.classList.replace('bg-white/10', 'bg-red-500');
                 adminBox.classList.remove('hidden');
+                manageBtn.classList.remove('hidden');
             } else {
                 btn.innerText = "開啟編輯";
                 btn.classList.replace('bg-red-500', 'bg-white/10');
                 adminBox.classList.add('hidden');
+                manageBtn.classList.add('hidden');
             }
             renderLedger();
         }
@@ -203,20 +219,12 @@
             const itemName = document.getElementById('itemSelector').value;
             const idx = currentLedger.findIndex(m => m.phone === phone);
             const newStatus = currentLedger[idx].status === '已繳' ? '未繳' : '已繳';
-            
             currentLedger[idx].status = newStatus;
-            renderLedger(); // 先行更新 UI
-
+            renderLedger(); 
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        type: 'update_payment_status',
-                        phone: phone,
-                        itemName: itemName,
-                        status: newStatus,
-                        key: STAFF_KEY
-                    })
+                    body: JSON.stringify({ type: 'update_payment_status', phone: phone, itemName: itemName, status: newStatus, key: STAFF_KEY })
                 });
             } catch (e) { showToast("❌ 同步失敗"); }
         }
@@ -241,13 +249,61 @@
             } finally { toggleLoading(false); }
         }
 
+        // --- 項目管理功能 ---
+        function openEditItemModal() {
+            const currentItem = document.getElementById('itemSelector').value;
+            if (!currentItem) { alert("請先選擇一個項目"); return; }
+            document.getElementById('editItemName').value = currentItem;
+            openModal('editItemModal');
+        }
+
+        async function updateItemName() {
+            const oldName = document.getElementById('itemSelector').value;
+            const newName = document.getElementById('editItemName').value.trim();
+            if (!newName || oldName === newName) return closeModal('editItemModal');
+
+            toggleLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'rename_ledger', oldName: oldName, newName: newName, key: STAFF_KEY })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("✅ 名稱已更新");
+                    await fetchItems();
+                    document.getElementById('itemSelector').value = newName;
+                    closeModal('editItemModal');
+                }
+            } finally { toggleLoading(false); }
+        }
+
+        async function deleteLedger() {
+            const itemName = document.getElementById('itemSelector').value;
+            if (!confirm(`⚠️ 警告：確定要永久刪除「${itemName}」帳簿及所有會員的繳費紀錄嗎？此動作無法復原。`)) return;
+
+            closeModal('editItemModal');
+            toggleLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'delete_ledger', itemName: itemName, key: STAFF_KEY })
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("🗑️ 帳簿已刪除");
+                    await fetchItems();
+                    document.getElementById('itemSelector').value = "";
+                    loadLedger();
+                }
+            } finally { toggleLoading(false); }
+        }
+
         async function prepareLineMessage() {
             const itemName = document.getElementById('itemSelector').value;
             const paidNames = currentLedger.filter(p => p.status === '已繳').map(p => `▫️ ${p.name}`);
             const msg = `【築心會館 - 繳費通報】\n項目：${itemName}\n──────────────\n已完成名單：\n${paidNames.length > 0 ? paidNames.join('\n') : '(目前無人繳費)'}\n\n📊 進度：${paidNames.length} / ${currentLedger.length} 位`;
-            
             if (!confirm("確定發送出席名單至 LINE 群組？")) return;
-            
             toggleLoading(true);
             try {
                 const res = await fetch(GAS_URL, {

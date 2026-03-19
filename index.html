@@ -14,7 +14,6 @@
         @keyframes fade { from {opacity: .6} to {opacity: 1} }
         @media (max-width: 640px) { .slide { height: 400px; } }
         
-        /* 彈窗樣式保持不變 */
         .modal { 
             display: none; 
             position: fixed; 
@@ -27,6 +26,16 @@
             backdrop-filter: blur(5px); 
             align-items: center;
             justify-content: center;
+        }
+
+        /* 優化關於我內容排版 */
+        #aboutContent {
+            line-height: 1.8;
+            letter-spacing: 0.05em;
+        }
+        #aboutContent strong {
+            color: #065f46;
+            font-weight: 700;
         }
     </style>
 </head>
@@ -65,7 +74,7 @@
             <div class="h-px w-full ml-6 bg-emerald-100"></div>
         </div>
         <div id="event-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="animate-pulse bg-emerald-50 h-40 rounded-3xl col-span-full flex items-center justify-center text-emerald-200 text-sm italic">正在探索未來活動...</div>
+            <div id="event-loading" class="animate-pulse bg-emerald-50 h-40 rounded-3xl col-span-full flex items-center justify-center text-emerald-300 text-sm italic">正在探索未來活動...</div>
         </div>
     </section>
 
@@ -86,40 +95,50 @@
 
     <footer class="py-12 text-center text-gray-400 text-xs tracking-widest uppercase">© 2026 Chuxin Book Club</footer>
 
+    <!-- 關於我彈窗 -->
     <div id="aboutModal" class="modal">
         <div class="bg-white max-w-2xl w-full rounded-[2.5rem] p-10 shadow-2xl relative max-h-[85vh] overflow-y-auto m-6 flex flex-col">
             <button onclick="closeModal('aboutModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
             <h2 class="text-2xl font-bold text-emerald-900 mb-6 flex items-center"><i class="fas fa-leaf mr-3 text-emerald-600"></i>關於築心</h2>
-            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">正在讀取內容...</div>
+            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">
+                <div class="flex flex-col items-center justify-center py-10 opacity-50">
+                    <i class="fas fa-circle-notch fa-spin text-3xl mb-4"></i>
+                    <p>內容加載中，請稍候...</p>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- 登入彈窗 -->
     <div id="loginModal" class="modal">
-    <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative m-6 flex flex-col">
-        <button onclick="closeModal('loginModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
-        <div class="text-center mb-8">
-            <h3 class="text-2xl font-bold text-emerald-900">會員登入</h3>
-            <p class="text-gray-400 text-xs mt-2">請驗證身分進入會館</p>
+        <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative m-6 flex flex-col">
+            <button onclick="closeModal('loginModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold text-emerald-900">會員登入</h3>
+                <p class="text-gray-400 text-xs mt-2">請驗證身分進入會館</p>
+            </div>
+            <div class="space-y-5">
+                <input type="tel" id="userPhone" placeholder="手機號碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                <input type="password" id="userPass" onkeyup="if(event.key==='Enter') handleLogin()" placeholder="登入密碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
+            </div>
         </div>
-        <div class="space-y-5">
-            <input type="tel" id="userPhone" placeholder="手機號碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-            <input type="password" id="userPass" onkeyup="if(event.key==='Enter') handleLogin()" placeholder="登入密碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-            <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
-        </div>
-      </div>
     </div>
+
     <script>
-        let allData = {}; // 全域存放資料
+        // 1. 全域變數定義
+        let allData = null; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
-        // 核心修正：將全形轉半形的工具
+        // 2. 工具函式
         function toHalfWidth(str) {
-            return str.replace(/[０-９]/g, function(s) {
-                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-            }).replace(/\s/g, ""); // 同時移除空格
+            return str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
         }
 
-        // 輪播動畫
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+
+        // 3. 輪播邏輯
         let slideIndex = 0;
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
@@ -130,53 +149,34 @@
             setTimeout(showSlides, 4500);
         }
 
-// 修改點 1：關於我讀取邏輯 (讀取 allData 裡的 content)
-function openAbout() {
-    const modal = document.getElementById('aboutModal');
-    const contentDiv = document.getElementById('aboutContent');
-    modal.style.display = 'flex';
-
-    // 檢查資料是否已經從 GAS 回傳
-    if (window.allData && allData.config && allData.config.about_content) {
-        // 資料已就緒，進行格式化後顯示
-        let text = allData.config.about_content
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        contentDiv.innerHTML = text;
-    } else {
-        // 資料還在路上的時候顯示這個
-        contentDiv.innerHTML = `
-            <div style="text-align:center; padding:20px;">
-                <p>內容加載中，請稍候...</p>
-            </div>
-        `;
-        
-        // 可選：如果資料還沒來，我們可以設定一個小定時器，等資料一到自動更新視窗內容
-        const checkData = setInterval(() => {
-            if (window.allData && allData.config && allData.config.about_content) {
-                openAbout(); // 資料到了，重新呼叫一次自己來更新介面
-                clearInterval(checkData);
+        // 4. 初始化資料抓取 (核心優化：只抓一次)
+        async function initData() {
+            try {
+                const res = await fetch(GAS_URL + "?t=" + Date.now());
+                allData = await res.json();
+                console.log("資料同步成功:", allData);
+                renderEvents(); // 資料一到，立刻渲染活動
+            } catch (e) {
+                console.error("初始化資料失敗:", e);
+                document.getElementById('event-loading').innerText = "暫時無法讀取活動，請重新整理網頁。";
             }
-        }, 500);
-    }
-}        
-        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        }
 
-// 更新載入活動的渲染方法
-async function loadEvents() {
-    try {
-        const res = await fetch(GAS_URL + "?t=" + Date.now());
-        allData = await res.json(); // 存入全域
-        
-        const today = new Date().toISOString().split('T')[0];
-        const grid = document.getElementById('event-grid');
-        
-        if(allData.calendar) {
+        // 5. 渲染活動卡片
+        function renderEvents() {
+            if (!allData || !allData.calendar) return;
+            const today = new Date().toISOString().split('T')[0];
+            const grid = document.getElementById('event-grid');
+            
             const upcoming = allData.calendar
                 .filter(ev => ev.dateText >= today)
                 .sort((a,b) => a.dateText.localeCompare(b.dateText))
                 .slice(0, 4);
+
+            if (upcoming.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10">目前尚無規劃中的活動。</div>';
+                return;
+            }
 
             grid.innerHTML = upcoming.map(ev => `
                 <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center flex flex-col justify-between h-full">
@@ -191,31 +191,43 @@ async function loadEvents() {
                 </div>
             `).join('');
         }
-    } catch (e) { console.error("資料載入失敗", e); }
-}
-        
-        
 
-// 修改點 4：行事曆跳轉邏輯 (考慮 Android/iOS)
-function addToCalendar(title, dateStr) {
-    const start = dateStr.replace(/-/g, '') + "T093000";
-    const end = dateStr.replace(/-/g, '') + "T120000";
-    const details = "築心讀書會活動";
-    
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        // 6. 關於我邏輯
+        function openAbout() {
+            const modal = document.getElementById('aboutModal');
+            const contentDiv = document.getElementById('aboutContent');
+            modal.style.display = 'flex';
 
-    if (isIOS) {
-        // iOS 使用 .ics 格式 (這裡簡化導向 web 版或提醒用戶，網頁通常無法直接寫入 iOS 內建行事曆，最穩是 Google 日曆)
-        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}`, '_blank');
-    } else {
-        // Android/Desktop 直接開啟 Google 日曆
-        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}`, '_blank');
-    }
-}        
-        // 核心修正：登入處理
+            const updateContent = () => {
+                if (allData && allData.config && allData.config.about_content) {
+                    let text = allData.config.about_content
+                        .replace(/\n/g, '<br>')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    contentDiv.innerHTML = text;
+                    return true;
+                }
+                return false;
+            };
+
+            if (!updateContent()) {
+                // 如果還沒載入，啟動監聽器
+                const timer = setInterval(() => {
+                    if (updateContent()) clearInterval(timer);
+                }, 500);
+            }
+        }
+
+        // 7. 行事曆跳轉
+        function addToCalendar(title, dateStr) {
+            const start = dateStr.replace(/-/g, '') + "T093000";
+            const end = dateStr.replace(/-/g, '') + "T120000";
+            const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent("築心讀書會活動")}`;
+            window.open(url, '_blank');
+        }
+
+        // 8. 登入處理
         window.handleLogin = async function() {
             const rawPhone = document.getElementById('userPhone').value.trim();
-            // 強制轉半形並移除所有非數字內容
             const u = toHalfWidth(rawPhone).replace(/\D/g, "");
             const p = document.getElementById('userPass').value.trim();
 
@@ -231,7 +243,6 @@ function addToCalendar(title, dateStr) {
                 });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    // 關鍵：將清洗後的 phone 存入，供 member_zone 使用
                     sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
                     window.location.href = 'member_zone.html';
                 } else {
@@ -244,7 +255,11 @@ function addToCalendar(title, dateStr) {
             }
         };
 
-        window.onload = () => { showSlides(); loadEvents(); };
+        // 啟動
+        window.onload = () => { 
+            showSlides(); 
+            initData(); // 網頁載入後立即獲取所有資料
+        };
     </script>
 </body>
 </html>

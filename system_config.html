@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統參數設定 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 p-6">
+    <div class="max-w-md mx-auto space-y-6">
+        <header class="flex items-center justify-between">
+            <h1 class="text-xl font-black text-emerald-900">系統參數設定</h1>
+            <button onclick="location.href='staff_menu.html'" class="text-sm text-gray-500">返回</button>
+        </header>
+
+        <div class="bg-white rounded-[2rem] p-6 shadow-sm space-y-6">
+            <!-- 導讀連結 -->
+            <div>
+                <label class="text-xs font-bold text-gray-400 block mb-2 ml-2">導讀資料夾連結 (Google Drive)</label>
+                <input type="text" id="reading_url" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <!-- 剪影連結 -->
+            <div>
+                <label class="text-xs font-bold text-gray-400 block mb-2 ml-2">活動剪影相簿連結</label>
+                <input type="text" id="photo_url" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <!-- 關於我連結 -->
+            <div>
+                <label class="text-xs font-bold text-gray-400 block mb-2 ml-2">關於我 (about.txt) 檔案連結</label>
+                <input type="text" id="about_url" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500">
+                <p class="text-[10px] text-orange-500 mt-2 ml-2 leading-relaxed">
+                    <i class="fas fa-info-circle"></i> 請確保該 txt 檔案在雲端已設定為「知道連結的任何人皆可檢視」。
+                </p>
+            </div>
+
+            <button onclick="saveConfigs()" class="w-full bg-emerald-600 text-white rounded-2xl py-4 font-black shadow-lg hover:bg-emerald-700 transition-all active:scale-95">
+                儲存變更
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+
+        // 初始化載入現有設定
+        async function loadCurrentConfigs() {
+            const res = await fetch(GAS_URL);
+            const data = await res.json();
+            document.getElementById('reading_url').value = data.config.reading_folder_url || "";
+            document.getElementById('photo_url').value = data.config.photo_gallery_url || "";
+            document.getElementById('about_url').value = data.config.about_us_url || "";
+        }
+
+        async function saveConfigs() {
+            const payload = {
+                type: 'update_config',
+                key: sessionStorage.getItem('staff_key'),
+                configs: {
+                    reading_folder_url: document.getElementById('reading_url').value,
+                    photo_gallery_url: document.getElementById('photo_url').value,
+                    about_us_url: document.getElementById('about_url').value
+                }
+            };
+            
+            // 發送 POST 到 GAS 執行更新 (需在 GAS 增加 update_config 處理邏輯)
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if(result.result === "SUCCESS") alert("設定已更新！");
+        }
+
+        window.onload = loadCurrentConfigs;
+    </script>
+</body>
+</html>

@@ -108,30 +108,42 @@
         setTimeout(() => { t.style.opacity = '0'; }, 3000);
     }
 
-    async function loadFinishedEvents() {
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            const data = await res.json();
-            const selector = document.getElementById('eventSelector');
+// 1. 修正：活動選單過濾（僅限過去與今日）與排序（新到舊）
+async function loadFinishedEvents() {
+    toggleLoading(true);
+    try {
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        const selector = document.getElementById('eventSelector');
+        
+        if (data && data.calendar && data.calendar.length > 0) {
+            const today = new Date();
+            today.setHours(23, 59, 59, 999); // 設定為今日結束點
+
+            // 過濾：只留下日期小於等於今天的活動
+            const pastEvents = data.calendar.filter(ev => {
+                const evDate = new Date(ev.dateText.replace(/\//g, '-'));
+                return evDate <= today;
+            });
+
+            // 排序：由新到舊 (B - A)
+            const sortedEvents = pastEvents.sort((a, b) => b.dateText.localeCompare(a.dateText));
             
-            if (data && data.calendar && data.calendar.length > 0) {
-                const sortedEvents = data.calendar.sort((a, b) => b.dateText.localeCompare(a.dateText));
-                let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
-                sortedEvents.forEach(ev => {
-                    const safeDate = ev.dateText.toString().replace(/\//g, '-');
-                    optionsHtml += `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
-                });
-                selector.innerHTML = optionsHtml;
-            } else {
-                selector.innerHTML = '<option value="">-- 暫無活動資料 --</option>';
-            }
-        } catch(e) { 
-            console.error(e);
-            showToast("⚠️ 活動清單載入失敗"); 
+            let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+            sortedEvents.forEach(ev => {
+                const safeDate = ev.dateText.toString().replace(/\//g, '-');
+                optionsHtml += `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
+            });
+            selector.innerHTML = optionsHtml;
+        } else {
+            selector.innerHTML = '<option value="">-- 暫無活動資料 --</option>';
         }
-        toggleLoading(false);
+    } catch(e) { 
+        console.error(e);
+        showToast("⚠️ 活動清單載入失敗"); 
     }
+    toggleLoading(false);
+}   
     
     async function fetchReport() {
         const eventVal = document.getElementById('eventSelector').value;
@@ -162,35 +174,41 @@
         toggleLoading(false);
     }    
     
-    function renderReport() {
-        const list = document.getElementById('reportList');
-        const presentCount = currentReport.filter(r => r.status === "出席").length;
-        document.getElementById('presentCount').innerText = presentCount;
-        document.getElementById('totalCount').innerText = currentReport.length;
+// 2. 修正：報到名單排序，讓「出席」者排在最前面
+function renderReport() {
+    const list = document.getElementById('reportList');
+    const presentCount = currentReport.filter(r => r.status === "出席").length;
+    document.getElementById('presentCount').innerText = presentCount;
+    document.getElementById('totalCount').innerText = currentReport.length;
 
-        const sortedReport = [...currentReport].sort((a, b) => (a.status === "出席" ? 1 : -1));
-        list.innerHTML = sortedReport.map(r => {
-            const isAttended = r.status === "出席";
-            return `
-                <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-gray-100 ${isAttended ? 'bg-emerald-50/30' : ''}">
-                    <div>
-                        <div class="font-black text-base ${isAttended ? 'text-emerald-900' : 'text-gray-400'}">${r.name}</div>
-                        <div class="text-[11px] text-gray-300 font-mono">${r.phone}</div>
-                    </div>
-                    <div>
-                        ${isAttended 
-                            ? '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>' 
-                            : (isEditMode 
-                                ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="bg-orange-500 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-md active:scale-95">補登</button>`
-                                : '<i class="far fa-circle text-gray-200 text-2xl"></i>'
-                              )
-                        }
-                    </div>
+    // 修正排序邏輯：若 status 是 "出席"，排在前面 (a < b 返回 -1)
+    const sortedReport = [...currentReport].sort((a, b) => {
+        if (a.status === "出席" && b.status !== "出席") return -1;
+        if (a.status !== "出席" && b.status === "出席") return 1;
+        return 0;
+    });
+
+    list.innerHTML = sortedReport.map(r => {
+        const isAttended = r.status === "出席";
+        return `
+            <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-gray-100 ${isAttended ? 'bg-emerald-50/50 border-emerald-200' : ''}">
+                <div>
+                    <div class="font-black text-base ${isAttended ? 'text-emerald-900' : 'text-gray-400'}">${r.name}</div>
+                    <div class="text-[11px] text-gray-300 font-mono">${r.phone}</div>
                 </div>
-            `;
-        }).join('');
-    }
-
+                <div>
+                    ${isAttended 
+                        ? '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>' 
+                        : (isEditMode 
+                            ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="bg-orange-500 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-md active:scale-95">補登</button>`
+                            : '<i class="far fa-circle text-gray-200 text-2xl"></i>'
+                          )
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
     function toggleEditMode() {
         isEditMode = !isEditMode;
         const btn = document.getElementById('editBtn');

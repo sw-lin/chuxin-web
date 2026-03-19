@@ -32,17 +32,17 @@
 </head>
 <body class="bg-[#FDFBF7]">
 
-    <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md shadow-sm px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-            <i class="fas fa-leaf text-emerald-700 text-xl"></i>
-            <span class="text-xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
-        </div>
-        <div class="flex items-center space-x-3 md:space-x-6">
-            <button onclick="openAbout()" class="text-emerald-800 font-bold hover:text-emerald-600 transition text-sm px-3 py-2">關於我</button>
-            <button onclick="openLogin()" class="bg-emerald-800 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-emerald-700 transition shadow-lg">進入會館</button>
-        </div>
-    </nav>
-
+<nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md shadow-sm px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center space-x-2">
+        <i class="fas fa-leaf text-emerald-700 text-2xl"></i>
+        <span class="text-2xl md:text-3xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
+    </div>
+    <div class="flex items-center space-x-3">
+        <button onclick="openAbout()" class="text-emerald-800 font-bold hover:bg-emerald-50 px-5 py-2.5 rounded-full transition text-sm border border-transparent">關於我</button>
+        <button onclick="openLogin()" class="bg-emerald-800 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-emerald-700 transition shadow-lg border border-emerald-800">進入會館</button>
+    </div>
+</nav>
+    
     <header class="relative pt-16">
         <div class="relative overflow-hidden bg-emerald-900">
             <img class="slide" src="1.jpg">
@@ -95,20 +95,19 @@
     </div>
 
     <div id="loginModal" class="modal">
-        <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative m-6 flex flex-col">
-            <button onclick="closeModal('loginModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
-            <div class="text-center mb-8">
-                <h3 class="text-2xl font-bold text-emerald-900">會員登入</h3>
-                <p class="text-gray-400 text-xs mt-2">請驗證身分進入會館</p>
-            </div>
-            <div class="space-y-5">
-                <input type="tel" id="userPhone" placeholder="手機號碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                <input type="password" id="userPass" placeholder="登入密碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
-            </div>
+    <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative m-6 flex flex-col">
+        <button onclick="closeModal('loginModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
+        <div class="text-center mb-8">
+            <h3 class="text-2xl font-bold text-emerald-900">會員登入</h3>
+            <p class="text-gray-400 text-xs mt-2">請驗證身分進入會館</p>
         </div>
+        <div class="space-y-5">
+            <input type="tel" id="userPhone" placeholder="手機號碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+            <input type="password" id="userPass" onkeyup="if(event.key==='Enter') handleLogin()" placeholder="登入密碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+            <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
+        </div>
+      </div>
     </div>
-
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
@@ -130,35 +129,66 @@
             setTimeout(showSlides, 4500);
         }
 
-        function openAbout() {
-            document.getElementById('aboutModal').style.display = 'flex';
-            fetch('about.txt?t=' + Date.now()).then(r => r.text()).then(t => {
-                document.getElementById('aboutContent').innerText = t;
-            }).catch(() => { document.getElementById('aboutContent').innerText = "內容暫時無法讀取..."; });
-        }
-
+// 修改點 1：關於我讀取邏輯 (讀取 allData 裡的 content)
+function openAbout() {
+    document.getElementById('aboutModal').style.display = 'flex';
+    // 直接顯示從 GAS 抓好的資料包內容
+    const content = allData.config?.about_content || "歡迎來到築心會館。";
+    document.getElementById('aboutContent').innerHTML = content.replace(/\n/g, '<br>');
+}
+        
         function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        async function loadEvents() {
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const today = new Date().toISOString().split('T')[0];
-                const grid = document.getElementById('event-grid');
-                if(data.calendar) {
-                    const upcoming = data.calendar.filter(ev => ev.dateText >= today).sort((a,b) => a.dateText.localeCompare(b.dateText)).slice(0, 4);
-                    grid.innerHTML = upcoming.length > 0 ? upcoming.map(ev => `
-                        <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center group">
-                            <div class="text-emerald-600 font-bold mb-2">${ev.dateText}</div>
-                            <div class="text-emerald-900 font-bold text-lg mb-4 group-hover:text-emerald-700 transition">${ev.title}</div>
-                            <div class="text-[10px] bg-emerald-50 text-emerald-600 inline-block px-4 py-1 rounded-full uppercase tracking-widest font-bold">Upcoming</div>
-                        </div>
-                    `).join('') : '<p class="col-span-full text-center text-gray-400 italic">目前暫無預告活動</p>';
-                }
-            } catch (e) { console.error(e); }
-        }
+// 更新載入活動的渲染方法
+async function loadEvents() {
+    try {
+        const res = await fetch(GAS_URL + "?t=" + Date.now());
+        allData = await res.json(); // 存入全域
+        
+        const today = new Date().toISOString().split('T')[0];
+        const grid = document.getElementById('event-grid');
+        
+        if(allData.calendar) {
+            const upcoming = allData.calendar
+                .filter(ev => ev.dateText >= today)
+                .sort((a,b) => a.dateText.localeCompare(b.dateText))
+                .slice(0, 4);
 
+            grid.innerHTML = upcoming.map(ev => `
+                <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm hover:shadow-md transition text-center flex flex-col justify-between h-full">
+                    <div>
+                        <div class="text-emerald-600 font-bold mb-1 text-sm">${ev.dateText}</div>
+                        <div class="text-emerald-900 font-bold text-lg mb-4 leading-snug">${ev.title}</div>
+                    </div>
+                    <button onclick="addToCalendar('${ev.title}', '${ev.dateText}')" 
+                        class="text-[10px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-4 py-2 rounded-full uppercase tracking-widest font-bold transition">
+                        <i class="far fa-calendar-plus mr-1"></i> 加入行事曆
+                    </button>
+                </div>
+            `).join('');
+        }
+    } catch (e) { console.error("資料載入失敗", e); }
+}
+        
+        let allData = {}; // 全域存放資料
+
+// 修改點 4：行事曆跳轉邏輯 (考慮 Android/iOS)
+function addToCalendar(title, dateStr) {
+    const start = dateStr.replace(/-/g, '') + "T093000";
+    const end = dateStr.replace(/-/g, '') + "T120000";
+    const details = "築心讀書會活動";
+    
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+    if (isIOS) {
+        // iOS 使用 .ics 格式 (這裡簡化導向 web 版或提醒用戶，網頁通常無法直接寫入 iOS 內建行事曆，最穩是 Google 日曆)
+        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}`, '_blank');
+    } else {
+        // Android/Desktop 直接開啟 Google 日曆
+        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}`, '_blank');
+    }
+}        
         // 核心修正：登入處理
         window.handleLogin = async function() {
             const rawPhone = document.getElementById('userPhone').value.trim();

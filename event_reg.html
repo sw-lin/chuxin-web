@@ -297,7 +297,7 @@
             showLoading(false);
         }
 
-        async function sendToLine() {
+async function sendToLine() {
             const title = document.getElementById('eventSelector').value;
             const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
             if (filtered.length === 0) return showToast("目前無人報名");
@@ -307,15 +307,16 @@
             
             showLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message });
+                // 這裡原本多了一個分號導致報錯，現在已修正
+                const res = await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message }) 
                 });
-                if ((await res.json()).result === 'SUCCESS') showToast('已發送至 LINE 群組');
+                const result = await res.json();
+                if (result.result === 'SUCCESS') showToast('已發送至 LINE 群組');
             } catch (e) { showToast('發送失敗'); }
             showLoading(false);
         }
-
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
     </script>

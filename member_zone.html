@@ -383,23 +383,22 @@
 <script>
   new CozeWebSDK.WebChatClient({
     config: {
-      bot_id: '7620394792719499317', // 已確認您的 Bot ID
+      bot_id: '7620394792719499317',
     },
     componentProps: {
       title: '築心智慧管家',
-      headerBackgroundColor: '#064e3b', // 森林綠
+      headerBackgroundColor: '#064e3b',
     },
     auth: {
       type: 'token',
-      // ⚠️ 請務必在此處填入您產生的 pat_ 代碼
-      token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI’, 
+      token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI', 
       onRefreshToken: function () {
-        return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI‘;
+        return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI';
       }
     },
     ui: {
       base: {
-        zIndex: 9999, // 確保浮在最上層
+        zIndex: 9999,
       },
       footer: {
         isShow: true,

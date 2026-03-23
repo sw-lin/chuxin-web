@@ -381,26 +381,16 @@
 </script>
     <script src="https://lf-cdn.coze.com/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js"></script>
 <script>
-  new CozeWebSDK.WebChatClient({
-    config: {
-      bot_id: '7620394792719499317',
-    },
-    componentProps: {
-      title: '築心智慧管家',
-      headerBackgroundColor: '#064e3b',
-    },
-    auth: {
-      type: 'token',
-      token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI',
-      onRefreshToken: function () {
-        return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI';
-      }
-    },
-    ui: {
-      base: { zIndex: 9999 },
-      footer: { isShow: true, expression: true }
-    }
-  });
+new CozeWebSDK.WebChatClient({
+  config:{bot_id:'7620394792719499317'},
+  componentProps: { title: '築心智慧管家', headerBackgroundColor: '#064e3b' },
+  auth: {
+    type: 'token',
+    token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI',
+    onRefreshToken: function () { return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI'; }
+  },
+  ui: { base: { zIndex: 9999 } }
+});
 </script>
 </body>
 </html>

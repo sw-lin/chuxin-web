@@ -379,5 +379,36 @@
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
 </script>
+<script src="https://lf-cdn.coze.com/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js"></script>
+<script>
+  new CozeWebSDK.WebChatClient({
+    config: {
+      // 1. 填入您的 Bot ID
+      bot_id: '7620394792719499317', 
+    },
+    componentProps: {
+      // 2. 設定視窗標題與外觀
+      title: '築心智慧管家',
+      headerBackgroundColor: '#064e3b', // 森林綠，符合您的會館風格
+    },
+    auth: {
+      type: 'token',
+      // 3. 貼上您剛才產生的 pat_ 開頭代碼
+      token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI', 
+      onRefreshToken: function () {
+        return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI';
+      }
+    },
+    ui: {
+      base: {
+        zIndex: 9999, // 確保它不會被網頁其他圖片擋住
+      },
+      footer: {
+        isShow: true,
+        expression: true, // 允許使用表情符號，讓聊天更親切
+      }
+    }
+  });
+</script>    
 </body>
 </html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/coze-chat-sdk/1.2.0-beta.6/index.js"></script>
+    <script src="https://unpkg.com/@coze/api-sdk@1.0.12/dist/chat.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
@@ -382,33 +382,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@coze/api-sdk@1.0.12/dist/index.js"></script>
 
 <script>
-  // 加入防錯機制，確保 SDK 載入後才執行
-  window.onload = function() {
-    if (typeof CozeWebSDK !== 'undefined') {
-      new CozeWebSDK.WebChatClient({
-        config: {
-          bot_id: '7620394792719499317',
-        },
-        componentProps: {
-          title: '築心智慧管家',
-          headerBackgroundColor: '#064e3b',
-        },
-        auth: {
-          type: 'token',
-          token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI',
-          onRefreshToken: function () {
-            return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI';
-          }
-        },
-        ui: {
-          base: { zIndex: 9999 },
-          footer: { isShow: true, expression: true }
-        }
-      });
-    } else {
-      console.error("SDK 載入失敗，請檢查網路連線");
+  new CozeWebSDK.WebChatClient({
+    config: {
+      bot_id: '7620394792719499317', // 確認這是您的 Bot ID
+    },
+    componentProps: {
+      title: '築心智慧管家',
+    },
+    auth: {
+      type: 'token',
+      token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI',
+      onRefreshToken: function () {
+        return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI';
+      }
     }
-  };
+  });
 </script>
 </body>
 </html>

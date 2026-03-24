@@ -214,27 +214,51 @@ function getDirectImageUrl(url) {
         return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
     }
 
-    function updateUI(user, calendar, events) {
-        const logs = (user.attendLog || []).map(log => String(log).trim());
+function updateUI(user, calendar, events) {
+        console.log("開始更新介面...", { user, calendar, events });
+        
+        // 1. 安全檢查：如果 user 不存在，直接中斷避免報錯
+        if (!user) {
+            console.error("更新失敗：找不到使用者資料");
+            return;
+        }
+
+        // 2. 防禦性處理出席紀錄
+        let logs = [];
+        try {
+            if (user.attendLog && Array.isArray(user.attendLog)) {
+                logs = user.attendLog.map(log => log ? String(log).trim() : "");
+            }
+        } catch (err) {
+            console.warn("解析出席紀錄時發生輕微錯誤:", err);
+        }
+
         const today = new Date().toISOString().split('T')[0];
-        const pastEvents = (calendar || []).filter(ev => ev.dateText <= today);
+        const pastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today);
+        
         const attended = pastEvents.filter(ev => {
             const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
-            return logs.some(log => log === standardKey || log.includes(ev.dateText) || log.includes(ev.title));
+            return logs.some(log => log === standardKey || (log && log.includes(ev.dateText)) || (log && log.includes(ev.title)));
         });
 
+        // 3. 更新數據顯示
         const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
         document.getElementById('attPercent').innerText = rate + "%";
         document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
 
-        if (rate >= 50 && pastEvents.length > 0) confetti({ particleCount: 150, spread: 70, origin: { y: 0.7 } });
+        // 4. 慶祝動畫 (僅在成功載入後執行)
+        if (rate >= 50 && pastEvents.length > 0) {
+            try { confetti({ particleCount: 100, spread: 70, origin: { y: 0.7 } }); } catch(e){}
+        }
 
         window.currentAttendedData = attended;
-        renderCalendarActivity(calendar);
-        renderEventSection(events);
-    }
 
-    function renderCalendarActivity(calendar) {
+        // 5. 確保渲染函式就算出錯也不會影響彼此
+        try { renderCalendarActivity(calendar); } catch(e) { console.error("渲染活動預告出錯", e); }
+        try { renderEventSection(events); } catch(e) { console.error("渲染報名區出錯", e); }
+        }
+    
+        function renderCalendarActivity(calendar) {
         const container = document.getElementById('calendarActivitySection');
         const today = new Date().toISOString().split('T')[0];
         if (!calendar) return;

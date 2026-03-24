@@ -123,19 +123,36 @@
     </div>
 
 <script>
-// 1. 立即執行：不准等，進頁面馬上查！
+ // 1. 立即執行：相容舊版 index.html 的存儲格式
     (function() {
-        const phone = sessionStorage.getItem('user_phone');
-        console.log("=== 權限優先檢查 ===");
-        console.log("當前 Session 電話:", phone);
+        console.log("=== 權限相容性檢查執行中 ===");
+        
+        // 嘗試讀取你說的舊格式 'userInfo'
+        const userInfoRaw = sessionStorage.getItem('userInfo');
+        let phone = sessionStorage.getItem('user_phone'); // 先看有沒有新格式
 
+        // 如果沒有新格式，但有舊的 userInfo，就現場拆箱
+        if (!phone && userInfoRaw) {
+            try {
+                const userObj = JSON.parse(userInfoRaw);
+                phone = userObj.phone; // 從 JSON 裡面拿電話
+                // 為了讓後面的 syncData 也能抓到，我們補存一下新格式
+                sessionStorage.setItem('user_phone', phone);
+                console.log("已從 userInfo 成功解析電話:", phone);
+            } catch (e) {
+                console.error("解析 userInfo 失敗");
+            }
+        }
+
+        console.log("最終檢查電話:", phone);
+
+        // 最後的判斷門檻
         if (!phone || phone === "undefined" || phone === "null") {
             alert("登入逾時或尚未登入，請重新登入");
-            window.location.replace('index.html'); // 使用 replace 避免按上一頁又回來
+            window.location.replace('index.html');
             return;
         }
-    })();   
-    
+    })();    
     var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     var html5QrCode = null;
     var remoteConfig = {};

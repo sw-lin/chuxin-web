@@ -7,12 +7,13 @@
     <meta http-equiv="Content-Security-Policy" content="
     default-src 'self' https://udify.app;
     script-src 'self' 'unsafe-inline' 'unsafe-eval' https://udify.app https://*.udify.app https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net;
+    script-src-elem 'self' 'unsafe-inline' https://udify.app https://*.udify.app https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline' https://udify.app https://*.udify.app https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.tailwindcss.com;
     font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com;
     img-src 'self' data: https://udify.app https://*.udify.app https://lh3.googleusercontent.com;
     connect-src 'self' https://udify.app https://*.udify.app wss://udify.app wss://*.udify.app https://script.google.com https://script.googleusercontent.com;
     frame-src 'self' https://udify.app https://*.udify.app;
-    worker-src 'self' blob:;">    
+    worker-src 'self' blob:;">
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -204,13 +205,13 @@
 
     // 3. 手動啟動 AI (這是關鍵修正)
 function activateAI() {
+    console.log("AI 啟動指令已觸發...");
     const btn = document.getElementById('aiLauncherBtn');
     if (!btn || btn.dataset.loaded === "true") return;
 
-    // 顯示載入狀態
     btn.innerHTML = '<div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><span class="text-xs">啟動中...</span>';
     
-    // 設定 Dify 配置
+    // 初始化 Dify 配置
     window.difyChatbotConfig = { 
         token: 'XN6K6P69Z8S6XN6K', 
         baseUrl: 'https://udify.app' 
@@ -219,33 +220,33 @@ function activateAI() {
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
     s.id = "XN6K6P69Z8S6XN6K";
-    s.async = true; // 使用 async 通常比 defer 在動態插入時更穩定
+    s.async = true;
     
     s.onload = () => { 
-        // 某些情況下 Dify 需要一點時間初始化介面
+        console.log("Dify 腳本下載成功，嘗試初始化介面...");
+        showToast("AI 助理已上線");
+        btn.dataset.loaded = "true";
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = `
+            <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
+                <i class="fas fa-check"></i>
+            </div>
+            <span class="font-black text-xs text-blue-900">AI 已啟動</span>
+        `;
+        // 檢查 Dify 是否真的掛載到 window
         setTimeout(() => {
-            showToast("AI 助理已上線");
-            btn.dataset.loaded = "true";
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            btn.innerHTML = `
-                <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
-                    <i class="fas fa-check"></i>
-                </div>
-                <span class="font-black text-xs text-blue-900">AI 已啟動</span>
-            `;
-        }, 500); 
+            console.log("目前視窗物件:", window.difyChatbotConfig);
+        }, 1000);
     };
 
-    s.onerror = (err) => {
-        console.error("CSP or Network Error:", err); // 方便你在控制台除錯
-        showToast("AI 載入失敗，請檢查網路或安全設定", "error");
-        btn.innerHTML = '<span class="cursor-pointer">重試啟動</span>';
-        btn.dataset.loaded = "false"; 
+    s.onerror = (e) => {
+        console.error("Dify 載入異常！錯誤詳情:", e);
+        showToast("AI 載入失敗，請查看控制台", "error");
+        btn.innerHTML = '<span>重試啟動</span>';
     };
 
     document.body.appendChild(s);
-}
-    
+}    
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;

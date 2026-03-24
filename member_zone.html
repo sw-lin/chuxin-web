@@ -221,50 +221,40 @@ function activateAI() {
     const btn = document.getElementById('aiLauncherBtn');
     if (!btn || btn.dataset.loaded === "true") return;
 
-    btn.innerHTML = '<div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><span class="text-xs">啟動中...</span>';
-    
-    // 初始化 Dify 配置
+    // 1. 先寫入配置 (必須在插入 script 之前！)
     window.difyChatbotConfig = { 
         token: 'XN6K6P69Z8S6XN6K', 
         baseUrl: 'https://udify.app' 
     };
 
+    // 2. 建立 script 標籤
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
-    s.id = "XN6K6P69Z8S6XN6K";
     s.async = true;
-    
+    // 注意：不要手動設 s.id = "XN6K6P69Z8S6XN6K"，避免衝突
+
     s.onload = () => { 
-    console.log("Dify 腳本下載成功");
-    // 關鍵修正：確保 window 上的配置在腳本跑之前就存在
-    window.difyChatbotConfig = { 
-        token: 'XN6K6P69Z8S6XN6K', 
-        baseUrl: 'https://udify.app' 
+        console.log("Dify 腳本執行完畢");
+        showToast("AI 助理已上線");
+        btn.dataset.loaded = "true";
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = `
+            <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
+                <i class="fas fa-check"></i>
+            </div>
+            <span class="font-black text-xs text-blue-900">AI 已啟動</span>
+        `;
     };
 
-    showToast("AI 助理已上線");
-    btn.dataset.loaded = "true";
-    btn.classList.add('opacity-50', 'cursor-not-allowed');
-    btn.innerHTML = `
-        <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
-            <i class="fas fa-check"></i>
-        </div>
-        <span class="font-black text-xs text-blue-900">AI 已啟動</span>
-    `;
-
-    // 額外保險：如果右下角沒圖標，嘗試重新載入 Dify
-    if (typeof window.initDifyChatbot === 'function') {
-        window.initDifyChatbot();
-    }
-    };
-    s.onerror = (e) => {
-        console.error("Dify 載入異常！錯誤詳情:", e);
-        showToast("AI 載入失敗，請查看控制台", "error");
-        btn.innerHTML = '<span>重試啟動</span>';
+    s.onerror = () => {
+        console.error("Dify 載入失敗");
+        showToast("網路連線異常", "error");
     };
 
+    // 3. 最後才插入 body
     document.body.appendChild(s);
-}    
+}
+    
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;

@@ -4,89 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-        #dify-chatbot-bubble-button { 
-            background-color: #064E3B !important; 
-            z-index: 100 !important; 
-            bottom: 80px !important; 
-        }
+        #news { white-space: normal; word-break: break-all; }
     </style>
+</head>
+<body class="min-h-screen pb-20">
 
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-
-    </head>
-    <body class="min-h-screen pb-20">
-
-    <div id="loadingOverlay" class="fixed inset-0 bg-white z-[300] flex flex-col items-center justify-center">
-        <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-800 rounded-full animate-spin mb-4"></div>
-        <p class="text-emerald-900 font-medium">資料同步中...</p>
+<!-- 加載動畫 -->
+<div id="loadingOverlay" class="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
+    <div class="flex flex-col items-center">
+        <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+        <p class="mt-4 text-emerald-900 font-bold animate-pulse">資料同步中...</p>
     </div>
-        
-    <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
+</div>
 
-    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-leaf text-emerald-400 text-xl"></i>
-            <h1 class="text-xl font-black tracking-widest text-white">築心會館</h1>
-        </div>
-        <button onclick="logout()" class="px-4 py-2 bg-red-900/40 hover:bg-red-800/60 rounded-full text-[12px] font-bold text-red-100 flex items-center gap-1.5 transition-all">
+<!-- 通知容器 -->
+<div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
+
+<!-- 導覽列 -->
+<nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <i class="fas fa-leaf text-emerald-400 text-xl"></i>
+        <h1 class="text-xl font-black tracking-widest text-white">築心會館</h1>
+    </div>
+    <div class="flex items-center gap-2">
+        <button onclick="logout()" class="px-4 py-2 bg-red-900/40 hover:bg-red-800/60 rounded-full text-[12px] font-bold transition-all text-red-100 flex items-center gap-1.5">
             <i class="fas fa-sign-out-alt"></i>登出
         </button>
-    </nav> 
+    </div>
+</nav> 
 
-    <main class="max-w-xl mx-auto p-6 space-y-8">
-        <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
-            <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
-                <i class="fas fa-bullhorn text-lg"></i>
-            </div>
-            <div class="flex-1">
-                <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
-                <p id="news" class="text-gray-600 text-xs leading-relaxed">歡迎回來</p>
-            </div>
+<main class="max-w-xl mx-auto p-6 space-y-8">
+
+    <!-- 1. 公告欄 -->
+    <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
+        <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+            <i class="fas fa-bullhorn text-lg"></i>
         </div>
-        
-        <div onclick="openHistoryModal()" class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden cursor-pointer active:scale-95 transition-all">
-            <div class="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/5 rounded-full"></div>
-            <div class="relative z-10 text-center">
-                <span class="text-emerald-200 text-xs font-bold tracking-[0.3em] uppercase">Member Profile</span>
-                <h2 id="userName" class="text-3xl font-black mt-2 mb-6 tracking-widest">載入中...</h2>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-black/20 rounded-3xl py-4 border border-white/10">
-                        <p class="text-emerald-200 text-[10px] font-bold mb-1">出席次數</p>
-                        <p id="attCountDisplay" class="text-2xl font-black">0 / 0</p>
-                    </div>
-                    <div class="bg-black/20 rounded-3xl py-4 border border-white/10">
-                        <p class="text-emerald-200 text-[10px] font-bold mb-1">參與率</p>
-                        <p id="attPercent" class="text-2xl font-black">0%</p>
-                    </div>
+        <div class="flex-1">
+            <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
+            <p id="news" class="text-gray-600 text-xs leading-relaxed">同步最新公告中...</p>
+        </div>
+    </div>
+    
+    <!-- 2. 出席率卡片 -->
+    <div onclick="openHistoryModal()" class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden cursor-pointer active:scale-95 transition-all">
+        <div class="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/5 rounded-full"></div>
+        <div class="relative z-10 text-center">
+            <span class="text-emerald-200 text-xs font-bold tracking-[0.3em] uppercase">Member Profile</span>
+            <h2 id="userName" class="text-3xl font-black mt-2 mb-6 tracking-widest">載入中...</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-black/20 rounded-3xl py-4 border border-white/10">
+                    <p class="text-emerald-200 text-[10px] font-bold mb-1">出席次數</p>
+                    <p id="attCountDisplay" class="text-2xl font-black">0 / 0</p>
+                </div>
+                <div class="bg-black/20 rounded-3xl py-4 border border-white/10">
+                    <p class="text-emerald-200 text-[10px] font-bold mb-1">參與率</p>
+                    <p id="attPercent" class="text-2xl font-black">0%</p>
                 </div>
             </div>
+            <p class="mt-5 text-[10px] opacity-60 flex items-center justify-center gap-1.5">
+                <i class="fas fa-info-circle"></i>點擊卡片查看詳細學習歷程
+            </p>
         </div>
+    </div>
 
-        <div class="space-y-4">
-            <div class="flex items-center gap-3 px-2">
-                <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
-                <h3 class="text-lg font-black text-emerald-950 tracking-wide">近期活動預告</h3>
-            </div>
-            <div id="calendarActivitySection" class="space-y-4"></div>
+    <!-- 3. 近期活動區 -->
+    <div class="space-y-4">
+        <div class="flex items-center gap-3 px-2">
+            <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
+            <h3 class="text-lg font-black text-emerald-950 tracking-wide">近期活動預告</h3>
         </div>
+        <div id="calendarActivitySection" class="space-y-4"></div>
+    </div>
 
-        <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all">
-            <i class="fas fa-qrcode text-2xl"></i>
-            <span class="text-xl font-black tracking-widest">掃碼報到</span>
-        </button>
+    <!-- 4. 掃碼按鈕 -->
+    <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all hover:bg-orange-600">
+        <i class="fas fa-qrcode text-2xl"></i>
+        <span class="text-xl font-black tracking-widest">掃碼報到</span>
+    </button>
 
-        <div id="eventSection" class="space-y-4 pt-4"></div>
+    <!-- 5. 報名區 -->
+    <div id="eventSection" class="space-y-4 pt-4"></div>
 
+    <!-- 6. 底部功能區 -->
+    <div class="space-y-4 pt-6 border-t border-emerald-50">
+        <div class="flex items-center gap-3 px-2">
+            <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
+            <h3 class="text-lg font-black text-emerald-950 tracking-wide">專屬服務</h3>
+        </div>
         <div class="grid grid-cols-2 gap-4">
             <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
                 <div class="bg-emerald-50 text-emerald-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-book-open text-xl"></i></div>
@@ -100,129 +115,94 @@
                 <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
             </button>
-            <button id="staffBtn" onclick="enterStaffMode()" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
+            <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
             </button>
         </div>
-    </main>
-
-    <div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
-        <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-7 shadow-2xl relative" onclick="event.stopPropagation()">
-            <button onclick="closeHistoryModal(event, true)" class="absolute top-5 right-6 text-gray-400 text-2xl">×</button>
-            <h3 class="text-xl font-black text-emerald-900 mb-5 text-center flex items-center justify-center gap-2"><i class="fas fa-history text-emerald-600"></i>學習歷程清發</h3>
-            <div id="historyList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
-        </div>
     </div>
+</main>
 
-    <div id="scannerModal" class="modal-overlay">
-        <div class="bg-white w-[90%] max-w-sm rounded-[3rem] overflow-hidden shadow-2xl">
-            <div id="reader" class="w-full"></div>
-            <div class="p-6 text-center"><button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-black text-gray-500">取消返回</button></div>
-        </div>
+<!-- 各種 Modal 略 (保持原樣) -->
+<div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-7 shadow-2xl relative" onclick="event.stopPropagation()">
+        <button onclick="closeHistoryModal(event, true)" class="absolute top-5 right-6 text-gray-400 hover:text-gray-600 text-2xl transition-colors">&times;</button>
+        <h3 class="text-xl font-black text-emerald-900 mb-5 text-center flex items-center justify-center gap-2"><i class="fas fa-history text-emerald-600"></i>學習歷程清單</h3>
+        <div id="historyList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
     </div>
-    
-    <div id="fake-ai-btn" onclick="activateRealAI()" 
-     class="fixed bottom-24 right-6 z-[100] w-14 h-14 bg-[#064E3B] rounded-full shadow-2xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-90 border-2 border-emerald-400/30">
-    <i class="fas fa-comment-dots text-white text-2xl"></i>
-    <span class="absolute -top-1 -right-1 flex h-4 w-4">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
-    </span>
 </div>
-        
+
+<div id="scannerModal" class="modal-overlay">
+    <div class="bg-white w-[90%] max-w-sm rounded-[3rem] overflow-hidden shadow-2xl">
+        <div id="reader" class="w-full"></div>
+        <div class="p-6 text-center"><button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-black text-gray-500">取消返回</button></div>
+    </div>
+</div>
+
+<div id="editProfileModal" class="modal-overlay" onclick="closeEditModal(event)">
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative" onclick="event.stopPropagation()">
+        <button onclick="closeEditModal(event, true)" class="absolute top-5 right-6 text-gray-400 hover:text-gray-600 text-2xl transition-colors">&times;</button>
+        <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">修改個人資料</h3>
+        <p class="text-center text-gray-400 text-xs mb-6">僅供更新 Email 與登入密碼</p>
+        <div class="space-y-4">
+            <div><label class="block text-xs font-bold text-emerald-800 mb-1.5 ml-1">電子郵件 (Email)</label><input type="email" id="editEmail" class="w-full px-5 py-3.5 bg-gray-50 rounded-xl outline-none text-sm font-bold border-2 border-transparent focus:border-emerald-500 transition-all"></div>
+            <div class="pt-2 border-t border-gray-100"><label class="block text-xs font-bold text-red-800 mb-1.5 ml-1">驗證舊密碼 (必填)</label><input type="password" id="oldPass" placeholder="請輸入目前密碼" class="w-full px-5 py-3.5 bg-red-50/50 rounded-xl outline-none text-sm font-bold border-2 border-transparent focus:border-red-300 transition-all"></div>
+            <div><label class="block text-xs font-bold text-emerald-800 mb-1.5 ml-1">設定新密碼 (選填)</label><input type="password" id="newPass" placeholder="若不修改請留空" class="w-full px-5 py-3.5 bg-gray-50 rounded-xl outline-none text-sm font-bold border-2 border-transparent focus:border-emerald-500 transition-all"></div>
+            <button onclick="handleUpdateProfile()" id="updateBtn" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-xl font-black tracking-widest active:scale-95 transition-all shadow-md">確認更新</button>
+        </div>
+    </div>
+</div>
+
 <script>
-// 1. 權限檢查（保持你目前的相容性寫法）
-(function() {
-    const info = sessionStorage.getItem('userInfo');
-    if (info) {
-        try {
-            const obj = JSON.parse(info);
-            if (obj.phone) sessionStorage.setItem('user_phone', obj.phone);
-        } catch(e) {}
-    }
-    const phone = sessionStorage.getItem('user_phone');
-    if (!phone || phone === "undefined") {
-        window.location.replace('index.html');
-    }
-})();
-    
     var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     var html5QrCode = null;
     var remoteConfig = {};
     var currentUser = null;
 
-// 2. 手動啟動 AI 的核心邏輯
-function activateRealAI() {
-    const btn = document.getElementById('fake-ai-btn');
-    
-    // 顯示載入狀態，避免使用者重覆點擊
-    btn.innerHTML = '<i class="fas fa-circle-notch animate-spin text-white text-2xl"></i>';
-    btn.style.pointerEvents = 'none'; 
-
-    console.log("正在召喚 AI 助手...");
-
-    // 配置 Dify
-    window.difyChatbotConfig = { token: 'a9BwRvWgFSBhR773' };
-    
-    // 動態插入腳本
-    const script = document.createElement('script');
-    script.src = "https://udify.app/embed.min.js";
-    script.id = "a9BwRvWgFSBhR773";
-    
-    // 當真正的 AI 腳本載入完成時
-    script.onload = function() {
-        console.log("AI 助手已就緒");
-        // 稍微延遲一下，等 Dify 原生按鈕渲染出來再隱藏偽裝按鈕
-        setTimeout(() => {
-            btn.style.opacity = '0';
-            setTimeout(() => { btn.style.display = 'none'; }, 300);
-        }, 1000);
+    window.onload = function() {
+        var userStr = sessionStorage.getItem('userInfo');
+        if (!userStr) { location.href = 'index.html'; return; }
+        currentUser = JSON.parse(userStr);
+        document.getElementById('userName').innerText = currentUser.name;
+        if(currentUser.email) document.getElementById('editEmail').value = currentUser.email;
+        syncData();
     };
 
-    document.body.appendChild(script);
-}
-
-// 3. 原本的同步邏輯（移除 finally 裡的 initAI）
-async function syncData() {
-    const overlay = document.getElementById('loadingOverlay');
-    const phone = sessionStorage.getItem('user_phone');
-    try {
-        const response = await fetch(`${GAS_URL}?type=sync&phone=${phone}`);
-        const data = await response.json();
-        if (data.result === "SUCCESS") {
-            currentUser = data.user;
-            remoteConfig = data.config;
-            document.getElementById('userName').innerText = currentUser.name || "會員";
-            document.getElementById('news').innerText = data.news || "歡迎回來";
-            if (currentUser.is_staff === true) {
-                document.getElementById('staffBtn').classList.remove('hidden');
-            }
-            updateUI(currentUser, data.calendar, data.events);
-        }
-    } catch (e) {
-        console.error("同步失敗:", e);
-    } finally {
-        if(overlay) overlay.style.display = 'none';
-        // 注意：這裡不再自動呼叫 initAI，完全交給使用者手動點擊
+    function syncData() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        fetch(GAS_URL + "?t=" + Date.now())
+            .then(res => res.json())
+            .then(data => {
+                remoteConfig = data.config || {};
+                document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
+                var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
+                var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
+                
+                if (liveUser) {
+                    currentUser = liveUser;
+                    sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
+                    if (liveUser.role && liveUser.role !== "學員") {
+                        const btn = document.getElementById('staffBtn');
+                        btn.classList.remove('hidden');
+                        btn.onclick = enterStaffMode;
+                    }
+                    updateUI(liveUser, data.calendar, data.events);
+                }
+            })
+            .catch(err => showToast("資料同步失敗", "error"))
+            .finally(() => document.getElementById('loadingOverlay').style.display = 'none');
     }
-}
-// 確保頁面載入後自動執行同步資料
-window.addEventListener('load', function() {
-    console.log("=== 頁面載入完成，啟動資料同步 ===");
-    syncData();
-});
-    
+
     function getDirectImageUrl(url) {
-        if (!url || !url.includes('drive.google.com')) return url || "";
+        if (!url) return "";
+        if (!url.includes('drive.google.com')) return url;
         let id = "";
         if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
         else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
-        return id ? `https://drive.google.com/uc?id=${id}` : url;
+        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
     }
 
     function updateUI(user, calendar, events) {
-        if (!user) return;
         const logs = (user.attendLog || []).map(log => String(log).trim());
         const today = new Date().toISOString().split('T')[0];
         const pastEvents = (calendar || []).filter(ev => ev.dateText <= today);
@@ -245,53 +225,98 @@ window.addEventListener('load', function() {
     function renderCalendarActivity(calendar) {
         const container = document.getElementById('calendarActivitySection');
         const today = new Date().toISOString().split('T')[0];
-        if (!container || !calendar) return;
+        if (!calendar) return;
 
         const upcoming = calendar
             .filter(ev => ev.dateText >= today)
             .sort((a, b) => a.dateText.localeCompare(b.dateText))
             .slice(0, 1);
 
-        container.innerHTML = upcoming.length === 0 ? 
-            '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">暫無近期活動</div>' :
-            upcoming.map(ev => {
-                const displayUrl = getDirectImageUrl(ev.poster_url);
-                return displayUrl.startsWith('http') ? 
-                    `<div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50"><img src="${displayUrl}" class="w-full object-cover"></div>` :
-                    `<div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white"><h4 class="font-black text-lg">${ev.title}</h4><p class="text-xs text-emerald-100"><i class="far fa-calendar-alt"></i> ${ev.dateText}</p></div>`;
-            }).join('');
-    }
+        if (upcoming.length === 0) {
+            container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">暫無近期活動</div>';
+            return;
+        }
 
-    function renderEventSection(events) {
-        const container = document.getElementById('eventSection');
-        if (!container) return;
-        const today = new Date().toISOString().split('T')[0];
-        const activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
-        if (activeEvents.length === 0) return;
-
-        container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
-        activeEvents.map(ev => {
+        container.innerHTML = upcoming.map(ev => {
             const displayUrl = getDirectImageUrl(ev.poster_url);
-            return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6">${displayUrl ? `<img src="${displayUrl}" class="w-full object-cover">` : ''}<div class="p-5"><h4 class="font-black text-emerald-900 mb-2">${ev.title}</h4><button onclick="handleReg('${ev.title}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black transition-all">立即報名</button></div></div>`;
+            if (displayUrl && displayUrl.includes('http')) {
+                return `<div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50"><img src="${displayUrl}" class="w-full object-cover"></div>`;
+            } else {
+                return `
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white relative overflow-hidden">
+                        <div class="absolute top-[-10px] right-[-10px] w-20 h-20 bg-white/10 rounded-full"></div>
+                        <h4 class="font-black text-white text-lg relative z-10">${ev.title}</h4>
+                        <p class="text-xs text-emerald-100 relative z-10"><i class="far fa-calendar-alt"></i> 活動日期：${ev.dateText}</p>
+                    </div>`;
+            }
         }).join('');
     }
 
-    // Modal 與其他基礎功能
+    function renderEventSection(events) {
+        var container = document.getElementById('eventSection');
+        var today = new Date().toISOString().split('T')[0];
+        var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
+        if (activeEvents.length === 0) { container.innerHTML = ""; return; }
+
+        container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
+        activeEvents.map(ev => {
+            const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
+            const displayUrl = getDirectImageUrl(ev.poster_url);
+            if (displayUrl && displayUrl.includes('http')) {
+                return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6"><img src="${displayUrl}" class="w-full object-cover">${isRegEnabled ? `<div class="p-5 bg-white"><button onclick="handleReg('${ev.title}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all">立即報名</button></div>` : ''}</div>`;
+            } else {
+                return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4"><h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4><p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>${isRegEnabled ? `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>` : `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic text-center py-2 bg-gray-50 rounded-lg">PROMOTION ONLY</div>`}</div>`;
+            }
+        }).join('');
+    }
+
+    // 其餘邏輯 (handleUpdateProfile, processCheckin, openHistoryModal, etc.) 略...
+    // 確保 openHistoryModal 也調用 getDirectImageUrl
     function openHistoryModal() {
-        const list = document.getElementById('historyList');
-        const data = window.currentAttendedData || [];
-        list.innerHTML = data.length === 0 ? '<div class="text-center py-12 text-gray-400 text-sm italic bg-gray-50 rounded-2xl">尚無出席紀錄</div>' : 
-            data.slice().reverse().map(ev => `<div class="bg-emerald-50/50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100/50"><div><div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div><div class="text-emerald-900 font-bold text-sm">${ev.title}</div></div><div class="bg-emerald-600 text-white w-7 h-7 rounded-full flex items-center justify-center"><i class="fas fa-check text-xs"></i></div></div>`).join('');
+        var list = document.getElementById('historyList');
+        var data = window.currentAttendedData || [];
+        if (data.length === 0) { list.innerHTML = '<div class="text-center py-12 text-gray-400 text-sm italic bg-gray-50 rounded-2xl">尚無出席紀錄</div>'; } 
+        else { 
+            list.innerHTML = data.slice().reverse().map(ev => {
+                const thumbUrl = getDirectImageUrl(ev.poster_url);
+                return `
+                <div class="bg-emerald-50/50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100/50">
+                    <div class="flex items-center gap-3">
+                        ${thumbUrl ? `<img src="${thumbUrl}" class="w-10 h-10 rounded-lg object-cover shadow-sm">` : ''}
+                        <div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                            <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-600 text-white w-7 h-7 rounded-full flex items-center justify-center shrink-0 ml-3"><i class="fas fa-check text-xs"></i></div>
+                </div>`;
+            }).join(''); 
+        }
         document.getElementById('historyModal').style.display = 'flex';
     }
-    function closeHistoryModal(e, force=false) { if (force || e.target.id === 'historyModal') document.getElementById('historyModal').style.display = 'none'; }
+
+    // 基礎 UI 控制
+    function closeHistoryModal(e, force=false) { if (force || e.target === document.getElementById('historyModal')) { document.getElementById('historyModal').style.display = 'none'; } }
+    function openEditModal() { document.getElementById('editProfileModal').style.display = 'flex'; }
+    function closeEditModal(e, force=false) { if (force || e.target === document.getElementById('editProfileModal')) { document.getElementById('editProfileModal').style.display = 'none'; } }
     function logout() { sessionStorage.clear(); location.href = 'index.html'; }
     function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else showToast("未設定連結", "error"); }
 
+    // Toast & Scanner
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `${type === 'success' ? 'bg-emerald-800' : 'bg-red-800'} text-white px-6 py-3 rounded-full shadow-2xl text-xs font-bold transition-all duration-500 opacity-0 translate-y-2 flex items-center gap-2`;
+        toast.innerHTML = (type === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-triangle"></i>') + msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-2'), 100);
+        setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-2'); setTimeout(() => toast.remove(), 500); }, 3500);
+    }
     function startScanner() {
         document.getElementById('scannerModal').style.display = 'flex';
         html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (text) => { stopScanner(); processCheckin(text); }, () => {});
+        html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (text) => { stopScanner(); processCheckin(text); }, () => {})
+        .catch(err => { showToast("相機啟動失敗", "error"); stopScanner(); });
     }
     function stopScanner() {
         if (html5QrCode) {
@@ -299,27 +324,91 @@ window.addEventListener('load', function() {
         } else { document.getElementById('scannerModal').style.display = 'none'; }
     }
 
+    // 交互邏輯 (與後端對接)
+    async function handleUpdateProfile() {
+        const oldPass = document.getElementById('oldPass').value.trim();
+        const email = document.getElementById('editEmail').value.trim();
+        const newPass = document.getElementById('newPass').value.trim();
+        if (!oldPass) { showToast("請輸入舊密碼", "error"); return; }
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'updateProfile', phone: currentUser.phone, oldPassword: oldPass, email: email, newPassword: newPass || null }) });
+            const result = await res.json();
+            if (result.result === "SUCCESS") { showToast("更新成功！"); closeEditModal(null, true); } 
+            else { showToast(result.message || "更新失敗", "error"); }
+        } catch (e) { showToast("連線異常", "error"); }
+        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+    }
+
     async function processCheckin(scanData) {
-        if (!scanData.startsWith("CHECKIN:")) return;
+        if (!scanData.startsWith("CHECKIN:")) { showToast("無效格式", "error"); return; }
         document.getElementById('loadingOverlay').style.display = 'flex';
         try {
             const parts = scanData.split(':');
             const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
             const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'checkin', phone: currentUser.phone, name: currentUser.name, eventTitle: eventID }) });
             const result = await res.json();
-            if (result.result === "SUCCESS") { showToast("報到成功！"); syncData(); }
+            if (result.result === "SUCCESS") { showToast("報到成功！"); confetti({ particleCount: 150 }); syncData(); } 
+            else { showToast(result.message, "error"); }
         } catch (e) { showToast("報到失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
 
-    function showToast(msg, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        toast.className = `${type === 'success' ? 'bg-emerald-800' : 'bg-red-800'} text-white px-6 py-3 rounded-full shadow-2xl text-xs font-bold transition-all duration-500 flex items-center gap-2`;
-        toast.innerText = msg;
-        container.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+    async function handleReg(title) {
+        if(!confirm(`確認報名「${title}」？`)) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'register_event', phone: currentUser.phone, name: currentUser.name, eventTitle: title }) });
+            const result = await res.json();
+            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") { showToast(result.message || "報名成功！"); syncData(); } 
+            else { showToast(result.message, "error"); }
+        } catch (e) { showToast("連線異常", "error"); }
+        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+    }
+
+    async function enterStaffMode() {
+        var key = prompt("輸入管理金鑰：");
+        if (!key) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'verify_staff_key', key: key }) });
+            var result = await res.json();
+            if (result.result === "SUCCESS") { sessionStorage.setItem('staff_key', key); location.href = "staff_menu.html"; } 
+            else { showToast("認證失敗", "error"); }
+        } catch (e) { showToast("連線失敗", "error"); }
+        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
 </script>
+<script src="https://lf-cdn.coze.com/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js"></script>
+<script>
+  new CozeWebSDK.WebChatClient({
+    config: {
+      // 1. 填入您的 Bot ID
+      bot_id: '7620394792719499317', 
+    },
+    componentProps: {
+      // 2. 設定視窗標題與外觀
+      title: '築心智慧管家',
+      headerBackgroundColor: '#064e3b', // 森林綠，符合您的會館風格
+    },
+    auth: {
+      type: 'token',
+      // 3. 貼上您剛才產生的 pat_ 開頭代碼
+      token: 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI', 
+      onRefreshToken: function () {
+        return 'pat_Gww24NvZLMTFlNOx3ZlL52VjKQS6NKmghVIw37x7kt6Wb6NikS8icwinwTBbXhHI';
+      }
+    },
+    ui: {
+      base: {
+        zIndex: 9999, // 確保它不會被網頁其他圖片擋住
+      },
+      footer: {
+        isShow: true,
+        expression: true, // 允許使用表情符號，讓聊天更親切
+      }
+    }
+  });
+</script>    
 </body>
 </html>

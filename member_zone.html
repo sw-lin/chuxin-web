@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' *; connect-src *; worker-src blob:;">    
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://udify.app; style-src 'self' 'unsafe-inline' https://udify.app; img-src 'self' data: https://udify.app; connect-src 'self' https://udify.app;">    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
@@ -194,23 +193,46 @@
     
 
     // 3. 手動啟動 AI (這是關鍵修正)
-    function activateAI() {
-        const btn = document.getElementById('aiLauncherBtn');
-        btn.innerHTML = '<div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><span class="text-xs">啟動中...</span>';
+function activateAI() {
+    const btn = document.getElementById('aiLauncherBtn');
+    // 防止重複點擊啟動
+    if (btn.dataset.loaded === "true") return;
+
+    btn.innerHTML = '<div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><span class="text-xs">啟動中...</span>';
+    
+    window.difyChatbotConfig = { 
+        token: 'XN6K6P69Z8S6XN6K', 
+        baseUrl: 'https://udify.app' 
+    };
+
+    const s = document.createElement('script');
+    s.src = "https://udify.app/embed.min.js";
+    s.id = "XN6K6P69Z8S6XN6K";
+    s.defer = true;
+    
+    s.onload = () => { 
+        showToast("AI 助理已上線");
+        btn.dataset.loaded = "true"; // 標記已載入
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = `
+            <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
+                <i class="fas fa-check"></i>
+            </div>
+            <span class="font-black text-xs text-blue-900">AI 已啟動</span>
+        `;
         
-        window.difyChatbotConfig = { token: 'XN6K6P69Z8S6XN6K', baseUrl: 'https://udify.app' };
-        const s = document.createElement('script');
-        s.src = "https://udify.app/embed.min.js";
-        s.id = "XN6K6P69Z8S6XN6K";
-        s.defer = true;
-        s.onload = () => { 
-            showToast("AI 助理已上線");
-            btn.classList.add('opacity-50');
-            btn.innerHTML = '<div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-check"></i></div><span class="font-black text-xs text-blue-900">AI 已啟動</span>';
-        };
-        document.body.appendChild(s);
-    }
-function getDirectImageUrl(url) {
+        // 如果右下角沒出現，通常是因為 Dify 還在初始化的過程，
+        // 確保你的 HTML body 結尾沒有其他腳本報錯中斷執行。
+    };
+
+    s.onerror = () => {
+        showToast("AI 載入失敗，請檢查網路連接", "error");
+        btn.innerHTML = '<span>重試啟動</span>';
+    };
+
+    document.body.appendChild(s);
+}
+    function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;
         let id = "";

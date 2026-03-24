@@ -15,11 +15,12 @@
       token: 'a9BwRvWgFSBhR773'
      }
     </script>
-    <script
-     src="https://udify.app/embed.min.js"
-     id="a9BwRvWgFSBhR773"
-     defer>
+    
+    <script>
+      window.difyChatbotConfig = { token: 'a9BwRvWgFSBhR773' }
     </script>
+    
+    <script src="https://udify.app/embed.min.js" id="a9BwRvWgFSBhR773" defer></script>    
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
@@ -29,10 +30,7 @@
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
         
         /* 調整 Dify 按鈕顏色與層級 */
-        #dify-chatbot-bubble-button {
-            background-color: #064E3B !important;
-            z-index: 100 !important;
-        }
+        #dify-chatbot-bubble-button { background-color: #064E3B !important; z-index: 100 !important;    
     </style>
 </head>
     <body class="min-h-screen pb-20">
@@ -179,19 +177,36 @@
             syncData();
         };
 
-        async function syncData() {
-            // 保留您原本的 syncData 實作
-            // 只要 Dify 移到 head 且 defer 載入，這裡就不會再卡住了
-            console.log("開始同步會員資料...");
-            try {
-                // ... 執行 fetch ...
-            } catch (e) {
-                console.error("同步失敗", e);
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+async function syncData() {
+    console.log("開始同步會員資料...");
+    const overlay = document.getElementById('loadingOverlay');
+    const phone = sessionStorage.getItem('user_phone'); // 假設您登入時存了電話
+
+    if (!phone) {
+        location.href = 'index.html'; // 沒電話回登入頁
+        return;
+    }
+
+    try {
+        // 這一段是您原本「已完成驗證」但剛才不小心刪掉的 fetch 邏輯
+        const response = await fetch(`${GAS_URL}?type=sync&phone=${phone}`);
+        const data = await response.json();
+        
+        if (data.result === "SUCCESS") {
+            currentUser = data.user;
+            remoteConfig = data.config;
+            document.getElementById('userName').innerText = currentUser.name;
+            document.getElementById('news').innerText = data.news || "歡迎回來";
+            updateUI(currentUser, data.calendar, data.events);
         }
-    
+    } catch (e) {
+        console.error("同步失敗", e);
+        showToast("資料讀取失敗，請重新整理", "error");
+    } finally {
+        // 這是讓「轉圈圈」消失的關鍵
+        overlay.style.display = 'none';
+    }
+}    
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;

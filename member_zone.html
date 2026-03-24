@@ -130,7 +130,7 @@
                 <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
             </button>
-            <button id="aiLauncherBtn" onclick="activateAI()" class="bg-blue-50 p-6 rounded-[2rem] shadow-sm border border-blue-100 flex flex-col items-center gap-2 transition-all active:bg-blue-100">
+            <button id="aiLauncherBtn" onclick="()" class="bg-blue-50 p-6 rounded-[2rem] shadow-sm border border-blue-100 flex flex-col items-center gap-2 transition-all active:bg-blue-100">
             <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center animate-bounce"><i class="fas fa-robot"></i></div>
             <span class="font-black text-xs text-blue-900">啟動 AI 助手</span>
             </button>
@@ -217,49 +217,59 @@
 
     // 3. 手動啟動 AI (這是關鍵修正)
 function activateAI() {
-    console.log("正在準備 AI 配置...");
+    console.log("強制啟動 AI 助理模式...");
     const btn = document.getElementById('aiLauncherBtn');
     if (!btn || btn.dataset.loaded === "true") return;
 
-    // A. 必須最優先：定義配置物件
-    // 這樣腳本一載入就能立刻抓到這兩個參數
+    // 1. 先把舊的 Dify 殘留清除 (如果有的話)
+    const oldScript = document.getElementById('dify-script');
+    if (oldScript) oldScript.remove();
+
+    // 2. 重新定義配置
     window.difyChatbotConfig = { 
         token: 'XN6K6P69Z8S6XN6K', 
         baseUrl: 'https://udify.app' 
     };
 
-    // B. 建立腳本標籤
+    // 3. 建立並插入腳本
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
-    s.id = "dify-script"; // 給一個無關痛癢的 ID
-    s.async = true;       // 確保非同步載入不阻塞頁面
+    s.id = "dify-script";
+    s.async = true;
 
     s.onload = () => { 
-        console.log("Dify 腳本執行成功，檢查 iframe 狀態...");
+        console.log("腳本載入完畢，開始循環嘗試手動初始化...");
         
-        // 稍微延遲一下，給 Dify 畫圖的時間
-        setTimeout(() => {
-            const iframes = document.querySelectorAll('iframe');
-            console.log("目前的 iframe 數量:", iframes.length);
+        let retryCount = 0;
+        const maxRetries = 5;
+        
+        const forceInit = setInterval(() => {
+            // 強制執行 Dify 內部的初始化函式
+            if (typeof window.initDifyChatbot === 'function') {
+                window.initDifyChatbot();
+                console.log(`第 ${retryCount + 1} 次手動初始化觸發`);
+            }
             
+            // 檢查 iframe 是否長出來了
+            const iframes = document.querySelectorAll('iframe');
             if (iframes.length > 0) {
-                showToast("AI 助理已上線");
+                console.log("🎉 成功！對話框已產生");
+                clearInterval(forceInit);
                 btn.dataset.loaded = "true";
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.innerHTML = `
-                    <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <span class="font-black text-xs text-blue-900">AI 已啟動</span>
-                `;
-            } else {
-                console.warn("腳本載入了，但 iframe 沒長出來，嘗試手動初始化...");
-                if (window.initDifyChatbot) window.initDifyChatbot();
+                btn.innerHTML = `<div class="text-blue-600"><i class="fas fa-check"></i></div><span class="text-xs">AI 已啟動</span>`;
+                showToast("AI 助理已上線");
             }
-        }, 1000);
+
+            if (++retryCount >= maxRetries) {
+                clearInterval(forceInit);
+                if (document.querySelectorAll('iframe').length === 0) {
+                    console.error("手動初始化失敗，請檢查網路連線或 token 權限");
+                }
+            }
+        }, 800); // 每 800 毫秒嘗試一次，共 5 次
     };
 
-    // C. 最後一步：將腳本插入 body
     document.body.appendChild(s);
 }    
     function getDirectImageUrl(url) {

@@ -207,6 +207,12 @@ async function syncData() {
         // 注意：這裡不再自動呼叫 initAI，完全交給使用者手動點擊
     }
 }
+// 確保頁面載入後自動執行同步資料
+window.addEventListener('load', function() {
+    console.log("=== 頁面載入完成，啟動資料同步 ===");
+    syncData();
+});
+    
     function getDirectImageUrl(url) {
         if (!url || !url.includes('drive.google.com')) return url || "";
         let id = "";

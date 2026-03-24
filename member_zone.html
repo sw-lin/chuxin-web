@@ -7,25 +7,24 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-        
-        /* 避免 AI 按鈕遮擋重要 UI */
         #dify-chatbot-bubble-button { 
             background-color: #064E3B !important; 
             z-index: 100 !important; 
-            bottom: 80px !important; /* 向上移一點，避開底部功能區 */
+            bottom: 80px !important; 
         }
     </style>
-</head>
-<body class="min-h-screen pb-20">
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    </head>
+    <body class="min-h-screen pb-20">
 
     <div id="loadingOverlay" class="fixed inset-0 bg-white z-[300] flex flex-col items-center justify-center">
         <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-800 rounded-full animate-spin mb-4"></div>
@@ -124,6 +123,19 @@
     </div>
 
 <script>
+// 1. 立即執行：不准等，進頁面馬上查！
+    (function() {
+        const phone = sessionStorage.getItem('user_phone');
+        console.log("=== 權限優先檢查 ===");
+        console.log("當前 Session 電話:", phone);
+
+        if (!phone || phone === "undefined" || phone === "null") {
+            alert("登入逾時或尚未登入，請重新登入");
+            window.location.replace('index.html'); // 使用 replace 避免按上一頁又回來
+            return;
+        }
+    })();   
+    
     var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     var html5QrCode = null;
     var remoteConfig = {};
@@ -140,17 +152,11 @@
         document.body.appendChild(script);
     }
 
-    window.onload = function() {
-    const phone = sessionStorage.getItem('user_phone'); // 這裡要跟 index 存的一模一樣
-    console.log("正在檢查登入狀態，取得電話：", phone);
-
-    if (!phone || phone === "undefined" || phone === "null") {
-        console.error("未偵測到登入資訊，退回首頁");
-        location.href = 'index.html'; 
-        return;
-    }
-    syncData(); // 只有確定有電話，才執行原本的同步流程
-};
+    // 3. 頁面加載後的邏輯
+    window.addEventListener('load', function() {
+        console.log("=== 頁面資源載入完成，開始同步資料 ===");
+        syncData();
+    });
     
     async function syncData() {
         const overlay = document.getElementById('loadingOverlay');

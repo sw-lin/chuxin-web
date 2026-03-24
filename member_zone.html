@@ -338,11 +338,30 @@ function updateUI(user, calendar, events) {
 
     // 基礎 UI 控制
     function closeHistoryModal(e, force=false) { if (force || e.target === document.getElementById('historyModal')) { document.getElementById('historyModal').style.display = 'none'; } }
-    function openEditModal() { document.getElementById('editProfileModal').style.display = 'flex'; }
+    
     function closeEditModal(e, force=false) { if (force || e.target === document.getElementById('editProfileModal')) { document.getElementById('editProfileModal').style.display = 'none'; } }
     function logout() { sessionStorage.clear(); location.href = 'index.html'; }
     function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else showToast("未設定連結", "error"); }
 
+    function openEditModal() {
+    // 取得 Email 輸入框元素
+    const emailInput = document.getElementById('editEmail');
+    
+    // 如果目前有使用者資料，將其 Email 設定為浮水印
+    if (currentUser && currentUser.email) {
+        emailInput.placeholder = currentUser.email;
+    } else {
+        emailInput.placeholder = "尚未設定 Email";
+    }
+    
+    // 清空上次輸入的舊密碼與新密碼，確保安全
+    document.getElementById('oldPass').value = "";
+    document.getElementById('newPass').value = "";
+    emailInput.value = ""; // 讓它呈現 placeholder
+    
+    // 顯示 Modal
+    document.getElementById('editProfileModal').style.display = 'flex';
+    }
     // Toast & Scanner
     function showToast(msg, type = 'success') {
         const container = document.getElementById('toastContainer');

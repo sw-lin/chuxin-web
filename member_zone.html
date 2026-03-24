@@ -154,7 +154,7 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     let currentUser = null;
     let remoteConfig = {};
-    let html5QrCode = null;
+    window.html5QrCode = window.html5QrCode || null;
 
     window.onload = () => {
         const userStr = sessionStorage.getItem('userInfo');

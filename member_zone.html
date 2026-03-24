@@ -205,11 +205,12 @@
     // 3. 手動啟動 AI (這是關鍵修正)
 function activateAI() {
     const btn = document.getElementById('aiLauncherBtn');
-    // 防止重複點擊啟動
-    if (btn.dataset.loaded === "true") return;
+    if (!btn || btn.dataset.loaded === "true") return;
 
+    // 顯示載入狀態
     btn.innerHTML = '<div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><span class="text-xs">啟動中...</span>';
     
+    // 設定 Dify 配置
     window.difyChatbotConfig = { 
         token: 'XN6K6P69Z8S6XN6K', 
         baseUrl: 'https://udify.app' 
@@ -218,30 +219,33 @@ function activateAI() {
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
     s.id = "XN6K6P69Z8S6XN6K";
-    s.defer = true;
+    s.async = true; // 使用 async 通常比 defer 在動態插入時更穩定
     
     s.onload = () => { 
-        showToast("AI 助理已上線");
-        btn.dataset.loaded = "true"; // 標記已載入
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
-        btn.innerHTML = `
-            <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
-                <i class="fas fa-check"></i>
-            </div>
-            <span class="font-black text-xs text-blue-900">AI 已啟動</span>
-        `;
-        
-        // 如果右下角沒出現，通常是因為 Dify 還在初始化的過程，
-        // 確保你的 HTML body 結尾沒有其他腳本報錯中斷執行。
+        // 某些情況下 Dify 需要一點時間初始化介面
+        setTimeout(() => {
+            showToast("AI 助理已上線");
+            btn.dataset.loaded = "true";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.innerHTML = `
+                <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check"></i>
+                </div>
+                <span class="font-black text-xs text-blue-900">AI 已啟動</span>
+            `;
+        }, 500); 
     };
 
-    s.onerror = () => {
-        showToast("AI 載入失敗，請檢查網路連接", "error");
-        btn.innerHTML = '<span>重試啟動</span>';
+    s.onerror = (err) => {
+        console.error("CSP or Network Error:", err); // 方便你在控制台除錯
+        showToast("AI 載入失敗，請檢查網路或安全設定", "error");
+        btn.innerHTML = '<span class="cursor-pointer">重試啟動</span>';
+        btn.dataset.loaded = "false"; 
     };
 
     document.body.appendChild(s);
 }
+    
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;

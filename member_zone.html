@@ -141,9 +141,17 @@
     }
 
     window.onload = function() {
-        syncData();
-    };
+    const phone = sessionStorage.getItem('user_phone'); // 這裡要跟 index 存的一模一樣
+    console.log("正在檢查登入狀態，取得電話：", phone);
 
+    if (!phone || phone === "undefined" || phone === "null") {
+        console.error("未偵測到登入資訊，退回首頁");
+        location.href = 'index.html'; 
+        return;
+    }
+    syncData(); // 只有確定有電話，才執行原本的同步流程
+};
+    
     async function syncData() {
         const overlay = document.getElementById('loadingOverlay');
         const phone = sessionStorage.getItem('user_phone');

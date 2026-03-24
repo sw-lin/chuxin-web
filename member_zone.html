@@ -28,11 +28,11 @@
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
         
-        /* 修正後的樣式：確保這裡有 } 結尾 */
+        /* 修正點：加上了缺少的 } */
         #dify-chatbot-bubble-button { 
             background-color: #064E3B !important; 
             z-index: 100 !important; 
-        }    
+        }
     </style>
 </head>
     
@@ -210,15 +210,15 @@ async function syncData() {
         overlay.style.display = 'none';
     }
 }    
-    function getDirectImageUrl(url) {
-        if (!url) return "";
-        if (!url.includes('drive.google.com')) return url;
-        let id = "";
-        if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
-        else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
-        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
-    }
-
+function getDirectImageUrl(url) {
+    if (!url) return "";
+    if (!url.includes('drive.google.com')) return url;
+    let id = "";
+    if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
+    else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
+    // 修正點：使用 ${id} 而非 {id}
+    return id ? `https://lh3.googleusercontent.com/u/0/d/${id}` : url;
+}
     function updateUI(user, calendar, events) {
         const logs = (user.attendLog || []).map(log => String(log).trim());
         const today = new Date().toISOString().split('T')[0];

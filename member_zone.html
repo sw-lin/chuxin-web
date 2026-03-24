@@ -235,22 +235,28 @@ function activateAI() {
     s.async = true;
     
     s.onload = () => { 
-        console.log("Dify 腳本下載成功，嘗試初始化介面...");
-        showToast("AI 助理已上線");
-        btn.dataset.loaded = "true";
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
-        btn.innerHTML = `
-            <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
-                <i class="fas fa-check"></i>
-            </div>
-            <span class="font-black text-xs text-blue-900">AI 已啟動</span>
-        `;
-        // 檢查 Dify 是否真的掛載到 window
-        setTimeout(() => {
-            console.log("目前視窗物件:", window.difyChatbotConfig);
-        }, 1000);
+    console.log("Dify 腳本下載成功");
+    // 關鍵修正：確保 window 上的配置在腳本跑之前就存在
+    window.difyChatbotConfig = { 
+        token: 'XN6K6P69Z8S6XN6K', 
+        baseUrl: 'https://udify.app' 
     };
 
+    showToast("AI 助理已上線");
+    btn.dataset.loaded = "true";
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+    btn.innerHTML = `
+        <div class="text-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
+            <i class="fas fa-check"></i>
+        </div>
+        <span class="font-black text-xs text-blue-900">AI 已啟動</span>
+    `;
+
+    // 額外保險：如果右下角沒圖標，嘗試重新載入 Dify
+    if (typeof window.initDifyChatbot === 'function') {
+        window.initDifyChatbot();
+    }
+    };
     s.onerror = (e) => {
         console.error("Dify 載入異常！錯誤詳情:", e);
         showToast("AI 載入失敗，請查看控制台", "error");

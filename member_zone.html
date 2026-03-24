@@ -16,11 +16,10 @@
      }
     </script>
     
-    <script>
+<script>
       window.difyChatbotConfig = { token: 'a9BwRvWgFSBhR773' }
     </script>
-    
-    <script src="https://udify.app/embed.min.js" id="a9BwRvWgFSBhR773" defer></script>    
+    <script src="https://udify.app/embed.min.js" id="a9BwRvWgFSBhR773" defer></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
@@ -29,10 +28,14 @@
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
         
-        /* 調整 Dify 按鈕顏色與層級 */
-        #dify-chatbot-bubble-button { background-color: #064E3B !important; z-index: 100 !important;    
+        /* 修正後的樣式：確保這裡有 } 結尾 */
+        #dify-chatbot-bubble-button { 
+            background-color: #064E3B !important; 
+            z-index: 100 !important; 
+        }    
     </style>
 </head>
+    
     <body class="min-h-screen pb-20">
 
 <!-- 加載動畫 -->
@@ -392,25 +395,6 @@ async function syncData() {
         } catch (e) { showToast("連線失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
-</script>
-<script>
- window.difyChatbotConfig = {
-  token: 'a9BwRvWgFSBhR773',
-  inputs: {
-    // You can define the inputs from the Start node here
-    // key is the variable name
-    // e.g.
-    // name: "NAME"
-  },
-  systemVariables: {
-    // user_id: 'YOU CAN DEFINE USER ID HERE',
-    // conversation_id: 'YOU CAN DEFINE CONVERSATION ID HERE, IT MUST BE A VALID UUID',
-  },
-  userVariables: {
-    // avatar_url: 'YOU CAN DEFINE USER AVATAR URL HERE',
-    // name: 'YOU CAN DEFINE USER NAME HERE',
-  },
- }
 </script>
 </body>
 </html>

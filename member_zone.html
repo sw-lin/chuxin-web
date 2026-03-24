@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
+    <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -21,13 +22,13 @@
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
         
-        /* 這裡加上了關鍵的右大括號 } */
+        /* 樣式正確閉合 */
         #dify-chatbot-bubble-button { 
             background-color: #064E3B !important; 
             z-index: 100 !important; 
         }
     </style>
-</head>    
+    </head>
     <body class="min-h-screen pb-20">
 
 <!-- 加載動畫 -->
@@ -201,15 +202,15 @@ async function syncData() {
         // 這是讓「轉圈圈」消失的關鍵
         overlay.style.display = 'none';
     }
-}    
-function getDirectImageUrl(url) {
+}
+    function getDirectImageUrl(url) {
     if (!url) return "";
     if (!url.includes('drive.google.com')) return url;
     let id = "";
     if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
     else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
-    // 修正點：使用 ${id} 而非 {id}
-    return id ? `https://lh3.googleusercontent.com/u/0/d/${id}` : url;
+    // 注意這裡的 ${id}
+    return id ? `https://lh3.googleusercontent.com/d/${id}` : url;
 }
     function updateUI(user, calendar, events) {
         const logs = (user.attendLog || []).map(log => String(log).trim());

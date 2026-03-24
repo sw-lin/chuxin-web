@@ -121,96 +121,92 @@
             <div class="p-6 text-center"><button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-black text-gray-500">取消返回</button></div>
         </div>
     </div>
-
-<script>
- // 1. 立即執行：相容舊版 index.html 的存儲格式
-    (function() {
-        console.log("=== 權限相容性檢查執行中 ===");
+    
+    <div id="fake-ai-btn" onclick="activateRealAI()" 
+     class="fixed bottom-24 right-6 z-[100] w-14 h-14 bg-[#064E3B] rounded-full shadow-2xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-90 border-2 border-emerald-400/30">
+    <i class="fas fa-comment-dots text-white text-2xl"></i>
+    <span class="absolute -top-1 -right-1 flex h-4 w-4">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+    </span>
+</div>
         
-        // 嘗試讀取你說的舊格式 'userInfo'
-        const userInfoRaw = sessionStorage.getItem('userInfo');
-        let phone = sessionStorage.getItem('user_phone'); // 先看有沒有新格式
-
-        // 如果沒有新格式，但有舊的 userInfo，就現場拆箱
-        if (!phone && userInfoRaw) {
-            try {
-                const userObj = JSON.parse(userInfoRaw);
-                phone = userObj.phone; // 從 JSON 裡面拿電話
-                // 為了讓後面的 syncData 也能抓到，我們補存一下新格式
-                sessionStorage.setItem('user_phone', phone);
-                console.log("已從 userInfo 成功解析電話:", phone);
-            } catch (e) {
-                console.error("解析 userInfo 失敗");
-            }
-        }
-
-        console.log("最終檢查電話:", phone);
-
-        // 最後的判斷門檻
-        if (!phone || phone === "undefined" || phone === "null") {
-            alert("登入逾時或尚未登入，請重新登入");
-            window.location.replace('index.html');
-            return;
-        }
-    })();    
+<script>
+// 1. 權限檢查（保持你目前的相容性寫法）
+(function() {
+    const info = sessionStorage.getItem('userInfo');
+    if (info) {
+        try {
+            const obj = JSON.parse(info);
+            if (obj.phone) sessionStorage.setItem('user_phone', obj.phone);
+        } catch(e) {}
+    }
+    const phone = sessionStorage.getItem('user_phone');
+    if (!phone || phone === "undefined") {
+        window.location.replace('index.html');
+    }
+})();
+    
     var GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
     var html5QrCode = null;
     var remoteConfig = {};
     var currentUser = null;
 
-    // 核心邏輯：動態注入 Dify AI
-    function initAI() {
-        console.log("正在啟動 AI 模組...");
-        window.difyChatbotConfig = { token: 'a9BwRvWgFSBhR773' };
-        const script = document.createElement('script');
-        script.src = "https://udify.app/embed.min.js";
-        script.id = "a9BwRvWgFSBhR773";
-        script.defer = true;
-        document.body.appendChild(script);
-    }
-
-    // 3. 頁面加載後的邏輯
-    window.addEventListener('load', function() {
-        console.log("=== 頁面資源載入完成，開始同步資料 ===");
-        syncData();
-    });
+// 2. 手動啟動 AI 的核心邏輯
+function activateRealAI() {
+    const btn = document.getElementById('fake-ai-btn');
     
-    async function syncData() {
-        const overlay = document.getElementById('loadingOverlay');
-        const phone = sessionStorage.getItem('user_phone');
-        if (!phone) { location.href = 'index.html'; return; }
+    // 顯示載入狀態，避免使用者重覆點擊
+    btn.innerHTML = '<i class="fas fa-circle-notch animate-spin text-white text-2xl"></i>';
+    btn.style.pointerEvents = 'none'; 
 
-        try {
-            console.log("正在從雲端同步資料...");
-            const response = await fetch(`${GAS_URL}?type=sync&phone=${phone}`);
-            const data = await response.json();
-            
-            if (data.result === "SUCCESS") {
-                currentUser = data.user;
-                remoteConfig = data.config;
-                
-                document.getElementById('userName').innerText = currentUser.name || "會員";
-                document.getElementById('news').innerText = data.news || "歡迎回來";
-                
-                // 權限檢查
-                if (currentUser.is_staff === true) {
-                    document.getElementById('staffBtn').classList.remove('hidden');
-                }
+    console.log("正在召喚 AI 助手...");
 
-                updateUI(currentUser, data.calendar, data.events);
+    // 配置 Dify
+    window.difyChatbotConfig = { token: 'a9BwRvWgFSBhR773' };
+    
+    // 動態插入腳本
+    const script = document.createElement('script');
+    script.src = "https://udify.app/embed.min.js";
+    script.id = "a9BwRvWgFSBhR773";
+    
+    // 當真正的 AI 腳本載入完成時
+    script.onload = function() {
+        console.log("AI 助手已就緒");
+        // 稍微延遲一下，等 Dify 原生按鈕渲染出來再隱藏偽裝按鈕
+        setTimeout(() => {
+            btn.style.opacity = '0';
+            setTimeout(() => { btn.style.display = 'none'; }, 300);
+        }, 1000);
+    };
+
+    document.body.appendChild(script);
+}
+
+// 3. 原本的同步邏輯（移除 finally 裡的 initAI）
+async function syncData() {
+    const overlay = document.getElementById('loadingOverlay');
+    const phone = sessionStorage.getItem('user_phone');
+    try {
+        const response = await fetch(`${GAS_URL}?type=sync&phone=${phone}`);
+        const data = await response.json();
+        if (data.result === "SUCCESS") {
+            currentUser = data.user;
+            remoteConfig = data.config;
+            document.getElementById('userName').innerText = currentUser.name || "會員";
+            document.getElementById('news').innerText = data.news || "歡迎回來";
+            if (currentUser.is_staff === true) {
+                document.getElementById('staffBtn').classList.remove('hidden');
             }
-        } catch (e) {
-            console.error("同步出錯:", e);
-        } finally {
-            // 先關閉遮罩，讓使用者看到內容
-            if(overlay) overlay.style.display = 'none';
-            console.log("遮罩已移除，準備執行次要任務");
-
-            // 等待 1.5 秒後才加載 AI，確保不影響網頁滑動順暢度
-            setTimeout(initAI, 1500);
+            updateUI(currentUser, data.calendar, data.events);
         }
+    } catch (e) {
+        console.error("同步失敗:", e);
+    } finally {
+        if(overlay) overlay.style.display = 'none';
+        // 注意：這裡不再自動呼叫 initAI，完全交給使用者手動點擊
     }
-
+}
     function getDirectImageUrl(url) {
         if (!url || !url.includes('drive.google.com')) return url || "";
         let id = "";

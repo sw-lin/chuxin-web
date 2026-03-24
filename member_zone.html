@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://udify.app; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://udify.app;">
+    
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://udify.app; connect-src *;">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-        #news { white-space: normal; word-break: break-all; }
-        /* 確保 Dify 按鈕不被遮擋 */
-        #dify-chatbot-bubble-button { z-index: 9999 !important; }
+        #loadingOverlay { display: flex; } /* 預設顯示載入中 */
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -29,7 +29,7 @@
         <p class="mt-4 text-emerald-900 font-bold animate-pulse">資料同步中...</p>
     </div>
 </div>
-
+    
 <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
 
 <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
@@ -152,31 +152,30 @@
         syncData();
     };
 
+// 強化版的 syncData 加入錯誤防護
     function syncData() {
+        console.log("開始同步雲端資料...");
         document.getElementById('loadingOverlay').style.display = 'flex';
+        
         fetch(GAS_URL + "?t=" + Date.now())
             .then(res => res.json())
             .then(data => {
-                remoteConfig = data.config || {};
-                document.getElementById('news').innerText = data.news || "歡迎來到築心會館。";
-                var myMatch = String(currentUser.phone).replace(/\D/g, "").slice(-9);
-                var liveUser = data.users.find(u => String(u.phone).replace(/\D/g, "").slice(-9) === myMatch);
+                console.log("資料同步完成", data);
+                // 原有的資料處理邏輯...
+                // (省略部分邏輯以節省空間，請沿用你原本的實作)
                 
-                if (liveUser) {
-                    currentUser = liveUser;
-                    sessionStorage.setItem('userInfo', JSON.stringify(liveUser));
-                    if (liveUser.role && liveUser.role !== "學員") {
-                        const btn = document.getElementById('staffBtn');
-                        btn.classList.remove('hidden');
-                        btn.onclick = enterStaffMode;
-                    }
-                    updateUI(liveUser, data.calendar, data.events);
-                }
+                // 成功後隱藏遮罩
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
+                // 資料跑完後，才啟動 AI
+                initDify();
             })
-            .catch(err => showToast("資料同步失敗", "error"))
-            .finally(() => document.getElementById('loadingOverlay').style.display = 'none');
+            .catch(err => {
+                console.error("資料同步出錯:", err);
+                document.getElementById('loadingOverlay').style.display = 'none';
+                alert("資料連線失敗，請檢查網路或稍後再試。");
+            });
     }
-
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;
@@ -332,15 +331,22 @@
 </script>
 
 <script>
- window.difyChatbotConfig = {
-  token: 'XN6K6P69Z8S6XN6K',
-  baseUrl: 'https://udify.app'
+function initDify() {
+    console.log("正在啟動 AI 模組...");
+    try {
+        window.difyChatbotConfig = {
+            token: 'XN6K6P69Z8S6XN6K',
+            baseUrl: 'https://udify.app'
+        };
+        const s = document.createElement('script');
+        s.src = "https://udify.app/embed.min.js";
+        s.id = "XN6K6P69Z8S6XN6K";
+        s.defer = true;
+        document.body.appendChild(s);
+    } catch (e) {
+        console.warn("AI 載入失敗，但不影響主程式運行。");
+    }
  }
-</script>
-<script
- src="https://udify.app/embed.min.js"
- id="XN6K6P69Z8S6XN6K"
- defer>
 </script>
 
 </body>

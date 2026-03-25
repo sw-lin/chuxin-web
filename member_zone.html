@@ -421,11 +421,10 @@ async function handleUpdateProfile() {
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
 
-// 2. 統一的 Dify AI 助手控制器
+ // 2. 統一的 Dify AI 助手控制器 (強化版)
 function initDifyBot(shouldOpen = false) {
-    const existingScript = document.getElementById('a9BwRvWgFSBhR773'); // 改用 Token 作為 ID
-    
-    if (existingScript) {
+    // 檢查是否已經有腳本
+    if (document.getElementById('dify-sdk')) {
         if (shouldOpen && typeof difyChatbot !== 'undefined') {
             difyChatbot.show();
         }
@@ -433,26 +432,34 @@ function initDifyBot(shouldOpen = false) {
     }
 
     console.log("🚀 正在啟動 Dify AI 助手...");
-
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
-    s.id = "a9BwRvWgFSBhR773"; // 與 Token 保持一致
+    s.id = "dify-sdk"; 
     s.defer = true;
 
     s.onload = () => {
-        console.log("✅ SDK 載入成功");
+        console.log("✅ Dify SDK 檔案載入完成");
+        // 使用更積極的檢查頻率
+        let retryCount = 0;
         const checkExist = setInterval(() => {
+            retryCount++;
             if (typeof difyChatbot !== 'undefined') {
                 clearInterval(checkExist);
-                console.log("✨ Dify 變數已就緒");
+                console.log("✨ Dify 元件初始化成功");
+                // 這裡一定要 init 否則泡泡不會出來
+                difyChatbot.init({
+                    token: 'a9BwRvWgFSBhR773',
+                    baseUrl: 'https://udify.app'
+                });
                 if (shouldOpen) {
                     setTimeout(() => { difyChatbot.show(); }, 500);
                 }
             }
+            if (retryCount > 50) clearInterval(checkExist); // 最多等 15 秒
         }, 300);
     };
-    document.body.appendChild(s);
-}  
+    document.head.appendChild(s); // 改掛在 head 確保優先級
+} 
     
 // 3. 點擊按鈕手動啟動
 function activateAI() {
@@ -489,25 +496,26 @@ async function syncData() {
         showToast("同步失敗", "error"); 
     } finally { 
         overlay.style.display = 'none'; 
-        // 資料同步後，靜默載入泡泡
-        initDifyBot(false);
     }
 }
     
-
-      // 5. 統一入口：頁面載入後執行
+// 5. 統一入口：頁面載入後執行
 window.addEventListener('load', () => {
+    // A. 優先載入 AI 助手 (不等待資料同步)
+    initDifyBot(false);
+
+    // B. 處理使用者權限與資料同步
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) { 
         location.href = 'index.html'; 
         return; 
     }
     currentUser = JSON.parse(userStr);
-    document.getElementById('userName').innerText = currentUser.name;
+    const userNameElem = document.getElementById('userName');
+    if(userNameElem) userNameElem.innerText = currentUser.name;
     
-    // 執行同步（同步完會自動呼叫 initDifyBot）
     syncData();
-}); 
+});
     
 </script>
 </body>

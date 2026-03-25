@@ -7,7 +7,7 @@
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net https://udify.app https://*.dify.ai;
-  style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+  style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://udify.app;
   font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com;
   connect-src 'self' https://script.google.com https://script.googleusercontent.com https://udify.app https://api.dify.ai;
   frame-src 'self' https://udify.app https://*.dify.ai;
@@ -181,17 +181,15 @@ div[class*="dify-chatbot"] {
     
 // 1. 統一的 Dify AI 助手控制器
 async function initDifyBot(shouldOpen = false) {
-    // 防止重複插入腳本
     if (document.getElementById('dify-script-loader')) {
         if (shouldOpen && typeof difyChatbot !== 'undefined') {
-            difyChatbot.show(); // 如果已載入，點擊按鈕就直接顯示
+            difyChatbot.show();
         }
         return;
     }
 
     console.log("正在啟動 Dify AI 助手...");
     
-    // 設定全域配置
     window.difyChatbotConfig = {
         token: 'a9BwRvWgFSBhR773',
         baseUrl: 'https://udify.app'
@@ -203,20 +201,26 @@ async function initDifyBot(shouldOpen = false) {
     s.async = true;
 
     s.onload = () => {
-        window.difyChatbotInitialized = true;
-        console.log("✅ Dify 腳本載入成功");
-        if (shouldOpen) {
-            // 給予微小延遲確保 init 完成
-            setTimeout(() => { if(typeof difyChatbot !== 'undefined') difyChatbot.show(); }, 500);
-        }
-    };
-
-    s.onerror = () => {
-        showToast("AI 腳本載入失敗，請檢查網路或 CSP 設定", "error");
+        console.log("✅ Dify 腳本載入成功，嘗試初始化...");
+        
+        // 強制檢查並初始化
+        const checkExist = setInterval(() => {
+            if (typeof difyChatbot !== 'undefined') {
+                clearInterval(checkExist);
+                // 如果載入後泡泡沒自動出來，可以手動調用 init (某些版本適用)
+                if (typeof difyChatbot.init === 'function') {
+                    difyChatbot.init(window.difyChatbotConfig);
+                }
+                
+                if (shouldOpen) {
+                    setTimeout(() => { difyChatbot.show(); }, 500);
+                }
+            }
+        }, 200);
     };
 
     document.body.appendChild(s);
-}  
+}
 
     
     window.onload = () => {

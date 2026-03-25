@@ -517,23 +517,37 @@ async function handleUpdateProfile() {
   
 </script>
 <script>
-  // 確保 Dify 參數正確
+  // 1. 確保配置物件在最外層，隨時可被讀取
   window.difyChatbotConfig = {
     token: 'XN6K6P69Z8S6XN6K',
     baseUrl: 'https://udify.app'
   };
 
-  // 核心修正：延遲載入 Dify，確保你的核心資料同步優先完成
   window.addEventListener('load', function() {
-    // 縮短為 2 秒，資料同步完馬上接力載入泡泡
+    console.log("頁面已完全載入，準備啟動 AI 助理...");
+    
     setTimeout(function() {
+      // 2. 建立腳本
       const s = document.createElement('script');
       s.src = 'https://udify.app/embed.min.js';
       s.id = 'XN6K6P69Z8S6XN6K';
-      s.async = true; // 改用 async 加快初始化
+      
+      s.onload = function() {
+        console.log("Dify 腳本載入完成，執行強制初始化...");
+        // 3. 保險機制：如果 1 秒後泡泡沒出來，手動踢它一下
+        setTimeout(function() {
+          if (document.querySelectorAll('iframe').length === 0) {
+            console.log("偵測到泡泡未自動顯示，嘗試手動初始化...");
+            if (typeof window.initDifyChatbot === 'function') {
+                window.initDifyChatbot();
+            }
+          }
+        }, 1000);
+      };
+
       document.body.appendChild(s);
-    }, 2000); 
+    }, 2000); // 維持 2 秒延遲，確保資料庫同步優先
   });
-</script>    
+</script>
 </body>
 </html>

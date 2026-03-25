@@ -139,7 +139,7 @@
             closeModal('addMemberModal');
             toggleLoading(true);
 
-            var payload = { type: 'add_member', key: STAFF_KEY, name: n, phone: p, email: e, password: '123', role: '學員' };
+            var payload = { type: 'add_member', key: STAFF_KEY, name: n, phone: p, email: e, password: '123', role: '' };
             
             fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
                 .then(function(res) { return res.json(); })

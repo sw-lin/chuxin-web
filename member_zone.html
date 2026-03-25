@@ -18,13 +18,14 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-        /* 強制 Dify 容器出現在所有元件之上 */
-        #dify-chatbot-bubble-button {
-         z-index: 999999 !important;
-        }
-        #dify-chatbot-window {
-         z-index: 999999 !important;
-        }
+/* 確保所有 Dify 相關的容器都浮在最上層 */
+[id^="dify-chatbot"] {
+    z-index: 999999 !important;
+}
+div[class*="dify-chatbot"] {
+    z-index: 999999 !important;
+}
+        
         /* 確保 body 不會阻擋固定定位的元件 */
         body {
            position: relative;

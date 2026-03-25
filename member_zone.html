@@ -476,7 +476,12 @@ async function initDifyBot(shouldOpen = false) {
     };
 
     document.body.appendChild(s);
-}  
+} 
+// 2. 關鍵所在：使用 load 監聽器來執行它
+        window.addEventListener('load', () => {
+            console.log("網頁已完全載入，準備呼叫 Dify...");
+            initDifyBot(false); // 執行函式，false 代表先顯示泡泡但不自動彈出對話框
+        });    
     // 1. 同步雲端資料
     async function syncData() {
         document.getElementById('loadingOverlay').style.display = 'flex';

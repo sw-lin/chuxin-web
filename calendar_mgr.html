@@ -120,18 +120,20 @@
         if(el) el.style.display = s ? 'flex' : 'none'; 
     }
 
-    // --- 1. 讀取行事曆 (對齊 GAS 的 calendar 欄位) ---
+    // --- 1. 讀取行事曆 (精確對齊 GAS 的 dateText 欄位) ---
     function loadCalendar() {
         toggleLoading(true);
+        // 強制加上時間戳避免快取舊資料
         fetch(GAS_URL + "?t=" + Date.now())
             .then(res => res.json())
             .then(data => {
                 const list = document.getElementById('eventList');
-                // 對齊 GAS：doGet 回傳的是 data.calendar
+                // 根據你的 GAS 第 175 行，資料放在 data.calendar
                 allEvents = data.calendar || [];
                 let html = '';
                 
                 allEvents.forEach((ev, index) => {
+                    // 核心修正：GAS 裡回傳的是 dateText，所以這裡必須用 ev.dateText
                     html += `
                         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-4">
                             <div class="flex justify-between items-start mb-4">
@@ -160,7 +162,9 @@
             .finally(() => toggleLoading(false));
     }
 
+    // 使用 Index 避免特殊字元解析錯誤
     function doQR(i) { openQR(allEvents[i].dateText, allEvents[i].title); }
+    
     function doEdit(i) {
         currentEditData = allEvents[i];
         document.getElementById('modalTitle').innerText = "編輯活動項目";
@@ -177,11 +181,12 @@
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
-        if (!date || !title) return alert("必填未填");
+        if (!date || !title) return alert("日期與標題為必填");
 
         closeModal('eventModal');
         toggleLoading(true);
 
+        // 根據 GAS 第 202 行，它同時接受 dateText 或 date
         fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({ 
@@ -193,7 +198,7 @@
                 needQR: true 
             })
         })
-        .then(() => { showToast("✅ 已新增"); loadCalendar(); })
+        .then(() => { showToast("✅ 活動已新增"); loadCalendar(); })
         .finally(() => toggleLoading(false));
     }
 
@@ -207,6 +212,7 @@
         closeModal('eventModal');
         toggleLoading(true);
 
+        // 對齊 GAS 第 211 行的參數名稱
         fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -218,20 +224,20 @@
                 poster_url: poster
             })
         })
-        .then(() => { showToast("✅ 已更新"); loadCalendar(); })
+        .then(() => { showToast("✅ 活動已更新"); loadCalendar(); })
         .finally(() => toggleLoading(false));
     }
 
-    // --- 4. 刪除活動 (對齊 GAS: delete_event_poster 實現連帶刪除) ---
+    // --- 4. 刪除活動 (對齊 GAS: delete_event_poster 執行全清空) ---
     function doDelete(i) {
         const ev = allEvents[i];
-        if (!confirm(`確定要刪除「${ev.title}」嗎？\n這將一併移除報名與簽到紀錄。`)) return;
+        if (!confirm(`確定要徹底刪除「${ev.title}」嗎？\n這將移除相關所有工作表的紀錄。`)) return;
         
         toggleLoading(true);
         fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({ 
-                type: 'delete_event_poster', // GAS 中最強大的刪除函式
+                type: 'delete_event_poster', // 對齊 GAS 第 288 行
                 key: STAFF_KEY, 
                 eventTitle: ev.title 
             })

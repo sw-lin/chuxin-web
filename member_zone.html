@@ -6,6 +6,8 @@
     <title>會員中心 | 築心會館</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://udify.app https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://udify.app https://api.dify.ai https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https:; child-src blob:; worker-src 'self' blob:;">
     
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
@@ -205,68 +207,20 @@
         
         // 資料同步成功後，才啟動 AI 助手，避免搶佔頻寬與報錯
         console.log("核心資料同步完成，喚醒 AI 助手...");
-        initDifyFlow(); 
+        // 資料同步後自動載入氣泡
+        initDifyBot();
     }
     }
     
-
-    // 3. 手動啟動 AI (這是關鍵修正)
+// 修改啟動按鈕的行為
 function activateAI() {
-    console.log("強制啟動 AI 助理模式...");
-    const btn = document.getElementById('aiLauncherBtn');
-    if (!btn || btn.dataset.loaded === "true") return;
-
-    // 1. 先把舊的 Dify 殘留清除 (如果有的話)
-    const oldScript = document.getElementById('dify-script');
-    if (oldScript) oldScript.remove();
-
-    // 2. 重新定義配置
-    window.difyChatbotConfig = { 
-        token: 'a9BwRvWgFSBhR773',
-        baseUrl: 'https://udify.app' 
-    };
-
-    // 3. 建立並插入腳本
-    const s = document.createElement('script');
-    s.src = "https://udify.app/embed.min.js";
-    s.id = "dify-script";
-    s.async = true;
-
-    s.onload = () => { 
-        console.log("腳本載入完畢，開始循環嘗試手動初始化...");
-        
-        let retryCount = 0;
-        const maxRetries = 5;
-        
-        const forceInit = setInterval(() => {
-            // 強制執行 Dify 內部的初始化函式
-            if (typeof window.initDifyChatbot === 'function') {
-                window.initDifyChatbot();
-                console.log(`第 ${retryCount + 1} 次手動初始化觸發`);
-            }
-            
-            // 檢查 iframe 是否長出來了
-            const iframes = document.querySelectorAll('iframe');
-            if (iframes.length > 0) {
-                console.log("🎉 成功！對話框已產生");
-                clearInterval(forceInit);
-                btn.dataset.loaded = "true";
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.innerHTML = `<div class="text-blue-600"><i class="fas fa-check"></i></div><span class="text-xs">AI 已啟動</span>`;
-                showToast("AI 助理已上線");
-            }
-
-            if (++retryCount >= maxRetries) {
-                clearInterval(forceInit);
-                if (document.querySelectorAll('iframe').length === 0) {
-                    console.error("手動初始化失敗，請檢查網路連線或 token 權限");
-                }
-            }
-        }, 800); // 每 800 毫秒嘗試一次，共 5 次
-    };
-
-    document.body.appendChild(s);
-}    
+    initDifyBot();
+    // 如果氣泡已經加載但被隱藏，強制顯示
+    if (typeof difyChatbot !== 'undefined') {
+        difyChatbot.show();
+    }
+}
+    
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;
@@ -556,6 +510,27 @@ async function handleUpdateProfile() {
 
     document.body.appendChild(s);
 }
+// 統一的 Dify 啟動器
+function initDifyBot() {
+    if (window.difyChatbotInitialized) return;
+
+    console.log("正在啟動 Dify AI 助手...");
+    
+    window.difyChatbotConfig = {
+        token: 'a9BwRvWgFSBhR773',
+        baseUrl: 'https://udify.app'
+    };
+
+    const s = document.createElement('script');
+    s.src = "https://udify.app/embed.min.js";
+    s.id = "dify-script-loader";
+    s.async = true;
+    s.onload = () => {
+        window.difyChatbotInitialized = true;
+        showToast("AI 助理已上線");
+    };
+    document.body.appendChild(s);
+}    
 </script>
 </body>
 </html>

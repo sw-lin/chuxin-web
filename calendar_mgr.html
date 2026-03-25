@@ -104,9 +104,8 @@
     var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
     var GAS_URL = u1 + u2;
     var STAFF_KEY = sessionStorage.getItem('staff_key');
-    var currentEditData = null; // 用於儲存當前編輯中的原始資料
+    var currentEditData = null;
 
-    // 頁面載入檢查
     window.onload = function() {
         if (!STAFF_KEY) { 
             alert("請重新從管理區登入");
@@ -116,14 +115,13 @@
         loadCalendar();
     };
 
-    // 載入動畫切換
     function toggleLoading(s) { 
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) overlay.style.display = s ? 'flex' : 'none'; 
     }
 
-    // --- 核心功能：讀取行事曆 ---
-function loadCalendar() {
+    // --- 1. 讀取行事曆 (使用 ev.date 確保載入成功) ---
+    function loadCalendar() {
         toggleLoading(true);
         fetch(GAS_URL + "?t=" + Date.now())
             .then(res => res.json())
@@ -132,25 +130,23 @@ function loadCalendar() {
                 const events = data.events || [];
                 let html = '';
                 
-                events.forEach((ev, index) => {
-                    // 安全做法：將資料轉為字串並存入 dataset
-                    const evData = JSON.stringify(ev);
-                    
+                events.forEach(ev => {
+                    const evString = encodeURIComponent(JSON.stringify(ev));
                     html += `
                         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-4">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
-                                    <div class="text-emerald-600 font-black text-sm mb-1">${ev.dateText}</div>
+                                    <div class="text-emerald-600 font-black text-sm mb-1">${ev.date}</div>
                                     <h3 class="text-xl font-black text-emerald-900">${ev.title}</h3>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openQR('${ev.dateText}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
+                                    <button onclick="openQR('${ev.date}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
                                         <i class="fas fa-qrcode"></i>
                                     </button>
-                                    <button id="edit-btn-${index}" data-info='${evData.replace(/'/g, "&apos;")}' onclick="handleEditClick(this)" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
+                                    <button onclick="openEditModal('${evString}')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="deleteEvent('${ev.dateText}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
+                                    <button onclick="deleteEvent('${ev.date}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
@@ -167,24 +163,7 @@ function loadCalendar() {
             .finally(() => toggleLoading(false));
     }
 
-    // 新增一個處理點擊的函式
-    function handleEditClick(btn) {
-        const ev = JSON.parse(btn.dataset.info);
-        openEditModalFromData(ev);
-    }
-
-    function openEditModalFromData(ev) {
-        currentEditData = ev;
-        document.getElementById('modalTitle').innerText = "編輯活動項目";
-        document.getElementById('eventDate').value = ev.dateText; 
-        document.getElementById('eventTitle').value = ev.title; 
-        document.getElementById('eventPoster').value = ev.poster_url || "";
-        
-        document.getElementById('addActions').classList.add('hidden'); 
-        document.getElementById('editActions').classList.remove('hidden');
-        document.getElementById('eventModal').style.display = 'flex';
-    }
-    // --- 功能：新增活動 ---
+    // --- 2. 新增活動 (確保發送 date) ---
     function submitAddEvent() {
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
@@ -195,29 +174,30 @@ function loadCalendar() {
         closeModal('eventModal');
         toggleLoading(true);
 
-        const payload = {
-            type: 'add_event',
-            key: STAFF_KEY,
-            dateText: date, // 確保 Key 名稱為 dateText
-            title: title,
-            poster_url: poster
-        };
-
-        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(res => res.json())
-            .then(res => {
-                if (res.result === "SUCCESS") {
-                    showToast("✅ 活動已排定");
-                    loadCalendar();
-                } else {
-                    showToast("❌ 失敗：" + res.message);
-                }
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'add_event',
+                key: STAFF_KEY,
+                date: date,
+                title: title,
+                poster_url: poster
             })
-            .catch(() => showToast("網路連線異常"))
-            .finally(() => toggleLoading(false));
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.result === "SUCCESS") {
+                showToast("✅ 活動已排定");
+                loadCalendar();
+            } else {
+                showToast("❌ 失敗：" + res.message);
+            }
+        })
+        .catch(() => showToast("連線異常"))
+        .finally(() => toggleLoading(false));
     }
 
-    // --- 功能：編輯活動 (修復日期消失關鍵) ---
+    // --- 3. 編輯活動 (修復日期消失與連帶紀錄問題) ---
     function submitEditEvent() {
         if (!currentEditData) return;
         
@@ -230,77 +210,61 @@ function loadCalendar() {
         closeModal('eventModal');
         toggleLoading(true);
 
-        const payload = {
-            type: 'edit_event',
-            key: STAFF_KEY,
-            old_date: currentEditData.dateText, // 用來尋找舊資料的索引
-            old_title: currentEditData.title,
-            new_data: {
-                dateText: date, // 修正：確保回傳給資料庫的也是 dateText
-                title: title,
-                poster_url: poster
-            }
-        };
-
-        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(res => res.json())
-            .then(res => {
-                if (res.result === "SUCCESS") {
-                    showToast("✅ 活動已更新");
-                    loadCalendar();
-                } else {
-                    showToast("❌ 更新失敗：" + (res.message || "未知錯誤"));
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'edit_event',
+                key: STAFF_KEY,
+                old_date: currentEditData.date, // 舊資料索引
+                old_title: currentEditData.title,
+                new_data: {
+                    date: date, // 儲存新日期回 date 欄位
+                    title: title,
+                    poster_url: poster
                 }
             })
-            .catch(() => showToast("更新時連線異常"))
-            .finally(() => toggleLoading(false));
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.result === "SUCCESS") {
+                showToast("✅ 活動已更新");
+                loadCalendar();
+            } else {
+                showToast("❌ 更新失敗：" + res.message);
+            }
+        })
+        .catch(() => showToast("連線異常"))
+        .finally(() => toggleLoading(false));
     }
 
-    // --- 功能：刪除活動 ---
+    // --- 4. 刪除活動 (觸發後端連帶刪除) ---
     function deleteEvent(date, title) {
-        if (!confirm(`確定要刪除 ${date} 的 ${title} 嗎？`)) return;
+        if (!confirm(`確定要刪除 ${date} 的 ${title} 嗎？\n這將一併移除相關報到紀錄。`)) return;
         toggleLoading(true);
         fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({ 
                 type: 'delete_event', 
                 key: STAFF_KEY, 
-                dateText: date, 
+                date: date, 
                 title: title 
             })
         })
         .then(() => { 
-            showToast("🗑️ 已移除活動"); 
+            showToast("🗑️ 已移除活動及紀錄"); 
             loadCalendar(); 
         })
         .catch(() => showToast("刪除失敗"))
         .finally(() => toggleLoading(false));
     }
 
-    // --- UI 輔助函式 ---
-    function showToast(m) {
-        const t = document.createElement('div');
-        t.className = 'toast';
-        t.innerText = m;
-        document.body.appendChild(t);
-        setTimeout(() => { 
-            t.style.opacity = '0'; 
-            setTimeout(() => t.remove(), 500); 
-        }, 2500);
-    }
-
-    function openQR(date, title) {
-        document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent("CHECKIN:"+date+":"+title)}`;
-        document.getElementById('qrModal').style.display = 'flex';
-    }
-
+    // --- 5. UI 控制 (開啟/關閉 Modal) ---
     function openAddModal() {
         currentEditData = null;
         document.getElementById('modalTitle').innerText = "排定新活動";
         document.getElementById('eventDate').value = ""; 
         document.getElementById('eventTitle').value = ""; 
         document.getElementById('eventPoster').value = "";
-        
         document.getElementById('addActions').classList.remove('hidden'); 
         document.getElementById('editActions').classList.add('hidden');
         document.getElementById('eventModal').style.display = 'flex';
@@ -309,20 +273,25 @@ function loadCalendar() {
     function openEditModal(evString) {
         const ev = JSON.parse(decodeURIComponent(evString));
         currentEditData = ev;
-        
         document.getElementById('modalTitle').innerText = "編輯活動項目";
-        document.getElementById('eventDate').value = ev.dateText; 
+        document.getElementById('eventDate').value = ev.date; 
         document.getElementById('eventTitle').value = ev.title; 
         document.getElementById('eventPoster').value = ev.poster_url || "";
-        
         document.getElementById('addActions').classList.add('hidden'); 
         document.getElementById('editActions').classList.remove('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
 
-    function closeModal(id) { 
-        document.getElementById(id).style.display = 'none'; 
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openQR(date, title) {
+        document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent("CHECKIN:"+date+":"+title)}`;
+        document.getElementById('qrModal').style.display = 'flex';
     }
-</script>
+    function showToast(m) {
+        const t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
+    }
+</script>    
 </body>
 </html>

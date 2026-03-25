@@ -104,6 +104,7 @@
     var GAS_URL = u1 + u2;
     var STAFF_KEY = sessionStorage.getItem('staff_key');
     var currentEditData = null;
+    var allEvents = []; // 存儲所有活動資料以便查詢
 
     window.onload = function() {
         if (!STAFF_KEY) { 
@@ -119,20 +120,17 @@
         if(el) el.style.display = s ? 'flex' : 'none'; 
     }
 
-    // --- 1. 讀取行事曆 (修正版：強化字串處理) ---
+    // --- 1. 讀取行事曆 (使用 index 索引避免字串錯誤) ---
     function loadCalendar() {
         toggleLoading(true);
         fetch(GAS_URL + "?t=" + Date.now())
             .then(res => res.json())
             .then(data => {
                 const list = document.getElementById('eventList');
-                const events = data.events || [];
+                allEvents = data.events || [];
                 let html = '';
                 
-                events.forEach((ev, index) => {
-                    // 將整筆資料轉為 JSON 字串並編碼，避免引號衝突
-                    const evString = encodeURIComponent(JSON.stringify(ev));
-                    
+                allEvents.forEach((ev, index) => {
                     html += `
                         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-4">
                             <div class="flex justify-between items-start mb-4">
@@ -141,13 +139,13 @@
                                     <h3 class="text-xl font-black text-emerald-900">${ev.title}</h3>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="handleQRClick('${ev.date}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
+                                    <button onclick="doQR(${index})" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
                                         <i class="fas fa-qrcode"></i>
                                     </button>
-                                    <button onclick="openEditModal('${evString}')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
+                                    <button onclick="doEdit(${index})" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="deleteEvent('${ev.date}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
+                                    <button onclick="doDelete(${index})" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
@@ -157,16 +155,24 @@
                 });
                 list.innerHTML = html || '<div class="text-center py-20 text-gray-400 font-bold">目前尚無排定活動</div>';
             })
-            .catch(err => {
-                console.error("載入出錯:", err);
-                showToast("❌ 資料載入失敗");
-            })
+            .catch(err => { console.error(err); showToast("❌ 資料載入失敗"); })
             .finally(() => toggleLoading(false));
     }
 
-    // 新增一個輔助函式處理 QR 點擊，避免字串解析錯誤
-    function handleQRClick(date, title) {
-        openQR(date, title);
+    // 使用 Index 安全觸發按鈕，避開所有特殊字元問題
+    function doQR(i) { openQR(allEvents[i].date, allEvents[i].title); }
+    function doEdit(i) { openEditModalFromObj(allEvents[i]); }
+    function doDelete(i) { deleteEvent(allEvents[i].date, allEvents[i].title); }
+
+    function openEditModalFromObj(ev) {
+        currentEditData = ev;
+        document.getElementById('modalTitle').innerText = "編輯活動項目";
+        document.getElementById('eventDate').value = ev.date; 
+        document.getElementById('eventTitle').value = ev.title; 
+        document.getElementById('eventPoster').value = ev.poster_url || "";
+        document.getElementById('addActions').classList.add('hidden'); 
+        document.getElementById('editActions').classList.remove('hidden');
+        document.getElementById('eventModal').style.display = 'flex';
     }
 
     // --- 2. 新增活動 ---
@@ -191,7 +197,7 @@
         .finally(() => toggleLoading(false));
     }
 
-    // --- 3. 編輯活動 (修正日期消失) ---
+    // --- 3. 編輯活動 ---
     function submitEditEvent() {
         if (!currentEditData) return;
         const date = document.getElementById('eventDate').value;
@@ -215,7 +221,7 @@
         .then(res => res.json())
         .then(res => {
             if (res.result === "SUCCESS") { showToast("✅ 活動已更新"); loadCalendar(); }
-            else { showToast("❌ 失敗：" + res.message); }
+            else { showToast("❌ 更新失敗"); }
         })
         .finally(() => toggleLoading(false));
     }
@@ -232,19 +238,7 @@
         .finally(() => toggleLoading(false));
     }
 
-    // --- UI 控制 ---
-    function openEditModal(evString) {
-        const ev = JSON.parse(decodeURIComponent(evString));
-        currentEditData = ev;
-        document.getElementById('modalTitle').innerText = "編輯活動項目";
-        document.getElementById('eventDate').value = ev.date; 
-        document.getElementById('eventTitle').value = ev.title; 
-        document.getElementById('eventPoster').value = ev.poster_url || "";
-        document.getElementById('addActions').classList.add('hidden'); 
-        document.getElementById('editActions').classList.remove('hidden');
-        document.getElementById('eventModal').style.display = 'flex';
-    }
-
+    // --- UI 輔助 ---
     function openAddModal() {
         currentEditData = null;
         document.getElementById('modalTitle').innerText = "排定新活動";
@@ -253,7 +247,6 @@
         document.getElementById('editActions').classList.add('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
-
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function openQR(date, title) {
         document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent("CHECKIN:"+date+":"+title)}`;

@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://udify.app https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://udify.app https://api.dify.ai https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https:; child-src blob:; worker-src 'self' blob:;">
-    
+    <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self'; 
+    script-src 'self' 'unsafe-inline' https://udify.app https://cdn.jsdelivr.net; 
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com;
+    connect-src 'self' https://udify.app https://api.dify.ai;
+    frame-src 'self' https://udify.app;
+    img-src 'self' data: https://udify.app;
+    ">    
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -214,13 +220,11 @@ div[class*="dify-chatbot"] {
     }
     
 // 修改啟動按鈕的行為
+// 2. 修正「啟動 AI 助手」按鈕呼叫的函數
 function activateAI() {
-    initDifyBot();
-    // 如果氣泡已經加載但被隱藏，強制顯示
-    if (typeof difyChatbot !== 'undefined') {
-        difyChatbot.show();
-    }
-}
+    // 呼叫統一入口，並要求開啟視窗
+    initDifyBot(true);
+}  
     
     function getDirectImageUrl(url) {
         if (!url) return "";
@@ -511,12 +515,19 @@ async function handleUpdateProfile() {
 
     document.body.appendChild(s);
 }
-// 統一的 Dify 啟動器
-function initDifyBot() {
-    if (window.difyChatbotInitialized) return;
+// 1. 統一的 Dify AI 助手控制器
+async function initDifyBot(shouldOpen = false) {
+    // 防止重複插入腳本
+    if (document.getElementById('dify-script-loader')) {
+        if (shouldOpen && typeof difyChatbot !== 'undefined') {
+            difyChatbot.show(); // 如果已載入，點擊按鈕就直接顯示
+        }
+        return;
+    }
 
     console.log("正在啟動 Dify AI 助手...");
     
+    // 設定全域配置
     window.difyChatbotConfig = {
         token: 'a9BwRvWgFSBhR773',
         baseUrl: 'https://udify.app'
@@ -526,10 +537,20 @@ function initDifyBot() {
     s.src = "https://udify.app/embed.min.js";
     s.id = "dify-script-loader";
     s.async = true;
+
     s.onload = () => {
         window.difyChatbotInitialized = true;
-        showToast("AI 助理已上線");
+        console.log("✅ Dify 腳本載入成功");
+        if (shouldOpen) {
+            // 給予微小延遲確保 init 完成
+            setTimeout(() => { if(typeof difyChatbot !== 'undefined') difyChatbot.show(); }, 500);
+        }
     };
+
+    s.onerror = () => {
+        showToast("AI 腳本載入失敗，請檢查網路或 CSP 設定", "error");
+    };
+
     document.body.appendChild(s);
 }    
 </script>

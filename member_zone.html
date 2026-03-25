@@ -445,50 +445,7 @@ async function handleUpdateProfile() {
         icon.innerText = '💬'; // 關閉時變回對話符號
     }
 }    
-
- // 2. 統一的 Dify AI 助手控制器 (強化版)
-function initDifyBot(shouldOpen = false) {
-    if (document.getElementById('dify-sdk')) {
-        if (shouldOpen && typeof difyChatbot !== 'undefined') {
-            difyChatbot.show();
-        }
-        return;
-    }
-
-    console.log("🚀 正在啟動 Dify AI 助手...");
-    const s = document.createElement('script');
-    s.src = "https://udify.app/embed.min.js";
-    s.id = "dify-sdk"; 
-    s.defer = true;
-
-    s.onload = () => {
-        console.log("✅ Dify SDK 檔案載入完成");
-        let retryCount = 0;
-        const checkExist = setInterval(() => {
-            retryCount++;
-            if (typeof difyChatbot !== 'undefined') {
-                clearInterval(checkExist);
-                console.log("✨ 偵測到變數，執行初始化 (掛載至專屬容器)...");
-                
-                // 核心修正：指定 container
-                difyChatbot.init({
-                    token: 'a9BwRvWgFSBhR773',
-                    baseUrl: 'https://udify.app',
-                    container: document.getElementById('dify-chatbot-container')
-                });
-                
-                if (shouldOpen) {
-                    setTimeout(() => { difyChatbot.show(); }, 500);
-                }
-            }
-            if (retryCount > 50) {
-                console.error("❌ Dify 初始化超時");
-                clearInterval(checkExist);
-            }
-        }, 300);
-    };
-    document.head.appendChild(s);
-}    
+   
 // 3. 點擊按鈕手動啟動
 function activateAI() {
     const container = document.getElementById('dify-iframe-container');
@@ -531,10 +488,8 @@ async function syncData() {
     
 // 5. 統一入口：頁面載入後執行
 window.addEventListener('load', () => {
-    // A. 優先載入 AI 助手 (不等待資料同步)
-    initDifyBot(false);
 
-    // B. 處理使用者權限與資料同步
+    // 處理使用者權限與資料同步
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) { 
         location.href = 'index.html'; 

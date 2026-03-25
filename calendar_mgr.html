@@ -167,47 +167,50 @@
             </div>`;
         }).join('');
     }
+                  
+function submitEvent() {
+    if (!currentEditData) return;
+    
+    // 取得輸入框的值
+    const date = document.getElementById('eventDate').value; 
+    const title = document.getElementById('eventTitle').value.trim();
+    const poster = document.getElementById('eventPoster').value.trim();
 
-    async function submitEvent(type) {
-        const date = document.getElementById('eventDate').value;
-        const title = document.getElementById('eventTitle').value.trim();
-        const poster = document.getElementById('eventPoster').value.trim();
+    if (!date || !title) return alert("日期與標題為必填");
 
-        if (!date || !title) { showToast("⚠️ 請填寫完整內容"); return; }
+    closeModal('eventModal');
+    toggleLoading(true);
 
-        toggleLoading(true);
-        try {
-            const payload = {
-                type: type === 'add' ? 'addEvent' : 'updateEvent',
-                key: STAFF_KEY, // 改回 key 以匹配 GAS adminOnly 檢查
-                dateText: date,
-                title: title,
-                poster_url: poster,
-                // 更新時需要舊資料來查找正確的 row
-                oldDateText: currentEditData ? currentEditData.dateText : null,
-                oldTitle: currentEditData ? currentEditData.title : null
-            };
-
-            const res = await fetch(GAS_URL, { 
-                method: 'POST', 
-                body: JSON.stringify(payload) 
-            });
-            const result = await res.json();
-
-            if (result.result === "SUCCESS") {
-                showToast("✅ " + (type === 'add' ? "活動已排定" : "更新成功"));
-                closeModal('eventModal');
-                loadEvents();
-            } else {
-                showToast("❌ 錯誤: " + result.message);
-            }
-        } catch(e) { 
-            showToast("⚠️ 同步失敗，請檢查金鑰"); 
-        } finally {
-            toggleLoading(false);
+    // 關鍵修正：將 'date' 改為 'dateText'，以符合 loadCalendar 的解析邏輯
+    const payload = {
+        type: 'edit_event',
+        key: STAFF_KEY,
+        old_date: currentEditData.dateText, // 使用原始資料中的日期作為索引
+        old_title: currentEditData.title,
+        new_data: {
+            dateText: date,  // 修正點：必須與資料庫/讀取時的欄位名一致
+            title: title,
+            poster_url: poster
         }
-    }
+    };
 
+    fetch(GAS_URL, { 
+        method: 'POST', 
+        body: JSON.stringify(payload) 
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.result === "SUCCESS") {
+            showToast("✅ 活動已更新");
+            loadCalendar(); // 重新載入列表
+        } else {
+            showToast("❌ 更新失敗：" + res.message);
+        }
+    })
+    .catch(() => showToast("連線異常"))
+    .finally(() => toggleLoading(false));
+}
+    
     async function confirmDeleteEvent() {
         if (!confirm(`確定要刪除「${currentEditData.title}」嗎？`)) return;
         

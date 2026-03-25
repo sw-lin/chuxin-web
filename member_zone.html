@@ -10,6 +10,7 @@
     connect-src * 'unsafe-inline' https://udify.app https://script.google.com https://script.googleusercontent.com;
     style-src * 'unsafe-inline';
     frame-src * https://udify.app;
+    worker-src 'self' blob:;
 ">
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -524,14 +525,14 @@ async function handleUpdateProfile() {
 
   // 核心修正：延遲載入 Dify，確保你的核心資料同步優先完成
   window.addEventListener('load', function() {
+    // 縮短為 2 秒，資料同步完馬上接力載入泡泡
     setTimeout(function() {
       const s = document.createElement('script');
       s.src = 'https://udify.app/embed.min.js';
       s.id = 'XN6K6P69Z8S6XN6K';
-      s.defer = true;
+      s.async = true; // 改用 async 加快初始化
       document.body.appendChild(s);
-      console.log("Dify 腳本已延遲載入，確保資料同步優先。");
-    }, 3000); // 延遲 3 秒執行
+    }, 2000); 
   });
 </script>    
 </body>

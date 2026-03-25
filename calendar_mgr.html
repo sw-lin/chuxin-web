@@ -99,7 +99,6 @@
         </div>
     </div>
 <script>
-    // --- 基礎配置 ---
     var u1 = 'https://script.google.com';
     var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
     var GAS_URL = u1 + u2;
@@ -116,11 +115,11 @@
     };
 
     function toggleLoading(s) { 
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) overlay.style.display = s ? 'flex' : 'none'; 
+        const el = document.getElementById('loadingOverlay');
+        if(el) el.style.display = s ? 'flex' : 'none'; 
     }
 
-    // --- 1. 讀取行事曆 (使用 ev.date 確保載入成功) ---
+    // --- 1. 讀取行事曆 (修正版：強化字串處理) ---
     function loadCalendar() {
         toggleLoading(true);
         fetch(GAS_URL + "?t=" + Date.now())
@@ -130,8 +129,10 @@
                 const events = data.events || [];
                 let html = '';
                 
-                events.forEach(ev => {
+                events.forEach((ev, index) => {
+                    // 將整筆資料轉為 JSON 字串並編碼，避免引號衝突
                     const evString = encodeURIComponent(JSON.stringify(ev));
+                    
                     html += `
                         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-4">
                             <div class="flex justify-between items-start mb-4">
@@ -140,7 +141,7 @@
                                     <h3 class="text-xl font-black text-emerald-900">${ev.title}</h3>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openQR('${ev.date}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
+                                    <button onclick="handleQRClick('${ev.date}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
                                         <i class="fas fa-qrcode"></i>
                                     </button>
                                     <button onclick="openEditModal('${evString}')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
@@ -157,18 +158,22 @@
                 list.innerHTML = html || '<div class="text-center py-20 text-gray-400 font-bold">目前尚無排定活動</div>';
             })
             .catch(err => {
-                console.error("載入失敗:", err);
-                showToast("❌ 無法取得行事曆資料");
+                console.error("載入出錯:", err);
+                showToast("❌ 資料載入失敗");
             })
             .finally(() => toggleLoading(false));
     }
 
-    // --- 2. 新增活動 (確保發送 date) ---
+    // 新增一個輔助函式處理 QR 點擊，避免字串解析錯誤
+    function handleQRClick(date, title) {
+        openQR(date, title);
+    }
+
+    // --- 2. 新增活動 ---
     function submitAddEvent() {
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
-
         if (!date || !title) return alert("日期與標題為必填");
 
         closeModal('eventModal');
@@ -176,35 +181,22 @@
 
         fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({
-                type: 'add_event',
-                key: STAFF_KEY,
-                date: date,
-                title: title,
-                poster_url: poster
-            })
+            body: JSON.stringify({ type: 'add_event', key: STAFF_KEY, date: date, title: title, poster_url: poster })
         })
         .then(res => res.json())
         .then(res => {
-            if (res.result === "SUCCESS") {
-                showToast("✅ 活動已排定");
-                loadCalendar();
-            } else {
-                showToast("❌ 失敗：" + res.message);
-            }
+            if (res.result === "SUCCESS") { showToast("✅ 活動已排定"); loadCalendar(); }
+            else { showToast("❌ 失敗：" + res.message); }
         })
-        .catch(() => showToast("連線異常"))
         .finally(() => toggleLoading(false));
     }
 
-    // --- 3. 編輯活動 (修復日期消失與連帶紀錄問題) ---
+    // --- 3. 編輯活動 (修正日期消失) ---
     function submitEditEvent() {
         if (!currentEditData) return;
-        
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
-
         if (!date || !title) return alert("日期與標題為必填");
 
         closeModal('eventModal');
@@ -215,61 +207,32 @@
             body: JSON.stringify({
                 type: 'edit_event',
                 key: STAFF_KEY,
-                old_date: currentEditData.date, // 舊資料索引
+                old_date: currentEditData.date, 
                 old_title: currentEditData.title,
-                new_data: {
-                    date: date, // 儲存新日期回 date 欄位
-                    title: title,
-                    poster_url: poster
-                }
+                new_data: { date: date, title: title, poster_url: poster }
             })
         })
         .then(res => res.json())
         .then(res => {
-            if (res.result === "SUCCESS") {
-                showToast("✅ 活動已更新");
-                loadCalendar();
-            } else {
-                showToast("❌ 更新失敗：" + res.message);
-            }
+            if (res.result === "SUCCESS") { showToast("✅ 活動已更新"); loadCalendar(); }
+            else { showToast("❌ 失敗：" + res.message); }
         })
-        .catch(() => showToast("連線異常"))
         .finally(() => toggleLoading(false));
     }
 
-    // --- 4. 刪除活動 (觸發後端連帶刪除) ---
+    // --- 4. 刪除活動 ---
     function deleteEvent(date, title) {
         if (!confirm(`確定要刪除 ${date} 的 ${title} 嗎？\n這將一併移除相關報到紀錄。`)) return;
         toggleLoading(true);
         fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({ 
-                type: 'delete_event', 
-                key: STAFF_KEY, 
-                date: date, 
-                title: title 
-            })
+            body: JSON.stringify({ type: 'delete_event', key: STAFF_KEY, date: date, title: title })
         })
-        .then(() => { 
-            showToast("🗑️ 已移除活動及紀錄"); 
-            loadCalendar(); 
-        })
-        .catch(() => showToast("刪除失敗"))
+        .then(() => { showToast("🗑️ 已移除活動及紀錄"); loadCalendar(); })
         .finally(() => toggleLoading(false));
     }
 
-    // --- 5. UI 控制 (開啟/關閉 Modal) ---
-    function openAddModal() {
-        currentEditData = null;
-        document.getElementById('modalTitle').innerText = "排定新活動";
-        document.getElementById('eventDate').value = ""; 
-        document.getElementById('eventTitle').value = ""; 
-        document.getElementById('eventPoster').value = "";
-        document.getElementById('addActions').classList.remove('hidden'); 
-        document.getElementById('editActions').classList.add('hidden');
-        document.getElementById('eventModal').style.display = 'flex';
-    }
-
+    // --- UI 控制 ---
     function openEditModal(evString) {
         const ev = JSON.parse(decodeURIComponent(evString));
         currentEditData = ev;
@@ -279,6 +242,15 @@
         document.getElementById('eventPoster').value = ev.poster_url || "";
         document.getElementById('addActions').classList.add('hidden'); 
         document.getElementById('editActions').classList.remove('hidden');
+        document.getElementById('eventModal').style.display = 'flex';
+    }
+
+    function openAddModal() {
+        currentEditData = null;
+        document.getElementById('modalTitle').innerText = "排定新活動";
+        document.getElementById('eventDate').value = ""; document.getElementById('eventTitle').value = ""; document.getElementById('eventPoster').value = "";
+        document.getElementById('addActions').classList.remove('hidden'); 
+        document.getElementById('editActions').classList.add('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
 

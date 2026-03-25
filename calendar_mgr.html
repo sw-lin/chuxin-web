@@ -103,8 +103,8 @@
     var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
     var GAS_URL = u1 + u2;
     var STAFF_KEY = sessionStorage.getItem('staff_key');
+    var allEvents = []; 
     var currentEditData = null;
-    var allEvents = []; // 存儲所有活動資料以便查詢
 
     window.onload = function() {
         if (!STAFF_KEY) { 
@@ -120,14 +120,15 @@
         if(el) el.style.display = s ? 'flex' : 'none'; 
     }
 
-    // --- 1. 讀取行事曆 (使用 index 索引避免字串錯誤) ---
+    // --- 1. 讀取行事曆 (對齊 GAS 的 calendar 欄位) ---
     function loadCalendar() {
         toggleLoading(true);
         fetch(GAS_URL + "?t=" + Date.now())
             .then(res => res.json())
             .then(data => {
                 const list = document.getElementById('eventList');
-                allEvents = data.events || [];
+                // 對齊 GAS：doGet 回傳的是 data.calendar
+                allEvents = data.calendar || [];
                 let html = '';
                 
                 allEvents.forEach((ev, index) => {
@@ -135,7 +136,7 @@
                         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-4">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
-                                    <div class="text-emerald-600 font-black text-sm mb-1">${ev.date}</div>
+                                    <div class="text-emerald-600 font-black text-sm mb-1">${ev.dateText}</div>
                                     <h3 class="text-xl font-black text-emerald-900">${ev.title}</h3>
                                 </div>
                                 <div class="flex gap-2">
@@ -155,55 +156,53 @@
                 });
                 list.innerHTML = html || '<div class="text-center py-20 text-gray-400 font-bold">目前尚無排定活動</div>';
             })
-            .catch(err => { console.error(err); showToast("❌ 資料載入失敗"); })
+            .catch(err => { console.error(err); showToast("❌ 讀取失敗"); })
             .finally(() => toggleLoading(false));
     }
 
-    // 使用 Index 安全觸發按鈕，避開所有特殊字元問題
-    function doQR(i) { openQR(allEvents[i].date, allEvents[i].title); }
-    function doEdit(i) { openEditModalFromObj(allEvents[i]); }
-    function doDelete(i) { deleteEvent(allEvents[i].date, allEvents[i].title); }
-
-    function openEditModalFromObj(ev) {
-        currentEditData = ev;
+    function doQR(i) { openQR(allEvents[i].dateText, allEvents[i].title); }
+    function doEdit(i) {
+        currentEditData = allEvents[i];
         document.getElementById('modalTitle').innerText = "編輯活動項目";
-        document.getElementById('eventDate').value = ev.date; 
-        document.getElementById('eventTitle').value = ev.title; 
-        document.getElementById('eventPoster').value = ev.poster_url || "";
+        document.getElementById('eventDate').value = currentEditData.dateText; 
+        document.getElementById('eventTitle').value = currentEditData.title; 
+        document.getElementById('eventPoster').value = currentEditData.poster_url || "";
         document.getElementById('addActions').classList.add('hidden'); 
         document.getElementById('editActions').classList.remove('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
 
-    // --- 2. 新增活動 ---
+    // --- 2. 新增活動 (對齊 GAS: add_event) ---
     function submitAddEvent() {
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
-        if (!date || !title) return alert("日期與標題為必填");
+        if (!date || !title) return alert("必填未填");
 
         closeModal('eventModal');
         toggleLoading(true);
 
         fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({ type: 'add_event', key: STAFF_KEY, date: date, title: title, poster_url: poster })
+            body: JSON.stringify({ 
+                type: 'add_event', 
+                key: STAFF_KEY, 
+                dateText: date, 
+                title: title, 
+                poster_url: poster,
+                needQR: true 
+            })
         })
-        .then(res => res.json())
-        .then(res => {
-            if (res.result === "SUCCESS") { showToast("✅ 活動已排定"); loadCalendar(); }
-            else { showToast("❌ 失敗：" + res.message); }
-        })
+        .then(() => { showToast("✅ 已新增"); loadCalendar(); })
         .finally(() => toggleLoading(false));
     }
 
-    // --- 3. 編輯活動 ---
+    // --- 3. 編輯活動 (對齊 GAS: update_calendar_event) ---
     function submitEditEvent() {
         if (!currentEditData) return;
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
-        if (!date || !title) return alert("日期與標題為必填");
 
         closeModal('eventModal');
         toggleLoading(true);
@@ -211,42 +210,36 @@
         fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
-                type: 'edit_event',
+                type: 'update_calendar_event',
                 key: STAFF_KEY,
-                old_date: currentEditData.date, 
-                old_title: currentEditData.title,
-                new_data: { date: date, title: title, poster_url: poster }
+                oldTitle: currentEditData.title,
+                date: date,
+                title: title,
+                poster_url: poster
             })
         })
-        .then(res => res.json())
-        .then(res => {
-            if (res.result === "SUCCESS") { showToast("✅ 活動已更新"); loadCalendar(); }
-            else { showToast("❌ 更新失敗"); }
-        })
+        .then(() => { showToast("✅ 已更新"); loadCalendar(); })
         .finally(() => toggleLoading(false));
     }
 
-    // --- 4. 刪除活動 ---
-    function deleteEvent(date, title) {
-        if (!confirm(`確定要刪除 ${date} 的 ${title} 嗎？\n這將一併移除相關報到紀錄。`)) return;
+    // --- 4. 刪除活動 (對齊 GAS: delete_event_poster 實現連帶刪除) ---
+    function doDelete(i) {
+        const ev = allEvents[i];
+        if (!confirm(`確定要刪除「${ev.title}」嗎？\n這將一併移除報名與簽到紀錄。`)) return;
+        
         toggleLoading(true);
         fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify({ type: 'delete_event', key: STAFF_KEY, date: date, title: title })
+            body: JSON.stringify({ 
+                type: 'delete_event_poster', // GAS 中最強大的刪除函式
+                key: STAFF_KEY, 
+                eventTitle: ev.title 
+            })
         })
-        .then(() => { showToast("🗑️ 已移除活動及紀錄"); loadCalendar(); })
+        .then(() => { showToast("🗑️ 已徹底移除"); loadCalendar(); })
         .finally(() => toggleLoading(false));
     }
 
-    // --- UI 輔助 ---
-    function openAddModal() {
-        currentEditData = null;
-        document.getElementById('modalTitle').innerText = "排定新活動";
-        document.getElementById('eventDate').value = ""; document.getElementById('eventTitle').value = ""; document.getElementById('eventPoster').value = "";
-        document.getElementById('addActions').classList.remove('hidden'); 
-        document.getElementById('editActions').classList.add('hidden');
-        document.getElementById('eventModal').style.display = 'flex';
-    }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function openQR(date, title) {
         document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent("CHECKIN:"+date+":"+title)}`;
@@ -256,6 +249,13 @@
         const t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
         document.body.appendChild(t);
         setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
+    }
+    function openAddModal() {
+        currentEditData = null;
+        document.getElementById('modalTitle').innerText = "排定新活動";
+        document.getElementById('eventDate').value = ""; document.getElementById('eventTitle').value = ""; document.getElementById('eventPoster').value = "";
+        document.getElementById('addActions').classList.remove('hidden'); document.getElementById('editActions').classList.add('hidden');
+        document.getElementById('eventModal').style.display = 'flex';
     }
 </script>    
 </body>

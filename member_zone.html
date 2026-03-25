@@ -133,6 +133,18 @@ div[class*="dify-chatbot"] {
             </button>
         </div>
     </div>
+  <div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 400px; height: 600px; z-index: 999999; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
+    <iframe
+        src="https://udify.app/chatbot/a9BwRvWgFSBhR773"
+        style="width: 100%; height: 100%; border: none;"
+        allow="microphone">
+    </iframe>
+ </div>
+
+ <div id="dify-custom-trigger" onclick="toggleDifyChat()" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; width: 60px; height: 60px; background-color: #064E3B; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
+    <span id="dify-icon" style="color: white; font-size: 28px;">💬</span>
+ </div>
+    
 </main>
 <!-- 各種 Modal 略 (保持原樣) -->
 <div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
@@ -420,6 +432,19 @@ async function handleUpdateProfile() {
         } catch (e) { showToast("連線失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
+    function toggleDifyChat() {
+    const container = document.getElementById('dify-iframe-container');
+    const icon = document.getElementById('dify-icon');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        icon.innerText = '❌'; // 打開時變換成關閉符號
+        console.log("🔓 已強制顯示 Dify 視窗");
+    } else {
+        container.style.display = 'none';
+        icon.innerText = '💬'; // 關閉時變回對話符號
+    }
+}    
 
  // 2. 統一的 Dify AI 助手控制器 (強化版)
 function initDifyBot(shouldOpen = false) {
@@ -466,9 +491,11 @@ function initDifyBot(shouldOpen = false) {
 }    
 // 3. 點擊按鈕手動啟動
 function activateAI() {
-    // 呼叫統一入口，並要求開啟視窗
-    initDifyBot(true);
-} 
+    const container = document.getElementById('dify-iframe-container');
+    if (container.style.display === 'none') {
+        toggleDifyChat();
+    }
+}
     
 // 4. 資料同步邏輯
 async function syncData() {

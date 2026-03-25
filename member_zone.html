@@ -517,36 +517,36 @@ async function handleUpdateProfile() {
   
 </script>
 <script>
-  // 1. 確保配置物件在最外層，隨時可被讀取
   window.difyChatbotConfig = {
     token: 'XN6K6P69Z8S6XN6K',
     baseUrl: 'https://udify.app'
   };
+</script>
 
+<script
+  src="https://udify.app/embed.min.js"
+  id="XN6K6P69Z8S6XN6K"
+  defer>
+</script>
+
+<script>
   window.addEventListener('load', function() {
-    console.log("頁面已完全載入，準備啟動 AI 助理...");
-    
+    // 給 Dify 額外的 3 秒鐘慢慢初始化
     setTimeout(function() {
-      // 2. 建立腳本
-      const s = document.createElement('script');
-      s.src = 'https://udify.app/embed.min.js';
-      s.id = 'XN6K6P69Z8S6XN6K';
+      const chatbotIframe = document.querySelector('iframe#dify-chatbot-bubble');
       
-      s.onload = function() {
-        console.log("Dify 腳本載入完成，執行強制初始化...");
-        // 3. 保險機制：如果 1 秒後泡泡沒出來，手動踢它一下
-        setTimeout(function() {
-          if (document.querySelectorAll('iframe').length === 0) {
-            console.log("偵測到泡泡未自動顯示，嘗試手動初始化...");
-            if (typeof window.initDifyChatbot === 'function') {
-                window.initDifyChatbot();
-            }
-          }
-        }, 1000);
-      };
-
-      document.body.appendChild(s);
-    }, 2000); // 維持 2 秒延遲，確保資料庫同步優先
+      if (!chatbotIframe) {
+        console.log("⚠️ 泡泡尚未浮現，啟動強制喚醒程序...");
+        // 嘗試呼叫 Dify 內部可能的各種初始化函式
+        if (typeof window.initDifyChatbot === 'function') {
+          window.initDifyChatbot();
+        } else if (window.difyChatbot && typeof window.difyChatbot.init === 'function') {
+          window.difyChatbot.init();
+        }
+      } else {
+        console.log("✅ Dify 泡泡已成功渲染。");
+      }
+    }, 3000);
   });
 </script>
 </body>

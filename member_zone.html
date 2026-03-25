@@ -4,14 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-<meta http-equiv="Content-Security-Policy" content="
-    default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
-    script-src * 'unsafe-inline' 'unsafe-eval' https://udify.app https://script.google.com;
-    connect-src * 'unsafe-inline' https://udify.app https://script.google.com https://script.googleusercontent.com;
-    style-src * 'unsafe-inline';
-    frame-src * https://udify.app;
-    worker-src 'self' blob:;
-">
+    
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://udify.app https://script.google.com; connect-src * 'unsafe-inline' https://udify.app https://script.google.com https://script.googleusercontent.com; style-src * 'unsafe-inline'; frame-src * https://udify.app; worker-src 'self' blob:;">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -183,7 +178,7 @@
         syncData();
     };
 
-    // 1. 同步雲端資料
+// 1. 同步雲端資料
     async function syncData() {
         document.getElementById('loadingOverlay').style.display = 'flex';
         try {
@@ -192,11 +187,10 @@
             remoteConfig = data.config || {};
             document.getElementById('news').innerText = data.news || "歡迎回來！";
             
-            
             const liveUser = data.users.find(u => {
-                   const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
-                   const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
-                   return uPhone === currPhone;
+                    const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
+                    const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
+                    return uPhone === currPhone;
              });
             
             if (liveUser) {
@@ -207,10 +201,20 @@
                 }
                 updateUI(liveUser, data.calendar, data.events);
             }
-        } catch (e) { showToast("同步失敗", "error"); }
-        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+        } catch (e) { 
+            showToast("同步失敗", "error"); 
+        } finally { 
+            document.getElementById('loadingOverlay').style.display = 'none'; 
+            
+            // 【關鍵修正：資料跑完了，現在才呼叫 AI 助手】
+            console.log("資料同步完成，準備喚醒 AI...");
+            setTimeout(() => {
+                if (typeof launchDify === "function") {
+                    launchDify();
+                }
+            }, 1000); // 稍微延遲 1 秒，讓介面渲染穩定
+        }
     }
-
     
 
     // 3. 手動啟動 AI (這是關鍵修正)
@@ -514,40 +518,20 @@ async function handleUpdateProfile() {
         } catch (e) { showToast("連線失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
-  
-</script>
-<script>
-  window.difyChatbotConfig = {
-    token: 'XN6K6P69Z8S6XN6K',
-    baseUrl: 'https://udify.app'
-  };
-</script>
-
-<script
-  src="https://udify.app/embed.min.js"
-  id="XN6K6P69Z8S6XN6K"
-  defer>
-</script>
-
-<script>
-  window.addEventListener('load', function() {
-    // 給 Dify 額外的 3 秒鐘慢慢初始化
-    setTimeout(function() {
-      const chatbotIframe = document.querySelector('iframe#dify-chatbot-bubble');
-      
-      if (!chatbotIframe) {
-        console.log("⚠️ 泡泡尚未浮現，啟動強制喚醒程序...");
-        // 嘗試呼叫 Dify 內部可能的各種初始化函式
-        if (typeof window.initDifyChatbot === 'function') {
-          window.initDifyChatbot();
-        } else if (window.difyChatbot && typeof window.difyChatbot.init === 'function') {
-          window.difyChatbot.init();
-        }
-      } else {
-        console.log("✅ Dify 泡泡已成功渲染。");
-      }
-    }, 3000);
-  });
+    function launchDify() {
+        if (document.getElementById('dify-script')) return; // 避免重複載入
+        
+        console.log("啟動 Dify 腳本插入...");
+        window.difyChatbotConfig = {
+            token: 'XN6K6P69Z8S6XN6K',
+            baseUrl: 'https://udify.app'
+        };
+        const s = document.createElement('script');
+        s.src = 'https://udify.app/embed.min.js';
+        s.id = 'dify-script';
+        s.async = true;
+        document.body.appendChild(s);
+    }
 </script>
 </body>
 </html>

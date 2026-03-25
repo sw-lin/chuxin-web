@@ -105,7 +105,9 @@
 
                         // 右側：電話 (字體與姓名一樣大，靠右)
                         html += '  <div class="flex items-center gap-3">';
-                        html += '    <div class="text-lg font-black text-emerald-800 font-mono text-right">' + u.phone + '</div>';
+                        // 核心修正：確保顯示時開頭有 0
+                          var displayPhone = String(u.phone).startsWith('0') ? u.phone : '0' + u.phone;
+                        html += '    <div class="text-lg font-black text-emerald-800 font-mono text-right">' + displayPhone + '</div>';
                         
                         if (isEditMode) {
                             html += '    <button onclick="deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>';

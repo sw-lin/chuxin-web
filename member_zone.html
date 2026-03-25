@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
 <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self' *; 
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://udify.app https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net https://script.google.com https://script.googleusercontent.com; 
-    style-src 'self' 'unsafe-inline' https://udify.app https://cdnjs.cloudflare.com https://fonts.googleapis.com; 
-    img-src 'self' data: blob: https://udify.app https://lh3.googleusercontent.com; 
-    connect-src 'self' https://udify.app https://script.google.com https://script.googleusercontent.com; 
-    font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;
-    frame-src 'self' https://udify.app;
+    default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+    script-src * 'unsafe-inline' 'unsafe-eval' https://udify.app https://script.google.com;
+    connect-src * 'unsafe-inline' https://udify.app https://script.google.com https://script.googleusercontent.com;
+    style-src * 'unsafe-inline';
+    frame-src * https://udify.app;
 ">
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -518,17 +516,23 @@ async function handleUpdateProfile() {
   
 </script>
 <script>
+  // 確保 Dify 參數正確
   window.difyChatbotConfig = {
     token: 'XN6K6P69Z8S6XN6K',
     baseUrl: 'https://udify.app'
-  }
-</script>
+  };
 
-<script
-  src="https://udify.app/embed.min.js"
-  id="XN6K6P69Z8S6XN6K"
-  defer>
-</script> 
-    
+  // 核心修正：延遲載入 Dify，確保你的核心資料同步優先完成
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      const s = document.createElement('script');
+      s.src = 'https://udify.app/embed.min.js';
+      s.id = 'XN6K6P69Z8S6XN6K';
+      s.defer = true;
+      document.body.appendChild(s);
+      console.log("Dify 腳本已延遲載入，確保資料同步優先。");
+    }, 3000); // 延遲 3 秒執行
+  });
+</script>    
 </body>
 </html>

@@ -548,17 +548,28 @@ async function handleUpdateProfile() {
     baseUrl: 'https://udify.app'
   };
 
-  // 強制在頁面完全載入 2 秒後再插入腳本，避免與你的資料同步邏輯衝突
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      console.log("正在嘗試強制啟動 Dify 氣泡...");
-      const s = document.createElement('script');
-      s.src = "https://udify.app/embed.min.js";
-      s.id = "a9BwRvWgFSBhR773";
-      s.defer = true;
-      document.body.appendChild(s);
-    }, 2000); 
-  });
-</script>    
+  (function() {
+    const s = document.createElement('script');
+    s.src = "https://udify.app/embed.min.js";
+    s.id = "a9BwRvWgFSBhR773";
+    s.async = true; // 改用 async 確保非同步載入
+    document.body.appendChild(s);
+
+    // 自動重試邏輯：每 0.5 秒檢查一次，直到氣泡出現
+    const retryInit = setInterval(() => {
+      if (typeof difyChatbot !== 'undefined') {
+        console.log("Dify 核心已就緒，手動初始化中...");
+        difyChatbot.init({ 
+          token: 'a9BwRvWgFSBhR773', 
+          baseUrl: 'https://udify.app' 
+        });
+        clearInterval(retryInit); // 初始化成功後停止重試
+      }
+    }, 500);
+
+    // 超過 10 秒後停止重試，避免無窮迴圈
+    setTimeout(() => clearInterval(retryInit), 10000);
+  })();
+</script>
 </body>
 </html>

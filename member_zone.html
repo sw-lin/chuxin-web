@@ -178,17 +178,12 @@ div[class*="dify-chatbot"] {
     let currentUser = null;
     let remoteConfig = {};
     let html5QrCode = null;
-    
 
-
-    
-    window.onload = () => {
-        const userStr = sessionStorage.getItem('userInfo');
-        if (!userStr) { location.href = 'index.html'; return; }
-        currentUser = JSON.parse(userStr);
-        document.getElementById('userName').innerText = currentUser.name;
-        syncData();
-    };
+// 1. 先定義配置 (放在最外層確保 Dify 隨時讀得到)
+window.difyChatbotConfig = {
+    token: 'a9BwRvWgFSBhR773',
+    baseUrl: 'https://udify.app'
+};
     
     function getDirectImageUrl(url) {
         if (!url) return "";
@@ -434,49 +429,43 @@ async function handleUpdateProfile() {
         } catch (e) { showToast("連線失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
+
+    // 2. 統一的 Dify AI 助手控制器
+function initDifyBot(shouldOpen = false) {
+    const existingScript = document.getElementById('dify-script-loader');
     
-// 1. 統一的 Dify AI 助手控制器
-async function initDifyBot(shouldOpen = false) {
-    if (document.getElementById('dify-script-loader')) {
+    // 如果腳本已經在頁面上
+    if (existingScript) {
+        console.log("Dify 腳本已存在，檢查是否需要開啟視窗...");
         if (shouldOpen && typeof difyChatbot !== 'undefined') {
             difyChatbot.show();
         }
         return;
     }
 
-    console.log("正在啟動 Dify AI 助手...");
-    
-    window.difyChatbotConfig = {
-        token: 'a9BwRvWgFSBhR773',
-        baseUrl: 'https://udify.app'
-    };
+    console.log("🚀 正在正式啟動 Dify AI 助手...");
 
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
     s.id = "dify-script-loader";
-    s.async = true;
+    s.defer = true; // 使用 defer 確保不阻塞渲染
 
     s.onload = () => {
-        console.log("✅ Dify 腳本載入成功，嘗試初始化...");
-        
-        // 強制檢查並初始化
+        console.log("✅ Dify 官方腳本加載完成");
+        // 每 300ms 檢查一次變數是否準備好
         const checkExist = setInterval(() => {
             if (typeof difyChatbot !== 'undefined') {
                 clearInterval(checkExist);
-                // 如果載入後泡泡沒自動出來，可以手動調用 init (某些版本適用)
-                if (typeof difyChatbot.init === 'function') {
-                    difyChatbot.init(window.difyChatbotConfig);
-                }
-                
+                console.log("✨ Dify 變數已就緒，泡泡應會出現");
                 if (shouldOpen) {
                     setTimeout(() => { difyChatbot.show(); }, 500);
                 }
             }
-        }, 200);
+        }, 300);
     };
 
     document.body.appendChild(s);
-} 
+}
 // 2. 關鍵所在：使用 load 監聽器來執行它
         window.addEventListener('load', () => {
             console.log("網頁已完全載入，準備呼叫 Dify...");
@@ -513,7 +502,7 @@ async function initDifyBot(shouldOpen = false) {
         // 資料同步成功後，才啟動 AI 助手，避免搶佔頻寬與報錯
         console.log("核心資料同步完成，喚醒 AI 助手...");
         // 資料同步後自動載入氣泡
-        initDifyBot();
+        initDifyBot(false);
     }
     }
     // 修改啟動按鈕的行為
@@ -521,7 +510,15 @@ async function initDifyBot(shouldOpen = false) {
 function activateAI() {
     // 呼叫統一入口，並要求開啟視窗
     initDifyBot(true);
-}      
+} 
+
+        window.onload = () => {
+        const userStr = sessionStorage.getItem('userInfo');
+        if (!userStr) { location.href = 'index.html'; return; }
+        currentUser = JSON.parse(userStr);
+        document.getElementById('userName').innerText = currentUser.name;
+        syncData();
+    };
 </script>
 </body>
 </html>

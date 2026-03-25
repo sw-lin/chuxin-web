@@ -8,12 +8,11 @@
     default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:;
     script-src * 'self' 'unsafe-inline' 'unsafe-eval' https:;
     style-src * 'self' 'unsafe-inline' https:;
-    connect-src * 'self' 'unsafe-inline' https: wss:;
-    frame-src * 'self' https:;
+    connect-src * 'self' 'unsafe-inline' https: wss: https://udify.app https://script.google.com https://script.googleusercontent.com;
+    frame-src * 'self' https://udify.app;
     img-src * 'self' data: https:;
     font-src * 'self' data: https:;
 ">
-
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -209,18 +208,14 @@
                 updateUI(liveUser, data.calendar, data.events);
             }
         } catch (e) { 
-            showToast("同步失敗", "error"); 
-        } finally { 
-            document.getElementById('loadingOverlay').style.display = 'none'; 
-            
-            // 【關鍵修正：資料跑完了，現在才呼叫 AI 助手】
-            console.log("資料同步完成，準備喚醒 AI...");
-            setTimeout(() => {
-                if (typeof launchDify === "function") {
-                    launchDify();
-                }
-            }, 1000); // 稍微延遲 1 秒，讓介面渲染穩定
-        }
+        showToast("同步失敗", "error"); 
+    } finally { 
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+        
+        // 資料同步成功後，才啟動 AI 助手，避免搶佔頻寬與報錯
+        console.log("核心資料同步完成，喚醒 AI 助手...");
+        initDifyFlow(); 
+    }
     }
     
 
@@ -539,35 +534,37 @@ async function handleUpdateProfile() {
         s.async = true;
         document.body.appendChild(s);
     }
-</script>
-<script>
-  window.difyChatbotConfig = {
-    token: 'a9BwRvWgFSBhR773',
-    baseUrl: 'https://udify.app'
-  };
+    
+    function initDifyFlow() {
+    if (window.difyChatbotInitialized) return; // 避免重複執行
 
-  (function() {
+    window.difyChatbotConfig = {
+        token: 'a9BwRvWgFSBhR773',
+        baseUrl: 'https://udify.app'
+    };
+
     const s = document.createElement('script');
     s.src = "https://udify.app/embed.min.js";
-    s.id = "a9BwRvWgFSBhR773";
-    s.async = true; // 改用 async 確保非同步載入
+    s.id = "dify-script-loader";
+    s.async = true;
+
+    s.onload = () => {
+        const checkExist = setInterval(() => {
+            if (typeof difyChatbot !== 'undefined') {
+                difyChatbot.init({
+                    token: 'a9BwRvWgFSBhR773',
+                    baseUrl: 'https://udify.app'
+                });
+                console.log("✅ Dify 氣泡初始化成功");
+                window.difyChatbotInitialized = true;
+                clearInterval(checkExist);
+            }
+        }, 500);
+        setTimeout(() => clearInterval(checkExist), 10000);
+    };
+
     document.body.appendChild(s);
-
-    // 自動重試邏輯：每 0.5 秒檢查一次，直到氣泡出現
-    const retryInit = setInterval(() => {
-      if (typeof difyChatbot !== 'undefined') {
-        console.log("Dify 核心已就緒，手動初始化中...");
-        difyChatbot.init({ 
-          token: 'a9BwRvWgFSBhR773', 
-          baseUrl: 'https://udify.app' 
-        });
-        clearInterval(retryInit); // 初始化成功後停止重試
-      }
-    }, 500);
-
-    // 超過 10 秒後停止重試，避免無窮迴圈
-    setTimeout(() => clearInterval(retryInit), 10000);
-  })();
+}
 </script>
 </body>
 </html>

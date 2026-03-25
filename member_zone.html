@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>
-    <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self'; 
-    script-src 'self' 'unsafe-inline' https://udify.app https://cdn.jsdelivr.net; 
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com;
-    connect-src 'self' https://udify.app https://api.dify.ai;
-    frame-src 'self' https://udify.app;
-    img-src 'self' data: https://udify.app;
-    ">    
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net https://udify.app https://*.dify.ai;
+  style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+  font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com;
+  connect-src 'self' https://script.google.com https://udify.app https://api.dify.ai;
+  worker-src 'self' blob:;
+  child-src 'self' blob:;
+  img-src 'self' data: blob: https://*;
+">    
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -175,7 +177,38 @@ div[class*="dify-chatbot"] {
     let currentUser = null;
     let remoteConfig = {};
     let html5QrCode = null;
+    
+    function initDifyFlow() {
+    if (window.difyChatbotInitialized) return; // 避免重複執行
 
+    window.difyChatbotConfig = {
+        token: 'a9BwRvWgFSBhR773',
+        baseUrl: 'https://udify.app'
+    };
+
+    const s = document.createElement('script');
+    s.src = "https://udify.app/embed.min.js";
+    s.id = "dify-script-loader";
+    s.async = true;
+
+    s.onload = () => {
+        const checkExist = setInterval(() => {
+            if (typeof difyChatbot !== 'undefined') {
+                difyChatbot.init({
+                    token: 'a9BwRvWgFSBhR773',
+                    baseUrl: 'https://udify.app'
+                });
+                console.log("✅ Dify 氣泡初始化成功");
+                window.difyChatbotInitialized = true;
+                clearInterval(checkExist);
+            }
+        }, 500);
+        setTimeout(() => clearInterval(checkExist), 10000);
+    };
+
+    document.body.appendChild(s);
+}
+    
     window.onload = () => {
         const userStr = sessionStorage.getItem('userInfo');
         if (!userStr) { location.href = 'index.html'; return; }
@@ -470,51 +503,8 @@ async function handleUpdateProfile() {
         } catch (e) { showToast("連線失敗", "error"); }
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }
-    function launchDify() {
-        if (document.getElementById('dify-script')) return; // 避免重複載入
-        
-        console.log("啟動 Dify 腳本插入...");
-        window.difyChatbotConfig = {
-            token: 'a9BwRvWgFSBhR773',
-            baseUrl: 'https://udify.app'
-        };
-        const s = document.createElement('script');
-        s.src = 'https://udify.app/embed.min.js';
-        s.id = 'dify-script';
-        s.async = true;
-        document.body.appendChild(s);
-    }
+
     
-    function initDifyFlow() {
-    if (window.difyChatbotInitialized) return; // 避免重複執行
-
-    window.difyChatbotConfig = {
-        token: 'a9BwRvWgFSBhR773',
-        baseUrl: 'https://udify.app'
-    };
-
-    const s = document.createElement('script');
-    s.src = "https://udify.app/embed.min.js";
-    s.id = "dify-script-loader";
-    s.async = true;
-
-    s.onload = () => {
-        const checkExist = setInterval(() => {
-            if (typeof difyChatbot !== 'undefined') {
-                difyChatbot.init({
-                    token: 'a9BwRvWgFSBhR773',
-                    baseUrl: 'https://udify.app'
-                });
-                console.log("✅ Dify 氣泡初始化成功");
-                window.difyChatbotInitialized = true;
-                clearInterval(checkExist);
-            }
-        }, 500);
-        setTimeout(() => clearInterval(checkExist), 10000);
-    };
-
-    document.body.appendChild(s);
-}
 // 1. 統一的 Dify AI 助手控制器
 async function initDifyBot(shouldOpen = false) {
     // 防止重複插入腳本

@@ -423,7 +423,6 @@ async function handleUpdateProfile() {
 
  // 2. 統一的 Dify AI 助手控制器 (強化版)
 function initDifyBot(shouldOpen = false) {
-    // 檢查是否已經有腳本
     if (document.getElementById('dify-sdk')) {
         if (shouldOpen && typeof difyChatbot !== 'undefined') {
             difyChatbot.show();
@@ -439,28 +438,32 @@ function initDifyBot(shouldOpen = false) {
 
     s.onload = () => {
         console.log("✅ Dify SDK 檔案載入完成");
-        // 使用更積極的檢查頻率
         let retryCount = 0;
         const checkExist = setInterval(() => {
             retryCount++;
             if (typeof difyChatbot !== 'undefined') {
                 clearInterval(checkExist);
-                console.log("✨ Dify 元件初始化成功");
-                // 這裡一定要 init 否則泡泡不會出來
+                console.log("✨ 偵測到變數，執行初始化 (掛載至專屬容器)...");
+                
+                // 核心修正：指定 container
                 difyChatbot.init({
                     token: 'a9BwRvWgFSBhR773',
-                    baseUrl: 'https://udify.app'
+                    baseUrl: 'https://udify.app',
+                    container: document.getElementById('dify-chatbot-container')
                 });
+                
                 if (shouldOpen) {
                     setTimeout(() => { difyChatbot.show(); }, 500);
                 }
             }
-            if (retryCount > 50) clearInterval(checkExist); // 最多等 15 秒
+            if (retryCount > 50) {
+                console.error("❌ Dify 初始化超時");
+                clearInterval(checkExist);
+            }
         }, 300);
     };
-    document.head.appendChild(s); // 改掛在 head 確保優先級
-} 
-    
+    document.head.appendChild(s);
+}    
 // 3. 點擊按鈕手動啟動
 function activateAI() {
     // 呼叫統一入口，並要求開啟視窗
@@ -518,5 +521,6 @@ window.addEventListener('load', () => {
 });
     
 </script>
+<div id="dify-chatbot-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999;"></div>    
 </body>
 </html>

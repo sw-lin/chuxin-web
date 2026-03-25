@@ -9,11 +9,16 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
         #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
         .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #059669; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 99px; z-index: 10000; transition: opacity 0.5s; }
+        
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 99px; z-index: 10000; transition: opacity 0.5; }
+        
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0, 0, 0.2, 1); }
     </style>
 </head>
 <body class="pb-20">
@@ -29,15 +34,15 @@
     </nav>
 
     <main class="max-w-md mx-auto px-6 py-8">
-        <div id="eventList" class="space-y-4">
+        <div id="calendarList" class="space-y-4">
             </div>
     </main>
 
-    <div id="eventModal" class="fixed inset-0 bg-black/60 z-[60] hidden flex-col justify-end">
+    <div id="addEventModal" class="fixed inset-0 bg-black/60 z-[60] hidden flex-col justify-end">
         <div class="bg-white rounded-t-[3rem] p-8 animate-slide-up">
             <div class="flex justify-between items-center mb-6">
                 <h2 id="modalTitle" class="text-2xl font-black text-emerald-900">排定新活動</h2>
-                <button onclick="closeModal('eventModal')" class="text-gray-400 text-2xl">&times;</button>
+                <button onclick="closeModal('addEventModal')" class="text-gray-400 text-2xl">&times;</button>
             </div>
             <div class="space-y-4">
                 <div>
@@ -85,7 +90,7 @@
         var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         var GAS_URL = u1 + u2;
         var STAFF_KEY = sessionStorage.getItem('staff_key');
-        var allEvents = []; 
+        var allEvents = [];
         var currentEditData = null;
 
         window.onload = function() {
@@ -102,13 +107,12 @@
             if(el) el.style.display = s ? 'flex' : 'none'; 
         }
 
-        // --- 1. 讀取行事曆 ---
         function loadCalendar() {
             toggleLoading(true);
             fetch(GAS_URL + "?t=" + Date.now())
                 .then(res => res.json())
                 .then(data => {
-                    const list = document.getElementById('eventList');
+                    const list = document.getElementById('calendarList');
                     allEvents = data.calendar || [];
                     let html = '';
                     
@@ -141,6 +145,7 @@
                 .finally(() => toggleLoading(false));
         }
 
+        // --- 功能觸發 (使用 Index 安全傳遞) ---
         function doQR(i) { openQR(allEvents[i].dateText, allEvents[i].title); }
         
         function doEdit(i) {
@@ -151,42 +156,34 @@
             document.getElementById('eventPoster').value = currentEditData.poster_url || "";
             document.getElementById('addActions').classList.add('hidden'); 
             document.getElementById('editActions').classList.remove('hidden');
-            document.getElementById('eventModal').style.display = 'flex';
+            document.getElementById('addEventModal').style.display = 'flex';
         }
 
-        // --- 2. 新增活動 ---
         function submitAddEvent() {
             const date = document.getElementById('eventDate').value;
             const title = document.getElementById('eventTitle').value.trim();
             const poster = document.getElementById('eventPoster').value.trim();
             if (!date || !title) return alert("日期與標題為必填");
 
-            closeModal('eventModal');
+            closeModal('addEventModal');
             toggleLoading(true);
 
             fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify({ 
-                    type: 'add_event', 
-                    key: STAFF_KEY, 
-                    dateText: date, 
-                    title: title, 
-                    poster_url: poster,
-                    needQR: true 
+                    type: 'add_event', key: STAFF_KEY, dateText: date, title: title, poster_url: poster, needQR: true 
                 })
-            })
-            .then(() => { showToast("✅ 已發佈活動"); loadCalendar(); })
-            .finally(() => toggleLoading(false));
+            }).then(() => { showToast("✅ 已發佈活動"); loadCalendar(); })
+              .finally(() => toggleLoading(false));
         }
 
-        // --- 3. 編輯活動 ---
         function submitEditEvent() {
             if (!currentEditData) return;
             const date = document.getElementById('eventDate').value;
             const title = document.getElementById('eventTitle').value.trim();
             const poster = document.getElementById('eventPoster').value.trim();
 
-            closeModal('eventModal');
+            closeModal('addEventModal');
             toggleLoading(true);
 
             fetch(GAS_URL, {
@@ -196,55 +193,3 @@
                     key: STAFF_KEY,
                     oldTitle: currentEditData.title,
                     date: date,
-                    title: title,
-                    poster_url: poster
-                })
-            })
-            .then(() => { showToast("✅ 已更新"); loadCalendar(); })
-            .finally(() => toggleLoading(false));
-        }
-
-        // --- 4. 刪除活動 ---
-        function doDelete(i) {
-            const ev = allEvents[i];
-            if (!confirm(`確定要刪除「${ev.title}」嗎？\n這將移除相關所有紀錄。`)) return;
-            
-            toggleLoading(true);
-            fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    type: 'delete_event_poster', 
-                    key: STAFF_KEY, 
-                    eventTitle: ev.title 
-                })
-            })
-            .then(() => { showToast("🗑️ 已移除活動"); loadCalendar(); })
-            .finally(() => toggleLoading(false));
-        }
-
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        
-        function openQR(date, title) {
-            document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent("CHECKIN:"+date+":"+title)}`;
-            document.getElementById('qrModal').style.display = 'flex';
-        }
-
-        function openAddModal() {
-            currentEditData = null;
-            document.getElementById('modalTitle').innerText = "排定新活動";
-            document.getElementById('eventDate').value = ""; 
-            document.getElementById('eventTitle').value = ""; 
-            document.getElementById('eventPoster').value = "";
-            document.getElementById('addActions').classList.remove('hidden'); 
-            document.getElementById('editActions').classList.add('hidden');
-            document.getElementById('eventModal').style.display = 'flex';
-        }
-
-        function showToast(m) {
-            const t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
-            document.body.appendChild(t);
-            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
-        }
-    </script>
-</body>
-</html>

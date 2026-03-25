@@ -123,7 +123,7 @@
     }
 
     // --- 核心功能：讀取行事曆 ---
-    function loadCalendar() {
+function loadCalendar() {
         toggleLoading(true);
         fetch(GAS_URL + "?t=" + Date.now())
             .then(res => res.json())
@@ -132,9 +132,9 @@
                 const events = data.events || [];
                 let html = '';
                 
-                events.forEach(ev => {
-                    // 將資料物件轉為字串，方便傳入編輯函式
-                    const evString = encodeURIComponent(JSON.stringify(ev));
+                events.forEach((ev, index) => {
+                    // 安全做法：將資料轉為字串並存入 dataset
+                    const evData = JSON.stringify(ev);
                     
                     html += `
                         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-4">
@@ -147,7 +147,7 @@
                                     <button onclick="openQR('${ev.dateText}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full">
                                         <i class="fas fa-qrcode"></i>
                                     </button>
-                                    <button onclick="openEditModal('${evString}')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
+                                    <button id="edit-btn-${index}" data-info='${evData.replace(/'/g, "&apos;")}' onclick="handleEditClick(this)" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button onclick="deleteEvent('${ev.dateText}', '${ev.title}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full">
@@ -167,6 +167,23 @@
             .finally(() => toggleLoading(false));
     }
 
+    // 新增一個處理點擊的函式
+    function handleEditClick(btn) {
+        const ev = JSON.parse(btn.dataset.info);
+        openEditModalFromData(ev);
+    }
+
+    function openEditModalFromData(ev) {
+        currentEditData = ev;
+        document.getElementById('modalTitle').innerText = "編輯活動項目";
+        document.getElementById('eventDate').value = ev.dateText; 
+        document.getElementById('eventTitle').value = ev.title; 
+        document.getElementById('eventPoster').value = ev.poster_url || "";
+        
+        document.getElementById('addActions').classList.add('hidden'); 
+        document.getElementById('editActions').classList.remove('hidden');
+        document.getElementById('eventModal').style.display = 'flex';
+    }
     // --- 功能：新增活動 ---
     function submitAddEvent() {
         const date = document.getElementById('eventDate').value;

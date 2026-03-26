@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動行程表 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <div class="max-w-md mx-auto">
+        <div class="flex items-center justify-between mb-8">
+            <button onclick="location.href='member_zone.html'" class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-emerald-800">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2 class="text-2xl font-black text-emerald-900 flex items-center gap-2">
+                <i class="fas fa-calendar-check text-amber-500"></i>活動行程表
+            </h2>
+            <div class="w-10"></div> </div>
+
+        <div id="loading" class="text-center py-20">
+            <div class="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-emerald-900 font-bold">同步行程中...</p>
+        </div>
+
+        <div id="calendarList" class="space-y-4"></div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+
+        async function loadCalendar() {
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                const events = (data.calendar || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                renderList(events);
+            } catch (e) {
+                document.getElementById('calendarList').innerHTML = '<div class="text-center text-red-500 py-10 font-bold">讀取失敗，請重新整理</div>';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderList(events) {
+            const list = document.getElementById('calendarList');
+            if (events.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-gray-400 italic bg-white rounded-3xl">目前尚無預定行程</div>';
+                return;
+            }
+
+            list.innerHTML = events.map(ev => {
+                const d = (ev.date || "").replace(/-/g, '');
+                const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${d}T013000Z/${d}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
+                
+                return `
+                    <div class="p-5 bg-white rounded-[2rem] border border-emerald-50 shadow-sm flex justify-between items-center transition-all active:scale-[0.98]">
+                        <div class="flex-1">
+                            <div class="text-[10px] font-bold text-emerald-600 mb-1">${ev.date || ''}</div>
+                            <div class="font-black text-emerald-900 text-base">${ev.title || '未命名活動'}</div>
+                        </div>
+                        <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-[12px] font-black border border-amber-100 shadow-sm shrink-0 flex items-center gap-1">
+                            <i class="fas fa-calendar-plus"></i>加日曆
+                        </button>
+                    </div>`;
+            }).join('');
+        }
+
+        window.onload = loadCalendar;
+    </script>
+</body>
+</html>

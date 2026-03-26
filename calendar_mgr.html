@@ -116,12 +116,12 @@
         if (isEditMode) {
             btn.innerText = "結束編輯";
             btn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-            document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
+            
             addBtn.classList.remove('hidden');
         } else {
             btn.innerText = "開啟編輯";
             btn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-            document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
+            
             addBtn.classList.add('hidden');
         }
         renderList();

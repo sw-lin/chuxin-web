@@ -306,7 +306,7 @@ function updateUI(user, calendar, events) {
                     <div class="flex items-center gap-3">
                         ${thumbUrl ? `<img src="${thumbUrl}" class="w-10 h-10 rounded-lg object-cover shadow-sm">` : ''}
                         <div>
-                            <div class="text-[10px] text-emerald-600 font-bold">${ev.dateText}</div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.date}</div>
                             <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
                         </div>
                     </div>
@@ -381,29 +381,43 @@ function updateUI(user, calendar, events) {
     }
     
 function openCalendarModal() {
+    const modal = document.getElementById('calendarModal');
     const list = document.getElementById('calendarList');
-    // 修改這裡：從 window.latestData 獲取，或確保 syncData 有存下來
-    // 建議將 syncData 抓到的 data 存成全域變數
-    const events = (window.latestCalendarData || []).sort((a,b) => new Date(a.dateText) - new Date(b.dateText));
     
+    // 1. 顯示 Modal
+    modal.style.display = 'flex';
+    
+    // 2. 取得資料並排序 (修正欄位名稱為 ev.date)
+    const events = (window.latestCalendarData || []).sort((a, b) => {
+        return new Date(a.date || 0) - new Date(b.date || 0);
+    });
+
+    if (events.length === 0) {
+        list.innerHTML = '<div class="text-center py-12 text-gray-400 italic">暫無行程資料</div>';
+        return;
+    }
+
+    // 3. 渲染清單
     list.innerHTML = events.map(ev => {
-        const d = ev.date.replace(/-/g, '');
-        // 固定 09:30 - 12:00 (UTC+8 轉換為 UTC 為 01:30-04:00)
+        // 處理 Google 日曆格式 (YYYYMMDD)
+        const d = (ev.date || "").replace(/-/g, '');
+        if (!d) return ""; // 跳過無日期的資料
+
         const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${d}T013000Z/${d}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
         
         return `
-            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex justify-between items-center">
-                <div>
-                    <div class="text-[10px] font-bold text-emerald-600">${ev.date}</div>
-                    <div class="font-bold text-emerald-900">${ev.title}</div>
+            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex justify-between items-center mb-3">
+                <div class="flex-1">
+                    <div class="text-[10px] font-bold text-emerald-600">${ev.date || ''}</div>
+                    <div class="font-bold text-emerald-900 text-sm">${ev.title || '未命名活動'}</div>
                 </div>
-                <button onclick="window.open('${googleUrl}', '_blank')" class="bg-white text-emerald-800 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-100 shadow-sm">
-                    <i class="fas fa-calendar-plus text-amber-500 mr-1"></i>加日曆
+                <button onclick="window.open('${googleUrl}', '_blank')" class="bg-white text-emerald-800 px-3 py-1.5 rounded-lg text-[10px] font-black border border-emerald-100 shadow-sm shrink-0 flex items-center gap-1">
+                    <i class="fas fa-calendar-plus text-amber-500"></i>加日曆
                 </button>
             </div>`;
     }).join('');
-    document.getElementById('calendarModal').style.display = 'flex';
 }
+
 
 function closeCalendarModal() {
     document.getElementById('calendarModal').style.display = 'none';

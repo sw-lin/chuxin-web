@@ -33,96 +33,109 @@
             </div>
 
     </main>
-
-    <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-
-        // 格式化日期：將 YYYY-MM-DD 轉為 { month: '03月', day: '27' }
-        function formatDisplayDate(dateStr) {
-            if (!dateStr) return { month: '--', day: '--' };
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return { month: '--', day: '--' };
+<script>
+    // 確保這裡的網址與您 member_zone.html 使用的一致
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+                    
+    // 格式化日期
+    function formatDisplayDate(dateStr) {
+        if (!dateStr) return { month: '--', day: '--' };
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                const parts = dateStr.split('-');
+                return { month: parts[1] + '月', day: parts[2] };
+            }
             return {
-                month: parts[1] + '月',
-                day: parts[2]
+                month: (d.getMonth() + 1).toString().padStart(2, '0') + '月',
+                day: d.getDate().toString().padStart(2, '0')
             };
-        }
+        } catch(e) { return { month: '--', day: '--' }; }
+    }
 
-        async function loadCalendar() {
-            try {
-                // 增加時間戳防緩存
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                
-                // 排序：日期早的在前面 (Ascending)
-                const events = (data.calendar || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                renderList(events);
-            } catch (e) {
-                console.error("讀取行事曆失敗:", e);
-                document.getElementById('calendarList').innerHTML = `
-                    <div class="text-center py-16 bg-white rounded-[2rem] border border-red-100 shadow-sm">
-                        <i class="fas fa-exclamation-triangle text-red-400 text-5xl mb-5"></i>
-                        <p class="text-red-900 font-bold">行程讀取失敗</p>
-                        <p class="text-red-700/70 text-xs mt-2">請檢查網路連線或稍後再試</p>
-                        <button onclick="location.reload()" class="mt-6 px-6 py-2.5 bg-red-50 text-red-800 rounded-xl font-bold text-sm border border-red-200 hover:bg-red-100">重新嘗試</button>
-                    </div>
-                `;
-            } finally {
-                // 隱藏載入中狀態
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
-
-        function renderList(events) {
-            const listContainer = document.getElementById('calendarList');
+    async function loadCalendar() {
+        const listContainer = document.getElementById('calendarList');
+        const loadingElem = document.getElementById('loading');
+        
+        try {
+            console.log("正在嘗試從 GAS 抓取資料...");
             
-            if (events.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="text-center py-20 bg-white rounded-[2rem] border border-emerald-50 shadow-sm space-y-3">
-                        <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mx-auto text-4xl">
-                            <i class="far fa-calendar"></i>
-                        </div>
-                        <p class="text-gray-400 text-sm italic font-bold">目前尚無預定行程</p>
-                    </div>
-                `;
-                return;
-            }
+            // 使用更強大的 fetch 參數，並加上超時機制
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
 
-            listContainer.innerHTML = events.map(ev => {
-                const dateClean = (ev.date || "").replace(/-/g, '');
-                if (!dateClean) return ""; // 跳過無日期的髒資料
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`, {
+                method: 'GET',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
 
-                // 準備日期顯示物件
-                const dateObj = formatDisplayDate(ev.date);
+            if (!res.ok) throw new Error('網路回應不正確');
+            
+            const data = await res.json();
+            console.log("資料抓取成功:", data);
 
-                // 生成 Google 日曆連結 (固定 09:30 - 12:00)
-                const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${dateClean}T013000Z/${dateClean}T040000Z&details=${encodeURIComponent('築心讀書會活動')}&location=${encodeURIComponent('築心會館')}`;
-                
-                return `
-                    <div class="bg-white p-5 rounded-[2rem] border border-emerald-50 shadow-sm flex items-center gap-5 transition-all active:scale-[0.98] hover:border-emerald-100">
-                        
-                        <div class="flex flex-col items-center justify-center w-20 h-20 shrink-0 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-                            <div class="text-[10px] font-bold text-emerald-700 tracking-wider">${dateObj.month}</div>
-                            <div class="text-4xl font-black text-emerald-900 mt-0.5">${dateObj.day}</div>
-                        </div>
+            // 取得 calendar 資料
+            const events = (data.calendar || []).filter(ev => ev.date && ev.title);
+            
+            // 排序
+            events.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            renderList(events);
 
-                        <div class="flex-1 space-y-1">
-                            <h4 class="font-black text-emerald-950 text-base leading-snug">${ev.title || '未命名活動'}</h4>
-                            <div class="text-xs text-emerald-700/80 flex items-center gap-1.5 font-medium">
-                                <i class="far fa-clock text-amber-500"></i>固定時間：09:30 - 12:00
-                            </div>
-                        </div>
+        } catch (e) {
+            console.error("載入失敗詳情:", e);
+            listContainer.innerHTML = `
+                <div class="text-center py-16 bg-white rounded-[2rem] border border-red-100 shadow-sm">
+                    <i class="fas fa-exclamation-circle text-red-400 text-5xl mb-5"></i>
+                    <p class="text-red-900 font-bold">連線逾時或發生錯誤</p>
+                    <p class="text-red-700/70 text-xs mt-2">原因：${e.name === 'AbortError' ? '伺服器回應太慢' : '網路連線異常'}</p>
+                    <button onclick="location.reload()" class="mt-6 px-6 py-2.5 bg-red-50 text-red-800 rounded-xl font-bold text-sm border border-red-200">手動重新整理</button>
+                </div>
+            `;
+        } finally {
+            loadingElem.style.display = 'none';
+        }
+    }
 
-                        <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-800 px-4 py-3 rounded-xl text-xs font-black border border-amber-100 shadow-sm shrink-0 flex items-center gap-1.5 hover:bg-amber-100 active:scale-95 transition-all">
-                            <i class="fas fa-calendar-plus text-amber-500 text-sm"></i>加日曆
-                        </button>
-                    </div>`;
-            }).join('');
+    function renderList(events) {
+        const listContainer = document.getElementById('calendarList');
+        
+        if (!events || events.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-20 bg-white rounded-[2rem] border border-emerald-50 shadow-sm">
+                    <p class="text-gray-400 text-sm italic font-bold">目前資料庫中尚無行程</p>
+                </div>
+            `;
+            return;
         }
 
-        // 頁面載入後自動執行
-        window.onload = loadCalendar;
-    </script>
+        listContainer.innerHTML = events.map(ev => {
+            const dateObj = formatDisplayDate(ev.date);
+            const dateClean = (ev.date || "").replace(/-/g, '');
+            const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${dateClean}T013000Z/${dateClean}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
+            
+            return `
+                <div class="bg-white p-5 rounded-[2rem] border border-emerald-50 shadow-sm flex items-center gap-5 mb-4">
+                    <div class="flex flex-col items-center justify-center w-20 h-20 shrink-0 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                        <div class="text-[10px] font-bold text-emerald-700">${dateObj.month}</div>
+                        <div class="text-4xl font-black text-emerald-900">${dateObj.day}</div>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-black text-emerald-950 text-base">${ev.title}</h4>
+                        <div class="text-xs text-emerald-700/80 flex items-center gap-1">
+                            <i class="far fa-clock text-amber-500"></i>09:30 - 12:00
+                        </div>
+                    </div>
+                    <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-800 px-3 py-2.5 rounded-xl text-[10px] font-black border border-amber-100 shrink-0 flex items-center gap-1">
+                        <i class="fas fa-calendar-plus text-amber-500"></i>加日曆
+                    </button>
+                </div>`;
+        }).join('');
+    }
+
+    window.onload = loadCalendar;
+</script> 
 </body>
 </html>

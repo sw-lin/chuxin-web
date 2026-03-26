@@ -25,9 +25,10 @@
         
         <h1 class="text-xl md:text-2xl font-black tracking-widest text-center flex-1">系統參數設定</h1>
         
-        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-amber-400 text-amber-900 px-5 py-2 rounded-xl font-bold hover:bg-amber-300 transition shadow-md active:scale-95 text-sm whitespace-nowrap">
+        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">
             <i class="fas fa-edit mr-1"></i>編輯模式
         </button>
+                                                                          
     </nav>
 
     <main class="max-w-4xl mx-auto mt-8 px-6">
@@ -140,16 +141,15 @@
             });
 
             if (isEditMode) {
-                navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>取消編輯';
+                navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>結束編輯';
                 navEditBtn.className = "bg-white text-emerald-900 px-5 py-2 rounded-xl font-bold hover:bg-emerald-50 transition shadow-md active:scale-95 text-sm";
                 saveActions.classList.remove('hidden');
             } else {
                 navEditBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
-                navEditBtn.className = "bg-amber-400 text-amber-900 px-5 py-2 rounded-xl font-bold hover:bg-amber-300 transition shadow-md active:scale-95 text-sm";
+                navEditBtn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
                 saveActions.classList.add('hidden');
             }
-        }
-
+        }                              
         async function saveConfigs() {
             const payload = {
                 type: 'update_config',

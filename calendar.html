@@ -12,66 +12,116 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
     </style>
 </head>
-<body class="min-h-screen p-6">
-    <div class="max-w-md mx-auto">
-        <div class="flex items-center justify-between mb-8">
-            <button onclick="location.href='member_zone.html'" class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-emerald-800">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <h2 class="text-2xl font-black text-emerald-900 flex items-center gap-2">
-                <i class="fas fa-calendar-check text-amber-500"></i>活動行程表
-            </h2>
-            <div class="w-10"></div> </div>
+<body class="min-h-screen pb-10">
 
-        <div id="loading" class="text-center py-20">
-            <div class="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-emerald-900 font-bold">同步行程中...</p>
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-200 transition">
+            <i class="fas fa-chevron-left mr-1.5"></i> 返回
+        </button>
+        <h1 class="text-xl font-black tracking-widest absolute left-1/2 -translate-x-1/2">活動行程表</h1>
+        <div class="w-10"></div> 
+    </nav>
+
+    <main class="max-w-xl mx-auto p-6 mt-6 space-y-6">
+        
+        <div id="loading" class="text-center py-24 bg-white rounded-[2rem] border border-emerald-50 shadow-sm">
+            <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-700 rounded-full animate-spin mx-auto mb-5"></div>
+            <p class="text-emerald-900 font-bold text-sm tracking-wide">正在同步最新行程...</p>
         </div>
 
-        <div id="calendarList" class="space-y-4"></div>
-    </div>
+        <div id="calendarList" class="space-y-5">
+            </div>
+
+    </main>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 
+        // 格式化日期：將 YYYY-MM-DD 轉為 { month: '03月', day: '27' }
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return { month: '--', day: '--' };
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return { month: '--', day: '--' };
+            return {
+                month: parts[1] + '月',
+                day: parts[2]
+            };
+        }
+
         async function loadCalendar() {
             try {
+                // 增加時間戳防緩存
                 const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
                 const data = await res.json();
+                
+                // 排序：日期早的在前面 (Ascending)
                 const events = (data.calendar || []).sort((a, b) => new Date(a.date) - new Date(b.date));
                 
                 renderList(events);
             } catch (e) {
-                document.getElementById('calendarList').innerHTML = '<div class="text-center text-red-500 py-10 font-bold">讀取失敗，請重新整理</div>';
+                console.error("讀取行事曆失敗:", e);
+                document.getElementById('calendarList').innerHTML = `
+                    <div class="text-center py-16 bg-white rounded-[2rem] border border-red-100 shadow-sm">
+                        <i class="fas fa-exclamation-triangle text-red-400 text-5xl mb-5"></i>
+                        <p class="text-red-900 font-bold">行程讀取失敗</p>
+                        <p class="text-red-700/70 text-xs mt-2">請檢查網路連線或稍後再試</p>
+                        <button onclick="location.reload()" class="mt-6 px-6 py-2.5 bg-red-50 text-red-800 rounded-xl font-bold text-sm border border-red-200 hover:bg-red-100">重新嘗試</button>
+                    </div>
+                `;
             } finally {
+                // 隱藏載入中狀態
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
         function renderList(events) {
-            const list = document.getElementById('calendarList');
+            const listContainer = document.getElementById('calendarList');
+            
             if (events.length === 0) {
-                list.innerHTML = '<div class="text-center py-12 text-gray-400 italic bg-white rounded-3xl">目前尚無預定行程</div>';
+                listContainer.innerHTML = `
+                    <div class="text-center py-20 bg-white rounded-[2rem] border border-emerald-50 shadow-sm space-y-3">
+                        <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mx-auto text-4xl">
+                            <i class="far fa-calendar"></i>
+                        </div>
+                        <p class="text-gray-400 text-sm italic font-bold">目前尚無預定行程</p>
+                    </div>
+                `;
                 return;
             }
 
-            list.innerHTML = events.map(ev => {
-                const d = (ev.date || "").replace(/-/g, '');
-                const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${d}T013000Z/${d}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
+            listContainer.innerHTML = events.map(ev => {
+                const dateClean = (ev.date || "").replace(/-/g, '');
+                if (!dateClean) return ""; // 跳過無日期的髒資料
+
+                // 準備日期顯示物件
+                const dateObj = formatDisplayDate(ev.date);
+
+                // 生成 Google 日曆連結 (固定 09:30 - 12:00)
+                const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${dateClean}T013000Z/${dateClean}T040000Z&details=${encodeURIComponent('築心讀書會活動')}&location=${encodeURIComponent('築心會館')}`;
                 
                 return `
-                    <div class="p-5 bg-white rounded-[2rem] border border-emerald-50 shadow-sm flex justify-between items-center transition-all active:scale-[0.98]">
-                        <div class="flex-1">
-                            <div class="text-[10px] font-bold text-emerald-600 mb-1">${ev.date || ''}</div>
-                            <div class="font-black text-emerald-900 text-base">${ev.title || '未命名活動'}</div>
+                    <div class="bg-white p-5 rounded-[2rem] border border-emerald-50 shadow-sm flex items-center gap-5 transition-all active:scale-[0.98] hover:border-emerald-100">
+                        
+                        <div class="flex flex-col items-center justify-center w-20 h-20 shrink-0 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                            <div class="text-[10px] font-bold text-emerald-700 tracking-wider">${dateObj.month}</div>
+                            <div class="text-4xl font-black text-emerald-900 mt-0.5">${dateObj.day}</div>
                         </div>
-                        <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-[12px] font-black border border-amber-100 shadow-sm shrink-0 flex items-center gap-1">
-                            <i class="fas fa-calendar-plus"></i>加日曆
+
+                        <div class="flex-1 space-y-1">
+                            <h4 class="font-black text-emerald-950 text-base leading-snug">${ev.title || '未命名活動'}</h4>
+                            <div class="text-xs text-emerald-700/80 flex items-center gap-1.5 font-medium">
+                                <i class="far fa-clock text-amber-500"></i>固定時間：09:30 - 12:00
+                            </div>
+                        </div>
+
+                        <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-800 px-4 py-3 rounded-xl text-xs font-black border border-amber-100 shadow-sm shrink-0 flex items-center gap-1.5 hover:bg-amber-100 active:scale-95 transition-all">
+                            <i class="fas fa-calendar-plus text-amber-500 text-sm"></i>加日曆
                         </button>
                     </div>`;
             }).join('');
         }
 
+        // 頁面載入後自動執行
         window.onload = loadCalendar;
     </script>
 </body>

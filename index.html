@@ -9,12 +9,9 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; color: #2C3E50; scroll-behavior: smooth; margin: 0; }
-        
-        /* 修正照片滿版邏輯 */
         .hero-gradient { background: linear-gradient(to bottom, rgba(6,78,59,0.5), rgba(6,78,59,0.2)); }
         .slide { display: none; width: 100%; height: 100%; object-fit: cover; animation: fade 1.5s; }
-        @keyframes fade { from {opacity: .8} to {opacity: 1} }
-        
+        @keyframes fade { from {opacity: 0.8} to {opacity: 1} }
         .modal { display: none; position: fixed; z-index: 100; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); align-items: center; justify-content: center; padding: 20px; }
         .nav-glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); }
     </style>
@@ -60,8 +57,9 @@
                 <p class="text-gray-500">期待與您在書香中相遇</p>
             </div>
             <form action="https://formspree.io/f/xpqjvblg" method="POST" class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-emerald-100 space-y-6">
-                <input type="text" name="姓名" required placeholder="您的姓名" class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none font-bold">
-                <input type="tel" name="電話" required placeholder="手機號碼" class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none font-bold">
+                <input type="text" name="姓名" required placeholder="您的姓名" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <input type="email" name="Email" required placeholder="您的電子郵件 (Email)" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <input type="tel" name="電話" required placeholder="手機號碼" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 <button type="submit" class="w-full bg-emerald-800 text-white font-bold py-5 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">
                     提交報名資料
                 </button>
@@ -81,13 +79,8 @@
                 </div>
             </div>
             <div class="space-y-4">
-                <input type="text" id="userPhone" placeholder="手機號碼 或 guest" class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none font-bold">
-                
-           <input type="password" id="userPass" 
-                  onkeyup="if(event.key==='Enter') handleLogin()" 
-                  placeholder="登入密碼" 
-                  class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none">                
-                
+                <input type="text" id="userPhone" placeholder="手機號碼 或 guest" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <input type="password" id="userPass" onkeyup="if(event.key==='Enter') handleLogin()" placeholder="登入密碼" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none">
                 <button onclick="handleLogin()" id="loginBtn" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
             </div>
         </div>
@@ -97,32 +90,41 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let slideIndex = 0;
 
-async function initData() {
-    try {
-        const res = await fetch(GAS_URL + "?t=" + Date.now());
-        const data = await res.json();
-        const config = data.config || {};
-        
-        // 修改處：加入自動轉換機制
-        const slides = [
-            transformDriveUrl(config.slide_img1) || '1.jpg',
-            transformDriveUrl(config.slide_img2) || '2.jpg',
-            transformDriveUrl(config.slide_img3) || '3.jpg',
-            transformDriveUrl(config.slide_img4) || '4.jpg',
-            transformDriveUrl(config.slide_img5) || '5.jpg'
-        ];
-        
-        document.getElementById('slideContainer').innerHTML = slides.map(url => `<img class="slide" src="${url}">`).join('');
-        startSlides();
-
-        if(config.about_content) {
-            document.getElementById('aboutContent').innerHTML = config.about_content.replace(/\n/g, '<br>');
+        function transformDriveUrl(url) {
+            if (!url || typeof url !== 'string') return '';
+            if (url.includes('drive.google.com')) {
+                const match = url.match(/\/d\/(.+?)\/(view|edit|share)?/);
+                if (match && match[1]) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            }
+            return url;
         }
-    } catch (e) {
-        document.getElementById('slideContainer').innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
-        startSlides();
-    }
-}
+
+        function toHalfWidth(str) {
+            if (!str) return "";
+            return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
+        }
+
+        async function initData() {
+            try {
+                const res = await fetch(GAS_URL + "?t=" + Date.now());
+                const data = await res.json();
+                const config = data.config || {};
+                
+                const rawSlides = [config.slide_img1, config.slide_img2, config.slide_img3, config.slide_img4, config.slide_img5];
+                const slides = rawSlides.map((url, index) => transformDriveUrl(url) || `${index + 1}.jpg`);
+                
+                document.getElementById('slideContainer').innerHTML = slides.map(url => `<img class="slide" src="${url}">`).join('');
+                startSlides();
+
+                if(config.about_content) {
+                    document.getElementById('aboutContent').innerHTML = config.about_content.replace(/\n/g, '<br>');
+                }
+            } catch (e) {
+                document.getElementById('slideContainer').innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
+                startSlides();
+            }
+        }
+
         function startSlides() {
             let slides = document.getElementsByClassName("slide");
             if (slides.length === 0) return;
@@ -132,74 +134,33 @@ async function initData() {
             slides[slideIndex - 1].style.display = "block";
             setTimeout(startSlides, 5000);
         }
-        
-// C. 登入處理函式
-window.handleLogin = async function() {
-    const rawPhone = document.getElementById('userPhone').value.trim();
-    const rawPass = document.getElementById('userPass').value.trim();
 
-    // 1. 處理帳號 (轉半形、轉小寫)
-    const u = toHalfWidth(rawPhone).toLowerCase();
-    
-    // 2. 處理密碼 (轉半形)
-    const p = toHalfWidth(rawPass);
+        async function handleLogin() {
+            const rawU = document.getElementById('userPhone').value.trim();
+            const u = toHalfWidth(rawU).toLowerCase();
+            const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
-    // Guest 快速通行
-    if (u === 'guest') {
-        sessionStorage.setItem('userInfo', JSON.stringify({ 
-            result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true 
-        }));
-        window.location.href = 'member_zone.html';
-        return;
-    }
+            if (u === 'guest') {
+                sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
+                window.location.href = 'member_zone.html';
+                return;
+            }
 
-    if(!u || !p) {
-        alert("請輸入帳號與密碼");
-        return;
-    }
-
-    const btn = document.getElementById('loginBtn');
-    btn.disabled = true;
-    btn.innerText = "驗證中...";
-    
-    try {
-        const res = await fetch(GAS_URL, { 
-            method: 'POST', 
-            body: JSON.stringify({ type: 'login', phone: u, password: p }) 
-        });
-        const result = await res.json();
-        
-        if (result.result === "SUCCESS") {
-            sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
-            window.location.href = 'member_zone.html';
-        } else {
-            alert("登入失敗：帳號或密碼錯誤");
+            if(!u || !p) return alert("請輸入帳號密碼");
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.innerText = "驗證中...";
+            
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'login', phone: u, password: p }) });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
+                    window.location.href = 'member_zone.html';
+                } else { alert("登入失敗：帳號或密碼錯誤"); }
+            } catch (e) { alert("網路異常"); }
+            finally { btn.disabled = false; btn.innerText = "確認進入"; }
         }
-    } catch (e) {
-        alert("網路異常，請稍後再試");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "確認進入";
-    }
-}       
-// A. 自動將 Google Drive 分享連結轉換為直接圖檔路徑
-function transformDriveUrl(url) {
-    if (!url) return '';
-    if (url.includes('drive.google.com')) {
-        const match = url.match(/\/d\/(.+?)\/(view|edit|share)?/);
-        if (match && match[1]) {
-            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-        }
-    }
-    return url;
-}        
-// B. 強大的全形轉半形工具（處理數字、英文字母，並移除空格）
-function toHalfWidth(str) {
-    if (!str) return "";
-    return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => 
-        String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
-    ).replace(/\s/g, "");
-}        
+
         function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
         window.onload = initData;

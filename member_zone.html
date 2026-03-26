@@ -123,12 +123,12 @@ div[class*="dify-chatbot"] {
                 <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
             </button>
-            <button id="calendarBtn" onclick="openCalendarModal()" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:bg-amber-100">
-             <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
-             <i class="fas fa-calendar-alt text-xl"></i>
-             </div>
-             <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
-            </button>            
+<button id="calendarBtn" onclick="location.href='calendar.html'" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+     <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+         <i class="fas fa-calendar-alt text-xl"></i>
+     </div>
+     <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
+</button>            
             <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
@@ -370,48 +370,7 @@ function updateUI(user, calendar, events) {
         } else { document.getElementById('scannerModal').style.display = 'none'; }
     }
     
-function openCalendarModal() {
-    const modal = document.getElementById('calendarModal');
-    const list = document.getElementById('calendarList');
-    
-    // 1. 顯示 Modal
-    modal.style.display = 'flex';
-    
-    // 2. 取得資料並排序 (修正欄位名稱為 ev.date)
-    const events = (window.latestCalendarData || []).sort((a, b) => {
-        return new Date(a.date || 0) - new Date(b.date || 0);
-    });
 
-    if (events.length === 0) {
-        list.innerHTML = '<div class="text-center py-12 text-gray-400 italic">暫無行程資料</div>';
-        return;
-    }
-
-    // 3. 渲染清單
-    list.innerHTML = events.map(ev => {
-        // 處理 Google 日曆格式 (YYYYMMDD)
-        const d = (ev.date || "").replace(/-/g, '');
-        if (!d) return ""; // 跳過無日期的資料
-
-        const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${d}T013000Z/${d}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
-        
-        return `
-            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex justify-between items-center mb-3">
-                <div class="flex-1">
-                    <div class="text-[10px] font-bold text-emerald-600">${ev.date || ''}</div>
-                    <div class="font-bold text-emerald-900 text-sm">${ev.title || '未命名活動'}</div>
-                </div>
-                <button onclick="window.open('${googleUrl}', '_blank')" class="bg-white text-emerald-800 px-3 py-1.5 rounded-lg text-[10px] font-black border border-emerald-100 shadow-sm shrink-0 flex items-center gap-1">
-                    <i class="fas fa-calendar-plus text-amber-500"></i>加日曆
-                </button>
-            </div>`;
-    }).join('');
-}
-
-
-function closeCalendarModal() {
-    document.getElementById('calendarModal').style.display = 'none';
-}    
 
     // 交互邏輯 (與後端對接)
 async function handleUpdateProfile() {
@@ -584,15 +543,6 @@ window.addEventListener('load', () => {
 });
     
 </script>
-<div id="calendarModal" class="modal-overlay" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
-    <div class="bg-white w-full max-w-md mx-4 rounded-[3rem] p-8 shadow-2xl relative max-h-[85vh] flex flex-col">
-        <button onclick="closeCalendarModal()" class="absolute top-6 right-6 text-gray-400"><i class="fas fa-times-circle text-2xl"></i></button>
-        <h3 class="text-2xl font-black text-emerald-900 mb-6 flex items-center">
-            <i class="fas fa-calendar-check mr-3 text-amber-500"></i>活動行程表
-        </h3>
-        <div id="calendarList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
-    </div>
-</div> 
   <div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px;left: 25px;right: 25px; width: auto;; height: 600px; z-index:2147483647; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
     <iframe
         src="https://udify.app/chatbot/a9BwRvWgFSBhR773"

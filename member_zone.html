@@ -123,10 +123,12 @@ div[class*="dify-chatbot"] {
                 <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
             </button>
-            <button id="aiLauncherBtn" onclick="openCalendarModal()" class="bg-blue-50 p-6 rounded-[2rem] shadow-sm border border-blue-100 flex flex-col items-center gap-2 transition-all active:bg-blue-100">
-            <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center animate-bounce"><i class="fas fa-robot"></i></div>
-            <span class="font-black text-xs text-blue-900">行事曆</span>
-            </button>
+            <button id="calendarBtn" onclick="openCalendarModal()" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:bg-amber-100">
+             <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+             <i class="fas fa-calendar-alt text-xl"></i>
+             </div>
+             <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
+            </button>            
             <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
@@ -181,7 +183,8 @@ div[class*="dify-chatbot"] {
     let currentUser = null;
     let remoteConfig = {};
     let html5QrCode = null;
-
+    window.latestCalendarData = []; // 預設空陣列，防止按鈕點擊噴錯
+    
 // 1. 先定義配置 (放在最外層確保 Dify 隨時讀得到)
 window.difyChatbotConfig = {
     token: 'a9BwRvWgFSBhR773',
@@ -523,7 +526,9 @@ async function syncData() {
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
-        window.latestCalendarData = data.calendar; // 【補這一行】存下行事曆資料供 Modal 使用
+        // 確保這兩行確實執行且資料存在
+        window.latestCalendarData = data.calendar || []; 
+       
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎回來！";
         
@@ -543,6 +548,7 @@ async function syncData() {
             updateUI(liveUser, data.calendar, data.events);
         }
     } catch (e) { 
+        console.error("同步失敗:", e);
         showToast("同步失敗", "error"); 
     } finally { 
         overlay.style.display = 'none'; 

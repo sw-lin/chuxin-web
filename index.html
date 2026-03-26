@@ -14,40 +14,55 @@
         @keyframes fade { from {opacity: .8} to {opacity: 1} }
         @media (max-width: 640px) { .slide { height: 400px; } }
         
-        .modal { display: none; position: fixed; z-index: 100; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
-        .nav-glass { background: rgba(6, 78, 59, 0.9); backdrop-filter: blur(8px); }
+        /* 模態彈窗基礎樣式 */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 100; 
+            inset: 0; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(5px); 
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* 優化關於我內容排版 */
+        #aboutContent {
+            line-height: 1.8;
+            letter-spacing: 0.05em;
+        }
+        #aboutContent strong {
+            color: #065f46;
+            font-weight: 700;
+        }
+
+        /* 案頭白底半透明風格 */
+        .nav-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+        }
     </style>
 </head>
-<body>
+<body class="bg-[#FDFBF7]">
 
-    <nav class="fixed w-full z-50 nav-glass text-white px-6 py-4 flex justify-between items-center shadow-lg">
+    <nav class="fixed w-full z-50 nav-glass px-6 py-4 flex justify-between items-center shadow-sm">
         <div class="flex items-center space-x-2">
-            <div class="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center">
-                <i class="fas fa-book-open text-emerald-900 text-sm"></i>
-            </div>
-            <span class="text-xl font-bold tracking-tighter">築心讀書會</span>
+            <i class="fas fa-leaf text-emerald-700 text-2xl"></i>
+            <span class="text-2xl md:text-3xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
         </div>
-        <button onclick="openLogin()" class="bg-amber-400 text-emerald-900 px-6 py-2 rounded-full text-sm font-bold shadow-md hover:bg-amber-300 transition">
+        <button onclick="openLogin()" class="bg-emerald-800 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-emerald-700 transition shadow-lg border border-emerald-800 active:scale-95">
             進入會館
         </button>
     </nav>
-
-    <header class="relative h-[600px] md:h-[700px] overflow-hidden">
+    
+    <header class="relative pt-16 h-[600px] md:h-[700px] overflow-hidden bg-emerald-900">
         <div id="slideContainer">
-            <div class="slide bg-emerald-900 flex items-center justify-center text-white">載入中...</div>
+            <div class="slide flex items-center justify-center text-white h-full text-lg italic opacity-50">載入中...</div>
         </div>
-        <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center px-4">
+        <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center px-6 z-10">
             <div class="max-w-3xl">
-                <span class="inline-block px-4 py-1 bg-amber-400/20 text-amber-400 rounded-full text-xs font-bold tracking-[0.3em] mb-6 uppercase">Building Hearts Through Reading</span>
-                <h2 class="text-5xl md:text-7xl font-black text-white mb-8 leading-tight tracking-tight">在共讀中築心</h2>
-                <p class="text-lg md:text-xl text-emerald-50/90 leading-relaxed font-light tracking-wide mb-10">
-                    這是一個溫暖的港灣，我們透過文字對話，<br class="hidden md:block">
-                    在喧囂的世界裡，找回內心的寧靜與力量。
-                </p>
-                <div class="flex flex-col md:flex-row gap-4 justify-center">
-                    <a href="#register" class="bg-amber-400 text-emerald-900 px-10 py-4 rounded-full font-bold shadow-xl hover:scale-105 transition">立即報名</a>
-                    <a href="#about" class="bg-white/10 text-white border border-white/30 backdrop-blur-md px-10 py-4 rounded-full font-bold hover:bg-white/20 transition">了解更多</a>
-                </div>
+                <h1 class="text-4xl md:text-6xl text-white font-bold leading-tight tracking-tight">在共讀中築心</h1>
             </div>
         </div>
     </header>
@@ -55,98 +70,72 @@
     <section id="about" class="py-24 px-6 bg-white">
         <div class="max-w-4xl mx-auto">
             <div class="text-center mb-16">
-                <h3 class="text-3xl font-black text-emerald-900 mb-4 italic">關於 築心會館</h3>
-                <div class="w-16 h-1 bg-amber-400 mx-auto"></div>
+                <h2 class="text-3xl font-bold text-emerald-900 mb-4 italic flex items-center justify-center">
+                    <i class="fas fa-leaf mr-3 text-emerald-600"></i>關於築心
+                </h2>
+                <div class="h-px w-24 bg-amber-400 mx-auto"></div>
             </div>
-            <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div class="space-y-6 text-gray-600 leading-relaxed text-lg">
-                    <p>「築心」源於一個簡單的願望：建立一個可以安頓心靈的空間。我們相信閱讀不只是獲取知識，更是一場關於生命的探索與對話。</p>
-                    <p>在讀書會中，我們不設門檻、不談功利，只為分享那份觸動心弦的文字與共鳴。</p>
-                </div>
-                <div class="bg-emerald-50 p-8 rounded-[3rem] border-2 border-dashed border-emerald-200">
-                    <h4 class="font-bold text-emerald-800 mb-4"><i class="fas fa-quote-left mr-2 opacity-50"></i> 核心價值</h4>
-                    <ul class="space-y-4 text-emerald-900/80 font-medium">
-                        <li><i class="fas fa-check text-amber-500 mr-2"></i> 深度閱讀與靈魂對話</li>
-                        <li><i class="fas fa-check text-amber-500 mr-2"></i> 無壓力、共融的學習氛圍</li>
-                        <li><i class="fas fa-check text-amber-500 mr-2"></i> 生活美學與感官覺察</li>
-                    </ul>
-                </div>
+            <div id="aboutContent" class="text-gray-600 leading-relaxed whitespace-pre-line text-lg">
+                <p><strong>「築心」</strong>，源於一個簡單而溫暖的願望：建立一個可以安頓心靈、彼此相伴的閱讀空間。在這個喧囂的世界裡，我們相信閱讀不只是獲取知識的工具，更是一場關於生命的探索與對話。</p>
+                <p>我們在共讀中築心，分享的不只是文字，更是彼此靈魂的共鳴。</p>
             </div>
         </div>
     </section>
 
-    <section id="register" class="py-24 px-6 bg-emerald-900 text-white relative overflow-hidden">
-        <div class="max-w-xl mx-auto relative z-10">
-            <div class="text-center mb-12">
-                <h3 class="text-4xl font-black mb-4">加入築心行列</h3>
-                <p class="text-emerald-200/80">填寫下方表單，開啟您的閱讀之旅</p>
-            </div>
-            <form id="regForm" class="space-y-4">
-                <input type="text" id="regName" placeholder="您的姓名" class="w-full bg-white/10 border border-white/20 p-4 rounded-2xl outline-none focus:border-amber-400 transition" required>
-                <input type="tel" id="regPhone" placeholder="手機號碼 (登入帳號)" class="w-full bg-white/10 border border-white/20 p-4 rounded-2xl outline-none focus:border-amber-400 transition" required>
-                <button type="button" onclick="handleRegister()" id="regBtn" class="w-full bg-amber-400 text-emerald-900 p-5 rounded-2xl font-black text-lg shadow-xl hover:bg-amber-300 transition-all active:scale-95">
-                    提交報名資料
-                </button>
+    <section id="register" class="py-24 px-6 bg-emerald-50/50">
+        <div class="max-w-xl mx-auto text-center">
+            <h2 class="text-3xl font-bold text-emerald-900 mb-4 tracking-tighter">加入我們</h2>
+            <p class="text-gray-500 mb-10">歡迎填寫報名資料，與我們一同開啟閱讀之旅</p>
+            <form action="https://formspree.io/f/xpqjvblg" method="POST" class="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl text-left border border-emerald-100">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">您的姓名</label>
+                        <input type="text" name="姓名" required placeholder="您的姓名" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">手機號碼</label>
+                        <input type="tel" name="電話" required placeholder="0912345678" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-800 mb-2 uppercase tracking-widest">電子郵件</label>
+                        <input type="email" name="Email" required placeholder="yourname@email.com" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition font-bold">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-800 text-white font-bold py-5 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-[0.98]">
+                        送出報名申請
+                    </button>
+                </div>
             </form>
         </div>
     </section>
 
+    <footer class="py-12 text-center text-gray-400 text-xs tracking-widest uppercase">© 2026 Chuxin Book Club</footer>
+
     <div id="loginModal" class="modal">
-        <div class="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl relative">
-            <button onclick="closeLogin()" class="absolute right-8 top-8 text-gray-300 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+        <div class="bg-white max-w-sm w-full rounded-[3rem] p-10 shadow-2xl relative m-6 flex flex-col">
+            <button onclick="closeModal('loginModal')" class="absolute top-6 right-6 text-gray-300 hover:text-emerald-700 transition"><i class="fas fa-times-circle text-2xl"></i></button>
             <div class="text-center mb-8">
-                <h4 class="text-2xl font-black text-emerald-900">進入會館</h4>
+                <h3 class="text-2xl font-bold text-emerald-900 tracking-tighter">會館登入</h3>
                 <div class="mt-4 p-3 bg-amber-50 rounded-2xl border border-amber-100">
                     <p class="text-amber-800 text-xs font-bold italic">
-                        <i class="fas fa-info-circle mr-1"></i> 
-                        歡迎使用訪客帳號 <b>guest</b> 登入 (免密碼)
+                        <i class="fas fa-info-circle mr-1 opacity-70"></i> 
+                        歡迎訪客！輸入 <b>guest</b> 即可免密碼進入。
                     </p>
                 </div>
             </div>
-            <div class="space-y-4">
-                <div class="space-y-1 px-1">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Account</label>
-                    <input type="text" id="userPhone" placeholder="手機號碼 或 guest" class="w-full bg-gray-50 p-4 rounded-2xl border-2 border-transparent focus:border-emerald-600 outline-none transition font-bold">
-                </div>
-                <div class="space-y-1 px-1">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Password</label>
-                    <input type="password" id="userPass" placeholder="您的密碼" class="w-full bg-gray-50 p-4 rounded-2xl border-2 border-transparent focus:border-emerald-600 outline-none transition">
-                </div>
-                <button onclick="handleLogin()" id="loginBtn" class="w-full bg-emerald-900 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-emerald-800 transition active:scale-95 mt-4">
-                    確認進入
-                </button>
+            <div class="space-y-5">
+                <input type="text" id="userPhone" placeholder="手機號碼 或 guest" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold">
+                <input type="password" id="userPass" onkeyup="if(event.key==='Enter') handleLogin()" placeholder="登入密碼" class="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
             </div>
         </div>
     </div>
 
-    <footer class="py-12 bg-white text-center border-t border-emerald-50">
-        <p class="text-emerald-900/30 text-xs font-black tracking-widest uppercase">© 2026 築心讀書會 - 讀書 築心 安頓</p>
-    </footer>
-
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+
+        // 1. 初始化照片輪播邏輯
         let slideIndex = 0;
-
-        // 1. 初始化資料 (僅獲取 Config 照片)
-        async function initData() {
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                const configData = data.config || {};
-                
-                const slides = [
-                    configData.slide_img1 || 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&q=80&w=1200',
-                    configData.slide_img2 || 'https://images.unsplash.com/photo-1513001900722-370f803f498d?auto=format&fit=crop&q=80&w=1200',
-                    configData.slide_img3 || 'https://images.unsplash.com/photo-1491841573634-28140fc7ced7?auto=format&fit=crop&q=80&w=1200',
-                    configData.slide_img4 || 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=1200',
-                    configData.slide_img5 || 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=1200'
-                ];
-
-                const container = document.getElementById('slideContainer');
-                container.innerHTML = slides.map(url => `<img src="${url}" class="slide">`).join('');
-                showSlides();
-            } catch (e) { console.error("資料載入失敗", e); }
-        }
+        let slideImages = []; // 存儲照片 URL
 
         function showSlides() {
             let slides = document.getElementsByClassName("slide");
@@ -155,65 +144,111 @@
             slideIndex++;
             if (slideIndex > slides.length) slideIndex = 1;
             slides[slideIndex - 1].style.display = "block";
-            setTimeout(showSlides, 5000);
+            setTimeout(showSlides, 5000); // 5秒換一張
         }
 
-        // 登入處理
+        // 2. 關於我內容樣式優化
+        function processAboutText(text) {
+            return text
+                .replace(/\n/g, '<br>') // 將換行改為 HTML 換行
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // 將 **文字** 改為粗體
+        }
+
+        // 3. 登入處理 (支援 Guest)
         window.handleLogin = async function() {
-            const rawPhone = document.getElementById('userPhone').value.trim().toLowerCase();
-            const pass = document.getElementById('userPass').value.trim();
+            const rawPhone = document.getElementById('userPhone').value.trim();
+            // 轉半形並轉小寫比對
+            const u = toHalfWidth(rawPhone).toLowerCase(); 
+            const p = document.getElementById('userPass').value.trim();
 
-            if(!rawPhone) return alert('請輸入手機號碼或 guest');
+            if(!u) return alert('請輸入登入帳號或 guest');
 
-            if (rawPhone === 'guest') {
+            // [核心修正] Guest 登入判斷
+            if (u === 'guest') {
+                // 模擬登入成功，不需要呼叫後端驗證，手機欄位標記為 guest
                 sessionStorage.setItem('userInfo', JSON.stringify({ 
-                    result: "SUCCESS", name: "訪客(Guest)", phone: "guest", isGuest: true 
+                    result: "SUCCESS", 
+                    name: "訪客 (Guest)", 
+                    phone: "guest" 
                 }));
-                window.location.href = 'member_zone.html';
+                // 直接跳轉
+                window.location.href = 'member_zone.html'; 
                 return;
             }
 
-            if(!pass) return alert('請輸入密碼');
+            // 一般會員登入
+            if(!p) return alert('請輸入登入密碼');
             const btn = document.getElementById('loginBtn');
             btn.disabled = true; btn.innerText = '正在登入...';
 
             try {
+                // 統一去除電話符號（僅針對非 guest 字串）
+                const phoneClean = u.replace(/\D/g, "");
+                
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ type: 'login', phone: rawPhone, password: pass })
+                    body: JSON.stringify({ type: 'login', phone: phoneClean, password: p })
                 });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: rawPhone }));
+                    // 將電話存入 sessionStorage
+                    sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: phoneClean }));
                     window.location.href = 'member_zone.html';
                 } else {
                     alert("登入失敗：帳號或密碼錯誤");
                 }
-            } catch (e) { alert("網路連線失敗"); }
-            finally { btn.disabled = false; btn.innerText = '確認進入'; }
+            } catch (e) {
+                alert("網路連線失敗，請稍後再試。");
+            } finally {
+                btn.disabled = false; btn.innerText = '確認進入';
+            }
         };
 
-        window.openLogin = () => document.getElementById('loginModal').style.display = 'flex';
-        window.closeLogin = () => document.getElementById('loginModal').style.display = 'none';
-        
-        async function handleRegister() {
-            const name = document.getElementById('regName').value.trim();
-            const phone = document.getElementById('regPhone').value.trim();
-            if(!name || !phone) return alert('請填寫完整資料');
-            
-            const btn = document.getElementById('regBtn');
-            btn.disabled = true; btn.innerText = '處理中...';
+        // 4. 初始化資料抓取 (照片與關於我)
+        async function initData() {
+            const contentDiv = document.getElementById('aboutContent');
+            const container = document.getElementById('slideContainer');
+
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'register', name, phone })
-                });
-                const result = await res.json();
-                alert(result.result === "SUCCESS" ? "報名成功！我們會儘速與您聯繫。" : "報名失敗：" + result.message);
-            } catch (e) { alert("系統繁忙，請稍後再試"); }
-            finally { btn.disabled = false; btn.innerText = '提交報名資料'; }
+                // 發送 GET 請求
+                const res = await fetch(GAS_URL + "?t=" + Date.now());
+                const allData = await res.json();
+                
+                // [A] 更新輪播照片
+                const config = allData.config || {};
+                const slides = [
+                    config.slide_img1 || '1.jpg',
+                    config.slide_img2 || '2.jpg',
+                    config.slide_img3 || '3.jpg',
+                    config.slide_img4 || '4.jpg',
+                    config.slide_img5 || '5.jpg'
+                ];
+                
+                container.innerHTML = slides.map(url => `<img class="slide" src="${url}">`).join('');
+                showSlides(); // 圖片載入完成後啟動輪播
+
+                // [B] 更新「關於我們」內容
+                if (config.about_content) {
+                    contentDiv.innerHTML = processAboutText(config.about_content);
+                }
+            } catch (e) {
+                console.error("資料初始化失敗:", e);
+                // 失敗時使用預設圖片兜底並保留原本預設文字
+                container.innerHTML = [
+                    '1.jpg', '2.jpg', '3.jpg', '4.jpg', '5.jpg'
+                ].map(url => `<img class="slide" src="${url}">`).join('');
+                showSlides();
+            }
         }
 
+        // 工具函式
+        function toHalfWidth(str) {
+            return str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+
+        // 啟動
         window.onload = initData;
     </script>
 </body>

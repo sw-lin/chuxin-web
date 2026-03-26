@@ -123,9 +123,9 @@ div[class*="dify-chatbot"] {
                 <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
             </button>
-            <button id="aiLauncherBtn" onclick="activateAI()" class="bg-blue-50 p-6 rounded-[2rem] shadow-sm border border-blue-100 flex flex-col items-center gap-2 transition-all active:bg-blue-100">
+            <button id="aiLauncherBtn" onclick="openCalendarModal()" class="bg-blue-50 p-6 rounded-[2rem] shadow-sm border border-blue-100 flex flex-col items-center gap-2 transition-all active:bg-blue-100">
             <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center animate-bounce"><i class="fas fa-robot"></i></div>
-            <span class="font-black text-xs text-blue-900">啟動 AI 助手</span>
+            <span class="font-black text-xs text-blue-900">行事曆</span>
             </button>
             <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
@@ -376,6 +376,35 @@ function updateUI(user, calendar, events) {
             html5QrCode.stop().then(() => { html5QrCode = null; document.getElementById('scannerModal').style.display = 'none'; }).catch(() => document.getElementById('scannerModal').style.display = 'none');
         } else { document.getElementById('scannerModal').style.display = 'none'; }
     }
+    
+function openCalendarModal() {
+    const list = document.getElementById('calendarList');
+    // 修改這裡：從 window.latestData 獲取，或確保 syncData 有存下來
+    // 建議將 syncData 抓到的 data 存成全域變數
+    const events = (window.latestCalendarData || []).sort((a,b) => new Date(a.dateText) - new Date(b.dateText));
+    
+    list.innerHTML = events.map(ev => {
+        const d = ev.date.replace(/-/g, '');
+        // 固定 09:30 - 12:00 (UTC+8 轉換為 UTC 為 01:30-04:00)
+        const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${d}T013000Z/${d}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
+        
+        return `
+            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex justify-between items-center">
+                <div>
+                    <div class="text-[10px] font-bold text-emerald-600">${ev.date}</div>
+                    <div class="font-bold text-emerald-900">${ev.title}</div>
+                </div>
+                <button onclick="window.open('${googleUrl}', '_blank')" class="bg-white text-emerald-800 px-3 py-1 rounded-lg text-xs font-bold border border-emerald-100 shadow-sm">
+                    <i class="fas fa-calendar-plus text-amber-500 mr-1"></i>加日曆
+                </button>
+            </div>`;
+    }).join('');
+    document.getElementById('calendarModal').style.display = 'flex';
+}
+
+function closeCalendarModal() {
+    document.getElementById('calendarModal').style.display = 'none';
+}    
 
     // 交互邏輯 (與後端對接)
 async function handleUpdateProfile() {
@@ -394,20 +423,53 @@ async function handleUpdateProfile() {
     // ... 後續 fetch ...
 }
     
-    async function processCheckin(scanData) {
-        if (!scanData.startsWith("CHECKIN:")) { showToast("無效格式", "error"); return; }
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            const parts = scanData.split(':');
-            const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
-            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'checkin', phone: currentUser.phone, name: currentUser.name, eventTitle: eventID }) });
-            const result = await res.json();
-            if (result.result === "SUCCESS") { showToast("報到成功！"); confetti({ particleCount: 150 }); syncData(); } 
-            else { showToast(result.message, "error"); }
-        } catch (e) { showToast("報到失敗", "error"); }
-        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+async function processCheckin(scanData) {
+    // 1. 格式檢查
+    if (!scanData.startsWith("CHECKIN:")) { showToast("無效格式", "error"); return; }
+    
+    // 2. 解析活動名稱 (例如從 CHECKIN:2026-03-26|金剛經導讀 解析出來)
+    const parts = scanData.split(':');
+    const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
+    const eventTitleOnly = parts.slice(2).join(':'); // 取得純活動名稱
+
+    // 3. 【新增：防重檢查】檢查出席紀錄是否已有此活動名稱 (不論日期)
+    // 檢查 currentUser.attendLog 裡面是否有人任何一筆包含這個活動名稱
+    const isAlreadyAttended = (currentUser.attendLog || []).some(log => {
+        return log && String(log).includes(eventTitleOnly);
+    });
+
+    if (isAlreadyAttended) {
+        showToast("您已經報到過此項目，不需再次報到", "error");
+        return;
     }
 
+    // 4. 原有的報到流程
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                type: 'checkin', 
+                phone: currentUser.phone, 
+                name: currentUser.name, 
+                eventTitle: eventID 
+            }) 
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") { 
+            showToast("報到成功！"); 
+            confetti({ particleCount: 150 }); 
+            syncData(); 
+        } else { 
+            showToast(result.message, "error"); 
+        }
+    } catch (e) { 
+        showToast("報到失敗", "error"); 
+    } finally { 
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+    }
+}
+    
     async function handleReg(title) {
         if(!confirm(`確認報名「${title}」？`)) return;
         document.getElementById('loadingOverlay').style.display = 'flex';
@@ -461,6 +523,7 @@ async function syncData() {
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
+        window.latestCalendarData = data.calendar; // 【補這一行】存下行事曆資料供 Modal 使用
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎回來！";
         
@@ -502,6 +565,15 @@ window.addEventListener('load', () => {
     syncData();
 });
     
-</script>   
+</script>
+<div id="calendarModal" class="modal-overlay" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+    <div class="bg-white w-full max-w-md mx-4 rounded-[3rem] p-8 shadow-2xl relative max-h-[85vh] flex flex-col">
+        <button onclick="closeCalendarModal()" class="absolute top-6 right-6 text-gray-400"><i class="fas fa-times-circle text-2xl"></i></button>
+        <h3 class="text-2xl font-black text-emerald-900 mb-6 flex items-center">
+            <i class="fas fa-calendar-check mr-3 text-amber-500"></i>活動行程表
+        </h3>
+        <div id="calendarList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
+    </div>
+</div>    
 </body>
 </html>

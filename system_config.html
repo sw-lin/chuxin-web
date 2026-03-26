@@ -139,12 +139,14 @@
             });
 
             if (isEditMode) {
-                navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>取消編輯';
-                navEditBtn.className = "bg-white text-emerald-900 px-5 py-2 rounded-xl font-bold hover:bg-emerald-50 transition shadow-md active:scale-95 text-sm";
+                navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>結束編輯';
+                navEditBtn.className = "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 ";
+                         
                 saveActions.classList.remove('hidden');
             } else {
                 navEditBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
-                navEditBtn.className = "bg-amber-400 text-amber-900 px-5 py-2 rounded-xl font-bold hover:bg-amber-300 transition shadow-md active:scale-95 text-sm";
+                navEditBtn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 ";
+                
                 saveActions.classList.add('hidden');
             }
         }

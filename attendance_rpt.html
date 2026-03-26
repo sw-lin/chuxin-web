@@ -112,30 +112,42 @@
         setTimeout(() => { t.style.opacity = '0'; }, 3000);
     }
 
-    async function loadFinishedEvents() {
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            const data = await res.json();
-            const selector = document.getElementById('eventSelector');
+async function loadFinishedEvents() {
+    toggleLoading(true);
+    try {
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        const selector = document.getElementById('eventSelector');
+        
+        if (data && data.calendar) {
+            // 獲取今日日期（不計時分秒，設為當天 23:59:59 以包含今日所有活動）
+            const now = new Date();
+            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+            // 1. 過濾邏輯：必須有 QR Code 且 日期小於等於今天
+            const validEvents = data.calendar.filter(ev => {
+                const evDate = new Date(ev.dateText.replace(/\//g, '-'));
+                return ev.needQR === true && evDate <= todayEnd;
+            });
             
-            if (data && data.calendar) {
-                // 需求 1：剔除沒有 QR Code 的活動 (needQR 為 false 者不顯示)
-                const validEvents = data.calendar.filter(ev => ev.needQR === true);
-                
-                // 排序：日期新到舊
-                const sortedEvents = validEvents.sort((a, b) => b.dateText.localeCompare(a.dateText));
-                
-                let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
-                sortedEvents.forEach(ev => {
-                    const safeDate = ev.dateText.toString().replace(/\//g, '-');
-                    optionsHtml += `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
-                });
-                selector.innerHTML = optionsHtml;
-            }
-        } catch(e) { showToast("⚠️ 活動清單載入失敗"); }
-        toggleLoading(false);
-    }   
+            // 2. 排序邏輯：越早發生越上面 (A - B)
+            const sortedEvents = validEvents.sort((a, b) => {
+                return a.dateText.localeCompare(b.dateText);
+            });
+            
+            let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+            sortedEvents.forEach(ev => {
+                const safeDate = ev.dateText.toString().replace(/\//g, '-');
+                optionsHtml += `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
+            });
+            selector.innerHTML = optionsHtml;
+        }
+    } catch(e) { 
+        console.error(e);
+        showToast("⚠️ 活動清單載入失敗"); 
+    }
+    toggleLoading(false);
+}
     
     async function fetchReport() {
         const eventVal = document.getElementById('eventSelector').value;

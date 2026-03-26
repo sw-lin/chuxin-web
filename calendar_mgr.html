@@ -9,7 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .edit-mode-active { background-color: #ef4444 !important; } /* 變成紅色代表結束編輯 */
+        .btn-edit-active { background-color: #ef4444 !important; } 
         #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
         .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -24,12 +24,11 @@
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-xl"><i class="fas fa-chevron-left"></i></button>
         <h1 class="text-xl font-black tracking-widest">行事曆管理</h1>
-        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow-md transition-all">編輯</button>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow-md">編輯</button>
     </nav>
 
     <main class="p-6 max-w-md mx-auto">
-        <div id="calendarList" class="space-y-4">
-            </div>
+        <div id="calendarList" class="space-y-4"></div>
 
         <div id="addBtnContainer" class="hidden mt-8">
             <button onclick="openAddModal()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-lg flex items-center justify-center gap-2">
@@ -52,23 +51,22 @@
                 </div>
                 <div>
                     <label class="block text-xs font-black text-emerald-800 mb-1 ml-1">海報網址</label>
-                    <input type="text" id="eventPoster" placeholder="https://..." class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                    <input type="text" id="eventPoster" placeholder="貼上 Drive 或圖片連結" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 </div>
                 <div class="flex items-center gap-3 p-2">
                     <input type="checkbox" id="needQR" checked class="w-5 h-5 accent-emerald-600">
                     <label for="needQR" class="text-sm font-bold text-gray-600">產生簽到 QR Code</label>
                 </div>
             </div>
-            
             <div class="grid grid-cols-2 gap-3 mt-8">
                 <button onclick="closeModal('eventModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                <button id="saveBtn" onclick="submitData()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg">確認送出</button>
+                <button onclick="submitData()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg">確認送出</button>
             </div>
         </div>
     </div>
 
     <div id="qrModal" class="modal-overlay" onclick="closeModal('qrModal')">
-        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 text-center shadow-2xl" onclick="event.stopPropagation()">
+        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 text-center" onclick="event.stopPropagation()">
             <h3 id="qrName" class="text-xl font-black text-emerald-900 mb-6"></h3>
             <div class="bg-gray-50 p-4 rounded-3xl mb-6">
                 <img id="qrImg" src="" class="w-full aspect-square">
@@ -85,28 +83,20 @@
     let currentEditData = null;
 
     window.onload = () => {
-        if (!STAFF_KEY) { alert("請重新登入"); location.href="index.html"; return; }
+        if (!STAFF_KEY) { alert("請從管理介面登入"); location.href="index.html"; return; }
         loadCalendar();
     };
 
     function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
-    // 切換編輯模式：模仿名冊邏輯
     function toggleEditMode() {
         isEditMode = !isEditMode;
         const btn = document.getElementById('editToggleBtn');
-        const addContainer = document.getElementById('addBtnContainer');
-        
-        if (isEditMode) {
-            btn.innerText = "結束編輯";
-            btn.classList.add('edit-mode-active');
-            addContainer.classList.remove('hidden');
-        } else {
-            btn.innerText = "編輯";
-            btn.classList.remove('edit-mode-active');
-            addContainer.classList.add('hidden');
-        }
-        renderList(); // 重新渲染以顯示/隱藏刪除鈕
+        const addBtn = document.getElementById('addBtnContainer');
+        btn.innerText = isEditMode ? "結束編輯" : "編輯";
+        btn.className = isEditMode ? "bg-red-500 px-4 py-1.5 rounded-full text-sm font-bold shadow-md" : "bg-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow-md";
+        addBtn.classList.toggle('hidden', !isEditMode);
+        renderList();
     }
 
     async function loadCalendar() {
@@ -116,7 +106,7 @@
             const data = await res.json();
             allEvents = data.calendar || [];
             renderList();
-        } catch(e) { console.error(e); }
+        } catch(e) { alert("連線失敗"); }
         toggleLoading(false);
     }
 
@@ -124,14 +114,14 @@
         const list = document.getElementById('calendarList');
         list.innerHTML = allEvents.map((ev, i) => `
             <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex items-center justify-between">
-                <div class="flex items-center gap-4" onclick="${!isEditMode ? `openQR(${i})` : `openEditModal(${i})`}">
+                <div class="flex items-center gap-4" onclick="${isEditMode ? `openEditModal(${i})` : `openQR(${i})`}">
                     <div class="bg-emerald-50 text-emerald-800 px-3 py-2 rounded-2xl text-center min-w-[60px]">
-                        <div class="text-[10px] font-black">${ev.dateText.split('-')[1]}月</div>
-                        <div class="text-xl font-black">${ev.dateText.split('-')[2]}</div>
+                        <div class="text-[10px] font-black">${ev.dateText.split('-')[1] || ''}月</div>
+                        <div class="text-xl font-black">${ev.dateText.split('-')[2] || ''}</div>
                     </div>
                     <div>
                         <h3 class="font-black text-emerald-900">${ev.title}</h3>
-                        <p class="text-[10px] text-gray-400 font-bold italic">${ev.dateText}</p>
+                        <p class="text-[10px] text-gray-400 font-bold">${ev.dateText}</p>
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -154,7 +144,6 @@
     }
 
     function openEditModal(i) {
-        if(!isEditMode) return;
         currentEditData = allEvents[i];
         document.getElementById('modalTitle').innerText = "編輯活動資料";
         document.getElementById('eventDate').value = currentEditData.dateText;
@@ -163,45 +152,31 @@
         document.getElementById('eventModal').style.display = 'flex';
     }
 
-    function submitData() {
+    async function submitData() {
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
         const qr = document.getElementById('needQR').checked;
 
-        if(!date || !title) return alert("日期與名稱為必填");
-
-        closeModal('eventModal');
-        toggleLoading(true);
+        if(!date || !title) return alert("必填未填");
+        closeModal('eventModal'); toggleLoading(true);
 
         const payload = {
-            key: STAFF_KEY,
-            dateText: date,
-            title: title,
-            poster_url: poster,
-            needQR: qr
+            key: STAFF_KEY, dateText: date, title: title, poster_url: poster, needQR: qr,
+            type: currentEditData ? 'update_calendar_event' : 'add_event',
+            oldTitle: currentEditData ? currentEditData.title : null,
+            date: date 
         };
 
-        if (currentEditData) {
-            payload.type = 'update_calendar_event';
-            payload.oldTitle = currentEditData.title;
-            payload.date = date; // 對齊 GAS 編輯所需的參數名
-        } else {
-            payload.type = 'add_event';
-        }
-
-        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-        .then(() => loadCalendar())
-        .finally(() => toggleLoading(false));
+        await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        loadCalendar();
     }
 
-    function doDelete(i) {
-        if(!confirm("確定要刪除此活動及其相關資料嗎？")) return;
+    async function doDelete(i) {
+        if(!confirm("確定刪除？")) return;
         toggleLoading(true);
-        fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ type: 'delete_event_poster', key: STAFF_KEY, eventTitle: allEvents[i].title })
-        }).then(() => loadCalendar()).finally(() => toggleLoading(false));
+        await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_event_poster', key: STAFF_KEY, eventTitle: allEvents[i].title }) });
+        loadCalendar();
     }
 
     function openQR(i) {

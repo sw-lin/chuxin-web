@@ -92,21 +92,12 @@ let slideIndex = 0;
 
 // 強化後的網址轉換邏輯
 function transformDriveUrl(url) {
-    if (!url || typeof url !== 'string') return '';
-    
-    // 如果已經是轉好的直接連結或是本地圖檔，直接回傳
-    if (url.includes('drive.google.com/uc')) return url;
-    
-    // 處理標準的 Google Drive 分享連結
-    if (url.includes('drive.google.com')) {
-        const match = url.match(/\/d\/(.+?)\/([a-z0-9]+)?/i);
-        if (match && match[1]) {
-            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-        }
-    }
-    
-    // 如果不符合以上條件，原樣回傳（可能是 1.jpg 或其他完整網址）
-    return url;
+    if (!url) return "";
+        if (!url.includes('drive.google.com')) return url;
+        let id = "";
+        if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
+        else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
+        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
 }
 
 function toHalfWidth(str) {

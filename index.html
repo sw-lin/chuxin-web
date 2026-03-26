@@ -132,21 +132,35 @@ async function initData() {
             slides[slideIndex - 1].style.display = "block";
             setTimeout(startSlides, 5000);
         }
+        
+// C. 登入處理函式
+window.handleLogin = async function() {
+    const rawPhone = document.getElementById('userPhone').value.trim();
+    const rawPass = document.getElementById('userPass').value.trim();
 
-async function handleLogin() {
-    // 修改處：手機與密碼都經過全形轉半形處理
-    const u = toHalfWidth(document.getElementById('userPhone').value.trim()).toLowerCase();
-    const p = toHalfWidth(document.getElementById('userPass').value.trim());
+    // 1. 處理帳號 (轉半形、轉小寫)
+    const u = toHalfWidth(rawPhone).toLowerCase();
+    
+    // 2. 處理密碼 (轉半形)
+    const p = toHalfWidth(rawPass);
 
+    // Guest 快速通行
     if (u === 'guest') {
-        sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
+        sessionStorage.setItem('userInfo', JSON.stringify({ 
+            result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true 
+        }));
         window.location.href = 'member_zone.html';
         return;
     }
 
-    if(!u || !p) return alert("請輸入帳號密碼");
+    if(!u || !p) {
+        alert("請輸入帳號與密碼");
+        return;
+    }
+
     const btn = document.getElementById('loginBtn');
-    btn.disabled = true; btn.innerText = "驗證中...";
+    btn.disabled = true;
+    btn.innerText = "驗證中...";
     
     try {
         const res = await fetch(GAS_URL, { 
@@ -154,36 +168,38 @@ async function handleLogin() {
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 
         });
         const result = await res.json();
+        
         if (result.result === "SUCCESS") {
             sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
             window.location.href = 'member_zone.html';
-        } else { 
-            alert("登入失敗：帳號或密碼錯誤"); 
+        } else {
+            alert("登入失敗：帳號或密碼錯誤");
         }
-    } catch (e) { 
-        alert("網路連線異常，請稍後再試"); 
-    } finally { 
-        btn.disabled = false; btn.innerText = "確認進入"; 
+    } catch (e) {
+        alert("網路異常，請稍後再試");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "確認進入";
     }
-}        
-// 新增：Google Drive 連結自動轉換工具
+}       
+// A. 自動將 Google Drive 分享連結轉換為直接圖檔路徑
 function transformDriveUrl(url) {
     if (!url) return '';
-    // 如果是 Google Drive 的分享連結
     if (url.includes('drive.google.com')) {
-        const match = url.match(/\/d\/(.+?)\/(view|edit)?/);
+        const match = url.match(/\/d\/(.+?)\/(view|edit|share)?/);
         if (match && match[1]) {
             return `https://drive.google.com/uc?export=view&id=${match[1]}`;
         }
     }
-    return url; // 一般網址直接回傳
-}
-// 新增：全形轉半形工具
+    return url;
+}        
+// B. 強大的全形轉半形工具（處理數字、英文字母，並移除空格）
 function toHalfWidth(str) {
     if (!str) return "";
-    return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
-}
-        
+    return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => 
+        String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
+    ).replace(/\s/g, "");
+}        
         function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
         window.onload = initData;

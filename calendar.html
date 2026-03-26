@@ -1,56 +1,15 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>活動行程表 | 築心會館</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-    </style>
-</head>
-<body class="min-h-screen pb-10">
-
-    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-200 transition">
-            <i class="fas fa-chevron-left mr-1.5"></i> 返回
-        </button>
-        <h1 class="text-xl font-black tracking-widest absolute left-1/2 -translate-x-1/2">活動行程表</h1>
-        <div class="w-10"></div> 
-    </nav>
-
-    <main class="max-w-xl mx-auto p-6 mt-6 space-y-6">
-        
-        <div id="loading" class="text-center py-24 bg-white rounded-[2rem] border border-emerald-50 shadow-sm">
-            <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-700 rounded-full animate-spin mx-auto mb-5"></div>
-            <p class="text-emerald-900 font-bold text-sm tracking-wide">正在同步最新行程...</p>
-        </div>
-
-        <div id="calendarList" class="space-y-5">
-            </div>
-
-    </main>
 <script>
-    // 確保這裡的網址與您 member_zone.html 使用的一致
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-                    
-    // 格式化日期
+
     function formatDisplayDate(dateStr) {
         if (!dateStr) return { month: '--', day: '--' };
-        try {
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) {
-                const parts = dateStr.split('-');
-                return { month: parts[1] + '月', day: parts[2] };
-            }
-            return {
-                month: (d.getMonth() + 1).toString().padStart(2, '0') + '月',
-                day: d.getDate().toString().padStart(2, '0')
-            };
-        } catch(e) { return { month: '--', day: '--' }; }
+        // 處理 yyyy-mm-dd 格式
+        const parts = dateStr.split('-');
+        if (parts.length < 3) return { month: '--', day: '--' };
+        return {
+            month: parts[1] + '月',
+            day: parts[2]
+        };
     }
 
     async function loadCalendar() {
@@ -58,42 +17,25 @@
         const loadingElem = document.getElementById('loading');
         
         try {
-            console.log("正在嘗試從 GAS 抓取資料...");
-            
-            // 使用更強大的 fetch 參數，並加上超時機制
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超時
-
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`, {
-                method: 'GET',
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-
-            if (!res.ok) throw new Error('網路回應不正確');
-            
+            // 抓取資料，強制不使用快取
+            const res = await fetch(`${GAS_URL}?type=get_all&t=${Date.now()}`);
             const data = await res.json();
-            console.log("資料抓取成功:", data);
-
-            // 取得 calendar 資料
-            const events = (data.calendar || []).filter(ev => ev.date && ev.title);
             
-            // 排序
-            events.sort((a, b) => new Date(a.date) - new Date(b.date));
+            // 重要：您的 GAS 回傳欄位是 dateText
+            let events = data.calendar || [];
             
-            renderList(events);
-
+            // 排除掉沒有日期的髒資料，並依照 dateText 排序
+            events = events.filter(ev => ev.dateText && ev.title);
+            events.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
+            
+            if (events.length === 0) {
+                listContainer.innerHTML = `<div class="text-center py-20 text-gray-400 font-bold bg-white rounded-[2rem]">目前尚無預定行程</div>`;
+            } else {
+                renderList(events);
+            }
         } catch (e) {
-            console.error("載入失敗詳情:", e);
-            listContainer.innerHTML = `
-                <div class="text-center py-16 bg-white rounded-[2rem] border border-red-100 shadow-sm">
-                    <i class="fas fa-exclamation-circle text-red-400 text-5xl mb-5"></i>
-                    <p class="text-red-900 font-bold">連線逾時或發生錯誤</p>
-                    <p class="text-red-700/70 text-xs mt-2">原因：${e.name === 'AbortError' ? '伺服器回應太慢' : '網路連線異常'}</p>
-                    <button onclick="location.reload()" class="mt-6 px-6 py-2.5 bg-red-50 text-red-800 rounded-xl font-bold text-sm border border-red-200">手動重新整理</button>
-                </div>
-            `;
+            console.error("載入失敗:", e);
+            listContainer.innerHTML = `<div class="text-center py-20 text-red-500 font-bold bg-white rounded-[2rem]">連線失敗，請檢查網路或 GAS 權限</div>`;
         } finally {
             loadingElem.style.display = 'none';
         }
@@ -101,34 +43,22 @@
 
     function renderList(events) {
         const listContainer = document.getElementById('calendarList');
-        
-        if (!events || events.length === 0) {
-            listContainer.innerHTML = `
-                <div class="text-center py-20 bg-white rounded-[2rem] border border-emerald-50 shadow-sm">
-                    <p class="text-gray-400 text-sm italic font-bold">目前資料庫中尚無行程</p>
-                </div>
-            `;
-            return;
-        }
-
         listContainer.innerHTML = events.map(ev => {
-            const dateObj = formatDisplayDate(ev.date);
-            const dateClean = (ev.date || "").replace(/-/g, '');
-            const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${dateClean}T013000Z/${dateClean}T040000Z&details=${encodeURIComponent('築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
+            const dateObj = formatDisplayDate(ev.dateText);
+            const dateClean = ev.dateText.replace(/-/g, '');
+            const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${dateClean}T013000Z/${dateClean}T040000Z&details=${encodeURIComponent(ev.description || '築心讀書會')}&location=${encodeURIComponent('築心會館')}`;
             
             return `
-                <div class="bg-white p-5 rounded-[2rem] border border-emerald-50 shadow-sm flex items-center gap-5 mb-4">
+                <div class="bg-white p-5 rounded-[2rem] border border-emerald-50 shadow-sm flex items-center gap-5 transition-all active:scale-[0.98]">
                     <div class="flex flex-col items-center justify-center w-20 h-20 shrink-0 bg-emerald-50/50 rounded-2xl border border-emerald-100">
                         <div class="text-[10px] font-bold text-emerald-700">${dateObj.month}</div>
                         <div class="text-4xl font-black text-emerald-900">${dateObj.day}</div>
                     </div>
-                    <div class="flex-1">
-                        <h4 class="font-black text-emerald-950 text-base">${ev.title}</h4>
-                        <div class="text-xs text-emerald-700/80 flex items-center gap-1">
-                            <i class="far fa-clock text-amber-500"></i>09:30 - 12:00
-                        </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-black text-emerald-950 text-base truncate">${ev.title}</h4>
+                        <p class="text-[10px] text-emerald-700/60 truncate mt-0.5">${ev.description || '定期聚會'}</p>
                     </div>
-                    <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-800 px-3 py-2.5 rounded-xl text-[10px] font-black border border-amber-100 shrink-0 flex items-center gap-1">
+                    <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-800 px-3 py-2.5 rounded-xl text-[10px] font-black border border-amber-100 shrink-0 flex items-center gap-1 hover:bg-amber-100">
                         <i class="fas fa-calendar-plus text-amber-500"></i>加日曆
                     </button>
                 </div>`;
@@ -136,6 +66,4 @@
     }
 
     window.onload = loadCalendar;
-</script> 
-</body>
-</html>
+</script>

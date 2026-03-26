@@ -12,20 +12,20 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .input-disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb !important; }
         .input-enabled { background-color: #ffffff; color: #064E3B; border: 2px solid #059669 !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; z-index: 100; backdrop-filter: blur(4px); }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; z-index: 1000; backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="pb-20">
 
-    <nav class="emerald-gradient text-white px-6 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
+    <nav class="emerald-gradient text-white px-6 py-4 flex justify-between items-center shadow-lg sticky top-0 z-[100]">
         <div class="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition" onclick="location.href='staff_menu.html'">
             <i class="fas fa-chevron-left"></i>
             <span class="text-lg font-bold">返回</span>
         </div>
         
-        <h1 class="text-xl md:text-2xl font-black tracking-widest">系統參數設定</h1>
+        <h1 class="text-xl md:text-2xl font-black tracking-widest text-center flex-1">系統參數設定</h1>
         
-        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-amber-400 text-amber-900 px-5 py-2 rounded-xl font-bold hover:bg-amber-300 transition shadow-md active:scale-95 text-sm">
+        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-amber-400 text-amber-900 px-5 py-2 rounded-xl font-bold hover:bg-amber-300 transition shadow-md active:scale-95 text-sm whitespace-nowrap">
             <i class="fas fa-edit mr-1"></i>編輯模式
         </button>
     </nav>
@@ -37,27 +37,27 @@
                     <div class="grid md:grid-cols-2 gap-8">
                         <div class="space-y-2">
                             <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">閱讀心得資料夾</label>
-                            <input type="text" id="reading_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
+                            <input type="text" id="reading_folder_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
                         </div>
                         <div class="space-y-2">
                             <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">活動照片相簿</label>
-                            <input type="text" id="photo_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
+                            <input type="text" id="photo_gallery_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
                         </div>
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">關於我們內容（可使用 \n 換行）</label>
-                        <textarea id="about_content" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-32" readonly></textarea>
+                        <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">關於我們頁面連結</label>
+                        <input type="text" id="about_us_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
                     </div>
 
                     <div class="pt-6 border-t border-gray-100">
                         <h3 class="text-sm font-black text-emerald-900 mb-6 flex items-center">
-                            <i class="fas fa-images mr-2 text-amber-500"></i> 首頁輪播照片設定 (1-5)
+                            <i class="fas fa-images mr-2 text-amber-500"></i> 首頁輪播照片連結 (Google Drive)
                         </h3>
                         <div class="grid gap-4">
                             <div class="flex items-center space-x-4">
                                 <span class="text-xs font-bold text-gray-400 w-8">#1</span>
-                                <input type="text" id="slide_img1" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly placeholder="Google Drive 分享連結">
+                                <input type="text" id="slide_img1" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly>
                             </div>
                             <div class="flex items-center space-x-4">
                                 <span class="text-xs font-bold text-gray-400 w-8">#2</span>
@@ -81,7 +81,7 @@
 
                 <div id="saveActions" class="hidden mt-12 pt-8 border-t border-gray-100 flex space-x-4">
                     <button onclick="saveConfigs()" class="flex-1 bg-emerald-800 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition active:scale-95">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i>確認儲存變更
+                        <i class="fas fa-cloud-upload-alt mr-2"></i>確認並儲存變更
                     </button>
                 </div>
             </div>
@@ -92,7 +92,7 @@
         <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-800 rounded-full animate-spin mb-4"></div>
         <p class="text-emerald-900 font-bold">同步雲端資料中...</p>
     </div>
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-opacity pointer-events-none z-[100] font-bold text-center"></div>
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-opacity pointer-events-none z-[1100] font-bold text-center"></div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
@@ -105,16 +105,19 @@
                 const data = await res.json();
                 const config = data.config || {};
                 
-                document.getElementById('reading_url').value = config.reading_folder_url || '';
-                document.getElementById('photo_url').value = config.photo_gallery_url || '';
-                document.getElementById('about_content').value = config.about_content || '';
+                // 精確對應資料庫 Key 值
+                document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
+                document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
+                document.getElementById('about_us_url').value = config.about_us_url || '';
                 document.getElementById('slide_img1').value = config.slide_img1 || '';
                 document.getElementById('slide_img2').value = config.slide_img2 || '';
                 document.getElementById('slide_img3').value = config.slide_img3 || '';
                 document.getElementById('slide_img4').value = config.slide_img4 || '';
                 document.getElementById('slide_img5').value = config.slide_img5 || '';
                 
-            } catch (e) { showToast("無法載入雲端設定"); }
+            } catch (e) { 
+                showToast("❌ 無法獲取資料，請檢查網路"); 
+            }
             showLoading(false);
         }
 
@@ -136,7 +139,6 @@
                 }
             });
 
-            // 更新按鈕文字與樣式
             if (isEditMode) {
                 navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>取消編輯';
                 navEditBtn.className = "bg-white text-emerald-900 px-5 py-2 rounded-xl font-bold hover:bg-emerald-50 transition shadow-md active:scale-95 text-sm";
@@ -153,9 +155,9 @@
                 type: 'update_config',
                 key: sessionStorage.getItem('staff_key'),
                 configs: {
-                    reading_folder_url: document.getElementById('reading_url').value,
-                    photo_gallery_url: document.getElementById('photo_url').value,
-                    about_content: document.getElementById('about_content').value,
+                    reading_folder_url: document.getElementById('reading_folder_url').value,
+                    photo_gallery_url: document.getElementById('photo_gallery_url').value,
+                    about_us_url: document.getElementById('about_us_url').value,
                     slide_img1: document.getElementById('slide_img1').value,
                     slide_img2: document.getElementById('slide_img2').value,
                     slide_img3: document.getElementById('slide_img3').value,
@@ -171,7 +173,7 @@
                 if(result.result === "SUCCESS") {
                     showToast("✅ 設定已成功同步至雲端");
                     isEditMode = true; 
-                    toggleEditMode(); // 儲存完自動回到顯示模式
+                    toggleEditMode(); // 回到唯讀模式
                 } else {
                     showToast("❌ 儲存失敗：" + result.message);
                 }
@@ -183,4 +185,10 @@
         function showToast(m) { 
             const t = document.getElementById('toast'); 
             t.innerText = m; t.style.opacity = '1'; 
-            setTimeout(() => t.style.
+            setTimeout(() => t.style.opacity = '0', 3000); 
+        }
+
+        window.onload = loadCurrentConfigs;
+    </script>
+</body>
+</html>

@@ -82,7 +82,13 @@
             </div>
             <div class="space-y-4">
                 <input type="text" id="userPhone" placeholder="手機號碼 或 guest" class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none font-bold">
-                <input type="password" id="userPass" placeholder="登入密碼" class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none">
+                
+                <input type="password" id="userPass" 
+                       onkeyup="if(event.key==='Enter') handleLogin()" 
+                       placeholder="登入密碼" 
+                       class="w-full px-6 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-emerald-600 outline-none">                
+                
+                
                 <button onclick="handleLogin()" id="loginBtn" class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">確認進入</button>
             </div>
         </div>
@@ -92,34 +98,32 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let slideIndex = 0;
 
-        async function initData() {
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const config = data.config || {};
-                
-                // 1. 照片處理：如果資料庫沒給網址，就用本地 1.jpg ~ 5.jpg
-                const slides = [
-                    config.slide_img1 || '1.jpg',
-                    config.slide_img2 || '2.jpg',
-                    config.slide_img3 || '3.jpg',
-                    config.slide_img4 || '4.jpg',
-                    config.slide_img5 || '5.jpg'
-                ];
-                document.getElementById('slideContainer').innerHTML = slides.map(url => `<img class="slide" src="${url}">`).join('');
-                startSlides();
+async function initData() {
+    try {
+        const res = await fetch(GAS_URL + "?t=" + Date.now());
+        const data = await res.json();
+        const config = data.config || {};
+        
+        // 修改處：加入自動轉換機制
+        const slides = [
+            transformDriveUrl(config.slide_img1) || '1.jpg',
+            transformDriveUrl(config.slide_img2) || '2.jpg',
+            transformDriveUrl(config.slide_img3) || '3.jpg',
+            transformDriveUrl(config.slide_img4) || '4.jpg',
+            transformDriveUrl(config.slide_img5) || '5.jpg'
+        ];
+        
+        document.getElementById('slideContainer').innerHTML = slides.map(url => `<img class="slide" src="${url}">`).join('');
+        startSlides();
 
-                // 2. 關於我內容
-                if(config.about_content) {
-                    document.getElementById('aboutContent').innerHTML = config.about_content.replace(/\n/g, '<br>');
-                }
-            } catch (e) {
-                // 備援方案
-                document.getElementById('slideContainer').innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
-                startSlides();
-            }
+        if(config.about_content) {
+            document.getElementById('aboutContent').innerHTML = config.about_content.replace(/\n/g, '<br>');
         }
-
+    } catch (e) {
+        document.getElementById('slideContainer').innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
+        startSlides();
+    }
+}
         function startSlides() {
             let slides = document.getElementsByClassName("slide");
             if (slides.length === 0) return;
@@ -130,31 +134,57 @@
             setTimeout(startSlides, 5000);
         }
 
-        async function handleLogin() {
-            const u = document.getElementById('userPhone').value.trim().toLowerCase();
-            const p = document.getElementById('userPass').value.trim();
+async function handleLogin() {
+    // 修改處：手機與密碼都經過全形轉半形處理
+    const u = toHalfWidth(document.getElementById('userPhone').value.trim()).toLowerCase();
+    const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
-            if (u === 'guest') {
-                sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
-                window.location.href = 'member_zone.html';
-                return;
-            }
+    if (u === 'guest') {
+        sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
+        window.location.href = 'member_zone.html';
+        return;
+    }
 
-            if(!u || !p) return alert("請輸入帳號密碼");
-            const btn = document.getElementById('loginBtn');
-            btn.disabled = true; btn.innerText = "驗證中...";
-            
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'login', phone: u, password: p }) });
-                const result = await res.json();
-                if (result.result === "SUCCESS") {
-                    sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
-                    window.location.href = 'member_zone.html';
-                } else { alert("登入失敗"); }
-            } catch (e) { alert("網路異常"); }
-            finally { btn.disabled = false; btn.innerText = "確認進入"; }
+    if(!u || !p) return alert("請輸入帳號密碼");
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.innerText = "驗證中...";
+    
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ type: 'login', phone: u, password: p }) 
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
+            window.location.href = 'member_zone.html';
+        } else { 
+            alert("登入失敗：帳號或密碼錯誤"); 
         }
-
+    } catch (e) { 
+        alert("網路連線異常，請稍後再試"); 
+    } finally { 
+        btn.disabled = false; btn.innerText = "確認進入"; 
+    }
+}        
+// 新增：Google Drive 連結自動轉換工具
+function transformDriveUrl(url) {
+    if (!url) return '';
+    // 如果是 Google Drive 的分享連結
+    if (url.includes('drive.google.com')) {
+        const match = url.match(/\/d\/(.+?)\/(view|edit)?/);
+        if (match && match[1]) {
+            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        }
+    }
+    return url; // 一般網址直接回傳
+}
+// 新增：全形轉半形工具
+function toHalfWidth(str) {
+    if (!str) return "";
+    return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
+}
+        
         function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
         window.onload = initData;

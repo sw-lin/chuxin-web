@@ -18,22 +18,22 @@
         
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 24px; }
         
-        /* 色調一致化 */
-        .btn-edit-on { background-color: #059669; border: 1px solid #047857; } /* 開啟編輯綠 */
-        .btn-edit-off { background-color: #f97316; border: 1px solid #ea580c; } /* 結束編輯橘 */
-        .bg-header { background-color: #064E3B; } /* 檔頭與按鈕一致的暗綠 */
+        /* 1:1 複製名冊按鈕風格 */
+        .btn-edit-green { background-color: #10b981; border: 1px solid #059669; color: white; }
+        .btn-edit-orange { background-color: #f97316; border: 1px solid #ea580c; color: white; }
+        .bg-header-dark { background-color: #064E3B; }
     </style>
 </head>
 <body class="pb-40">
 
     <div id="loadingOverlay"><div class="bg-white p-8 rounded-3xl flex flex-col items-center shadow-2xl"><div class="spinner mb-4"></div><p class="font-bold text-emerald-900">同步資料中...</p></div></div>
 
-    <nav class="sticky top-0 z-40 bg-header text-white px-6 h-16 shadow-lg flex items-center justify-between">
+    <nav class="sticky top-0 z-40 bg-header-dark text-white px-6 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="flex items-center gap-1 font-bold active:opacity-50">
             <i class="fas fa-chevron-left"></i> 返回
         </button>
         <h1 class="text-lg font-black tracking-widest">行事曆管理</h1>
-        <button id="editToggleBtn" onclick="toggleEditMode()" class="btn-edit-on px-4 py-1.5 rounded-full text-sm font-bold shadow-md transition-all">開啟編輯</button>
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="btn-edit-green px-4 py-1.5 rounded-full text-sm font-bold shadow-md">開啟編輯</button>
     </nav>
 
     <main class="p-6 max-w-md mx-auto">
@@ -43,14 +43,14 @@
 
     <div id="addBtnContainer" class="fixed-add-btn hidden">
         <div class="bg-[#FDFBF7]/90 backdrop-blur-sm p-4 rounded-3xl">
-            <button onclick="openAddModal()" class="w-full py-4 bg-header text-white rounded-2xl font-black shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
+            <button onclick="openAddModal()" class="w-full py-4 bg-header-dark text-white rounded-2xl font-black shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
                 <i class="fas fa-plus"></i> 新增活動項目
             </button>
         </div>
     </div>
 
     <div id="eventModal" class="modal-overlay" onclick="closeModal('eventModal')">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl overflow-y-auto max-h-[90vh]" onclick="event.stopPropagation()">
             <h3 id="modalTitle" class="text-2xl font-black text-emerald-900 mb-6 text-center">活動資料</h3>
             <div class="space-y-4">
                 <div>
@@ -65,6 +65,10 @@
                     <label class="block text-xs font-black text-emerald-800 mb-1 ml-1">海報網址</label>
                     <input type="text" id="eventPoster" placeholder="https://..." class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 </div>
+                <div>
+                    <label class="block text-xs font-black text-emerald-800 mb-1 ml-1">活動描述 (對應 E 欄位)</label>
+                    <textarea id="eventDesc" rows="3" placeholder="請輸入活動簡介內容..." class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold resize-none"></textarea>
+                </div>
                 <div class="flex items-center gap-3 p-2">
                     <input type="checkbox" id="needQR" class="w-5 h-5 accent-emerald-600">
                     <label for="needQR" class="text-sm font-bold text-gray-600">啟用簽到功能 (QR Code)</label>
@@ -74,9 +78,9 @@
             <div class="flex flex-col gap-3 mt-8">
                 <div class="grid grid-cols-2 gap-3">
                     <button onclick="closeModal('eventModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                    <button onclick="submitData()" class="py-4 bg-header text-white rounded-2xl font-black shadow-lg">儲存變更</button>
+                    <button onclick="submitData()" class="py-4 bg-header-dark text-white rounded-2xl font-black shadow-lg">儲存變更</button>
                 </div>
-                <button id="deleteBtn" onclick="confirmDelete()" class="w-full py-3 text-red-500 font-bold hidden">刪除此活動</button>
+                <button id="deleteBtn" onclick="confirmDelete()" class="w-full py-3 text-red-500 font-bold hidden">刪除此活動項目</button>
             </div>
         </div>
     </div>
@@ -111,11 +115,11 @@
         const addBtn = document.getElementById('addBtnContainer');
         if (isEditMode) {
             btn.innerText = "結束編輯";
-            btn.classList.replace('btn-edit-on', 'btn-edit-off');
+            btn.className = "btn-edit-orange px-4 py-1.5 rounded-full text-sm font-bold shadow-md transition-all";
             addBtn.classList.remove('hidden');
         } else {
             btn.innerText = "開啟編輯";
-            btn.classList.replace('btn-edit-off', 'btn-edit-on');
+            btn.className = "btn-edit-green px-4 py-1.5 rounded-full text-sm font-bold shadow-md transition-all";
             addBtn.classList.add('hidden');
         }
         renderList();
@@ -127,21 +131,22 @@
             const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
             const data = await res.json();
             allEvents = data.calendar || [];
-            // 排序：越早越提前 (由舊到新)
             allEvents.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
             renderList();
-        } catch(e) { alert("讀取失敗"); }
+        } catch(e) { console.error(e); }
         toggleLoading(false);
     }
 
     function renderList() {
         const list = document.getElementById('calendarList');
-        const todayStr = new Date().toLocaleDateString('en-CA'); // 格式 YYYY-MM-DD
+        const todayStr = new Date().toLocaleDateString('en-CA');
 
         list.innerHTML = allEvents.map((ev, i) => {
             const isFuture = ev.dateText > todayStr;
             const hasPoster = ev.poster_url && ev.poster_url.trim() !== "";
-            
+            // 修正：必須 needQR 為 true 且 非未來日期 才顯示按鈕
+            const canShowQR = (ev.needQR === true || ev.needQR === "TRUE") && !isFuture;
+
             return `
             <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex items-center justify-between">
                 <div class="flex items-center gap-4">
@@ -157,9 +162,9 @@
                 <div>
                     ${isEditMode ? 
                         `<button onclick="openEditModal(${i})" class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center border border-blue-100"><i class="fas fa-pencil-alt"></i></button>` : 
-                        (ev.needQR && !isFuture ? 
+                        (canShowQR ? 
                             `<button onclick="openQR(${i})" class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 shadow-sm"><i class="fas fa-qrcode"></i></button>` : 
-                            `<div class="w-12 h-12"></div>`)
+                            `<div class="w-12 h-12 opacity-0 pointer-events-none"></div>`)
                     }
                 </div>
             </div>`;
@@ -172,6 +177,7 @@
         document.getElementById('eventDate').value = "";
         document.getElementById('eventTitle').value = "";
         document.getElementById('eventPoster').value = "";
+        document.getElementById('eventDesc').value = "";
         document.getElementById('needQR').checked = true;
         document.getElementById('deleteBtn').classList.add('hidden');
         document.getElementById('eventModal').style.display = 'flex';
@@ -183,7 +189,8 @@
         document.getElementById('eventDate').value = currentEditData.dateText;
         document.getElementById('eventTitle').value = currentEditData.title;
         document.getElementById('eventPoster').value = currentEditData.poster_url || "";
-        document.getElementById('needQR').checked = (currentEditData.needQR === true);
+        document.getElementById('eventDesc').value = currentEditData.description || "";
+        document.getElementById('needQR').checked = (currentEditData.needQR === true || currentEditData.needQR === "TRUE");
         document.getElementById('deleteBtn').classList.remove('hidden');
         document.getElementById('eventModal').style.display = 'flex';
     }
@@ -192,9 +199,10 @@
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
         const poster = document.getElementById('eventPoster').value.trim();
+        const desc = document.getElementById('eventDesc').value.trim();
         const qr = document.getElementById('needQR').checked;
 
-        if(!date || !title) { alert("日期與名稱為必填"); return; }
+        if(!date || !title) { alert("日期與名稱不能為空"); return; }
 
         closeModal('eventModal');
         toggleLoading(true);
@@ -206,6 +214,7 @@
             dateText: date,
             title: title,
             poster_url: poster,
+            description: desc, // 新增欄位參數
             needQR: qr
         };
 
@@ -216,7 +225,7 @@
     }
 
     async function confirmDelete() {
-        if(!confirm(`確定刪除「${currentEditData.title}」？`)) return;
+        if(!confirm(`確定要徹底刪除「${currentEditData.title}」？`)) return;
         closeModal('eventModal');
         toggleLoading(true);
         try {

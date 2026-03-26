@@ -87,83 +87,109 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-        let slideIndex = 0;
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+let slideIndex = 0;
 
-        function transformDriveUrl(url) {
-            if (!url || typeof url !== 'string') return '';
-            if (url.includes('drive.google.com')) {
-                const match = url.match(/\/d\/(.+?)\/(view|edit|share)?/);
-                if (match && match[1]) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-            }
-            return url;
+// 強化後的網址轉換邏輯
+function transformDriveUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    
+    // 如果已經是轉好的直接連結或是本地圖檔，直接回傳
+    if (url.includes('drive.google.com/uc')) return url;
+    
+    // 處理標準的 Google Drive 分享連結
+    if (url.includes('drive.google.com')) {
+        const match = url.match(/\/d\/(.+?)\/([a-z0-9]+)?/i);
+        if (match && match[1]) {
+            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
         }
+    }
+    
+    // 如果不符合以上條件，原樣回傳（可能是 1.jpg 或其他完整網址）
+    return url;
+}
 
-        function toHalfWidth(str) {
-            if (!str) return "";
-            return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
+function toHalfWidth(str) {
+    if (!str) return "";
+    return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
+}
+
+async function initData() {
+    const contentDiv = document.getElementById('aboutContent');
+    const container = document.getElementById('slideContainer');
+
+    try {
+        const res = await fetch(GAS_URL + "?t=" + Date.now());
+        const data = await res.json();
+        const config = data.config || {};
+        
+        // 抓取 5 張圖
+        const rawSlides = [
+            config.slide_img1, 
+            config.slide_img2, 
+            config.slide_img3, 
+            config.slide_img4, 
+            config.slide_img5
+        ];
+
+        // 轉換並過濾：如果有填網址就轉換，沒填（或是轉換後為空）就用本地 1~5.jpg
+        const slides = rawSlides.map((url, index) => {
+            const transformed = transformDriveUrl(url);
+            return (transformed && transformed.startsWith('http')) ? transformed : `${index + 1}.jpg`;
+        });
+
+        container.innerHTML = slides.map(url => `<img class="slide" src="${url}" onerror="this.src='${slides.indexOf(url)+1}.jpg'">`).join('');
+        startSlides();
+
+        if(config.about_content) {
+            contentDiv.innerHTML = config.about_content.replace(/\n/g, '<br>');
         }
+    } catch (e) {
+        console.error("載入失敗:", e);
+        container.innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
+        startSlides();
+    }
+}
 
-        async function initData() {
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const config = data.config || {};
-                
-                const rawSlides = [config.slide_img1, config.slide_img2, config.slide_img3, config.slide_img4, config.slide_img5];
-                const slides = rawSlides.map((url, index) => transformDriveUrl(url) || `${index + 1}.jpg`);
-                
-                document.getElementById('slideContainer').innerHTML = slides.map(url => `<img class="slide" src="${url}">`).join('');
-                startSlides();
+function startSlides() {
+    let slides = document.getElementsByClassName("slide");
+    if (slides.length === 0) return;
+    for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
+    slideIndex++;
+    if (slideIndex > slides.length) slideIndex = 1;
+    slides[slideIndex - 1].style.display = "block";
+    setTimeout(startSlides, 5000);
+}
 
-                if(config.about_content) {
-                    document.getElementById('aboutContent').innerHTML = config.about_content.replace(/\n/g, '<br>');
-                }
-            } catch (e) {
-                document.getElementById('slideContainer').innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
-                startSlides();
-            }
-        }
+async function handleLogin() {
+    const rawU = document.getElementById('userPhone').value.trim();
+    const u = toHalfWidth(rawU).toLowerCase();
+    const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
-        function startSlides() {
-            let slides = document.getElementsByClassName("slide");
-            if (slides.length === 0) return;
-            for (let i = 0; i < slides.length; i++) slides[i].style.display = "none";
-            slideIndex++;
-            if (slideIndex > slides.length) slideIndex = 1;
-            slides[slideIndex - 1].style.display = "block";
-            setTimeout(startSlides, 5000);
-        }
+    if (u === 'guest') {
+        sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
+        window.location.href = 'member_zone.html';
+        return;
+    }
 
-        async function handleLogin() {
-            const rawU = document.getElementById('userPhone').value.trim();
-            const u = toHalfWidth(rawU).toLowerCase();
-            const p = toHalfWidth(document.getElementById('userPass').value.trim());
+    if(!u || !p) return alert("請輸入帳號密碼");
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.innerText = "驗證中...";
+    
+    try {
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'login', phone: u, password: p }) });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
+            window.location.href = 'member_zone.html';
+        } else { alert("登入失敗：帳號或密碼錯誤"); }
+    } catch (e) { alert("網路異常"); }
+    finally { btn.disabled = false; btn.innerText = "確認進入"; }
+}
 
-            if (u === 'guest') {
-                sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
-                window.location.href = 'member_zone.html';
-                return;
-            }
-
-            if(!u || !p) return alert("請輸入帳號密碼");
-            const btn = document.getElementById('loginBtn');
-            btn.disabled = true; btn.innerText = "驗證中...";
-            
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'login', phone: u, password: p }) });
-                const result = await res.json();
-                if (result.result === "SUCCESS") {
-                    sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
-                    window.location.href = 'member_zone.html';
-                } else { alert("登入失敗：帳號或密碼錯誤"); }
-            } catch (e) { alert("網路異常"); }
-            finally { btn.disabled = false; btn.innerText = "確認進入"; }
-        }
-
-        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
-        window.onload = initData;
+function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
+window.onload = initData;        
     </script>
 </body>
 </html>

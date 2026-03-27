@@ -252,38 +252,57 @@ function updateUI(user, calendar, events) {
     try { renderEventSection(events); } catch(e) { console.error("渲染報名區出錯", e); }
 }
     
-        function renderCalendarActivity(calendar) {
-        const container = document.getElementById('calendarActivitySection');
-        
-         
-            
-        if (!calendar) return;
+function renderCalendarActivity(calendar) {
+    const container = document.getElementById('calendarActivitySection');
+    if (!container) return;
 
-        const upcoming = calendar
-            .filter(ev => ev.dateText >= today)
-            .sort((a, b) => a.dateText.localeCompare(b.dateText))
-            .slice(0, 1);
-
-        if (upcoming.length === 0) {
-            container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">暫無近期活動</div>';
-            return;
-        }
-
-        container.innerHTML = upcoming.map(ev => {
-            const displayUrl = getDirectImageUrl(ev.poster_url);
-            if (displayUrl && displayUrl.includes('http')) {
-                return `<div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50"><img src="${displayUrl}" class="w-full object-cover"></div>`;
-            } else {
-                return `
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white relative overflow-hidden">
-                        <div class="absolute top-[-10px] right-[-10px] w-20 h-20 bg-white/10 rounded-full"></div>
-                        <h4 class="font-black text-white text-lg relative z-10">${ev.title}</h4>
-                        <p class="text-xs text-emerald-100 relative z-10"><i class="far fa-calendar-alt"></i> 活動日期：${ev.dateText}</p>
-                    </div>`;
-            }
-        }).join('');
+    // 1. 確保有資料，若無資料則顯示預設狀態
+    if (!calendar || calendar.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">暫無近期活動</div>';
+        return;
     }
 
+    // 2. 取得今天日期 (格式 YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+
+    // 3. 核心邏輯：過濾出「大於等於今天」的活動，排序後只取「第 1 筆」
+    const upcoming = calendar
+        .filter(ev => ev.dateText && ev.dateText >= today)
+        .sort((a, b) => a.dateText.localeCompare(b.dateText))
+        .slice(0, 1); // 強制只取一筆
+
+    // 4. 若今天以後都沒有活動的處理
+    if (upcoming.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">近期無預定活動</div>';
+        return;
+    }
+
+    // 5. 渲染該筆活動
+    container.innerHTML = upcoming.map(ev => {
+        const displayUrl = getDirectImageUrl(ev.poster_url);
+        
+        // 優先顯示海報圖模式
+        if (displayUrl && displayUrl.startsWith('http')) {
+            return `
+                <div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50">
+                    <img src="${displayUrl}" class="w-full h-auto object-cover" onerror="this.src='https://placehold.co/600x400?text=活動預告'">
+                    <div class="p-5">
+                        <h4 class="font-black text-emerald-900 text-base">${ev.title}</h4>
+                        <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-widest"><i class="far fa-calendar-alt mr-1"></i>Next Event: ${ev.dateText}</p>
+                    </div>
+                </div>`;
+        } 
+        
+        // 無圖時顯示精緻的文字漸層卡片
+        return `
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white relative overflow-hidden">
+                <div class="absolute top-[-10px] right-[-10px] w-20 h-20 bg-white/10 rounded-full"></div>
+                <span class="text-[10px] text-emerald-200 font-bold tracking-[0.2em] uppercase">Upcoming</span>
+                <h4 class="font-black text-white text-lg mt-1 relative z-10">${ev.title}</h4>
+                <p class="text-xs text-emerald-100 relative z-10 mt-3"><i class="far fa-calendar-alt mr-1"></i> 活動日期：${ev.dateText}</p>
+            </div>`;
+    }).join('');
+}
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];

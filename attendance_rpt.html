@@ -91,7 +91,6 @@
             </div>
         </div>
     </div>
-
 <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
     const STAFF_KEY = sessionStorage.getItem('staff_key');
@@ -112,80 +111,62 @@
         setTimeout(() => { t.style.opacity = '0'; }, 3000);
     }
 
-async function loadFinishedEvents() {
-    toggleLoading(true);
-    try {
-        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-        const data = await res.json();
-        const selector = document.getElementById('eventSelector');
-        
-        if (data && data.calendar) {
-            // 獲取今日日期（不計時分秒，設為當天 23:59:59 以包含今日所有活動）
-            const now = new Date();
-            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    // 載入活動清單並填充下拉選單
+    async function loadFinishedEvents() {
+        toggleLoading(true);
+        try {
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+            const data = await res.json();
+            const selector = document.getElementById('eventSelector');
+            
+            if (data && data.calendar) {
+                const now = new Date();
+                const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-            // 1. 過濾邏輯：必須有 QR Code 且 日期小於等於今天
-            const validEvents = data.calendar.filter(ev => {
-                const evDate = new Date(ev.dateText.replace(/\//g, '-'));
-                return ev.needQR === true && evDate <= todayEnd;
-            });
-            
-            // 2. 排序邏輯：越早發生越上面 (A - B)
-            const sortedEvents = validEvents.sort((a, b) => {
-                return a.dateText.localeCompare(b.dateText);
-            });
-            
-            let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
-            sortedEvents.forEach(ev => {
-                const safeDate = ev.dateText.toString().replace(/\//g, '-');
-                optionsHtml += `<option value="${safeDate}:${ev.title}">${safeDate} | ${ev.title}</option>`;
-            });
-            selector.innerHTML = optionsHtml;
+                // 過濾與排序：需要 QR 且日期 <= 今天，依日期降冪排序 (新的在前)
+                const validEvents = data.calendar
+                    .filter(ev => ev.needQR === true && new Date(ev.dateText.replace(/\//g, '-')) <= todayEnd)
+                    .sort((a, b) => b.dateText.localeCompare(a.dateText));
+                
+                let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+                validEvents.forEach(ev => {
+                    const safeDate = ev.dateText.toString().replace(/\//g, '-');
+                    // 重要：將日期存入 data-date 屬性，value 只存標題
+                    optionsHtml += `<option value="${ev.title}" data-date="${safeDate}">${safeDate} | ${ev.title}</option>`;
+                });
+                selector.innerHTML = optionsHtml;
+            }
+        } catch(e) { 
+            console.error(e);
+            showToast("⚠️ 活動清單載入失敗"); 
         }
-    } catch(e) { 
-        console.error(e);
-        showToast("⚠️ 活動清單載入失敗"); 
+        toggleLoading(false);
     }
-    toggleLoading(false);
-}
-// 約在第 225 行附近
-function updateEventSelector(calendar) {
-    const selector = document.getElementById('eventSelector');
-    
-    // 1. 依照日期由新到舊排序 (讓管理員好選)
-    const sorted = [...calendar].sort((a, b) => b.dateText.localeCompare(a.dateText));
-    
-    // 2. 渲染選項：關鍵在於加入 data-date="${ev.dateText}"
-    selector.innerHTML = sorted.map(ev => 
-        `<option value="${ev.title}" data-date="${ev.dateText}">${ev.title} (${ev.dateText})</option>`
-    ).join('');
 
-    // 初始化報表
-    if (sorted.length > 0) fetchReport();
-}    
+    // 獲取報表資料
     async function fetchReport() {
-        const eventVal = document.getElementById('eventSelector').value;
-        if (!eventVal) { 
+        const selector = document.getElementById('eventSelector');
+        const title = selector.value;
+        const date = selector.options[selector.selectedIndex].getAttribute('data-date');
+
+        if (!title || !date) { 
             document.getElementById('statsSection').classList.add('hidden'); 
             return; 
         }
 
         toggleLoading(true);
-        const [date, title] = eventVal.split(':');
-        
         try {
             const res = await fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify({ 
                     type: 'get_attendance_data', 
                     key: STAFF_KEY, 
-                    eventTitle: `EVENT:${date}|${title}` 
+                    eventTitle: `EVENT:${date}|${title}` // 使用統一格式查詢
                 })
             });
             const result = await res.json();
             if (result.result === "SUCCESS") {
                 currentReport = result.report;
-                // 重設介面顯示（若是從排行榜切換回來）
                 document.getElementById('statsLabel').innerText = "目前進度";
                 document.getElementById('statsSubLabel').innerText = "已出席";
                 document.getElementById('lineBtn').classList.remove('hidden');
@@ -194,52 +175,49 @@ function updateEventSelector(calendar) {
             }
         } catch (e) { showToast("❌ 讀取報表錯誤"); }
         toggleLoading(false);
-    }    
+    }
 
-    // 需求 2：排行榜功能
-    async function fetchRank() {
-        // 先清空選單選擇，避免衝突
-        document.getElementById('eventSelector').value = "";
+    // 補登執行函數 (修正名稱與邏輯)
+    async function submitManualCheckin() {
+        if (!pendingCheckin.phone) return;
+
+        const selector = document.getElementById('eventSelector');
+        const title = selector.value;
+        const date = selector.options[selector.selectedIndex].getAttribute('data-date');
+
+        if (!date || !title) {
+            showToast("❌ 請先選擇活動項目");
+            return;
+        }
+
+        // 格式化為與 QR Code 相同的格式
+        const eventMark = `EVENT:${date}|${title}`;
+
         toggleLoading(true);
         try {
             const res = await fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify({ 
-                    type: 'get_attendance_data', 
+                    type: 'manual_checkin', 
                     key: STAFF_KEY, 
-                    isRank: true 
+                    phone: pendingCheckin.phone, 
+                    name: pendingCheckin.name, 
+                    eventTitle: eventMark 
                 })
             });
             const result = await res.json();
             if (result.result === "SUCCESS") {
-                displayRank(result.report);
+                showToast("✅ 補登成功");
+                closeManualModal();
+                fetchReport(); // 刷新清單
             }
-        } catch(e) { showToast("❌ 排行榜載入失敗"); }
+        } catch(e) { 
+            showToast("❌ 補登失敗"); 
+        }
         toggleLoading(false);
     }
 
-    function displayRank(rankData) {
-        const list = document.getElementById('reportList');
-        document.getElementById('statsSection').classList.remove('hidden');
-        document.getElementById('statsLabel').innerText = "榮譽排行";
-        document.getElementById('statsSubLabel').innerText = "上榜人數";
-        document.getElementById('presentCount').innerText = rankData.length;
-        document.getElementById('totalCount').innerText = "人";
-        document.getElementById('lineBtn').classList.add('hidden'); // 排行榜不顯示發送 LINE
-
-        list.innerHTML = rankData.map((r, i) => `
-            <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-amber-100 bg-gradient-to-r from-amber-50/30 to-transparent">
-                <div class="flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-sm">${i+1}</div>
-                    <div class="font-black text-lg text-amber-900">${r.name}</div>
-                </div>
-                <div class="bg-amber-100 px-4 py-1 rounded-full text-amber-700 font-black text-sm">
-                    參與 ${r.count} 次
-                </div>
-            </div>
-        `).join('');
-    }
-    
+    // 其他輔助函數
     function renderReport() {
         const list = document.getElementById('reportList');
         const presentCount = currentReport.filter(r => r.status === "出席").length;
@@ -279,75 +257,60 @@ function updateEventSelector(calendar) {
         const btn = document.getElementById('editBtn');
         btn.innerText = isEditMode ? "關閉編輯" : "開啟編輯";
         btn.classList.toggle('bg-red-500');
-        // 如果目前不是排行榜畫面，才重新渲染單一活動報表
-        if(document.getElementById('lineBtn').classList.contains('hidden') === false) {
-            renderReport();
-        }
+        if(!document.getElementById('lineBtn').classList.contains('hidden')) renderReport();
     }
 
     function openManualModal(phone, name) {
         pendingCheckin = { phone, name };
         document.getElementById('manualMemberInfo').innerText = `${name} (${phone})`;
-        document.getElementById('manualModal').classList.remove('hidden');
-        document.getElementById('manualModal').classList.add('flex');
+        document.getElementById('manualModal').style.display = 'flex';
     }
 
     function closeManualModal() {
-        document.getElementById('manualModal').classList.add('hidden');
-        document.getElementById('manualModal').classList.remove('flex');
+        document.getElementById('manualModal').style.display = 'none';
     }
 
-async function manualCheckin() {
-    if (!pendingCheckin) return;
-
-    const selector = document.getElementById('eventSelector');
-    const selectedOption = selector.options[selector.selectedIndex];
-    
-    // 從選單屬性中獲取日期與標題 (假設您的 selector 已經有 data-date)
-    const title = selectedOption.text;
-    const date = selectedOption.getAttribute('data-date'); 
-
-    if (!date) {
-        showToast("❌ 無法獲取活動日期，請重新載入頁面", "error");
-        return;
+    async function fetchRank() {
+        document.getElementById('eventSelector').value = "";
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: 'get_attendance_data', key: STAFF_KEY, isRank: true })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") displayRank(result.report);
+        } catch(e) { showToast("❌ 排行榜載入失敗"); }
+        toggleLoading(false);
     }
 
-    // 關鍵修正：組合與會員區 QR 報到一致的格式
-    const eventMark = `EVENT:${date}|${title}`;
+    function displayRank(rankData) {
+        const list = document.getElementById('reportList');
+        const stats = document.getElementById('statsSection');
+        stats.classList.remove('hidden');
+        document.getElementById('statsLabel').innerText = "榮譽排行";
+        document.getElementById('statsSubLabel').innerText = "上榜人數";
+        document.getElementById('presentCount').innerText = rankData.length;
+        document.getElementById('totalCount').innerText = "人";
+        document.getElementById('lineBtn').classList.add('hidden');
 
-    if (!confirm(`確定為 ${pendingCheckin.name} 補登《${title}》嗎？`)) return;
-
-    toggleLoading(true);
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ 
-                type: 'manual_checkin', 
-                key: STAFF_KEY, 
-                phone: pendingCheckin.phone, 
-                name: pendingCheckin.name, 
-                eventTitle: eventMark  // 這裡發送格式化後的標記
-            })
-        });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-            showToast("✅ 補登成功");
-            closeCheckinModal();
-            fetchReport(); 
-        }
-    } catch(e) { 
-        showToast("❌ 補登失敗"); 
+        list.innerHTML = rankData.map((r, i) => `
+            <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-amber-100 bg-gradient-to-r from-amber-50/30 to-transparent">
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-sm">${i+1}</div>
+                    <div class="font-black text-lg text-amber-900">${r.name}</div>
+                </div>
+                <div class="bg-amber-100 px-4 py-1 rounded-full text-amber-700 font-black text-sm">參與 ${r.count} 次</div>
+            </div>
+        `).join('');
     }
-    toggleLoading(false);
-}
+
     async function sendLineReport() {
         const selector = document.getElementById('eventSelector');
         const eventText = selector.options[selector.selectedIndex].text;
         const presentList = currentReport.filter(r => r.status === "出席").map(r => `▫️ ${r.name}`);
         const reportMsg = `【築心會館 - 出席通報】\n活動：${eventText}\n──────────────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
-
         if (!confirm(`確定將出席名單發送至 LINE 群組？`)) return;
-
         toggleLoading(true);
         try {
             const res = await fetch(GAS_URL, {

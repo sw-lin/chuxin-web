@@ -256,53 +256,71 @@ function renderCalendarActivity(calendar) {
     const container = document.getElementById('calendarActivitySection');
     if (!container) return;
 
-    // 1. 確保有資料，若無資料則顯示預設狀態
-    if (!calendar || calendar.length === 0) {
-        container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">暫無近期活動</div>';
+    // 1. 安全檢查：確保 calendar 是陣列且有資料
+    if (!calendar || !Array.isArray(calendar) || calendar.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm italic bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">目前沒有安排活動</div>';
         return;
     }
 
-    // 2. 取得今天日期 (格式 YYYY-MM-DD)
+    // 2. 取得今天日期 (格式 YYYY-MM-DD，與 GAS 的 formatDateToISO 匹配)
     const today = new Date().toISOString().split('T')[0];
 
-    // 3. 核心邏輯：過濾出「大於等於今天」的活動，排序後只取「第 1 筆」
+    // 3. 核心過濾與排序邏輯
     const upcoming = calendar
-        .filter(ev => ev.dateText && ev.dateText >= today)
-        .sort((a, b) => a.dateText.localeCompare(b.dateText))
-        .slice(0, 1); // 強制只取一筆
+        .filter(ev => {
+            // 確保 dateText 存在，且日期大於等於今天
+            return ev.dateText && ev.dateText >= today;
+        })
+        .sort((a, b) => a.dateText.localeCompare(b.dateText)) // 依日期升冪排序（最近的在前）
+        .slice(0, 1); // 【關鍵】只取第一筆，避免畫面過長
 
-    // 4. 若今天以後都沒有活動的處理
+    // 4. 若今天以後都沒有活動
     if (upcoming.length === 0) {
-        container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-3xl border border-dashed border-gray-100">近期無預定活動</div>';
+        container.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm italic bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">近期無預定活動</div>';
         return;
     }
 
-    // 5. 渲染該筆活動
-    container.innerHTML = upcoming.map(ev => {
-        const displayUrl = getDirectImageUrl(ev.poster_url);
-        
-        // 優先顯示海報圖模式
-        if (displayUrl && displayUrl.startsWith('http')) {
-            return `
-                <div class="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-emerald-50">
-                    <img src="${displayUrl}" class="w-full h-auto object-cover" onerror="this.src='https://placehold.co/600x400?text=活動預告'">
-                    <div class="p-5">
-                        <h4 class="font-black text-emerald-900 text-base">${ev.title}</h4>
-                        <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-widest"><i class="far fa-calendar-alt mr-1"></i>Next Event: ${ev.dateText}</p>
+    // 5. 渲染該筆活動 (優化後的卡片 UI)
+    const ev = upcoming[0];
+    const displayUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(ev.poster_url) : ev.poster_url;
+
+    if (displayUrl && displayUrl.startsWith('http')) {
+        // 有海報時的圖卡模式
+        container.innerHTML = `
+            <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-emerald-50 hover:shadow-md transition-shadow">
+                <img src="${displayUrl}" class="w-full h-auto object-cover max-h-[250px]" onerror="this.parentElement.innerHTML=renderTextOnlyCard('${ev.title}', '${ev.dateText}')">
+                <div class="p-5">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-black text-emerald-900 text-base line-clamp-1">${ev.title}</h4>
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-tighter">Next</span>
                     </div>
-                </div>`;
-        } 
-        
-        // 無圖時顯示精緻的文字漸層卡片
-        return `
-            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white relative overflow-hidden">
-                <div class="absolute top-[-10px] right-[-10px] w-20 h-20 bg-white/10 rounded-full"></div>
-                <span class="text-[10px] text-emerald-200 font-bold tracking-[0.2em] uppercase">Upcoming</span>
-                <h4 class="font-black text-white text-lg mt-1 relative z-10">${ev.title}</h4>
-                <p class="text-xs text-emerald-100 relative z-10 mt-3"><i class="far fa-calendar-alt mr-1"></i> 活動日期：${ev.dateText}</p>
+                    <p class="text-[11px] text-gray-400 mt-2 flex items-center">
+                        <i class="far fa-calendar-check mr-2 text-emerald-500"></i>活動日期：${ev.dateText}
+                    </p>
+                </div>
             </div>`;
-    }).join('');
+    } else {
+        // 無海報時的精緻文字模式
+        container.innerHTML = renderTextOnlyCard(ev.title, ev.dateText);
+    }
 }
+
+// 輔助函數：渲染純文字卡片
+function renderTextOnlyCard(title, date) {
+    return `
+        <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white relative overflow-hidden">
+            <div class="absolute top-[-10px] right-[-10px] w-20 h-20 bg-white/10 rounded-full"></div>
+            <div class="flex items-center space-x-2">
+                <span class="text-[10px] text-emerald-200 font-bold tracking-[0.2em] uppercase">Upcoming</span>
+                <div class="h-[1px] w-8 bg-emerald-400/50"></div>
+            </div>
+            <h4 class="font-black text-white text-lg mt-2 relative z-10 leading-tight">${title}</h4>
+            <p class="text-xs text-emerald-100 relative z-10 mt-4 flex items-center">
+                <i class="far fa-clock mr-2"></i> ${date}
+            </p>
+        </div>`;
+} 
+    
     function renderEventSection(events) {
         var container = document.getElementById('eventSection');
         var today = new Date().toISOString().split('T')[0];

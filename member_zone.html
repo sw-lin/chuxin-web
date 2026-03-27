@@ -190,7 +190,7 @@ window.difyChatbotConfig = {
         return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
     }
 
-function updateUI(user, calendar, events) {
+function updateUI(user, calendarData, eventsData) {
         console.log("開始更新介面...", { user, calendar, events });
         
         // 1. 安全檢查：如果 user 不存在，直接中斷避免報錯
@@ -208,20 +208,35 @@ function updateUI(user, calendar, events) {
         } catch (err) {
             console.warn("解析出席紀錄時發生輕微錯誤:", err);
         }
-
-        const today = new Date().toISOString().split('T')[0];
-        const pastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today);
-        
-        const attended = pastEvents.filter(ev => {
-            const standardKey = `EVENT:${ev.dateText}|${ev.title}`;
-            return logs.some(log => log === standardKey || (log && log.includes(ev.dateText)) || (log && log.includes(ev.title)));
-        });
-
-        // 3. 更新數據顯示
-        const rate = pastEvents.length ? Math.round((attended.length / pastEvents.length) * 100) : 0;
-        document.getElementById('attPercent').innerText = rate + "%";
-        document.getElementById('attCountDisplay').innerText = attended.length + " / " + pastEvents.length;
-
+    
+        // 1. 取得今天日期 (YYYY-MM-DD)
+        const today = new Date().toISOString().split('T')[0];    
+        // 2. 篩選出「今天以前」且「需要報到」的活動
+        const requiredPastEvents = (calendarData || []).filter(ev => {
+           return ev && 
+                  ev.dateText && 
+                  ev.dateText <= today && 
+                  ev.needQR === true; // 關鍵點：只有 needQR 為 true 的才算分母
+        });  
+        // 3. 設定分母與分子
+        const totalEvents = requiredPastEvents.length; // 修正後的分母
+        const attendCount = (user.attendLog || []).length; // 分子：實際簽到次數
+        // 4. 計算百分比（增加安全檢查，避免除以 0）
+        const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;        
+        // 5. 更新 UI 數字
+        document.getElementById('attendPercent').innerText = attendanceRate + '%';
+        document.getElementById('attendCount').innerText = attendCount;
+        document.getElementById('totalEvents').innerText = totalEvents;    
+        // 更新圓環進度條
+        const circle = document.getElementById('progressCircle');
+        if (circle) {
+           const radius = circle.r.baseVal.value;
+           const circumference = 2 * Math.PI * radius;
+           circle.style.strokeDasharray = `${circumference} ${circumference}`;
+           const offset = circumference - (attendanceRate / 100) * circumference;
+           circle.style.strokeDashoffset = offset;
+        }
+    
         // 4. 慶祝動畫 (僅在成功載入後執行)
         if (rate >= 50 && pastEvents.length > 0) {
             try { confetti({ particleCount: 100, spread: 70, origin: { y: 0.7 } }); } catch(e){}
@@ -236,7 +251,9 @@ function updateUI(user, calendar, events) {
     
         function renderCalendarActivity(calendar) {
         const container = document.getElementById('calendarActivitySection');
-        const today = new Date().toISOString().split('T')[0];
+        
+         
+            
         if (!calendar) return;
 
         const upcoming = calendar

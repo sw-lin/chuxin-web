@@ -148,7 +148,21 @@ async function loadFinishedEvents() {
     }
     toggleLoading(false);
 }
+// 約在第 225 行附近
+function updateEventSelector(calendar) {
+    const selector = document.getElementById('eventSelector');
     
+    // 1. 依照日期由新到舊排序 (讓管理員好選)
+    const sorted = [...calendar].sort((a, b) => b.dateText.localeCompare(a.dateText));
+    
+    // 2. 渲染選項：關鍵在於加入 data-date="${ev.dateText}"
+    selector.innerHTML = sorted.map(ev => 
+        `<option value="${ev.title}" data-date="${ev.dateText}">${ev.title} (${ev.dateText})</option>`
+    ).join('');
+
+    // 初始化報表
+    if (sorted.length > 0) fetchReport();
+}    
     async function fetchReport() {
         const eventVal = document.getElementById('eventSelector').value;
         if (!eventVal) { 
@@ -283,31 +297,49 @@ async function loadFinishedEvents() {
         document.getElementById('manualModal').classList.remove('flex');
     }
 
-    async function submitManualCheckin() {
-        const eventVal = document.getElementById('eventSelector').value;
-        const [date, title] = eventVal.split(':');
-        closeManualModal();
-        toggleLoading(true);
-        try {
-            const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    type: 'manual_checkin', 
-                    key: STAFF_KEY, 
-                    phone: pendingCheckin.phone, 
-                    name: pendingCheckin.name, 
-                    eventTitle: `EVENT:${date}|${title}` 
-                })
-            });
-            const result = await res.json();
-            if (result.result === "SUCCESS") {
-                showToast("✅ 補登成功");
-                fetchReport(); 
-            }
-        } catch(e) { showToast("❌ 補登失敗"); }
-        toggleLoading(false);
+async function manualCheckin() {
+    if (!pendingCheckin) return;
+
+    const selector = document.getElementById('eventSelector');
+    const selectedOption = selector.options[selector.selectedIndex];
+    
+    // 從選單屬性中獲取日期與標題 (假設您的 selector 已經有 data-date)
+    const title = selectedOption.text;
+    const date = selectedOption.getAttribute('data-date'); 
+
+    if (!date) {
+        showToast("❌ 無法獲取活動日期，請重新載入頁面", "error");
+        return;
     }
 
+    // 關鍵修正：組合與會員區 QR 報到一致的格式
+    const eventMark = `EVENT:${date}|${title}`;
+
+    if (!confirm(`確定為 ${pendingCheckin.name} 補登《${title}》嗎？`)) return;
+
+    toggleLoading(true);
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                type: 'manual_checkin', 
+                key: STAFF_KEY, 
+                phone: pendingCheckin.phone, 
+                name: pendingCheckin.name, 
+                eventTitle: eventMark  // 這裡發送格式化後的標記
+            })
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            showToast("✅ 補登成功");
+            closeCheckinModal();
+            fetchReport(); 
+        }
+    } catch(e) { 
+        showToast("❌ 補登失敗"); 
+    }
+    toggleLoading(false);
+}
     async function sendLineReport() {
         const selector = document.getElementById('eventSelector');
         const eventText = selector.options[selector.selectedIndex].text;

@@ -517,24 +517,33 @@ function toggleDifyChat() {
     const iframe = document.getElementById('dify-iframe');
     
     if (container.style.display === 'none') {
-        // --- 修正處：確保 URL 包含您的 App Token ---
+        // 1. 取得基礎網址 (確保後方沒有多餘的斜槓)
         let baseUrl = "https://udify.app/chat/ERNQLHGG3QKClfr7";
         
-        // 嘗試不使用 JSON.stringify 的 encode，改用 Dify 較偏好的直接鍵值對（若 Webapp 支援）
-        // 但標準 Dify 確實是使用 inputs={...}，所以請確保開始節點的 Key 完全一致
-        let uName = currentUser?.name || "訪客";
-        let uPhone = currentUser?.phone || "GUEST";        
+        // 2. 準備使用者資料 (增加防錯)
+        let uName = (currentUser && currentUser.name) ? currentUser.name : "訪客";
+        let uPhone = "GUEST";
+        
+        if (currentUser && currentUser.phone) {
+            // 關鍵優化：確保電話是 09 開頭的字串，避免被當成數字處理
+            uPhone = String(currentUser.phone).trim();
+            if (uPhone.startsWith('9')) uPhone = '0' + uPhone; 
+        }
 
-        // 對應您 Dify 設定的 user_name 與 user_phone
-        let inputs = {
+        // 3. 封裝 Inputs (對應 Dify 開始節點變數)
+        const inputsObj = {
             "user_name": uName,
             "user_phone": uPhone
         };
         
-        let finalUrl = `${baseUrl}?inputs=${encodeURIComponent(JSON.stringify(inputs))}`;
+        // 4. 生成最終 URL (使用標準編碼)
+        const inputsString = encodeURIComponent(JSON.stringify(inputsObj));
+        const finalUrl = `${baseUrl}?inputs=${inputsString}`;
         
+        // 5. 強制刷新 iframe 網址
+        console.log("正在為 " + uName + " ( " + uPhone + " ) 啟動 AI...");
         iframe.src = finalUrl;
-        console.log("生成的 URL:", finalUrl);
+        
         container.style.display = 'block';
         icon.innerText = '✕'; 
     } else {
@@ -606,7 +615,7 @@ window.addEventListener('load', () => {
 <div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; max-width: 90vw; height: 600px; z-index:2147483647; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
     <iframe
         id="dify-iframe"
-        src="https://udify.app/chat/ERNQLHGG3QKClfr7"        
+        src="about:blank"        
         style="width: 100%; height: 100%; border: none;"
         allow="microphone">
     </iframe>

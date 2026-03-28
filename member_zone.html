@@ -523,24 +523,20 @@ function toggleDifyChat() {
     const iframe = document.getElementById('dify-iframe');
     
     if (container.style.display === 'none') {
-        // --- 核心修改：動態構建 URL ---
-        let baseUrl = "https://udify.app/chatbot/";
+        // --- 修正處：確保 URL 包含您的 App Token ---
+        let baseUrl = "https://udify.app/chatbot/app-DrCPbzLi9Y1rDPTZq0EJRcQ8";
         
-        // 取得當前使用者資訊，若無則預設為訪客
         let uName = currentUser && currentUser.name ? currentUser.name : "訪客";
         let uPhone = currentUser && currentUser.phone ? currentUser.phone : "GUEST";
 
-        // 將變數編碼到 URL 中 (對應您 Dify 設定的 user_name 與 user_phone)
-        // 注意：Dify iframe 接收 inputs 的格式通常是 query string
+        // 對應您 Dify 設定的 user_name 與 user_phone
         let inputs = {
             "user_name": uName,
             "user_phone": uPhone
         };
         
-        // 轉換為 Dify 識別的 URL 格式
         let finalUrl = `${baseUrl}?inputs=${encodeURIComponent(JSON.stringify(inputs))}`;
         
-        // 更新 iframe 來源並顯示
         iframe.src = finalUrl;
         container.style.display = 'block';
         icon.innerText = '✕'; 
@@ -548,7 +544,7 @@ function toggleDifyChat() {
         container.style.display = 'none';
         icon.innerText = '💬';
     }
-}   
+}    
 // 3. 點擊按鈕手動啟動
 function activateAI() {
     const container = document.getElementById('dify-iframe-container');

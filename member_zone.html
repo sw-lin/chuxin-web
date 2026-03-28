@@ -178,7 +178,7 @@ div[class*="dify-chatbot"] {
 // 1. 先定義配置 (放在最外層確保 Dify 隨時讀得到)
 window.difyChatbotConfig = {
     // 請替換為完整的 Key
-    token: 'app-DrCPbzLi9Y1rDPTZq0EJRcQ8', 
+    token: 'ERNQLHGG3QKClfr7', 
     baseUrl: 'https://udify.app'
 };    
     function getDirectImageUrl(url) {
@@ -524,7 +524,7 @@ function toggleDifyChat() {
     
     if (container.style.display === 'none') {
         // --- 修正處：確保 URL 包含您的 App Token ---
-        let baseUrl = "https://udify.app/chatbot/app-DrCPbzLi9Y1rDPTZq0EJRcQ8";
+        let baseUrl = "https://udify.app/chat/ERNQLHGG3QKClfr7";
         
         let uName = currentUser && currentUser.name ? currentUser.name : "訪客";
         let uPhone = currentUser && currentUser.phone ? currentUser.phone : "GUEST";

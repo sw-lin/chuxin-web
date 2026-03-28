@@ -174,13 +174,7 @@ div[class*="dify-chatbot"] {
     let remoteConfig = {};
     let html5QrCode = null;
     window.latestCalendarData = []; // 預設空陣列，防止按鈕點擊噴錯
-    
-// 1. 先定義配置 (放在最外層確保 Dify 隨時讀得到)
-window.difyChatbotConfig = {
-    // 請替換為完整的 Key
-    token: 'ERNQLHGG3QKClfr7', 
-    baseUrl: 'https://udify.app'
-};    
+        
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;
@@ -606,7 +600,7 @@ window.addEventListener('load', () => {
 });
     
 </script>
-  <div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px;right: 20px; width: 350px; height: 600px; z-index:2147483647; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
+<div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; max-width: 90vw; height: 600px; z-index:2147483647; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
     <iframe
         id="dify-iframe"
         src="https://udify.app/chat/ERNQLHGG3QKClfr7"        

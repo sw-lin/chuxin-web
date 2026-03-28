@@ -532,6 +532,7 @@ function toggleDifyChat() {
         let finalUrl = `${baseUrl}?inputs=${encodeURIComponent(JSON.stringify(inputs))}`;
         
         iframe.src = finalUrl;
+        console.log("生成的 URL:", finalUrl);
         container.style.display = 'block';
         icon.innerText = '✕'; 
     } else {

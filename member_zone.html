@@ -520,8 +520,10 @@ function toggleDifyChat() {
         // --- 修正處：確保 URL 包含您的 App Token ---
         let baseUrl = "https://udify.app/chat/ERNQLHGG3QKClfr7";
         
-        let uName = currentUser && currentUser.name ? currentUser.name : "訪客";
-        let uPhone = currentUser && currentUser.phone ? currentUser.phone : "GUEST";
+        // 嘗試不使用 JSON.stringify 的 encode，改用 Dify 較偏好的直接鍵值對（若 Webapp 支援）
+        // 但標準 Dify 確實是使用 inputs={...}，所以請確保開始節點的 Key 完全一致
+        let uName = currentUser?.name || "訪客";
+        let uPhone = currentUser?.phone || "GUEST";        
 
         // 對應您 Dify 設定的 user_name 與 user_phone
         let inputs = {

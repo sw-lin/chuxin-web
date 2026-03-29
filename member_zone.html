@@ -645,16 +645,16 @@ window.addEventListener('load', () => {
 });
     
 </script>
-<div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; max-width: 90vw; height: 600px; z-index:2147483647; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
+<div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; max-width: 90vw; height: 600px; z-index:2147483647;pointer-events: auto;border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
     <iframe
         id="dify-iframe"
         src="about:blank"        
         style="width: 100%; height: 100%; border: none;"
-        allow="microphone">
+        allow="microphone; clipboard-read; clipboard-write">
     </iframe>
  </div>
 
- <div id="dify-custom-trigger" onclick="toggleDifyChat()" style="position: fixed; bottom: 20px; right: 20px; z-index:2147483647; width: 60px; height: 60px; background-color: #064E3B; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
+ <div id="dify-custom-trigger" onclick="toggleDifyChat()" style="position: fixed; bottom: 20px; right: 20px; z-index:2147483647;pointer-events: auto;width: 60px; height: 60px; background-color: #064E3B; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
     <span id="dify-icon" style="color: white; font-size: 28px;">💬</span>
  </div>    
 </body>

@@ -104,7 +104,6 @@ function toHalfWidth(str) {
     if (!str) return "";
     return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
 }
-
 async function initData() {
     const contentDiv = document.getElementById('aboutContent');
     const container = document.getElementById('slideContainer');
@@ -112,9 +111,22 @@ async function initData() {
     try {
         const res = await fetch(GAS_URL + "?t=" + Date.now());
         const data = await res.json();
-        const config = data.config || {};
         
-        // 抓取 5 張圖
+        // 1. 重要：先宣告 config 變數，並做好防呆
+        const config = data.config || {};
+        console.log("從 GAS 接收到的完整 Config:", config);      
+
+        // 2. 處理「關於築心」文字 (優先處理，確保文字一定會出來)
+        // 這裡同時檢查 about_content 或 about_us_url 兩個 Key
+        const aboutText = config.about_content || config.about_us_url;
+        
+        if (aboutText) {
+            contentDiv.innerHTML = aboutText.replace(/\n/g, '<br>');
+        } else {
+            contentDiv.innerHTML = "系統目前無法取得介紹內容，請檢查試算表設定。";
+        }   
+        
+        // 3. 處理 5 張圖片
         const rawSlides = [
             config.slide_img1, 
             config.slide_img2, 
@@ -123,22 +135,24 @@ async function initData() {
             config.slide_img5
         ];
 
-        // 轉換並過濾：如果有填網址就轉換，沒填（或是轉換後為空）就用本地 1~5.jpg
+        // 轉換並過濾網址
         const slides = rawSlides.map((url, index) => {
             const transformed = transformDriveUrl(url);
+            // 只有當 transformed 是有效的 http 網址才使用，否則回歸 1.jpg, 2.jpg...
             return (transformed && transformed.startsWith('http')) ? transformed : `${index + 1}.jpg`;
         });
 
-        container.innerHTML = slides.map(url => `<img class="slide" src="${url}" onerror="this.src='${slides.indexOf(url)+1}.jpg'">`).join('');
+        // 渲染圖片到容器
+        container.innerHTML = slides.map((url, idx) => 
+            `<img class="slide" src="${url}" onerror="this.src='${idx + 1}.jpg'">`
+        ).join('');
+        
+        // 啟動輪播
         startSlides();
 
-        if(config.about_content) {
-            contentDiv.innerHTML = config.about_content.replace(/\n/g, '<br>');
-        }
     } catch (e) {
-        console.error("載入失敗:", e);
-        container.innerHTML = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg'].map(url => `<img class="slide" src="${url}">`).join('');
-        startSlides();
+        console.error("initData 執行失敗:", e);
+        contentDiv.innerHTML = "連線失敗，請檢查網路或 GAS 部署狀態。";
     }
 }
 

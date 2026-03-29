@@ -426,20 +426,53 @@ function renderTextOnlyCard(title, date) {
     // 交互邏輯 (與後端對接)
 async function handleUpdateProfile() {
     const oldPass = document.getElementById('oldPass').value.trim();
-    let email = document.getElementById('editEmail').value.trim(); // 改用 let
+    let email = document.getElementById('editEmail').value.trim();
     const newPass = document.getElementById('newPass').value.trim();
     
-    if (!oldPass) { showToast("請輸入舊密碼", "error"); return; }
+    if (!oldPass) { 
+        showToast("請輸入目前密碼以供驗證", "error"); 
+        return; 
+    }
     
-    // 修正：若使用者沒填 Email，則沿用目前的 Email (浮水印值)
+    // 若沒填新 Email，沿用舊的
     if (!email && currentUser.email) {
         email = currentUser.email;
     }
 
-    document.getElementById('loadingOverlay').style.display = 'flex';
-    // ... 後續 fetch ...
-}
-    
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
+
+    try {
+        const payload = {
+            type: 'updateProfile',
+            phone: currentUser.phone,
+            oldPassword: oldPass,
+            newPassword: newPass,
+            email: email
+        };
+
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await res.json();
+
+        if (result.result === "SUCCESS") {
+            showToast("個人資料更新成功！");
+            closeEditModal(null, true);
+            // 立即同步最新資料
+            await syncData();
+        } else {
+            showToast(result.message, "error");
+        }
+    } catch (e) {
+        console.error("更新失敗:", e);
+        showToast("網路連線異常，請稍後再試", "error");
+    } finally {
+        overlay.style.display = 'none';
+    }
+}    
 async function processCheckin(scanData) {
     // 1. 格式檢查
     if (!scanData.startsWith("CHECKIN:")) { showToast("無效格式", "error"); return; }

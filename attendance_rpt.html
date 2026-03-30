@@ -309,7 +309,7 @@
         const selector = document.getElementById('eventSelector');
         const eventText = selector.options[selector.selectedIndex].text;
         const presentList = currentReport.filter(r => r.status === "出席").map(r => `▫️ ${r.name}`);
-        const reportMsg = `【築心會館 - 出席通報】\n活動：${eventText}\n───────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
+        const reportMsg = `【築心 - 出席通報】\n活動：${eventText}\n──────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
         if (!confirm(`確定將出席名單發送至 LINE 群組？`)) return;
         toggleLoading(true);
         try {

@@ -323,7 +323,7 @@ async function sendToLine() {
             const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
             if (filtered.length === 0) return showToast("目前無人報名");
 
-            let message = `📊 【築心會館】活動報名清單\n━━━━━━━━━━━━\n活動：${title}\n總計：${filtered.length} 人\n\n`;
+            let message = `📊 【築心】活動報名清單\n━━━━━━\n活動：${title}\n總計：${filtered.length} 人\n\n`;
             filtered.forEach((r, i) => message += `${i+1}. ${r.會員姓名} (${r.手機號碼.slice(-4)})\n`);
             
             showLoading(true);

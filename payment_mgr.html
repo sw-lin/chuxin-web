@@ -302,7 +302,7 @@
         async function prepareLineMessage() {
             const itemName = document.getElementById('itemSelector').value;
             const paidNames = currentLedger.filter(p => p.status === '已繳').map(p => `▫️ ${p.name}`);
-            const msg = `【築心會館 - 繳費通報】\n項目：${itemName}\n──────────────\n已完成名單：\n${paidNames.length > 0 ? paidNames.join('\n') : '(目前無人繳費)'}\n\n📊 進度：${paidNames.length} / ${currentLedger.length} 位`;
+            const msg = `【築心 - 繳費通報】\n項目：${itemName}\n──────\n已完成名單：\n${paidNames.length > 0 ? paidNames.join('\n') : '(目前無人繳費)'}\n\n📊 進度：${paidNames.length} / ${currentLedger.length} 位`;
             if (!confirm("確定發送出席名單至 LINE 群組？")) return;
             toggleLoading(true);
             try {

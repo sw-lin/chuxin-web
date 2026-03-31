@@ -13,32 +13,11 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-@1.5.1/dist/confetti.browser.min.js"></script>
     
     <style>       
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
-    
-    /* 保持純粹的背景與字體設定即可 */
-    body { 
-        font-family: 'Noto Serif TC', serif; 
-        background-color: #FDFBF7; 
-    }
-    
-    .emerald-gradient { 
-        background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); 
-    }
-    
-    .hidden { 
-        display: none !important; 
-    }
-    
-    .modal-overlay { 
-        position: fixed; 
-        inset: 0; 
-        z-index: 200; 
-        background: rgba(0,0,0,0.85); 
-        backdrop-filter: blur(4px); 
-        align-items: center; 
-        justify-content: center; 
-        display: none; 
-    }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .hidden { display: none !important; }
+        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }        
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -495,65 +474,45 @@ async function enterStaffMode() {
 }   
 
 // 核心資料同步
-async function syncData() {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = 'flex';
-    try {
-        console.log("開始同步會員資料...");
-        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-        const data = await res.json();
-        
-        window.latestCalendarData = data.calendar || []; 
-        remoteConfig = data.config || {};
-        document.getElementById('news').innerText = data.news || "歡迎回來！";
-        
-        const liveUser = data.users.find(u => {
-            const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
-            const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
-            return uPhone === currPhone;
-        });
-        
-        if (liveUser) {
-            currentUser = liveUser;
-            updateUI(liveUser, data.calendar, data.events);
-            
-            if (liveUser.role && liveUser.role !== "學員") {
-                const staffBtn = document.getElementById('staffBtn');
-                staffBtn.classList.remove('hidden');
-                staffBtn.onclick = enterStaffMode;
-            }
-        }
-    } catch (e) { 
-        console.error("同步流程出錯:", e);
-    } finally { 
-        overlay.style.display = 'none'; 
-    }
-}  
-
-// --- 核心資料同步函式結束後，請直接接這段 ---
-
-// 啟動入口：直接執行，不依賴 window.onload 以確保最快觸發
-(function() {
-    console.log("系統啟動中...");
-    const savedUser = sessionStorage.getItem('currentUser');
-    if (savedUser) {
+// 4. 核心資料同步
+    async function syncData() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.display = 'flex';
         try {
-            currentUser = JSON.parse(savedUser);
-            // 立即在畫面上顯示名字 (原本的功能)
-            const userNameElem = document.getElementById('userName');
-            if (userNameElem) userNameElem.innerText = currentUser.name || "載入中...";
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+            const data = await res.json();
+            window.latestCalendarData = data.calendar || [];
+            remoteConfig = data.config || {};
+            document.getElementById('news').innerText = data.news || "歡迎回來！";
             
-            // 執行您原本驗證過的同步功能 (這會帶動出席率、活動清單、管理員按鈕)
-            syncData(); 
-        } catch (e) {
-            console.error("Session 解析錯誤", e);
+            const liveUser = data.users.find(u => {
+                const uP = String(u.phone || "").replace(/\D/g, "").slice(-9);
+                const cP = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
+                return uP === cP;
+            });
+            if (liveUser) {
+                currentUser = liveUser;
+                updateUI(liveUser, data.calendar, data.events);
+                if (liveUser.role && liveUser.role !== "學員") {
+                    const btn = document.getElementById('staffBtn');
+                    btn.classList.remove('hidden');
+                    btn.onclick = enterStaffMode;
+                }
+            }
+        } catch (e) { console.error("同步出錯", e); } finally { overlay.style.display = 'none'; }
+    }
+
+    // 5. 啟動入口
+    (function init() {
+        const saved = sessionStorage.getItem('currentUser');
+        if (saved) {
+            currentUser = JSON.parse(saved);
+            document.getElementById('userName').innerText = currentUser.name;
+            syncData();
+        } else {
             location.href = 'index.html';
         }
-    } else {
-        location.href = 'index.html';
-    }
-})();
-    
+    })();    
 </script>
 </body>
 </html>

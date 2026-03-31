@@ -86,7 +86,13 @@ div[class*="dify-chatbot"] {
         </div>
     </div>
 
-    <!-- 3. 近期活動區 -->
+    <!-- 3. 掃碼按鈕 -->
+    <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all hover:bg-orange-600">
+        <i class="fas fa-qrcode text-2xl"></i>
+        <span class="text-xl font-black tracking-widest">掃碼報到</span>
+    </button>
+    
+    <!-- 4. 近期活動區 -->
     <div class="space-y-4">
         <div class="flex items-center gap-3 px-2">
             <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
@@ -94,12 +100,6 @@ div[class*="dify-chatbot"] {
         </div>
         <div id="calendarActivitySection" class="space-y-4"></div>
     </div>
-
-    <!-- 4. 掃碼按鈕 -->
-    <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all hover:bg-orange-600">
-        <i class="fas fa-qrcode text-2xl"></i>
-        <span class="text-xl font-black tracking-widest">掃碼報到</span>
-    </button>
 
     <!-- 5. 報名區 -->
     <div id="eventSection" class="space-y-4 pt-4"></div>

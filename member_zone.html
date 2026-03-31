@@ -12,25 +12,33 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .hidden { display: none !important; }
-        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-
-/* 強制讓 SDK 自動生成的泡泡按鈕與視窗浮在最前線 */
-    #dify-chatbot-bubble-button, 
-    #dify-chatbot-bubble-window,
-    [id^="dify-chatbot"] {
-        z-index: 2147483647 !important;
+    <style>       
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+    
+    /* 保持純粹的背景與字體設定即可 */
+    body { 
+        font-family: 'Noto Serif TC', serif; 
+        background-color: #FDFBF7; 
     }
-        
-        /* 確保 body 不會阻擋固定定位的元件 */
-        body {
-           position: relative;
-           min-height: 100vh;
-        }        
+    
+    .emerald-gradient { 
+        background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); 
+    }
+    
+    .hidden { 
+        display: none !important; 
+    }
+    
+    .modal-overlay { 
+        position: fixed; 
+        inset: 0; 
+        z-index: 200; 
+        background: rgba(0,0,0,0.85); 
+        backdrop-filter: blur(4px); 
+        align-items: center; 
+        justify-content: center; 
+        display: none; 
+    }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -128,6 +136,12 @@
          <i class="fas fa-calendar-alt text-xl"></i>
      </div>
      <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
+</button> 
+<button onclick="goToAI()" class="bg-emerald-50 p-6 rounded-[2rem] shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+    <div class="bg-emerald-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+        <i class="fas fa-comment-dots text-xl"></i>
+    </div>
+    <span class="font-black text-emerald-900 text-sm tracking-wide">智慧助理</span>
 </button>            
             <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
@@ -460,6 +474,12 @@ async function handleReg(title) {
     } catch (e) { showToast("連線異常", "error"); }
     finally { document.getElementById('loadingOverlay').style.display = 'none'; }
 }
+function goToAI() {
+    // 帶著目前使用者的資料跳過去
+    const name = currentUser ? encodeURIComponent(currentUser.name) : "訪客";
+    const phone = currentUser ? encodeURIComponent(currentUser.phone) : "GUEST";
+    location.href = `ai_chat.html?name=${name}&phone=${phone}`;
+}    
 
 async function enterStaffMode() {
     var key = prompt("輸入管理金鑰：");
@@ -487,7 +507,6 @@ async function syncData() {
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎回來！";
         
-        // 抓取當前登入者
         const liveUser = data.users.find(u => {
             const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
             const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
@@ -498,86 +517,34 @@ async function syncData() {
             currentUser = liveUser;
             updateUI(liveUser, data.calendar, data.events);
             
-            // 權限判斷
             if (liveUser.role && liveUser.role !== "學員") {
                 const staffBtn = document.getElementById('staffBtn');
                 staffBtn.classList.remove('hidden');
                 staffBtn.onclick = enterStaffMode;
             }
-
-            // 【關鍵】資料同步完畢後，啟動 AI
-            initDifyAI();
-        } else {
-            console.warn("找不到對應的會員資料，以訪客身分啟動 AI");
-            initDifyAI();
         }
     } catch (e) { 
         console.error("同步流程出錯:", e);
-        initDifyAI(); // 報錯也要讓 AI 出現，只是沒參數
     } finally { 
         overlay.style.display = 'none'; 
     }
-}
-// 1. 強化的初始化函式
-function initDifyAI() {
-    console.log("正在準備 Dify AI 配置...");
-    
-    // 確保抓取到目前的會員資料
-    const name = (currentUser && currentUser.name) ? currentUser.name : "訪客";
-    const phone = (currentUser && currentUser.phone) ? currentUser.phone : "GUEST";
-
-    // 配置全域物件
-    window.difyChatbotConfig = {
-        token: 'ERNQLHGG3QKClfr7',
-        baseUrl: 'https://udify.app',
-        draggable: true,
-        inputs: {
-            "user_name": name,
-            "user_phone": phone
-        }
-    };
-
-    // 2. 檢查腳本是否已存在
-    let script = document.getElementById('dify-chatbot-script');
-    
-    if (!script) {
-        console.log("正在注入 Dify SDK 腳本...");
-        script = document.createElement('script');
-        script.src = "https://udify.app/embed.min.js";
-        script.id = 'dify-chatbot-script';
-        script.async = true;
-        document.body.appendChild(script);
-    } else {
-        console.log("Dify SDK 已存在，嘗試重新初始化介面");
-        // 如果腳本已經載入過，且有暴露初始化方法，可以在此補強
-    }
-}   
+}    
+ 
 // --- 啟動入口：當網頁所有元件都載入完成後執行 ---
+// 啟動入口
 window.onload = () => {
-    console.log("網頁載入完成，準備啟動程式...");
-
-    // 1. 嘗試從 sessionStorage 抓取登入時存下的使用者資訊
     const savedUser = sessionStorage.getItem('currentUser');
-
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
-            console.log("偵測到登入狀態，開始同步最新資料...", currentUser.name);
-            
-            // 2. 啟動核心資料同步（AI 泡泡會在 syncData 裡面被觸發）
             syncData(); 
-            
         } catch (e) {
-            console.error("解析快取資料失敗，請重新登入", e);
-            location.href = 'index.html'; // 出錯就回登入頁，最安全
+            location.href = 'index.html';
         }
     } else {
-        // 3. 如果沒登入，理論上不該在這一頁，直接導回首頁
-        console.warn("未偵測到登入資訊，重新導向中...");
         location.href = 'index.html';
     }
 };    
 </script>
-<div id="dify-chatbot-container"></div>    
 </body>
 </html>

@@ -481,12 +481,12 @@ async function syncData() {
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
-    
         
         window.latestCalendarData = data.calendar || []; 
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎回來！";
         
+        // 找到當前使用者
         const liveUser = data.users.find(u => {
             const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
             const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
@@ -494,50 +494,56 @@ async function syncData() {
         });
         
         if (liveUser) {
-            currentUser = liveUser;
+            currentUser = liveUser; // 更新全域變數
             if (liveUser.role && liveUser.role !== "學員") {
                 const staffBtn = document.getElementById('staffBtn');
                 staffBtn.classList.remove('hidden');
                 staffBtn.onclick = enterStaffMode;
             }
             updateUI(liveUser, data.calendar, data.events);
+            
+            // 【修正】直接呼叫 initDifyAI，不需要再次 fetch
+            initDifyAI(liveUser);
+            console.log("AI 泡泡已根據會員資料初始化");
         }
-        const response = await fetch(GAS_URL);
-        const userData = await response.json();
-        
-        // 資料拿到了！這時候再啟動 AI，參數就絕對帶得進去
-        initDifyAI(userData);
-        
-        console.log("會員資料同步完成，AI 泡泡已初始化");        
     } catch (e) { 
         console.error("同步失敗:", e);
-        // 如果失敗，也可以啟動一個帶預設值的 AI
         initDifyAI({ name: "訪客" });
         showToast("同步失敗", "error"); 
     } finally { 
         overlay.style.display = 'none'; 
     }
-}    
+}
 
 // 1. 定義初始化 AI 的函式
 function initDifyAI(userData) {
+    // 檢查 currentUser 是否存在，因為它是全域變數，裡面才有具體姓名
+    const name = (currentUser && currentUser.name) ? currentUser.name : "訪客";
+    const phone = (currentUser && currentUser.phone) ? currentUser.phone : "GUEST";
+
     window.difyChatbotConfig = {
         token: 'ERNQLHGG3QKClfr7',
-        baseUrl: 'https://udify.app/chatbot/ERNQLHGG3QKClfr7', // 請確保填入正確的 URL
-        container: '#dify-chatbot-container', // 指定掛載到剛才建的 div
+        // 【重要修正】baseUrl 必須是域名，不包含 /chat 或 /chatbot 路徑
+        baseUrl: 'https://udify.app', 
         draggable: true,
+        // 如果您想要讓泡泡「自動」跳出來，不需要 container，SDK 會自動生成在右下角
+        // 若指定了 container，泡泡會被關在那個 div 裡，反而看不到
         inputs: {
-            // 這裡就是您最在意的參數傳遞
-            "user_name": currentUser.name || "訪客",
-            "user_phone": currentUser.phone || "GUEST"
+            "user_name": name,
+            "user_phone": phone
         }
     };
-    // 2. 動態載入 Dify 腳本（如果尚未載入）
+
+    // 2. 動態載入 Dify 腳本
     if (!document.getElementById('dify-chatbot-script')) {
         const script = document.createElement('script');
         script.src = "https://udify.app/embed.min.js";
         script.id = 'dify-chatbot-script';
         script.async = true;
+        // 確保腳本載入後，如果 SDK 沒有自動初始化，強制它跑一次
+        script.onload = () => {
+             console.log("Dify SDK 載入成功");
+        };
         document.body.appendChild(script);
     }
 }    

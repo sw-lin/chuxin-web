@@ -509,7 +509,7 @@ async function processCheckin(scanData) {
         if (result.result === "SUCCESS") { 
             showToast("報到成功！"); 
             confetti({ particleCount: 150 }); 
-            syncData(); 
+            (); 
         } else { 
             showToast(result.message, "error"); 
         }

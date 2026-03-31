@@ -582,38 +582,39 @@ async function syncData() {
     }
 }
     
-// 5. 統一入口：頁面載入後執行
-// 5. 統一入口：頁面載入後執行
+// 5. 統一入口：Dify SDK 自動化載入邏輯
 window.addEventListener('load', async () => {
-    // 1. 取得會員資料
+
+    // 1. 取得會員資料並驗證登入
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) { 
         location.href = 'index.html'; 
         return; 
     }
     currentUser = JSON.parse(userStr);
+    
+    // 更新介面姓名
+    const userNameElem = document.getElementById('userName');
+    if(userNameElem) userNameElem.innerText = currentUser.name;
 
-    // 2. 配置 Dify 參數 (SDK 會自動來這裡抓 user_phone)
+    // 2. 【核心修改】設定 Dify 自動配置
+    // 這段必須在載入 embed.min.js 之前定義
     window.difyChatbotConfig = {
         token: 'ERNQLHGG3QKClfr7',
         inputs: {
             "user_name": currentUser.name || "會員",
-            "user_phone": String(currentUser.phone || "")
+            "user_phone": String(currentUser.phone || "") // 確保是字串，避免傳參失敗
         }
     };
 
-    // 3. 載入 Dify SDK (這行會自動產生右下角氣泡，取代 toggleDifyChat)
+    // 3. 動態注入 Dify SDK 腳本
     const script = document.createElement('script');
     script.src = "https://udify.app/embed.min.js";
     script.id = "ERNQLHGG3QKClfr7";
     script.defer = true;
     document.body.appendChild(script);
 
-    // 4. 更新頁面 UI 姓名
-    const userNameElem = document.getElementById('userName');
-    if(userNameElem) userNameElem.innerText = currentUser.name;
-    
-    // 5. 執行原本的資料同步
+    // 4. 執行原本的資料同步流程
     await syncData();
 });    
 </script>

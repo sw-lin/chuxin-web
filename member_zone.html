@@ -474,45 +474,71 @@ async function enterStaffMode() {
 }   
 
 // 核心資料同步
-// 4. 核心資料同步
-    async function syncData() {
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.style.display = 'flex';
-        try {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            const data = await res.json();
-            window.latestCalendarData = data.calendar || [];
-            remoteConfig = data.config || {};
-            document.getElementById('news').innerText = data.news || "歡迎回來！";
-            
+// [修正] 核心資料同步邏輯
+async function syncData() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
+    try {
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        
+        window.latestCalendarData = data.calendar || [];
+        remoteConfig = data.config || {};
+        document.getElementById('news').innerText = data.news || "歡迎回來！";
+        
+        // 確保 currentUser 存在才進行比對
+        if (currentUser && data.users) {
             const liveUser = data.users.find(u => {
                 const uP = String(u.phone || "").replace(/\D/g, "").slice(-9);
                 const cP = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
                 return uP === cP;
             });
+
             if (liveUser) {
                 currentUser = liveUser;
+                // [重要] 同步回 sessionStorage，確保重新整理不掉資料
+                sessionStorage.setItem('currentUser', JSON.stringify(liveUser));
+                
+                document.getElementById('userName').innerText = liveUser.name;
                 updateUI(liveUser, data.calendar, data.events);
+                
                 if (liveUser.role && liveUser.role !== "學員") {
                     const btn = document.getElementById('staffBtn');
                     btn.classList.remove('hidden');
                     btn.onclick = enterStaffMode;
                 }
             }
-        } catch (e) { console.error("同步出錯", e); } finally { overlay.style.display = 'none'; }
+        }
+    } catch (e) { 
+        console.error("同步出錯:", e);
+        showToast("資料同步失敗，請檢查網路", "error");
+    } finally { 
+        overlay.style.display = 'none'; 
     }
+}    
 
     // 5. 啟動入口
-    (function init() {
-        const saved = sessionStorage.getItem('currentUser');
-        if (saved) {
+// [修正] 初始化進入點
+function init() {
+    const saved = sessionStorage.getItem('currentUser');
+    if (saved && saved !== "undefined") {
+        try {
             currentUser = JSON.parse(saved);
             document.getElementById('userName').innerText = currentUser.name;
+            // 先用舊資料跑一次 UI，避免畫面空白
+            updateUI(currentUser, [], []); 
+            // 隨即進行背景同步
             syncData();
-        } else {
+        } catch (e) {
+            console.error("Session 解析失敗");
             location.href = 'index.html';
         }
-    })();    
+    } else {
+        // 完全沒有登入資訊，才跳回首頁
+        console.warn("無登入資訊，跳轉至登入頁");
+        location.href = 'index.html';
+    }
+}   
 </script>
 </body>
 </html>

@@ -545,7 +545,7 @@ async function processCheckin(scanData) {
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }   
 
-// 4. 統一入口：Dify SDK 自動化載入邏輯與資料同步
+// 4. 統一入口：資料同步後加載 Dify SDK
 window.addEventListener('load', async () => {
     // A. 驗證登入
     const userStr = sessionStorage.getItem('userInfo');
@@ -559,33 +559,33 @@ window.addEventListener('load', async () => {
     const userNameElem = document.getElementById('userName');
     if(userNameElem) userNameElem.innerText = currentUser.name;
 
-    // C. 【核心修正】配置 Dify 並加載 SDK
-// 在頁面載入時，先從 sessionStorage 取得會員資料
-    const user = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-
-    window.difyChatbotConfig = {
-        token: 'ERNQLHGG3QKClfr7',
-        // 自動帶入當前登入者的姓名與電話
-        inputs: {
-            "user_name": user.name || "訪客",
-            "user_phone": user.phone || "GUEST"
-        }
-    }
-    
-    // 使用標準方式注入，並移除 defer 嘗試強制提前執行
-    const script = document.createElement('script');
-    script.src = "https://udify.app/embed.min.js";
-    script.id = "ERNQLHGG3QKClfr7";
-    // 移除 script.defer = true; 
-    document.body.appendChild(script);
-
-    // D. 執行資料同步 (不影響 SDK 載入)
+    // C. 執行資料同步
     try {
         await syncData();
     } catch (e) {
         console.error("同步流程異常:", e);
     }
-}); 
+
+    // D. 【核心修正】在資料同步完後，動態加載 Dify SDK
+    // 這樣可以確保 inputs 帶入的是 syncData 之後最新的使用者資訊
+    const difyConfigScript = document.createElement('script');
+    difyConfigScript.id = "dify-chatbot-config"; // 必須加上這個 ID
+    difyConfigScript.textContent = JSON.stringify({
+        token: 'ERNQLHGG3QKClfr7',
+        inputs: {
+            "user_name": currentUser.name || "訪客",
+            "user_phone": currentUser.phone || "GUEST"
+        }
+    });
+    document.head.appendChild(difyConfigScript);
+
+    const sdkScript = document.createElement('script');
+    sdkScript.src = "https://udify.app/embed.min.js";
+    sdkScript.id = "ERNQLHGG3QKClfr7";
+    sdkScript.defer = true;
+    document.body.appendChild(sdkScript);
+});
+    
 // 5. 資料同步邏輯
 async function syncData() {
     const overlay = document.getElementById('loadingOverlay');

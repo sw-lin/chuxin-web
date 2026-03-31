@@ -481,6 +481,7 @@ async function syncData() {
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
+    
         
         window.latestCalendarData = data.calendar || []; 
         remoteConfig = data.config || {};
@@ -501,53 +502,46 @@ async function syncData() {
             }
             updateUI(liveUser, data.calendar, data.events);
         }
+        const response = await fetch(GAS_URL);
+        const userData = await response.json();
+        
+        // 資料拿到了！這時候再啟動 AI，參數就絕對帶得進去
+        initDifyAI(userData);
+        
+        console.log("會員資料同步完成，AI 泡泡已初始化");        
     } catch (e) { 
         console.error("同步失敗:", e);
+        // 如果失敗，也可以啟動一個帶預設值的 AI
+        initDifyAI({ name: "訪客" });
         showToast("同步失敗", "error"); 
     } finally { 
         overlay.style.display = 'none'; 
     }
 }    
 
-// 統一入口：頁面載入後執行
-window.addEventListener('load', async () => {
-    const userStr = sessionStorage.getItem('userInfo');
-    if (!userStr) { 
-        location.href = 'index.html'; 
-        return; 
+// 1. 定義初始化 AI 的函式
+function initDifyAI(userData) {
+    window.difyChatbotConfig = {
+        token: 'ERNQLHGG3QKClfr7',
+        baseUrl: 'https://udify.app/chatbot/ERNQLHGG3QKClfr7', // 請確保填入正確的 URL
+        container: '#dify-chatbot-container', // 指定掛載到剛才建的 div
+        draggable: true,
+        inputs: {
+            // 這裡就是您最在意的參數傳遞
+            "user_name": currentUser.name || "訪客",
+            "user_phone": currentUser.phone || "GUEST"
+        }
+    };
+    // 2. 動態載入 Dify 腳本（如果尚未載入）
+    if (!document.getElementById('dify-chatbot-script')) {
+        const script = document.createElement('script');
+        script.src = "https://udify.app/embed.min.js";
+        script.id = 'dify-chatbot-script';
+        script.async = true;
+        document.body.appendChild(script);
     }
-    currentUser = JSON.parse(userStr);
-    
-    const userNameElem = document.getElementById('userName');
-    if(userNameElem) userNameElem.innerText = currentUser.name;
-
-    // 先等資料同步完成
-    try {
-        await syncData();
-    } catch (e) {
-        console.error("同步流程異常:", e);
-    }
-
-    // 確保只注入一次 Dify 配置
-    if (!document.getElementById('dify-chatbot-config')) {
-        const difyConfigScript = document.createElement('script');
-        difyConfigScript.id = "dify-chatbot-config";
-        difyConfigScript.textContent = JSON.stringify({
-            token: 'ERNQLHGG3QKClfr7',
-            inputs: {
-                "user_name": currentUser.name || "訪客",
-                "user_phone": currentUser.phone || "GUEST"
-            }
-        });
-        document.head.appendChild(difyConfigScript);
-
-        const sdkScript = document.createElement('script');
-        sdkScript.src = "https://udify.app/embed.min.js";
-        sdkScript.id = "ERNQLHGG3QKClfr7";
-        sdkScript.defer = true;
-        document.body.appendChild(sdkScript);
-    }
-});    
+}    
 </script>
+<div id="dify-chatbot-container"></div>    
 </body>
 </html>

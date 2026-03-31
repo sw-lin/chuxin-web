@@ -10,7 +10,7 @@
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-@1.5.1/dist/confetti.browser.min.js"></script>
     
     <style>       
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
@@ -528,23 +528,32 @@ async function syncData() {
     } finally { 
         overlay.style.display = 'none'; 
     }
-}    
- 
-// --- 啟動入口：當網頁所有元件都載入完成後執行 ---
-// 啟動入口
-window.onload = () => {
+}  
+
+// --- 核心資料同步函式結束後，請直接接這段 ---
+
+// 啟動入口：直接執行，不依賴 window.onload 以確保最快觸發
+(function() {
+    console.log("系統啟動中...");
     const savedUser = sessionStorage.getItem('currentUser');
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
+            // 立即在畫面上顯示名字 (原本的功能)
+            const userNameElem = document.getElementById('userName');
+            if (userNameElem) userNameElem.innerText = currentUser.name || "載入中...";
+            
+            // 執行您原本驗證過的同步功能 (這會帶動出席率、活動清單、管理員按鈕)
             syncData(); 
         } catch (e) {
+            console.error("Session 解析錯誤", e);
             location.href = 'index.html';
         }
     } else {
         location.href = 'index.html';
     }
-};    
+})();
+    
 </script>
 </body>
 </html>

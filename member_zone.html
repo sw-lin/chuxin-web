@@ -18,12 +18,13 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-/* 確保所有 Dify 相關的容器都浮在最上層 */
-[id^="dify-chatbot"] {
-    z-index: 999999 !important;
-}
-div[class*="dify-chatbot"] {
-    z-index: 999999 !important;
+
+/* 強制讓 Dify 所有的元件（按鈕、對話視窗）浮在最前線 */
+[id^="dify-chatbot"], 
+div[class*="dify-chatbot"],
+#dify-chatbot-bubble-button,
+#dify-chatbot-window {
+    z-index: 2147483647 !important;
 }
         
         /* 確保 body 不會阻擋固定定位的元件 */
@@ -545,8 +546,45 @@ async function processCheckin(scanData) {
         finally { document.getElementById('loadingOverlay').style.display = 'none'; }
     }   
 
+// 4. 統一入口：Dify SDK 自動化載入邏輯與資料同步
+window.addEventListener('load', async () => {
+    // A. 驗證登入
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) { 
+        location.href = 'index.html'; 
+        return; 
+    }
+    currentUser = JSON.parse(userStr);
     
-// 4. 資料同步邏輯
+    // B. 立即更新介面姓名 (提供即時回饋)
+    const userNameElem = document.getElementById('userName');
+    if(userNameElem) userNameElem.innerText = currentUser.name;
+
+    // C. 【核心修正】配置 Dify 並加載 SDK
+    // 確保 config 在全局作用域
+    window.difyChatbotConfig = {
+        token: 'ERNQLHGG3QKClfr7',
+        inputs: {
+            "user_name": String(currentUser.name || "會員"),
+            "user_phone": String(currentUser.phone || "")
+        }
+    };
+
+    // 使用標準方式注入，並移除 defer 嘗試強制提前執行
+    const script = document.createElement('script');
+    script.src = "https://udify.app/embed.min.js";
+    script.id = "ERNQLHGG3QKClfr7";
+    // 移除 script.defer = true; 
+    document.body.appendChild(script);
+
+    // D. 執行資料同步 (不影響 SDK 載入)
+    try {
+        await syncData();
+    } catch (e) {
+        console.error("同步流程異常:", e);
+    }
+}); 
+// 5. 資料同步邏輯
 async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
@@ -580,43 +618,7 @@ async function syncData() {
     } finally { 
         overlay.style.display = 'none'; 
     }
-}
-
-// 5. 統一入口：Dify SDK 自動化載入邏輯
-window.addEventListener('load', async () => {
-
-    // 1. 取得會員資料並驗證登入
-    const userStr = sessionStorage.getItem('userInfo');
-    if (!userStr) { 
-        location.href = 'index.html'; 
-        return; 
-    }
-    currentUser = JSON.parse(userStr);
-    
-    // 更新介面姓名
-    const userNameElem = document.getElementById('userName');
-    if(userNameElem) userNameElem.innerText = currentUser.name;
-
-    // 2. 【核心修改】設定 Dify 自動配置
-    // 這段必須在載入 embed.min.js 之前定義
-    window.difyChatbotConfig = {
-        token: 'ERNQLHGG3QKClfr7',
-        inputs: {
-            "user_name": currentUser.name || "會員",
-            "user_phone": String(currentUser.phone || "") // 確保是字串，避免傳參失敗
-        }
-    };
-
-    // 3. 動態注入 Dify SDK 腳本
-    const script = document.createElement('script');
-    script.src = "https://udify.app/embed.min.js";
-    script.id = "ERNQLHGG3QKClfr7";
-    script.defer = true;
-    document.body.appendChild(script);
-
-    // 4. 執行原本的資料同步流程
-    await syncData();
-});    
+}    
 </script>
 </body>
 </html>

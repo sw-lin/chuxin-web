@@ -479,6 +479,7 @@ async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
     try {
+        console.log("開始同步會員資料...");
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
@@ -486,7 +487,7 @@ async function syncData() {
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎回來！";
         
-        // 找到當前使用者
+        // 抓取當前登入者
         const liveUser = data.users.find(u => {
             const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
             const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
@@ -494,59 +495,88 @@ async function syncData() {
         });
         
         if (liveUser) {
-            currentUser = liveUser; // 更新全域變數
+            currentUser = liveUser;
+            updateUI(liveUser, data.calendar, data.events);
+            
+            // 權限判斷
             if (liveUser.role && liveUser.role !== "學員") {
                 const staffBtn = document.getElementById('staffBtn');
                 staffBtn.classList.remove('hidden');
                 staffBtn.onclick = enterStaffMode;
             }
-            updateUI(liveUser, data.calendar, data.events);
-            
-            // 【修正】直接呼叫 initDifyAI，不需要再次 fetch
-            initDifyAI(liveUser);
-            console.log("AI 泡泡已根據會員資料初始化");
+
+            // 【關鍵】資料同步完畢後，啟動 AI
+            initDifyAI();
+        } else {
+            console.warn("找不到對應的會員資料，以訪客身分啟動 AI");
+            initDifyAI();
         }
     } catch (e) { 
-        console.error("同步失敗:", e);
-        initDifyAI({ name: "訪客" });
-        showToast("同步失敗", "error"); 
+        console.error("同步流程出錯:", e);
+        initDifyAI(); // 報錯也要讓 AI 出現，只是沒參數
     } finally { 
         overlay.style.display = 'none'; 
     }
 }
-
-// 1. 定義初始化 AI 的函式
-function initDifyAI(userData) {
-    // 檢查 currentUser 是否存在，因為它是全域變數，裡面才有具體姓名
+// 1. 強化的初始化函式
+function initDifyAI() {
+    console.log("正在準備 Dify AI 配置...");
+    
+    // 確保抓取到目前的會員資料
     const name = (currentUser && currentUser.name) ? currentUser.name : "訪客";
     const phone = (currentUser && currentUser.phone) ? currentUser.phone : "GUEST";
 
+    // 配置全域物件
     window.difyChatbotConfig = {
         token: 'ERNQLHGG3QKClfr7',
-        // 【重要修正】baseUrl 必須是域名，不包含 /chat 或 /chatbot 路徑
-        baseUrl: 'https://udify.app', 
+        baseUrl: 'https://udify.app',
         draggable: true,
-        // 如果您想要讓泡泡「自動」跳出來，不需要 container，SDK 會自動生成在右下角
-        // 若指定了 container，泡泡會被關在那個 div 裡，反而看不到
         inputs: {
             "user_name": name,
             "user_phone": phone
         }
     };
 
-    // 2. 動態載入 Dify 腳本
-    if (!document.getElementById('dify-chatbot-script')) {
-        const script = document.createElement('script');
+    // 2. 檢查腳本是否已存在
+    let script = document.getElementById('dify-chatbot-script');
+    
+    if (!script) {
+        console.log("正在注入 Dify SDK 腳本...");
+        script = document.createElement('script');
         script.src = "https://udify.app/embed.min.js";
         script.id = 'dify-chatbot-script';
         script.async = true;
-        // 確保腳本載入後，如果 SDK 沒有自動初始化，強制它跑一次
-        script.onload = () => {
-             console.log("Dify SDK 載入成功");
-        };
         document.body.appendChild(script);
+    } else {
+        console.log("Dify SDK 已存在，嘗試重新初始化介面");
+        // 如果腳本已經載入過，且有暴露初始化方法，可以在此補強
     }
-}    
+}   
+// --- 啟動入口：當網頁所有元件都載入完成後執行 ---
+window.onload = () => {
+    console.log("網頁載入完成，準備啟動程式...");
+
+    // 1. 嘗試從 sessionStorage 抓取登入時存下的使用者資訊
+    const savedUser = sessionStorage.getItem('currentUser');
+
+    if (savedUser) {
+        try {
+            currentUser = JSON.parse(savedUser);
+            console.log("偵測到登入狀態，開始同步最新資料...", currentUser.name);
+            
+            // 2. 啟動核心資料同步（AI 泡泡會在 syncData 裡面被觸發）
+            syncData(); 
+            
+        } catch (e) {
+            console.error("解析快取資料失敗，請重新登入", e);
+            location.href = 'index.html'; // 出錯就回登入頁，最安全
+        }
+    } else {
+        // 3. 如果沒登入，理論上不該在這一頁，直接導回首頁
+        console.warn("未偵測到登入資訊，重新導向中...");
+        location.href = 'index.html';
+    }
+};    
 </script>
 <div id="dify-chatbot-container"></div>    
 </body>

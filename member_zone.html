@@ -3,21 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>會員中心 | 築心會館</title>
-
+    <title>會員中心 | 築心會館</title>    
+    
     
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     
-    <style>       
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
-        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }        
+        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
+/* 確保所有 Dify 相關的容器都浮在最上層 */
+[id^="dify-chatbot"] {
+    z-index: 999999 !important;
+}
+div[class*="dify-chatbot"] {
+    z-index: 999999 !important;
+}
+        
+        /* 確保 body 不會阻擋固定定位的元件 */
+        body {
+           position: relative;
+           min-height: 100vh;
+        }        
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -115,12 +128,6 @@
          <i class="fas fa-calendar-alt text-xl"></i>
      </div>
      <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
-</button> 
-<button onclick="goToAI()" class="bg-emerald-50 p-6 rounded-[2rem] shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
-    <div class="bg-emerald-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
-        <i class="fas fa-comment-dots text-xl"></i>
-    </div>
-    <span class="font-black text-emerald-900 text-sm tracking-wide">智慧助理</span>
 </button>            
             <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
@@ -162,12 +169,12 @@
 </div>
     
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-let currentUser = null;
-let remoteConfig = {};
-let html5QrCode = null;
-window.latestCalendarData = [];
-
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+    let currentUser = null;
+    let remoteConfig = {};
+    let html5QrCode = null;
+    window.latestCalendarData = []; // 預設空陣列，防止按鈕點擊噴錯
+        
     function getDirectImageUrl(url) {
         if (!url) return "";
         if (!url.includes('drive.google.com')) return url;
@@ -176,29 +183,44 @@ window.latestCalendarData = [];
         else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
         return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
     }
-    
+
 function updateUI(user, calendar, events) {
     console.log("開始更新介面...", { user, calendar, events });
+    
+    // 1. 安全檢查
     if (!user) {
         console.error("更新失敗：找不到使用者資料");
         return;
     }
 
+    // 2. 取得今天日期
     const today = new Date().toISOString().split('T')[0];
+
+    // 3. 核心邏輯：計算出席率
+    // 分母：過去已發生且「需要報到」的活動
     const requiredPastEvents = (calendar || []).filter(ev => {
-        return ev && ev.dateText && ev.dateText <= today && ev.needQR === true; 
+        return ev && 
+               ev.dateText && 
+               ev.dateText <= today && 
+               ev.needQR === true; 
     });
 
     const totalEvents = requiredPastEvents.length;
+    // 分子：該會員實際有報到的紀錄總數
     const attendCount = (user.attendLog || []).length;
+    
+    // 計算百分比
     const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
+    // 4. 更新 UI 數字
+    // 這裡要對齊您的 HTML ID (attPercent, attCountDisplay)
     const percentElem = document.getElementById('attPercent');
     const countDisplayElem = document.getElementById('attCountDisplay');
 
     if (percentElem) percentElem.innerText = attendanceRate + '%';
     if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
 
+    // 更新圓環進度條 (如果有這個元素的話)
     const circle = document.getElementById('progressCircle');
     if (circle) {
         const radius = circle.r.baseVal.value;
@@ -208,42 +230,56 @@ function updateUI(user, calendar, events) {
         circle.style.strokeDashoffset = offset;
     }
 
+    // 5. 慶祝動畫 (大於 50% 且有活動時觸發)
     if (attendanceRate >= 50 && totalEvents > 0) {
         try { confetti({ particleCount: 100, spread: 70, origin: { y: 0.7 } }); } catch(e){}
     }
 
+    // 儲存出席資料供 Modal 使用
+    // 假設您有一個全域變數處理這個，這裡過濾出該用戶有參加的詳細資料
     window.currentAttendedData = (calendar || []).filter(ev => 
         (user.attendLog || []).some(log => String(log).includes(ev.title))
     );
 
+    // 6. 渲染下方區塊
     try { renderCalendarActivity(calendar); } catch(e) { console.error("渲染活動預告出錯", e); }
     try { renderEventSection(events); } catch(e) { console.error("渲染報名區出錯", e); }
 }
-
+    
 function renderCalendarActivity(calendar) {
     const container = document.getElementById('calendarActivitySection');
     if (!container) return;
 
+    // 1. 安全檢查：確保 calendar 是陣列且有資料
     if (!calendar || !Array.isArray(calendar) || calendar.length === 0) {
         container.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm italic bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">目前沒有安排活動</div>';
         return;
     }
 
+    // 2. 取得今天日期 (格式 YYYY-MM-DD，與 GAS 的 formatDateToISO 匹配)
     const today = new Date().toISOString().split('T')[0];
-    const upcoming = calendar
-        .filter(ev => ev.dateText && ev.dateText >= today)
-        .sort((a, b) => a.dateText.localeCompare(b.dateText))
-        .slice(0, 1);
 
+    // 3. 核心過濾與排序邏輯
+    const upcoming = calendar
+        .filter(ev => {
+            // 確保 dateText 存在，且日期大於等於今天
+            return ev.dateText && ev.dateText >= today;
+        })
+        .sort((a, b) => a.dateText.localeCompare(b.dateText)) // 依日期升冪排序（最近的在前）
+        .slice(0, 1); // 【關鍵】只取第一筆，避免畫面過長
+
+    // 4. 若今天以後都沒有活動
     if (upcoming.length === 0) {
         container.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm italic bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">近期無預定活動</div>';
         return;
     }
 
+    // 5. 渲染該筆活動 (優化後的卡片 UI)
     const ev = upcoming[0];
     const displayUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(ev.poster_url) : ev.poster_url;
 
     if (displayUrl && displayUrl.startsWith('http')) {
+        // 有海報時的圖卡模式
         container.innerHTML = `
             <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-emerald-50 hover:shadow-md transition-shadow">
                 <img src="${displayUrl}" class="w-full h-auto object-cover max-h-[250px]" onerror="this.parentElement.innerHTML=renderTextOnlyCard('${ev.title}', '${ev.dateText}')">
@@ -258,10 +294,12 @@ function renderCalendarActivity(calendar) {
                 </div>
             </div>`;
     } else {
+        // 無海報時的精緻文字模式
         container.innerHTML = renderTextOnlyCard(ev.title, ev.dateText);
     }
 }
 
+// 輔助函數：渲染純文字卡片
 function renderTextOnlyCard(title, date) {
     return `
         <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border-l-8 border-emerald-800 emerald-gradient text-white relative overflow-hidden">
@@ -275,82 +313,96 @@ function renderTextOnlyCard(title, date) {
                 <i class="far fa-clock mr-2"></i> ${date}
             </p>
         </div>`;
-}
+} 
+    
+    function renderEventSection(events) {
+        var container = document.getElementById('eventSection');
+        var today = new Date().toISOString().split('T')[0];
+        var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
+        if (activeEvents.length === 0) { container.innerHTML = ""; return; }
 
-function renderEventSection(events) {
-    var container = document.getElementById('eventSection');
-    var today = new Date().toISOString().split('T')[0];
-    var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
-    if (activeEvents.length === 0) { container.innerHTML = ""; return; }
-
-    container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
-    activeEvents.map(ev => {
-        const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
-        const displayUrl = getDirectImageUrl(ev.poster_url);
-        if (displayUrl && displayUrl.includes('http')) {
-            return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6"><img src="${displayUrl}" class="w-full object-cover">${isRegEnabled ? `<div class="p-5 bg-white"><button onclick="handleReg('${ev.title}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all">立即報名</button></div>` : ''}</div>`;
-        } else {
-            return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4"><h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4><p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>${isRegEnabled ? `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>` : `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic text-center py-2 bg-gray-50 rounded-lg">PROMOTION ONLY</div>`}</div>`;
-        }
-    }).join('');
-}
-
-function openHistoryModal() {
-    var list = document.getElementById('historyList');
-    var data = window.currentAttendedData || [];
-    if (data.length === 0) { list.innerHTML = '<div class="text-center py-12 text-gray-400 text-sm italic bg-gray-50 rounded-2xl">尚無出席紀錄</div>'; } 
-    else { 
-        list.innerHTML = data.slice().reverse().map(ev => {
-            const thumbUrl = getDirectImageUrl(ev.poster_url);
-            return `
-            <div class="bg-emerald-50/50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100/50">
-                <div class="flex items-center gap-3">
-                    ${thumbUrl ? `<img src="${thumbUrl}" class="w-10 h-10 rounded-lg object-cover shadow-sm">` : ''}
-                    <div>
-                        <div class="text-[10px] text-emerald-600 font-bold">${ev.date}</div>
-                        <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
-                    </div>
-                </div>
-                <div class="bg-emerald-600 text-white w-7 h-7 rounded-full flex items-center justify-center shrink-0 ml-3"><i class="fas fa-check text-xs"></i></div>
-            </div>`;
-        }).join(''); 
+        container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
+        activeEvents.map(ev => {
+            const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
+            const displayUrl = getDirectImageUrl(ev.poster_url);
+            if (displayUrl && displayUrl.includes('http')) {
+                return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6"><img src="${displayUrl}" class="w-full object-cover">${isRegEnabled ? `<div class="p-5 bg-white"><button onclick="handleReg('${ev.title}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all">立即報名</button></div>` : ''}</div>`;
+            } else {
+                return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4"><h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4><p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>${isRegEnabled ? `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>` : `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic text-center py-2 bg-gray-50 rounded-lg">PROMOTION ONLY</div>`}</div>`;
+            }
+        }).join('');
     }
-    document.getElementById('historyModal').style.display = 'flex';
-}
 
-function closeHistoryModal(e, force=false) { if (force || e.target === document.getElementById('historyModal')) { document.getElementById('historyModal').style.display = 'none'; } }
-function closeEditModal(e, force=false) { if (force || e.target === document.getElementById('editProfileModal')) { document.getElementById('editProfileModal').style.display = 'none'; } }
-function logout() { sessionStorage.clear(); location.href = 'index.html'; }
-function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else showToast("未設定連結", "error"); }
+    // 其餘邏輯 (handleUpdateProfile, processCheckin, openHistoryModal, etc.) 略...
+    // 確保 openHistoryModal 也調用 getDirectImageUrl
+    function openHistoryModal() {
+        var list = document.getElementById('historyList');
+        var data = window.currentAttendedData || [];
+        if (data.length === 0) { list.innerHTML = '<div class="text-center py-12 text-gray-400 text-sm italic bg-gray-50 rounded-2xl">尚無出席紀錄</div>'; } 
+        else { 
+            list.innerHTML = data.slice().reverse().map(ev => {
+                const thumbUrl = getDirectImageUrl(ev.poster_url);
+                return `
+                <div class="bg-emerald-50/50 p-4 rounded-2xl flex justify-between items-center border border-emerald-100/50">
+                    <div class="flex items-center gap-3">
+                        ${thumbUrl ? `<img src="${thumbUrl}" class="w-10 h-10 rounded-lg object-cover shadow-sm">` : ''}
+                        <div>
+                            <div class="text-[10px] text-emerald-600 font-bold">${ev.date}</div>
+                            <div class="text-emerald-900 font-bold text-sm">${ev.title}</div>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-600 text-white w-7 h-7 rounded-full flex items-center justify-center shrink-0 ml-3"><i class="fas fa-check text-xs"></i></div>
+                </div>`;
+            }).join(''); 
+        }
+        document.getElementById('historyModal').style.display = 'flex';
+    }
 
-function openEditModal() {
+    // 基礎 UI 控制
+    function closeHistoryModal(e, force=false) { if (force || e.target === document.getElementById('historyModal')) { document.getElementById('historyModal').style.display = 'none'; } }
+    
+    function closeEditModal(e, force=false) { if (force || e.target === document.getElementById('editProfileModal')) { document.getElementById('editProfileModal').style.display = 'none'; } }
+    function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+    function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else showToast("未設定連結", "error"); }
+
+    function openEditModal() {
+    // 取得 Email 輸入框元素
     const emailInput = document.getElementById('editEmail');
+    
+    // 如果目前有使用者資料，將其 Email 設定為浮水印
     if (currentUser && currentUser.email) {
         emailInput.placeholder = currentUser.email;
     } else {
         emailInput.placeholder = "尚未設定 Email";
     }
+    
+    // 清空上次輸入的舊密碼與新密碼，確保安全
     document.getElementById('oldPass').value = "";
     document.getElementById('newPass').value = "";
-    emailInput.value = ""; 
+    emailInput.value = ""; // 讓它呈現 placeholder
+    
+    // 顯示 Modal
     document.getElementById('editProfileModal').style.display = 'flex';
-}
+    }
+    // Toast & Scanner
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `${type === 'success' ? 'bg-emerald-800' : 'bg-red-800'} text-white px-6 py-3 rounded-full shadow-2xl text-xs font-bold transition-all duration-500 opacity-0 translate-y-2 flex items-center gap-2`;
+        toast.innerHTML = (type === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-triangle"></i>') + msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-2'), 100);
+        setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-2'); setTimeout(() => toast.remove(), 500); }, 3500);
+    }
 
-function showToast(msg, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `${type === 'success' ? 'bg-emerald-800' : 'bg-red-800'} text-white px-6 py-3 rounded-full shadow-2xl text-xs font-bold transition-all duration-500 opacity-0 translate-y-2 flex items-center gap-2`;
-    toast.innerHTML = (type === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-triangle"></i>') + msg;
-    container.appendChild(toast);
-    setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-2'), 100);
-    setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-2'); setTimeout(() => toast.remove(), 500); }, 3500);
-}
-
-async function startScanner() {
+    async function startScanner() {
     document.getElementById('scannerModal').style.display = 'flex';
+    
+    // 如果已有實例，先停止再重建
     if (html5QrCode) {
         try { await html5QrCode.stop(); } catch(e) {}
     }
+
     html5QrCode = new Html5Qrcode("reader");
     html5QrCode.start(
         { facingMode: "environment" }, 
@@ -363,13 +415,15 @@ async function startScanner() {
         stopScanner(); 
     });
 }
+    function stopScanner() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => { html5QrCode = null; document.getElementById('scannerModal').style.display = 'none'; }).catch(() => document.getElementById('scannerModal').style.display = 'none');
+        } else { document.getElementById('scannerModal').style.display = 'none'; }
+    }
+    
 
-function stopScanner() {
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => { html5QrCode = null; document.getElementById('scannerModal').style.display = 'none'; }).catch(() => document.getElementById('scannerModal').style.display = 'none');
-    } else { document.getElementById('scannerModal').style.display = 'none'; }
-}
 
+    // 交互邏輯 (與後端對接)
 async function handleUpdateProfile() {
     const oldPass = document.getElementById('oldPass').value.trim();
     let email = document.getElementById('editEmail').value.trim();
@@ -379,6 +433,8 @@ async function handleUpdateProfile() {
         showToast("請輸入目前密碼以供驗證", "error"); 
         return; 
     }
+    
+    // 若沒填新 Email，沿用舊的
     if (!email && currentUser.email) {
         email = currentUser.email;
     }
@@ -387,13 +443,25 @@ async function handleUpdateProfile() {
     overlay.style.display = 'flex';
 
     try {
-        const payload = { type: 'updateProfile', phone: currentUser.phone, oldPassword: oldPass, newPassword: newPass, email: email };
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const payload = {
+            type: 'updateProfile',
+            phone: currentUser.phone,
+            oldPassword: oldPass,
+            newPassword: newPass,
+            email: email
+        };
+
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
             showToast("個人資料更新成功！");
             closeEditModal(null, true);
+            // 立即同步最新資料
             await syncData();
         } else {
             showToast(result.message, "error");
@@ -405,13 +473,17 @@ async function handleUpdateProfile() {
         overlay.style.display = 'none';
     }
 }    
-
 async function processCheckin(scanData) {
+    // 1. 格式檢查
     if (!scanData.startsWith("CHECKIN:")) { showToast("無效格式", "error"); return; }
+    
+    // 2. 解析活動名稱 (例如從 CHECKIN:2026-03-26|金剛經導讀 解析出來)
     const parts = scanData.split(':');
     const eventID = "EVENT:" + parts[1] + "|" + parts.slice(2).join(':');
-    const eventTitleOnly = parts.slice(2).join(':'); 
+    const eventTitleOnly = parts.slice(2).join(':'); // 取得純活動名稱
 
+    // 3. 【新增：防重檢查】檢查出席紀錄是否已有此活動名稱 (不論日期)
+    // 檢查 currentUser.attendLog 裡面是否有人任何一筆包含這個活動名稱
     const isAlreadyAttended = (currentUser.attendLog || []).some(log => {
         return log && String(log).includes(eventTitleOnly);
     });
@@ -421,17 +493,23 @@ async function processCheckin(scanData) {
         return;
     }
 
+    // 4. 原有的報到流程
     document.getElementById('loadingOverlay').style.display = 'flex';
     try {
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
-            body: JSON.stringify({ type: 'checkin', phone: currentUser.phone, name: currentUser.name, eventTitle: eventID }) 
+            body: JSON.stringify({ 
+                type: 'checkin', 
+                phone: currentUser.phone, 
+                name: currentUser.name, 
+                eventTitle: eventID 
+            }) 
         });
         const result = await res.json();
         if (result.result === "SUCCESS") { 
             showToast("報到成功！"); 
             confetti({ particleCount: 150 }); 
-            await syncData(); 
+            syncData(); 
         } else { 
             showToast(result.message, "error"); 
         }
@@ -441,104 +519,143 @@ async function processCheckin(scanData) {
         document.getElementById('loadingOverlay').style.display = 'none'; 
     }
 }
+    
+    async function handleReg(title) {
+        if(!confirm(`確認報名「${title}」？`)) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'register_event', phone: currentUser.phone, name: currentUser.name, eventTitle: title }) });
+            const result = await res.json();
+            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") { showToast(result.message || "報名成功！"); syncData(); } 
+            else { showToast(result.message, "error"); }
+        } catch (e) { showToast("連線異常", "error"); }
+        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+    }
 
-async function handleReg(title) {
-    if(!confirm(`確認報名「${title}」？`)) return;
-    document.getElementById('loadingOverlay').style.display = 'flex';
-    try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'register_event', phone: currentUser.phone, name: currentUser.name, eventTitle: title }) });
-        const result = await res.json();
-        if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") { showToast(result.message || "報名成功！"); await syncData(); } 
-        else { showToast(result.message, "error"); }
-    } catch (e) { showToast("連線異常", "error"); }
-    finally { document.getElementById('loadingOverlay').style.display = 'none'; }
-}
-function goToAI() {
-    // 帶著目前使用者的資料跳過去
-    const name = currentUser ? encodeURIComponent(currentUser.name) : "訪客";
-    const phone = currentUser ? encodeURIComponent(currentUser.phone) : "GUEST";
-    location.href = `ai_chat.html?name=${name}&phone=${phone}`;
+    async function enterStaffMode() {
+        var key = prompt("輸入管理金鑰：");
+        if (!key) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'verify_staff_key', key: key }) });
+            var result = await res.json();
+            if (result.result === "SUCCESS") { sessionStorage.setItem('staff_key', key); location.href = "staff_menu.html"; } 
+            else { showToast("認證失敗", "error"); }
+        } catch (e) { showToast("連線失敗", "error"); }
+        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+    }
+function toggleDifyChat() {
+    const container = document.getElementById('dify-iframe-container');
+    const icon = document.getElementById('dify-icon');
+    const iframe = document.getElementById('dify-iframe');
+    
+    if (container.style.display === 'none') {
+        // 1. 取得基礎網址 (確保後方沒有多餘的斜槓)
+        let baseUrl = "https://udify.app/chatbot/ERNQLHGG3QKClfr7";
+        
+        // 2. 準備使用者資料 (增加防錯)
+        let uName = (currentUser && currentUser.name) ? currentUser.name : "訪客";
+        let uPhone = "GUEST";
+        
+        if (currentUser && currentUser.phone) {
+            // 關鍵優化：確保電話是 09 開頭的字串，避免被當成數字處理
+            uPhone = String(currentUser.phone).trim();
+            if (uPhone.startsWith('9')) uPhone = '0' + uPhone; 
+        }
+
+        // 3. 封裝 Inputs (對應 Dify 開始節點變數)
+        const inputsObj = {
+            "user_name": uName,
+            "user_phone": uPhone
+        };
+        
+        // 4. 生成最終 URL (使用標準編碼)
+        const inputsString = encodeURIComponent(JSON.stringify(inputsObj));
+        const finalUrl = `${baseUrl}?inputs=${inputsString}`;
+        
+        // 5. 強制刷新 iframe 網址
+        console.log("正在為 " + uName + " ( " + uPhone + " ) 啟動 AI...");
+        iframe.src = finalUrl;
+        
+        container.style.display = 'block';
+        icon.innerText = '✕'; 
+    } else {
+        container.style.display = 'none';
+        icon.innerText = '💬';
+    }
 }    
-
-async function enterStaffMode() {
-    var key = prompt("輸入管理金鑰：");
-    if (!key) return;
-    document.getElementById('loadingOverlay').style.display = 'flex';
-    try {
-        var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'verify_staff_key', key: key }) });
-        var result = await res.json();
-        if (result.result === "SUCCESS") { sessionStorage.setItem('staff_key', key); location.href = "staff_menu.html"; } 
-        else { showToast("認證失敗", "error"); }
-    } catch (e) { showToast("連線失敗", "error"); }
-    finally { document.getElementById('loadingOverlay').style.display = 'none'; }
-}   
-
-// 核心資料同步
-// [修正] 核心資料同步邏輯
+// 3. 點擊按鈕手動啟動
+function activateAI() {
+    const container = document.getElementById('dify-iframe-container');
+    if (container.style.display === 'none') {
+        toggleDifyChat();
+    }
+}
+    
+// 4. 資料同步邏輯
 async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
-        
-        window.latestCalendarData = data.calendar || [];
+        // 確保這兩行確實執行且資料存在
+        window.latestCalendarData = data.calendar || []; 
+       
         remoteConfig = data.config || {};
         document.getElementById('news').innerText = data.news || "歡迎回來！";
         
-        // 確保 currentUser 存在才進行比對
-        if (currentUser && data.users) {
-            const liveUser = data.users.find(u => {
-                const uP = String(u.phone || "").replace(/\D/g, "").slice(-9);
-                const cP = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
-                return uP === cP;
-            });
-
-            if (liveUser) {
-                currentUser = liveUser;
-                // [重要] 同步回 sessionStorage，確保重新整理不掉資料
-                sessionStorage.setItem('currentUser', JSON.stringify(liveUser));
-                
-                document.getElementById('userName').innerText = liveUser.name;
-                updateUI(liveUser, data.calendar, data.events);
-                
-                if (liveUser.role && liveUser.role !== "學員") {
-                    const btn = document.getElementById('staffBtn');
-                    btn.classList.remove('hidden');
-                    btn.onclick = enterStaffMode;
-                }
+        const liveUser = data.users.find(u => {
+            const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
+            const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
+            return uPhone === currPhone;
+        });
+        
+        if (liveUser) {
+            currentUser = liveUser;
+            if (liveUser.role && liveUser.role !== "學員") {
+                const staffBtn = document.getElementById('staffBtn');
+                staffBtn.classList.remove('hidden');
+                staffBtn.onclick = enterStaffMode;
             }
+            updateUI(liveUser, data.calendar, data.events);
         }
     } catch (e) { 
-        console.error("同步出錯:", e);
-        showToast("資料同步失敗，請檢查網路", "error");
+        console.error("同步失敗:", e);
+        showToast("同步失敗", "error"); 
     } finally { 
         overlay.style.display = 'none'; 
     }
-}    
+}
+    
+// 5. 統一入口：頁面載入後執行
+window.addEventListener('load', () => {
 
-    // 5. 啟動入口
-// [修正] 初始化進入點
-function init() {
-    const saved = sessionStorage.getItem('currentUser');
-    if (saved && saved !== "undefined") {
-        try {
-            currentUser = JSON.parse(saved);
-            document.getElementById('userName').innerText = currentUser.name;
-            // 先用舊資料跑一次 UI，避免畫面空白
-            updateUI(currentUser, [], []); 
-            // 隨即進行背景同步
-            syncData();
-        } catch (e) {
-            console.error("Session 解析失敗");
-            location.href = 'index.html';
-        }
-    } else {
-        // 完全沒有登入資訊，才跳回首頁
-        console.warn("無登入資訊，跳轉至登入頁");
-        location.href = 'index.html';
+    // 處理使用者權限與資料同步
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) { 
+        location.href = 'index.html'; 
+        return; 
     }
-}   
+    currentUser = JSON.parse(userStr);
+    const userNameElem = document.getElementById('userName');
+    if(userNameElem) userNameElem.innerText = currentUser.name;
+    
+    syncData();
+});
+    
 </script>
+<div id="dify-iframe-container" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; max-width: 90vw; height: 600px; z-index:2147483647;pointer-events: auto;border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e5e7eb; background: white;">
+    <iframe
+        id="dify-iframe"
+        src="about:blank"        
+        style="width: 100%; height: 100%; border: none;"
+        allow="microphone; clipboard-read; clipboard-write">
+    </iframe>
+ </div>
+
+ <div id="dify-custom-trigger" onclick="toggleDifyChat()" style="position: fixed; bottom: 20px; right: 20px; z-index:2147483647;pointer-events: auto;width: 60px; height: 60px; background-color: #064E3B; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
+    <span id="dify-icon" style="color: white; font-size: 28px;">💬</span>
+ </div>    
 </body>
 </html>

@@ -19,13 +19,12 @@
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
 
-/* 強制讓 Dify 所有的元件（按鈕、對話視窗）浮在最前線 */
-[id^="dify-chatbot"], 
-div[class*="dify-chatbot"],
-#dify-chatbot-bubble-button,
-#dify-chatbot-window {
-    z-index: 2147483647 !important;
-}
+/* 強制讓 SDK 自動生成的泡泡按鈕與視窗浮在最前線 */
+    #dify-chatbot-bubble-button, 
+    #dify-chatbot-bubble-window,
+    [id^="dify-chatbot"] {
+        z-index: 2147483647 !important;
+    }
         
         /* 確保 body 不會阻擋固定定位的元件 */
         body {
@@ -561,15 +560,18 @@ window.addEventListener('load', async () => {
     if(userNameElem) userNameElem.innerText = currentUser.name;
 
     // C. 【核心修正】配置 Dify 並加載 SDK
-    // 確保 config 在全局作用域
+// 在頁面載入時，先從 sessionStorage 取得會員資料
+    const user = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+
     window.difyChatbotConfig = {
         token: 'ERNQLHGG3QKClfr7',
+        // 自動帶入當前登入者的姓名與電話
         inputs: {
-            "user_name": String(currentUser.name || "會員"),
-            "user_phone": String(currentUser.phone || "")
+            "user_name": user.name || "訪客",
+            "user_phone": user.phone || "GUEST"
         }
-    };
-
+    }
+    
     // 使用標準方式注入，並移除 defer 嘗試強制提前執行
     const script = document.createElement('script');
     script.src = "https://udify.app/embed.min.js";

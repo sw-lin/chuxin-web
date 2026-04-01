@@ -109,30 +109,33 @@
                         var u = users[i];
                         var p = String(u.phone).startsWith('0') ? u.phone : '0' + u.phone;
                         
-                        // 卡片主體：點擊觸發 toggleCard
-                        html += '<div id="card-'+u.phone+'" onclick="toggleCard(this)" class="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]">';
+                        // 卡片主容器
+                        html += '<div id="card-'+u.phone+'" onclick="toggleCard(this)" class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]">';
                         
-                        html += '  <div class="flex justify-between items-center">';
-                        html += '    <div class="flex-1 min-w-0 pr-4">';
-                        html += '      <div class="flex items-center gap-2 mb-0.5">';
-                        html += '        <span class="text-lg font-black text-emerald-900 truncate">' + u.name + '</span>';
+                        // 頂部資訊列：改為 justify-between 確保姓名靠左、電話靠右
+                        html += '  <div class="flex justify-between items-center w-full">';
+                        
+                        // 左側：姓名與職位 (設定固定最大寬度，避免推擠電話)
+                        html += '    <div class="flex items-center gap-2 overflow-hidden mr-4">';
+                        html += '      <span class="text-lg font-black text-emerald-900 truncate">' + u.name + '</span>';
                         if(u.role) {
-                            html += '        <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full shrink-0">' + u.role + '</span>';
+                            html += '      <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full shrink-0">' + u.role + '</span>';
                         }
-                        html += '      </div>';
-                        html += '      <div class="text-[11px] text-gray-400 font-mono">' + p + '</div>';
                         html += '    </div>';
                         
-                        html += '    <div class="flex items-center gap-3">';
+                        // 右側：電話 (字體大小 text-lg，與姓名一致)
+                        html += '    <div class="flex items-center gap-3 shrink-0">';
+                        html += '      <div class="text-lg font-black text-emerald-800 font-mono">' + p + '</div>';
                         if (isEditMode) {
-                            html += '      <button onclick="event.stopPropagation(); deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>';
+                            html += '      <button onclick="event.stopPropagation(); deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all"><i class="fas fa-trash-alt text-sm"></i></button>';
                         } else {
                             html += '      <i class="fas fa-chevron-down text-gray-300 rotate-icon"></i>';
                         }
                         html += '    </div>';
+                        
                         html += '  </div>';
 
-                        // 展開的詳細資訊區塊
+                        // 展開的詳細資訊區塊 (維持原樣)
                         html += '  <div class="detail-section">';
                         html += '    <div class="grid grid-cols-1 gap-3">';
                         html += '      <div class="flex items-center gap-2 text-xs">';
@@ -157,7 +160,6 @@
                 .catch(function() { showToast("連線失敗"); })
                 .finally(function() { toggleLoading(false); });
         }
-
         // 切換卡片展開狀態
         function toggleCard(el) {
             // 如果在編輯模式，不觸發展開（為了方便點擊刪除按鈕）

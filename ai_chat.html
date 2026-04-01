@@ -1,93 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>築心智慧助理</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
-        body { 
-            font-family: 'Noto Serif TC', serif; 
-            background-color: #FDFBF7; 
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* 避免頁面捲軸，只讓聊天框捲動 */
-        }
-        
-        /* 導覽列固定高度 */
-        nav {
-            height: 64px;
-            flex-shrink: 0;
-        }
-
-        /* 聊天視窗容器：佔滿剩餘高度 */
-        .chat-container {
-            flex-grow: 1;
-            width: 100%;
-            border: none;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
-</head>
+<html>
+<head><meta charset="UTF-8"></head>
 <body>
-    <nav class="bg-[#064e3b] text-white px-6 shadow-lg flex items-center justify-between relative z-50">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-robot text-emerald-400"></i>
-            <h1 class="text-xl font-black tracking-widest">智慧助理</h1>
-        </div>
-        <button onclick="location.href='member_zone.html'" class="px-4 py-2 bg-white/20 rounded-full text-[12px] font-bold hover:bg-white/30 transition-all">返回會員中心</button>
-    </nav>
-
-    <div class="chat-container">
-        <iframe
-            id="dify-iframe"
-            src="https://udify.app/chat/ERNQLHGG3QKClfr7"
-            allow="microphone">
-        </iframe>
-    </div>
-
-    <script>
-        // 自動帶入會員資料
-window.onload = function() {
-    // 1. 從網址取得會員資料
-    const urlParams = new URLSearchParams(window.location.search);
-    const userName = urlParams.get('name') || "訪客";
-    const userPhone = urlParams.get('phone') || "GUEST";
-    
-    // 2. 封裝變數 (請務必確認 Dify 設定的變數名稱也是 user_name 和 user_phone)
-    const inputsData = {
-        "user_name": userName,
-        "user_phone": userPhone
-    };
-
-    const iframe = document.getElementById('dify-iframe');
-    const baseUrl = "https://udify.app/chat/ERNQLHGG3QKClfr7";
-    
-    // 3. 核心修正：先清空 src，確保強制重新載入，並使用 URLSearchParams 進行編碼
-    iframe.src = ""; 
-    
-    const finalInputs = JSON.stringify(inputsData);
-    // 這裡使用最穩定的參數串接方式
-    const finalUrl = `${baseUrl}?inputs=${encodeURIComponent(finalInputs)}`;
-    
-    console.log("嘗試注入參數 URL:", finalUrl);
-    
-    // 4. 延遲 100ms 注入，確保 DOM 已完全就緒
-    setTimeout(() => {
-        iframe.src = finalUrl;
-    }, 100);
-};        
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+<script>
+  window.difyChatbotConfig = {
+    token: 'ERNQLHGG3QKClfr7',
+    baseUrl: 'https://udify.app',
+    inputs: {
+     user_phone: '0928528517'
+    }
+  }
+</script>
+<script src="https://udify.app/embed.min.js" id="ERNQLHGG3QKClfr7" defer></script>
 </body>
 </html>

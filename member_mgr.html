@@ -188,35 +188,48 @@
             openModal('memberModal');
         }
 
-        function saveMemberData() {
-            var n = document.getElementById('mName').value.trim();
-            var p = document.getElementById('mPhone').value.trim();
-            if (!n || !p) return alert("姓名與手機為必填");
+function saveMemberData() {
+    var n = document.getElementById('mName').value.trim();
+    var p = document.getElementById('mPhone').value.trim();
+    if (!n || !p) return alert("姓名與手機為必填");
 
-            closeModal('memberModal');
-            toggleLoading(true);
+    toggleLoading(true);
+    closeModal('memberModal');
 
-            var type = currentEditPhone ? 'edit_member' : 'add_member';
-            var payload = {
-                type: type,
-                key: STAFF_KEY,
-                name: n,
-                phone: p,
-                email: document.getElementById('mEmail').value,
-                role: document.getElementById('mRole').value,
-                joinDate: document.getElementById('mJoinDate').value,
-                note: document.getElementById('mNote').value
-            };
+    // 關鍵判斷：如果有 currentEditPhone 代表是「修改」，否則為「新增」
+    var requestType = currentEditPhone ? 'edit_member' : 'add_member';
 
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(r => r.json())
-                .then(res => {
-                    showToast(res.result === "SUCCESS" ? "✅ 儲存成功" : "❌ 失敗: " + res.message);
-                    loadMembers();
-                })
-                .finally(() => toggleLoading(false));
+    var payload = {
+        type: requestType,
+        key: STAFF_KEY,
+        name: n,
+        phone: p, // 修改時此為 ID
+        email: document.getElementById('mEmail').value.trim(),
+        role: document.getElementById('mRole').value,
+        joinDate: document.getElementById('mJoinDate').value,
+        note: document.getElementById('mNote').value.trim()
+    };
+
+    fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.result === "SUCCESS") {
+            showToast("✅ 資料已同步至雲端");
+            loadMembers(); // 重新整理列表
+        } else {
+            showToast("❌ 儲存失敗：" + res.message);
         }
-
+    })
+    .catch(err => {
+        console.error(err);
+        showToast("⚠️ 網路連線異常");
+    })
+    .finally(() => toggleLoading(false));
+}
+        
         function deleteCurrentMember() {
             var n = document.getElementById('mName').value;
             var p = document.getElementById('mPhone').value;

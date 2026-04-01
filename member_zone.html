@@ -554,14 +554,29 @@ async function syncData() {
         const newsContainer = document.getElementById('newsContainer');
         const newsText = document.getElementById('news');
 
-        if (newsContent && newsContent !== "NONE" && newsContent !== "") {
-            // 如果有公告內容，顯示容器並填入文字
-            if (newsContainer) newsContainer.classList.remove('hidden');
-            if (newsText) newsText.innerText = newsContent;
-        } else {
-            // 如果沒有公告，隱藏整個容器
-            if (newsContainer) newsContainer.classList.add('hidden');
-        }
+        // 取得台灣本地今日日期 (格式: YYYY-MM-DD)
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        // 取得後端傳來的有效日期 (若後端沒傳，預設為空字串)
+        const startDate = data.startDate || "";
+        const endDate = data.endDate || "";
+
+        // 判斷條件：
+        // 1. 必須有文字內容
+        // 2. 文字內容不是 "NONE"
+        // 3. (關鍵) 今日日期必須 >= 起始日期 且 今日日期 <= 結束日期
+        const isDateValid = (startDate === "" || todayStr >= startDate) && (endDate === "" || todayStr <= endDate);        
+        
+     if (newsContent && newsContent !== "NONE" && newsContent !== "" && isDateValid) {
+       // 條件符合：顯示容器並填入文字
+       if (newsContainer) newsContainer.classList.remove('hidden');
+       if (newsText) newsText.innerText = newsContent;
+     } else {
+       // 條件不符（日期還沒到、已過期、或沒內容）：隱藏整個容器
+       if (newsContainer) newsContainer.classList.add('hidden');
+     }
+        
         // --- 公告欄修改邏輯結束 ---   
         
         const liveUser = data.users.find(u => {

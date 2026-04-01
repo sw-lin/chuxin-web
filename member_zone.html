@@ -111,12 +111,18 @@
                 <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
             </button>
-<button id="calendarBtn" onclick="location.href='calendar.html'" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
-     <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
-         <i class="fas fa-calendar-alt text-xl"></i>
-     </div>
-     <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
-</button>            
+            <button onclick="goToAI()" class="bg-emerald-50 p-6 rounded-[2rem] shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+                <div class="bg-emerald-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+                    <i class="fas fa-comment-dots text-xl"></i>
+                </div>
+                <span class="font-black text-emerald-900 text-sm tracking-wide">智慧助理</span>
+            </button>            
+            <button id="calendarBtn" onclick="location.href='calendar.html'" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+                <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+                <i class="fas fa-calendar-alt text-xl"></i>
+            </div>
+            <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
+            </button>            
             <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
                 <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
@@ -352,7 +358,8 @@ function renderTextOnlyCard(title, date) {
     function closeEditModal(e, force=false) { if (force || e.target === document.getElementById('editProfileModal')) { document.getElementById('editProfileModal').style.display = 'none'; } }
     function logout() { sessionStorage.clear(); location.href = 'index.html'; }
     function openRemoteLink(key) { if (remoteConfig[key]) window.open(remoteConfig[key], '_blank'); else showToast("未設定連結", "error"); }
-
+    function goToAI() { location.href = `ai_chat.html?name=${encodeURIComponent(currentUser.name)}&phone=${encodeURIComponent(currentUser.phone)}`; }
+    
     function openEditModal() {
     // 取得 Email 輸入框元素
     const emailInput = document.getElementById('editEmail');

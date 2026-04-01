@@ -58,11 +58,12 @@
     <script>
         // 自動帶入會員資料
 window.onload = function() {
+    // 1. 從網址取得會員資料
     const urlParams = new URLSearchParams(window.location.search);
     const userName = urlParams.get('name') || "訪客";
     const userPhone = urlParams.get('phone') || "GUEST";
     
-    // 確保這裡的 Key (user_name, user_phone) 與 Dify [編排] 頁面的變數名稱完全一致
+    // 2. 封裝變數 (請務必確認 Dify 設定的變數名稱也是 user_name 和 user_phone)
     const inputsData = {
         "user_name": userName,
         "user_phone": userPhone
@@ -71,11 +72,19 @@ window.onload = function() {
     const iframe = document.getElementById('dify-iframe');
     const baseUrl = "https://udify.app/chat/ERNQLHGG3QKClfr7";
     
-    // 核心修正：將物件轉 JSON 後，進行 URL 編碼
-    const encodedInputs = encodeURIComponent(JSON.stringify(inputsData));
+    // 3. 核心修正：先清空 src，確保強制重新載入，並使用 URLSearchParams 進行編碼
+    iframe.src = ""; 
     
-    // 最終合成的 URL
-    iframe.src = `${baseUrl}?inputs=${encodedInputs}`;
+    const finalInputs = JSON.stringify(inputsData);
+    // 這裡使用最穩定的參數串接方式
+    const finalUrl = `${baseUrl}?inputs=${encodeURIComponent(finalInputs)}`;
+    
+    console.log("嘗試注入參數 URL:", finalUrl);
+    
+    // 4. 延遲 100ms 注入，確保 DOM 已完全就緒
+    setTimeout(() => {
+        iframe.src = finalUrl;
+    }, 100);
 };        
     </script>
 

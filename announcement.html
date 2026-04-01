@@ -38,9 +38,25 @@
                 <i class="fas fa-scroll text-emerald-700"></i>
                 <span class="font-bold text-emerald-900">1. 會員 App 公告欄</span>
             </div>
-            <div class="p-5">
+
+                <div class="p-5">
                 <p class="text-[11px] text-gray-400 mb-3 font-bold uppercase tracking-wider">更新後，全體會員登入後可見</p>
                 <textarea id="newsContent" rows="4" placeholder="讀取目前公告中..." class="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-100 mb-6">
+                <label class="block text-emerald-800 font-bold mb-2">公告內容</label>
+                <textarea id="newsContent" class="w-full h-32 p-4 border rounded-2xl focus:ring-2 focus:ring-emerald-500 mb-4" placeholder="請輸入公告..."></textarea>
+    
+                <div class="grid grid-cols-2 gap-4">
+                <div>
+                   <label class="block text-sm text-emerald-600 font-bold mb-1">起始日期</label>
+                   <input type="date" id="newsStart" class="w-full p-2 border rounded-xl">
+               </div>
+               <div>
+                   <label class="block text-sm text-emerald-600 font-bold mb-1">結束日期</label>
+                   <input type="date" id="newsEnd" class="w-full p-2 border rounded-xl">
+               </div>
+    </div>
+</div>                
                 <button onclick="updateAppNews()" class="w-full mt-4 py-4 bg-[#064E3B] text-white rounded-xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all">
                     <i class="fas fa-save"></i> 儲存並更新公告
                 </button>
@@ -91,21 +107,41 @@
 
         // 更新 App 內部的公告欄[cite: 4]
         function updateAppNews() {
-            var content = document.getElementById('newsContent').value.trim();
-            if (!content) return alert("公告內容不可為空");
-            if (!confirm("確定要更新全體會員首頁的公告嗎？")) return;
+         const content = document.getElementById('newsContent').value.trim();
+         let startDate = document.getElementById('newsStart').value;
+         let endDate = document.getElementById('newsEnd').value;
 
-            showLoading(true, "更新公告中...");
-            var payload = { type: 'update_news', key: STAFF_KEY, content: content };
+        // --- 自動計算日期邏輯 ---
+        const today = new Date();
+        const nextWeek = new Date();
+        nextWeek.setDate(today.getDate() + 7);
 
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(function(res) { return res.json(); })
-                .then(function(result) {
-                    if (result.result === "SUCCESS") {
-                        showToast("✅ 會員公告已更新");
-                    } else { alert("更新失敗"); }
-                })
-                .finally(function() { showLoading(false); });
+        const isoToday = today.toISOString().split('T')[0];
+        const isoNextWeek = nextWeek.toISOString().split('T')[0];
+
+       // 如果沒填，就帶入預設值 (今日 ~ 一週後)
+       if (!startDate) startDate = isoToday;
+       if (!endDate) endDate = isoNextWeek;
+
+       if (!content) return alert("公告內容不能為空");
+
+      showLoading(true, "更新公告中...");
+      const payload = {
+        type: 'update_news',
+        key: STAFF_KEY,
+        content: content,
+        startDate: startDate,
+        endDate: endDate
+        };
+
+        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+        .then(res => res.json())
+        .then(result => {
+            if (result.result === "SUCCESS") {
+                showToast("✅ 公告與有效期限已更新");
+            } else { alert("更新失敗"); }
+        })
+        .finally(() => showLoading(false));            
         }
 
         // 發送 LINE 訊息推播[cite: 4]

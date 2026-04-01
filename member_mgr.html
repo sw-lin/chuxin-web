@@ -51,11 +51,13 @@
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-6 text-center">會員資料</h3>
             <div class="space-y-4">
+                <div class="text-xs font-bold text-gray-400 pl-2">基本資訊</div>
                 <input type="text" id="mName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
                 <input type="tel" id="mPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono">
                 <input type="email" id="mEmail" placeholder="電子郵件 Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 
-                <select id="mRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-500 appearance-none">
+                <div class="text-xs font-bold text-gray-400 pl-2">會務設定</div>
+                <select id="mRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-500">
                     <option value="">-- 選擇職位 (可不選) --</option>
                     <option value="會長">會長</option>
                     <option value="副會長">副會長</option>
@@ -71,11 +73,18 @@
                 <div class="text-xs font-bold text-gray-400 pl-2">入會日期</div>
                 <input type="date" id="mJoinDate" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 
-                <textarea id="mNote" placeholder="備註事項" rows="3" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold"></textarea>
+                <div class="text-xs font-bold text-gray-400 pl-2">備註事項</div>
+                <textarea id="mNote" placeholder="輸入會員相關備註..." rows="3" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold"></textarea>
             </div>
-            <div class="grid grid-cols-2 gap-3 mt-8">
-                <button onclick="closeModal('memberModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                <button id="modalSubmitBtn" onclick="saveMemberData()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認儲存</button>
+
+            <div class="flex flex-col gap-3 mt-8">
+                <button id="modalSubmitBtn" onclick="saveMemberData()" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg">確認儲存</button>
+                <div class="flex justify-between items-center px-2">
+                    <button id="deleteInModalBtn" onclick="deleteCurrentMember()" class="text-red-500 font-black text-sm hidden">
+                        <i class="fas fa-trash-alt mr-1"></i> 刪除此成員
+                    </button>
+                    <button onclick="closeModal('memberModal')" class="text-gray-400 font-bold text-sm">取消返回</button>
+                </div>
             </div>
         </div>
     </div>
@@ -84,7 +93,7 @@
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         var STAFF_KEY = sessionStorage.getItem('staff_key');
         var isEditMode = false;
-        var currentEditPhone = null; // 用於辨識是新增還是修改
+        var currentEditPhone = null;
 
         window.onload = function() {
             if (!STAFF_KEY) { 
@@ -110,11 +119,16 @@
                     users.forEach(u => {
                         var p = String(u.phone).startsWith('0') ? u.phone : '0' + u.phone;
                         
-                        // 卡片：根據模式決定點擊行為
-                        var clickAction = isEditMode ? `openEditModal('${u.phone}', '${u.name}', '${u.email || ''}', '${u.role || ''}', '${u.joinDate || ''}', '${u.note || ''}')` : `toggleCard(this)`;
-                        
+                        // 資料清理防呆
+                        var uName = (u.name || "").replace(/'/g, "\\'");
+                        var uEmail = (u.email || "").replace(/'/g, "\\'");
+                        var uRole = (u.role || "").replace(/'/g, "\\'");
+                        var uJoinDate = (u.joinDate || "").replace(/'/g, "\\'");
+                        var uNote = (u.note || "").replace(/'/g, "\\'");
+
                         html += `
-                        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]" onclick="${clickAction}">
+                        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]" 
+                             onclick="handleCardClick(this, '${p}', '${uName}', '${uEmail}', '${uRole}', '${uJoinDate}', '${uNote}')">
                             <div class="flex justify-between items-center w-full">
                                 <div class="flex items-center gap-2 overflow-hidden mr-4">
                                     <span class="text-lg font-black text-emerald-900 truncate">${u.name}</span>
@@ -123,7 +137,7 @@
                                 <div class="flex items-center gap-3 shrink-0">
                                     <div class="text-lg font-black text-emerald-800 font-mono">${p}</div>
                                     ${isEditMode ? 
-                                        `<button onclick="event.stopPropagation(); deleteMember('${u.phone}', '${u.name}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all"><i class="fas fa-trash-alt text-sm"></i></button>` : 
+                                        `<i class="fas fa-pen text-orange-400 text-sm ml-1"></i>` : 
                                         `<i class="fas fa-chevron-down text-gray-300 rotate-icon"></i>`
                                     }
                                 </div>
@@ -142,12 +156,19 @@
                 .finally(() => toggleLoading(false));
         }
 
-        // 彈窗控制
+        function handleCardClick(el, phone, name, email, role, joinDate, note) {
+            if (isEditMode) {
+                openEditModal(phone, name, email, role, joinDate, note);
+            } else {
+                el.classList.toggle('card-active');
+            }
+        }
+
         function openAddModal() {
             currentEditPhone = null;
             document.getElementById('modalTitle').innerText = "新增新會員";
             document.getElementById('mPhone').disabled = false;
-            // 清空欄位
+            document.getElementById('deleteInModalBtn').classList.add('hidden');
             ['mName', 'mPhone', 'mEmail', 'mRole', 'mJoinDate', 'mNote'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('mJoinDate').value = new Date().toISOString().split('T')[0];
             openModal('memberModal');
@@ -156,7 +177,8 @@
         function openEditModal(phone, name, email, role, joinDate, note) {
             currentEditPhone = phone;
             document.getElementById('modalTitle').innerText = "修改會員資料";
-            document.getElementById('mPhone').disabled = true; // 帳號(手機)不可修改
+            document.getElementById('mPhone').disabled = true;
+            document.getElementById('deleteInModalBtn').classList.remove('hidden');
             document.getElementById('mName').value = name;
             document.getElementById('mPhone').value = phone;
             document.getElementById('mEmail').value = email;
@@ -195,7 +217,18 @@
                 .finally(() => toggleLoading(false));
         }
 
-        function toggleCard(el) { el.classList.toggle('card-active'); }
+        function deleteCurrentMember() {
+            var n = document.getElementById('mName').value;
+            var p = document.getElementById('mPhone').value;
+            if (confirm(`確定要刪除「${n}」嗎？此動作無法復原。`)) {
+                closeModal('memberModal');
+                toggleLoading(true);
+                fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_member', key: STAFF_KEY, phone: p }) })
+                    .then(() => { showToast("🗑️ 已移除成員"); loadMembers(); })
+                    .finally(() => toggleLoading(false));
+            }
+        }
+
         function toggleEditMode() {
             isEditMode = !isEditMode;
             var btn = document.getElementById('editToggleBtn');
@@ -204,13 +237,7 @@
             document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
             loadMembers();
         }
-        function deleteMember(phone, name) {
-            if (!confirm(`確定要刪除「${name}」嗎？`)) return;
-            toggleLoading(true);
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_member', key: STAFF_KEY, phone: phone }) })
-                .then(() => { showToast("🗑️ 已移除成員"); loadMembers(); })
-                .finally(() => toggleLoading(false));
-        }
+
         function showToast(m) {
             var t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
             document.body.appendChild(t);

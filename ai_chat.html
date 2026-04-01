@@ -12,24 +12,34 @@
             font-family: 'Noto Serif TC', serif; 
             background-color: #FDFBF7; 
             margin: 0;
-            overflow: hidden; /* 防止全頁出現雙捲軸 */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 避免頁面捲軸，只讓聊天框捲動 */
         }
         
-        /* 讓容器填滿剩餘空間，且不遮擋導覽列 */
-        #dify-chatbot-container {
-            width: 100%;
-            height: calc(100vh - 64px); /* 總高減去導覽列的 16 (4rem = 64px) */
-            display: block;
+        /* 導覽列固定高度 */
+        nav {
+            height: 64px;
+            flex-shrink: 0;
         }
 
-        /* 針對 Dify 嵌入後的 iframe 進行微調 */
+        /* 聊天視窗容器：佔滿剩餘高度 */
+        .chat-container {
+            flex-grow: 1;
+            width: 100%;
+            border: none;
+        }
+
         iframe {
-            border: none !important;
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
-<body class="h-screen flex flex-col">
-    <nav class="bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between relative z-50">
+<body>
+    <nav class="bg-[#064e3b] text-white px-6 shadow-lg flex items-center justify-between relative z-50">
         <div class="flex items-center gap-2">
             <i class="fas fa-robot text-emerald-400"></i>
             <h1 class="text-xl font-black tracking-widest">智慧助理</h1>
@@ -37,33 +47,34 @@
         <button onclick="location.href='member_zone.html'" class="px-4 py-2 bg-white/20 rounded-full text-[12px] font-bold hover:bg-white/30 transition-all">返回會員中心</button>
     </nav>
 
-    <div id="dify-chatbot-container"></div>
+    <div class="chat-container">
+        <iframe
+            id="dify-iframe"
+            src="https://udify.app/chat/ERNQLHGG3QKClfr7"
+            allow="microphone">
+        </iframe>
+    </div>
 
     <script>
-        // 獲取參數
-        const urlParams = new URLSearchParams(window.location.search);
-        const userName = urlParams.get('name') || "訪客";
-        const userPhone = urlParams.get('phone') || "GUEST";
-
-        // 設定 Dify 為嵌入模式
-        window.difyChatbotConfig = {
-            token: 'ERNQLHGG3QKClfr7',
-            baseUrl: 'https://udify.app',
-            container: '#dify-chatbot-container', // 這裡指定容器
-            isDev: false,
-            inputs: {
+        // 自動帶入會員資料
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userName = urlParams.get('name') || "訪客";
+            const userPhone = urlParams.get('phone') || "GUEST";
+            
+            // 如果需要傳遞參數給嵌入式視窗，Dify 的 iframe 連結通常支援 query string
+            const iframe = document.getElementById('dify-iframe');
+            // 注意：Dify 嵌入式頁面通常透過 URL 傳遞 inputs
+            // 格式為: &inputs={"key":"value"}，需先轉為 URL 編碼
+            const inputs = encodeURIComponent(JSON.stringify({
                 "user_name": userName,
                 "user_phone": userPhone
-            }
+            }));
+            
+            iframe.src = `https://udify.app/chat/ERNQLHGG3QKClfr7?inputs=${inputs}`;
         };
     </script>
-    
-    <script 
-        src="https://udify.app/embed.min.js" 
-        id="ERNQLHGG3QKClfr7" 
-        defer>
-    </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </body>
 </html>

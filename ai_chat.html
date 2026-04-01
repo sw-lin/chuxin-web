@@ -10,6 +10,25 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
     </style>
+    <style>
+    /* 強制對話視窗佔滿畫面 (PC適用) */
+    #dify-chatbot-bubble-window {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 1000px !important; /* PC 上最大寬度，可依喜好調整 */
+      max-height: 90vh !important;
+      right: 50% !important;
+      bottom: 50% !important;
+      transform: translate(50%, 50%) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    }
+  
+    /* 隱藏預設的關閉按鈕（因為這一頁就是專門聊天用的） */
+    #dify-chatbot-bubble-window [class*="close"] {
+      display: none !important;
+    }
+    </style>    
 </head>
 <body class="h-screen flex flex-col">
     <nav class="bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
@@ -17,11 +36,12 @@
             <i class="fas fa-robot text-emerald-400"></i>
             <h1 class="text-xl font-black tracking-widest">智慧助理</h1>
         </div>
-        <button onclick="location.href='member_zone.html'" class="px-4 py-2 bg-white/20 rounded-full text-[12px] font-bold">返回中心</button>
+        <button onclick="location.href='member_zone.html'" class="px-4 py-2 bg-white/20 rounded-full text-[12px] font-bold">返回會員中心</button>
     </nav>
 
     <div id="dify-chatbot-container" class="flex-1 w-full">
         </div>
+    
 
     <script>
         // 獲取網址參數 (例如 ai_chat.html?name=王小明)
@@ -39,6 +59,30 @@
             }
         };
     </script>
-    <script src="https://udify.app/embed.min.js" id="dify-chatbot-script" defer></script>
+    
+    <script 
+    src="https://udify.app/embed.min.js" 
+    id="ERNQLHGG3QKClfr7" 
+     defer>
+    </script> 
+    
+    <script>
+    window.addEventListener('load', () => {
+    // 監測 Dify 是否加載完成
+    const checkDify = setInterval(() => {
+      if (window.difyChatbot && typeof window.difyChatbot.show === 'function') {
+        // A. 強制顯示並開啟對話框 (不用再按泡泡)
+        window.difyChatbot.show();
+        window.difyChatbot.open();
+        
+        // B. 隱藏那個礙眼的右下角圓圈泡泡
+        const bubble = document.getElementById('dify-chatbot-bubble-button');
+        if (bubble) bubble.style.display = 'none';
+        
+        clearInterval(checkDify);
+      }
+      }, 100);
+    });
+    </script>    
 </body>
 </html>

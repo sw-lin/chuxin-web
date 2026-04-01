@@ -15,10 +15,10 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; transition: opacity 0.5s; pointer-events: none; }
         
-        /* 展開動畫樣式 */
+        /* 展開動畫 */
         .detail-section { max-height: 0; overflow: hidden; transition: all 0.3s ease-out; opacity: 0; }
-        .card-active .detail-section { max-height: 200px; opacity: 1; padding-top: 1rem; margin-top: 1rem; border-top: 1px dashed #e5e7eb; }
-        .card-active { border-color: #059669 !important; ring: 2px; ring-color: #059669; }
+        .card-active .detail-section { max-height: 300px; opacity: 1; padding-top: 1rem; margin-top: 1rem; border-top: 1px dashed #e5e7eb; }
+        .card-active { border-color: #059669 !important; }
         .rotate-icon { transition: transform 0.3s; }
         .card-active .rotate-icon { transform: rotate(180deg); }
     </style>
@@ -42,20 +42,20 @@
     </main>
 
     <div id="bottomAddArea" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xs px-6 hidden z-30">
-        <button onclick="openModal('addMemberModal')" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+        <button onclick="openAddModal()" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
             <i class="fas fa-user-plus text-xl"></i> 新增新會員
         </button>
     </div>
 
-    <div id="addMemberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6" onclick="closeModal('addMemberModal')">
-        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl" onclick="event.stopPropagation()">
-            <h3 class="text-xl font-black text-emerald-900 mb-6 text-center">新增新會員</h3>
+    <div id="memberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6" onclick="closeModal('memberModal')">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-6 text-center">會員資料</h3>
             <div class="space-y-4">
-                <input type="text" id="newName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
-                <input type="tel" id="newPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono">
-                <input type="email" id="newEmail" placeholder="電子郵件 Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                <input type="text" id="mName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
+                <input type="tel" id="mPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono">
+                <input type="email" id="mEmail" placeholder="電子郵件 Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 
-                <select id="newRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-500 appearance-none">
+                <select id="mRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-500 appearance-none">
                     <option value="">-- 選擇職位 (可不選) --</option>
                     <option value="會長">會長</option>
                     <option value="副會長">副會長</option>
@@ -65,23 +65,26 @@
                     <option value="資訊圖書">資訊圖書</option>
                     <option value="企劃">企劃</option>
                     <option value="活動">活動</option>
-                    
+                    <option value="會員">會員</option>
                 </select>
+
+                <div class="text-xs font-bold text-gray-400 pl-2">入會日期</div>
+                <input type="date" id="mJoinDate" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                
+                <textarea id="mNote" placeholder="備註事項" rows="3" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold"></textarea>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-8">
-                <button onclick="closeModal('addMemberModal')" class="py-4 text-gray-400 font-bold">取消</button>
-                <button onclick="submitAddMember()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認新增</button>
+                <button onclick="closeModal('memberModal')" class="py-4 text-gray-400 font-bold">取消</button>
+                <button id="modalSubmitBtn" onclick="saveMemberData()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black">確認儲存</button>
             </div>
         </div>
     </div>
 
     <script>
-        var u1 = 'https://script.google.com';
-        var u2 = '/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
-        var GAS_URL = u1 + u2;
-        
+        var GAS_URL = 'https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec';
         var STAFF_KEY = sessionStorage.getItem('staff_key');
         var isEditMode = false;
+        var currentEditPhone = null; // 用於辨識是新增還是修改
 
         window.onload = function() {
             if (!STAFF_KEY) { 
@@ -94,90 +97,105 @@
 
         function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
-        // 會員列表渲染：加入點擊展開詳細資訊功能
         function loadMembers() {
             toggleLoading(true);
             fetch(GAS_URL + "?t=" + Date.now())
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
+                .then(r => r.json())
+                .then(data => {
                     var list = document.getElementById('memberList');
                     var users = data.users || [];
                     document.getElementById('memberCount').innerText = users.length + ' 位成員';
                     
                     var html = '';
-                    for (var i = 0; i < users.length; i++) {
-                        var u = users[i];
+                    users.forEach(u => {
                         var p = String(u.phone).startsWith('0') ? u.phone : '0' + u.phone;
                         
-                        // 卡片主容器
-                        html += '<div id="card-'+u.phone+'" onclick="toggleCard(this)" class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]">';
+                        // 卡片：根據模式決定點擊行為
+                        var clickAction = isEditMode ? `openEditModal('${u.phone}', '${u.name}', '${u.email || ''}', '${u.role || ''}', '${u.joinDate || ''}', '${u.note || ''}')` : `toggleCard(this)`;
                         
-                        // 頂部資訊列：改為 justify-between 確保姓名靠左、電話靠右
-                        html += '  <div class="flex justify-between items-center w-full">';
-                        
-                        // 左側：姓名與職位 (設定固定最大寬度，避免推擠電話)
-                        html += '    <div class="flex items-center gap-2 overflow-hidden mr-4">';
-                        html += '      <span class="text-lg font-black text-emerald-900 truncate">' + u.name + '</span>';
-                        if(u.role) {
-                            html += '      <span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full shrink-0">' + u.role + '</span>';
-                        }
-                        html += '    </div>';
-                        
-                        // 右側：電話 (字體大小 text-lg，與姓名一致)
-                        html += '    <div class="flex items-center gap-3 shrink-0">';
-                        html += '      <div class="text-lg font-black text-emerald-800 font-mono">' + p + '</div>';
-                        if (isEditMode) {
-                            html += '      <button onclick="event.stopPropagation(); deleteMember(\''+u.phone+'\', \''+u.name+'\')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all"><i class="fas fa-trash-alt text-sm"></i></button>';
-                        } else {
-                            html += '      <i class="fas fa-chevron-down text-gray-300 rotate-icon"></i>';
-                        }
-                        html += '    </div>';
-                        
-                        html += '  </div>';
-
-                        // 展開的詳細資訊區塊 (維持原樣)
-                        html += '  <div class="detail-section">';
-                        html += '    <div class="grid grid-cols-1 gap-3">';
-                        html += '      <div class="flex items-center gap-2 text-xs">';
-                        html += '        <span class="w-16 text-gray-400 font-bold shrink-0">電子郵件</span>';
-                        html += '        <span class="text-emerald-900 font-medium truncate">' + (u.email || "未提供") + '</span>';
-                        html += '      </div>';
-                        html += '      <div class="flex items-center gap-2 text-xs">';
-                        html += '        <span class="w-16 text-gray-400 font-bold shrink-0">入會日期</span>';
-                        html += '        <span class="text-emerald-900 font-medium">' + (u.joinDate || "系統移轉前會員") + '</span>';
-                        html += '      </div>';
-                        html += '      <div class="flex items-start gap-2 text-xs">';
-                        html += '        <span class="w-16 text-gray-400 font-bold shrink-0">備註事項</span>';
-                        html += '        <span class="text-emerald-900 font-medium leading-relaxed">' + (u.note || "無") + '</span>';
-                        html += '      </div>';
-                        html += '    </div>';
-                        html += '  </div>';
-
-                        html += '</div>';
-                    }
+                        html += `
+                        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]" onclick="${clickAction}">
+                            <div class="flex justify-between items-center w-full">
+                                <div class="flex items-center gap-2 overflow-hidden mr-4">
+                                    <span class="text-lg font-black text-emerald-900 truncate">${u.name}</span>
+                                    ${u.role ? `<span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full shrink-0">${u.role}</span>` : ''}
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0">
+                                    <div class="text-lg font-black text-emerald-800 font-mono">${p}</div>
+                                    ${isEditMode ? 
+                                        `<button onclick="event.stopPropagation(); deleteMember('${u.phone}', '${u.name}')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-full active:scale-90 transition-all"><i class="fas fa-trash-alt text-sm"></i></button>` : 
+                                        `<i class="fas fa-chevron-down text-gray-300 rotate-icon"></i>`
+                                    }
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="grid grid-cols-1 gap-3 text-xs">
+                                    <div class="flex"><span class="w-16 text-gray-400 font-bold">Email</span><span class="text-emerald-900 font-medium truncate">${u.email || '未提供'}</span></div>
+                                    <div class="flex"><span class="w-16 text-gray-400 font-bold">入會日期</span><span class="text-emerald-900 font-medium">${u.joinDate || '無'}</span></div>
+                                    <div class="flex"><span class="w-16 text-gray-400 font-bold">備註</span><span class="text-emerald-900 font-medium">${u.note || '無'}</span></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
                     list.innerHTML = html;
                 })
-                .catch(function() { showToast("連線失敗"); })
-                .finally(function() { toggleLoading(false); });
-        }
-        // 切換卡片展開狀態
-        function toggleCard(el) {
-            // 如果在編輯模式，不觸發展開（為了方便點擊刪除按鈕）
-            if(isEditMode) return;
-            
-            // 檢查是否點擊到按鈕本身（雖然有 stopPropagation，但這是雙重保險）
-            if (event.target.closest('button')) return;
-
-            // 先把其他已經展開的縮回去 (選擇性功能，想要一次展開多個可以把這段刪掉)
-            /*
-            document.querySelectorAll('.card-active').forEach(c => {
-                if(c !== el) c.classList.remove('card-active');
-            });
-            */
-
-            el.classList.toggle('card-active');
+                .finally(() => toggleLoading(false));
         }
 
+        // 彈窗控制
+        function openAddModal() {
+            currentEditPhone = null;
+            document.getElementById('modalTitle').innerText = "新增新會員";
+            document.getElementById('mPhone').disabled = false;
+            // 清空欄位
+            ['mName', 'mPhone', 'mEmail', 'mRole', 'mJoinDate', 'mNote'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('mJoinDate').value = new Date().toISOString().split('T')[0];
+            openModal('memberModal');
+        }
+
+        function openEditModal(phone, name, email, role, joinDate, note) {
+            currentEditPhone = phone;
+            document.getElementById('modalTitle').innerText = "修改會員資料";
+            document.getElementById('mPhone').disabled = true; // 帳號(手機)不可修改
+            document.getElementById('mName').value = name;
+            document.getElementById('mPhone').value = phone;
+            document.getElementById('mEmail').value = email;
+            document.getElementById('mRole').value = role;
+            document.getElementById('mJoinDate').value = joinDate;
+            document.getElementById('mNote').value = note;
+            openModal('memberModal');
+        }
+
+        function saveMemberData() {
+            var n = document.getElementById('mName').value.trim();
+            var p = document.getElementById('mPhone').value.trim();
+            if (!n || !p) return alert("姓名與手機為必填");
+
+            closeModal('memberModal');
+            toggleLoading(true);
+
+            var type = currentEditPhone ? 'edit_member' : 'add_member';
+            var payload = {
+                type: type,
+                key: STAFF_KEY,
+                name: n,
+                phone: p,
+                email: document.getElementById('mEmail').value,
+                role: document.getElementById('mRole').value,
+                joinDate: document.getElementById('mJoinDate').value,
+                note: document.getElementById('mNote').value
+            };
+
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(r => r.json())
+                .then(res => {
+                    showToast(res.result === "SUCCESS" ? "✅ 儲存成功" : "❌ 失敗: " + res.message);
+                    loadMembers();
+                })
+                .finally(() => toggleLoading(false));
+        }
+
+        function toggleCard(el) { el.classList.toggle('card-active'); }
         function toggleEditMode() {
             isEditMode = !isEditMode;
             var btn = document.getElementById('editToggleBtn');
@@ -186,62 +204,17 @@
             document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
             loadMembers();
         }
-
-        function submitAddMember() {
-            var n = document.getElementById('newName').value.trim();
-            var p = document.getElementById('newPhone').value.trim();
-            var e = document.getElementById('newEmail').value.trim();
-            var r = document.getElementById('newRole').value; // 獲取職位
-            
-            if (!n || !p) return alert("姓名與手機為必填");
-
-            closeModal('addMemberModal');
-            toggleLoading(true);
-
-            var payload = { 
-                type: 'add_member', 
-                key: STAFF_KEY, 
-                name: n, 
-                phone: p, 
-                email: e, 
-                password: '123', 
-                role: r, 
-                joinDate: new Date().toISOString().split('T')[0] // 自動代入今日日期
-            };
-            
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(function(res) { return res.json(); })
-                .then(function(res) { 
-                    if(res.result === "SUCCESS") {
-                        showToast("✅ 會員 " + n + " 已新增"); 
-                        // 清空欄位
-                        document.getElementById('newName').value = '';
-                        document.getElementById('newPhone').value = '';
-                        document.getElementById('newEmail').value = '';
-                        document.getElementById('newRole').value = '';
-                        loadMembers(); 
-                    } else {
-                        showToast("❌ 新增失敗：" + res.message);
-                    }
-                })
-                .catch(function() { showToast("網路異常"); })
-                .finally(function() { toggleLoading(false); });
-        }
-
         function deleteMember(phone, name) {
-            if (!confirm("確定要刪除「" + name + "」嗎？此動作無法復原。")) return;
+            if (!confirm(`確定要刪除「${name}」嗎？`)) return;
             toggleLoading(true);
-            var payload = { type: 'delete_member', key: STAFF_KEY, phone: phone };
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(function() { showToast("🗑️ 已移除成員"); loadMembers(); })
-                .catch(function() { showToast("網路錯誤"); })
-                .finally(function() { toggleLoading(false); });
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_member', key: STAFF_KEY, phone: phone }) })
+                .then(() => { showToast("🗑️ 已移除成員"); loadMembers(); })
+                .finally(() => toggleLoading(false));
         }
-
         function showToast(m) {
             var t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
             document.body.appendChild(t);
-            setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 500); }, 2500);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }

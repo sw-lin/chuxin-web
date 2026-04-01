@@ -104,12 +104,12 @@
             
             // 2. 填入起始日期 (假設後端回傳 key 為 start)
             if (data.start) {
-                document.getElementById('startDate').value = formatDateForInput(data.start);
+                document.getElementById('startDate').value = formatDateForInput(data.newsStart);
             }
             
             // 3. 填入結束日期 (假設後端回傳 key 為 end)
             if (data.end) {
-                document.getElementById('endDate').value = formatDateForInput(data.end);
+                document.getElementById('endDate').value = formatDateForInput(data.newsEnd);
             }
         })
         .catch(function(err) {
@@ -120,8 +120,8 @@
         // 更新 App 內部的公告欄[cite: 4]
         function updateAppNews() {
          const content = document.getElementById('newsContent').value.trim();
-         let startDate = document.getElementById('newsStart').value;
-         let endDate = document.getElementById('newsEnd').value;
+         let startDate = document.getElementById('startDate').value;
+         let endDate = document.getElementById('endDate').value;
 
         // --- 自動計算日期邏輯 ---
         const today = new Date();

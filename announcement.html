@@ -42,18 +42,19 @@
                 <div class="p-5">
                 <p class="text-[11px] text-gray-400 mb-3 font-bold uppercase tracking-wider">更新後，在預定期限內 全體會員登入後可見</p>
                 <textarea id="newsContent" rows="4" placeholder="讀取目前公告中..." class="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
-    
-                <div class="grid grid-cols-2 gap-4">
-                <div>
-                   <label class="block text-sm text-emerald-600 font-bold mb-1">起始日期</label>
-                   <input type="date" id="newsStart" class="w-full p-2 border rounded-xl">
-               </div>
-               <div>
-                   <label class="block text-sm text-emerald-600 font-bold mb-1">結束日期</label>
-                   <input type="date" id="newsEnd" class="w-full p-2 border rounded-xl">
-               </div>
+
+<div class="flex gap-4 mb-4">
+    <div class="flex-1">
+        <label class="block text-emerald-700 font-bold mb-1">起始日期</label>
+        <input type="date" id="startDate" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none">
     </div>
-</div>                
+    <div class="flex-1">
+        <label class="block text-emerald-700 font-bold mb-1">結束日期</label>
+        <input type="date" id="endDate" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none">
+    </div>
+</div>
+
+                </div>                
                 <button onclick="updateAppNews()" class="w-full mt-4 py-4 bg-[#064E3B] text-white rounded-xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all">
                     <i class="fas fa-save"></i> 儲存並更新公告
                 </button>
@@ -94,13 +95,27 @@
         }
 
         // 讀取目前資料庫裡的公告內容
-        function fetchCurrentNews() {
-            fetch(GAS_URL)
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    document.getElementById('newsContent').value = data.news || "";
-                });
-        }
+    function fetchCurrentNews() {
+    fetch(GAS_URL)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            // 1. 填入公告內容
+            document.getElementById('newsContent').value = data.news || "";
+            
+            // 2. 填入起始日期 (假設後端回傳 key 為 start)
+            if (data.start) {
+                document.getElementById('startDate').value = formatDateForInput(data.start);
+            }
+            
+            // 3. 填入結束日期 (假設後端回傳 key 為 end)
+            if (data.end) {
+                document.getElementById('endDate').value = formatDateForInput(data.end);
+            }
+        })
+        .catch(function(err) {
+            console.error("讀取失敗：", err);
+        });
+        }        
 
         // 更新 App 內部的公告欄[cite: 4]
         function updateAppNews() {
@@ -160,7 +175,20 @@
                 })
                 .finally(function() { showLoading(false); });
         }
+        // 將日期轉換為 HTML5 input 要求的 YYYY-MM-DD 格式
+    function formatDateForInput(dateStr) {
+    if (!dateStr) return "";
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return ""; // 處理無效日期
+    var month = '' + (d.getMonth() + 1);
+    var day = '' + d.getDate();
+    var year = d.getFullYear();
 
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+
+    return [year, month, day].join('-');
+    }
         function showToast(m) {
             var t = document.createElement('div');
             t.className = 'toast';

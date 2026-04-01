@@ -57,22 +57,27 @@
 
     <script>
         // 自動帶入會員資料
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const userName = urlParams.get('name') || "訪客";
-            const userPhone = urlParams.get('phone') || "GUEST";
-            
-            // 如果需要傳遞參數給嵌入式視窗，Dify 的 iframe 連結通常支援 query string
-            const iframe = document.getElementById('dify-iframe');
-            // 注意：Dify 嵌入式頁面通常透過 URL 傳遞 inputs
-            // 格式為: &inputs={"key":"value"}，需先轉為 URL 編碼
-            const inputs = encodeURIComponent(JSON.stringify({
-                "user_name": userName,
-                "user_phone": userPhone
-            }));
-            
-            iframe.src = `https://udify.app/chat/ERNQLHGG3QKClfr7?inputs=${inputs}`;
-        };
+window.onload = function() {
+    // 1. 獲取網址參數
+    const urlParams = new URLSearchParams(window.location.search);
+    const userName = urlParams.get('name') || "訪客";
+    const userPhone = urlParams.get('phone') || "GUEST";
+    
+    // 2. 準備 inputs 物件
+    const inputsObj = {
+        "user_name": userName,
+        "user_phone": userPhone
+    };
+
+    // 3. 關鍵：將物件轉換為 JSON 字串並進行「兩次」編碼，或直接放入 URL
+    // 這是最穩定的 Dify iframe 傳參格式
+    const iframe = document.getElementById('dify-iframe');
+    const baseUrl = "https://udify.app/chat/ERNQLHGG3QKClfr7";
+    const finalUrl = `${baseUrl}?inputs=${encodeURIComponent(JSON.stringify(inputsObj))}`;
+    
+    console.log("正在傳送參數:", inputsObj);
+    iframe.src = finalUrl;
+};        
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>

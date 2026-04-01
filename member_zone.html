@@ -42,16 +42,15 @@
 <main class="max-w-xl mx-auto p-6 space-y-8">
 
     <!-- 1. 公告欄 -->
-    <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
-        <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
-            <i class="fas fa-bullhorn text-lg"></i>
-        </div>
-        <div class="flex-1">
-            <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
-            <p id="news" class="text-gray-600 text-xs leading-relaxed">同步最新公告中...</p>
-        </div>
+   <div id="newsContainer" class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
+    <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+        <i class="fas fa-bullhorn text-lg"></i>
     </div>
-    
+    <div class="flex-1">
+        <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
+        <p id="news" class="text-gray-600 text-xs leading-relaxed">同步最新公告中...</p>
+    </div>
+   </div>    
     <!-- 2. 出席率卡片 -->
     <div onclick="openHistoryModal()" class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden cursor-pointer active:scale-95 transition-all">
         <div class="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/5 rounded-full"></div>
@@ -550,8 +549,20 @@ async function syncData() {
         // 確保這兩行確實執行且資料存在
         window.latestCalendarData = data.calendar || []; 
        
-        remoteConfig = data.config || {};
-        document.getElementById('news').innerText = data.news || "歡迎回來！";
+        // --- 公告欄修改邏輯開始 ---
+        const newsContent = data.news ? data.news.trim() : "";
+        const newsContainer = document.getElementById('newsContainer');
+        const newsText = document.getElementById('news');
+
+        if (newsContent && newsContent !== "NONE" && newsContent !== "") {
+            // 如果有公告內容，顯示容器並填入文字
+            if (newsContainer) newsContainer.classList.remove('hidden');
+            if (newsText) newsText.innerText = newsContent;
+        } else {
+            // 如果沒有公告，隱藏整個容器
+            if (newsContainer) newsContainer.classList.add('hidden');
+        }
+        // --- 公告欄修改邏輯結束 ---   
         
         const liveUser = data.users.find(u => {
             const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);

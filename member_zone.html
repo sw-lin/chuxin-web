@@ -558,6 +558,31 @@ async function handleReg(dataStr) {
     }
 
     document.getElementById('regOptionsModal').style.display = 'flex';
+} 
+    
+let currentNeedID = "N"; // 全域變數追蹤當前活動需求
+
+// 1. 根據選擇人數生成表單
+function renderPartnerFields() {
+    const count = parseInt(document.getElementById('partnerCount').value);
+    const container = document.getElementById('partnerContainer');
+    container.innerHTML = '';
+    
+    for (let i = 1; i <= count; i++) {
+        container.innerHTML += `
+            <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-3">
+                <p class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">同行人 ${i}</p>
+                <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm">
+                <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm">
+                ${currentNeedID === 'Y' ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono">` : ''}
+                <select class="p-meal w-full px-3 py-2 rounded-lg border text-sm">
+                    <option value="葷食">葷食</option>
+                    <option value="素食">素食</option>
+                    <option value="不拘">不拘</option>
+                </select>
+            </div>
+        `;
+    }
 }    
 // 關閉選單的輔助函數
 function closeRegModal(e, force=false) {
@@ -567,39 +592,32 @@ function closeRegModal(e, force=false) {
 } 
 // 新增的提交函數：真正把資料送出
 async function submitRegistration() {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = 'flex';
+    const partners = [];
+    const pNames = document.querySelectorAll('.p-name');
+    const pPhones = document.querySelectorAll('.p-phone');
+    const pIDs = document.querySelectorAll('.p-id');
+    const pMeals = document.querySelectorAll('.p-meal');
 
-    // 讀取所有資料
-    const idNumber = document.getElementById('regID').value;
-    const meal = document.getElementById('regMeal').value;
-    const transport = document.getElementById('regTransport').value;
-    
-    // 開車詳情
-    const canDriveOthers = document.querySelector('input[name="canDriveOthers"]:checked').value;
-    const carCapacity = document.getElementById('carCapacity').value;
-    
-    // 伴侶詳情
-    const hasPartner = document.querySelector('input[name="hasPartner"]:checked').value;
-    const partnerName = document.getElementById('partnerName').value;
-    const partnerMeal = document.getElementById('partnerMeal').value;
+    pNames.forEach((el, i) => {
+        partners.push({
+            name: el.value,
+            phone: pPhones[i].value,
+            id: pIDs[i] ? pIDs[i].value : "",
+            meal: pMeals[i].value
+        });
+    });
 
-    try {
-        const payload = {
-            type: 'complex_register',
-            activityName: tempRegTitle,
-            userName: currentUser.name,
-            userPhone: currentUser.phone,
-            userID: idNumber,           // 身分證字號
-            userMeal: meal,
-            transport: transport,
-            canDriveOthers: canDriveOthers,
-            carCapacity: carCapacity,
-            hasPartner: hasPartner,
-            partnerName: partnerName,
-            partnerMeal: partnerMeal,
-            totalCount: (hasPartner === 'Y' ? 2 : 1) // 計算總人數
-        };
+    const payload = {
+        type: 'complex_register',
+        activityName: tempRegTitle,
+        userName: currentUser.name,
+        userPhone: currentUser.phone,
+        userID: document.getElementById('regID').value,
+        userMeal: document.getElementById('regMeal').value,
+        transport: document.getElementById('regTransport').value,
+        carCapacity: document.getElementById('carCapacity') ? document.getElementById('carCapacity').value : 0,
+        partners: partners
+    };
 
         const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
         const result = await res.json();
@@ -731,6 +749,17 @@ window.addEventListener('load', () => {
 });
     
 </script>
+<div class="pt-4 border-t border-emerald-100">
+    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">攜伴人數 (最多3位)</label>
+    <select id="partnerCount" onchange="renderPartnerFields()" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+        <option value="0">不攜伴</option>
+        <option value="1">攜伴 1 人</option>
+        <option value="2">攜伴 2 人</option>
+        <option value="3">攜伴 3 人</option>
+    </select>
+    
+    <div id="partnerContainer" class="space-y-4 mt-4"></div>
+</div>    
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
     <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
         <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center">活動報名</h3>

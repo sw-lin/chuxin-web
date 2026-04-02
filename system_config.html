@@ -1,220 +1,130 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>系統參數設定 | 築心會館</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .input-disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb !important; }
-        .input-enabled { background-color: #ffffff; color: #064E3B; border: 2px solid #059669 !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; z-index: 1000; backdrop-filter: blur(4px); }
-        .config-label { font-size: 0.75rem; font-weight: 900; color: #064E3B; letter-spacing: 0.05em; margin-left: 0.25rem; }
-        .sub-label { font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: block; }
-    </style>
-</head>
-<body class="pb-20">
+<script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
+    let isEditMode = false;
 
-    <nav class="emerald-gradient text-white px-6 py-4 flex justify-between items-center shadow-lg sticky top-0 z-[100]">
-        <div class="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition" onclick="location.href='staff_menu.html'">
-            <i class="fas fa-chevron-left"></i>
-            <span class="text-lg font-bold">返回</span>
-        </div>
-        <h1 class="text-xl md:text-2xl font-black tracking-widest text-center flex-1">系統參數設定</h1>
-        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition active:scale-95">
-            <i class="fas fa-edit mr-1"></i>編輯模式
-        </button>
-    </nav>
-
-    <main class="max-w-4xl mx-auto mt-8 px-6">
-        <div class="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-emerald-50">
-            <div class="p-8 md:p-12">
-                <div class="space-y-10">
-                    
-                    <div class="pb-6 border-b border-gray-100">
-                        <h3 class="text-sm font-black text-emerald-900 mb-6 flex items-center">
-                            <i class="fas fa-calendar-alt mr-2 text-orange-500"></i> 宣傳活動期間設定
-                        </h3>
-                        <div class="grid md:grid-cols-2 gap-6">
-                            <div class="space-y-2">
-                                <label class="config-label">開始日期</label>
-                                <input type="date" id="promo_start" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="config-label">結束日期</label>
-                                <input type="date" id="promo_end" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 class="text-sm font-black text-emerald-900 mb-6 flex items-center">
-                            <i class="fas fa-images mr-2 text-amber-500"></i> 首頁輪播照片 (宣傳優先)
-                        </h3>
-                        <div id="img_container" class="space-y-6">
-                            </div>
-                    </div>
-
-                    <div class="pt-8 border-t border-gray-100 space-y-8">
-                        <h3 class="text-sm font-black text-emerald-900 mb-2 flex items-center">
-                            <i class="fas fa-link mr-2 text-emerald-600"></i> 常規連結設定 (單欄固定)
-                        </h3>
-                        
-                        <div class="space-y-3">
-                            <label class="config-label">導讀資料資料夾網址</label>
-                            <input type="text" id="reading_folder_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                        </div>
-
-                        <div class="space-y-3">
-                            <label class="config-label">活動剪影相簿網址</label>
-                            <input type="text" id="photo_gallery_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                        </div>
-
-                        <div class="space-y-3">
-                            <label class="config-label">關於我 (首頁文字介紹)</label>
-                            <textarea id="about_us_url" rows="4" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled resize-none" readonly></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="saveActions" class="hidden mt-12 pt-8 border-t border-gray-100 flex space-x-4">
-                    <button onclick="saveConfigs()" class="flex-1 bg-emerald-800 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition active:scale-95">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i>確認並儲存所有變更
-                    </button>
-                </div>
+    // 生成 1-5 張圖片輸入框
+    const container = document.getElementById('img_container');
+    container.innerHTML = Array.from({length: 5}, (_, i) => `
+        <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
+            <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #${i+1}</span>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img${i+1}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img${i+1}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
             </div>
         </div>
-    </main>
+    `).join('');
 
-    <div id="loadingOverlay" class="flex flex-col items-center justify-center">
-        <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-800 rounded-full animate-spin mb-4"></div>
-        <p class="text-emerald-900 font-bold">同步雲端資料中...</p>
-    </div>
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-opacity pointer-events-none z-[1100] font-bold text-center"></div>
+    async function loadCurrentConfigs() {
+        showLoading(true);
+        try {
+            const res = await fetch(GAS_URL + "?t=" + Date.now());
+            const data = await res.json();
+            const config = data.config || {};
+            console.log("後端回傳 Config:", config); // 調試用
 
-    <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
-        let isEditMode = false;
+            // 1. 填入日期 (處理物件或純字串)
+            const startDate = config.promo_start;
+            const endDate = config.promo_end;
+            document.getElementById('promo_start').value = (typeof startDate === 'object' ? startDate.promo : startDate) || '';
+            document.getElementById('promo_end').value = (typeof endDate === 'object' ? endDate.promo : endDate) || '';
 
-        // 生成 1-5 張圖片輸入框
-        const container = document.getElementById('img_container');
-        container.innerHTML = Array.from({length: 5}, (_, i) => `
-            <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
-                <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #${i+1}</span>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img${i+1}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                    <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img${i+1}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                </div>
-            </div>
-        `).join('');
-
-        async function loadCurrentConfigs() {
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const config = data.config || {};
-                
-                // 1. 填入日期
-                document.getElementById('promo_start').value = (config.promo_start?.promo || config.promo_start || '');
-                document.getElementById('promo_end').value = (config.promo_end?.promo || config.promo_end || '');
-
-                // 2. 填入 5 張輪播圖 (雙欄)
-                for(let i=1; i<=5; i++) {
-                    const item = config[`slide_img${i}`];
-                    if(typeof item === 'object' && item !== null) {
-                        document.getElementById(`slide_img${i}_promo`).value = item.promo || '';
-                        document.getElementById(`slide_img${i}_normal`).value = item.normal || '';
-                    } else {
-                        document.getElementById(`slide_img${i}_normal`).value = item || '';
-                    }
+            // 2. 填入 5 張輪播圖 (雙欄)
+            for(let i=1; i<=5; i++) {
+                const item = config[`slide_img${i}`];
+                if(typeof item === 'object' && item !== null) {
+                    document.getElementById(`slide_img${i}_promo`).value = item.promo || '';
+                    document.getElementById(`slide_img${i}_normal`).value = item.normal || '';
+                } else {
+                    document.getElementById(`slide_img${i}_normal`).value = item || '';
+                    document.getElementById(`slide_img${i}_promo`).value = '';
                 }
-
-                // 3. 填入基礎連結 (單欄)
-                const fillSingle = (id, key) => {
-                    const val = config[key];
-                    // 如果後端傳來的是物件，我們只取 normal 欄位作為顯示
-                    document.getElementById(id).value = (typeof val === 'object') ? (val.normal || val.promo || '') : (val || '');
-                };
-                fillSingle('reading_folder_url', 'reading_folder_url');
-                fillSingle('photo_gallery_url', 'photo_gallery_url');
-                fillSingle('about_us_url', 'about_us_url');
-                
-            } catch (e) { showToast("❌ 無法獲取資料"); }
-            showLoading(false);
-        }
-
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            const inputs = document.querySelectorAll('.config-input');
-            const navEditBtn = document.getElementById('navEditBtn');
-            const saveActions = document.getElementById('saveActions');
-
-            inputs.forEach(input => {
-                input.readOnly = !isEditMode;
-                input.className = isEditMode ? 'config-input w-full p-4 rounded-2xl outline-none transition input-enabled' : 'config-input w-full p-4 rounded-2xl outline-none transition input-disabled';
-                // 圖片小輸入框保持 p-3
-                if(input.id.includes('slide_img')) {
-                    input.classList.replace('p-4', 'p-3');
-                    input.classList.replace('rounded-2xl', 'rounded-xl');
-                }
-            });
-
-            if (isEditMode) {
-                navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>結束編輯';
-                navEditBtn.className = "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md";
-                saveActions.classList.remove('hidden');
-            } else {
-                navEditBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
-                navEditBtn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-                saveActions.classList.add('hidden');
             }
-        }
 
-        async function saveConfigs() {
-            const payload = {
-                type: 'update_config',
-                key: sessionStorage.getItem('staff_key'),
-                configs: {
-                    promo_start: document.getElementById('promo_start').value,
-                    promo_end: document.getElementById('promo_end').value,
-                    // 圖片依然維持雙欄傳輸
-                    slide_img1: { promo: document.getElementById('slide_img1_promo').value, normal: document.getElementById('slide_img1_normal').value },
-                    slide_img2: { promo: document.getElementById('slide_img2_promo').value, normal: document.getElementById('slide_img2_normal').value },
-                    slide_img3: { promo: document.getElementById('slide_img3_promo').value, normal: document.getElementById('slide_img3_normal').value },
-                    slide_img4: { promo: document.getElementById('slide_img4_promo').value, normal: document.getElementById('slide_img4_normal').value },
-                    slide_img5: { promo: document.getElementById('slide_img5_promo').value, normal: document.getElementById('slide_img5_normal').value },
-                    // 下方三項改為單一值傳輸 (GAS 會自動填入 normal 欄位)
-                    reading_folder_url: document.getElementById('reading_folder_url').value,
-                    photo_gallery_url: document.getElementById('photo_gallery_url').value,
-                    about_us_url: document.getElementById('about_us_url').value
+            // 3. 填入單欄連結與文字 (確保對應 key 值)
+            // 注意：這裡的 key 必須跟您 GAS 裡的欄位名稱完全一致
+            const setVal = (id, key) => {
+                const val = config[key];
+                const target = document.getElementById(id);
+                if (target) {
+                    // 如果欄位是物件則取 normal，否則取純值
+                    target.value = (typeof val === 'object' && val !== null) ? (val.normal || val.promo || '') : (val || '');
                 }
             };
-            
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await res.json();
-                if(result.result === "SUCCESS") {
-                    showToast("✅ 設定已成功同步至雲端");
-                    isEditMode = true; toggleEditMode();
-                } else { showToast("❌ 儲存失敗：" + result.message); }
-            } catch (e) { showToast("❌ 連線異常"); }
-            showLoading(false);
-        }
 
-        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-        function showToast(m) { 
-            const t = document.getElementById('toast'); 
-            t.innerText = m; t.style.opacity = '1'; 
-            setTimeout(() => t.style.opacity = '0', 3000); 
-        }
+            setVal('reading_folder_url', 'reading_folder_url');
+            setVal('photo_gallery_url', 'photo_gallery_url');
+            setVal('about_us_url', 'about_us_url'); // 關於我
 
-        window.onload = loadCurrentConfigs;
-    </script>
-</body>
-</html>
+        } catch (e) { 
+            console.error(e);
+            showToast("❌ 無法獲取資料"); 
+        }
+        showLoading(false);
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const inputs = document.querySelectorAll('.config-input');
+        const navEditBtn = document.getElementById('navEditBtn');
+        const saveActions = document.getElementById('saveActions');
+
+        inputs.forEach(input => {
+            input.readOnly = !isEditMode;
+            input.className = isEditMode ? 'config-input w-full p-4 rounded-2xl outline-none transition input-enabled' : 'config-input w-full p-4 rounded-2xl outline-none transition input-disabled';
+            if(input.id.includes('slide_img')) {
+                input.classList.replace('p-4', 'p-3');
+                input.classList.replace('rounded-2xl', 'rounded-xl');
+            }
+        });
+
+        if (isEditMode) {
+            navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>結束編輯';
+            navEditBtn.className = "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md";
+            saveActions.classList.remove('hidden');
+        } else {
+            navEditBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
+            navEditBtn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            saveActions.classList.add('hidden');
+        }
+    }
+
+    async function saveConfigs() {
+        const payload = {
+            type: 'update_config',
+            key: sessionStorage.getItem('staff_key'),
+            configs: {
+                promo_start: document.getElementById('promo_start').value,
+                promo_end: document.getElementById('promo_end').value,
+                slide_img1: { promo: document.getElementById('slide_img1_promo').value, normal: document.getElementById('slide_img1_normal').value },
+                slide_img2: { promo: document.getElementById('slide_img2_promo').value, normal: document.getElementById('slide_img2_normal').value },
+                slide_img3: { promo: document.getElementById('slide_img3_promo').value, normal: document.getElementById('slide_img3_normal').value },
+                slide_img4: { promo: document.getElementById('slide_img4_promo').value, normal: document.getElementById('slide_img4_normal').value },
+                slide_img5: { promo: document.getElementById('slide_img5_promo').value, normal: document.getElementById('slide_img5_normal').value },
+                reading_folder_url: document.getElementById('reading_folder_url').value,
+                photo_gallery_url: document.getElementById('photo_gallery_url').value,
+                about_us_url: document.getElementById('about_us_url').value
+            }
+        };
+        
+        showLoading(true);
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if(result.result === "SUCCESS") {
+                showToast("✅ 設定已成功同步至雲端");
+                isEditMode = true; toggleEditMode();
+                loadCurrentConfigs(); // 重新讀取確認
+            } else { showToast("❌ 儲存失敗：" + result.message); }
+        } catch (e) { showToast("❌ 連線異常"); }
+        showLoading(false);
+    }
+
+    function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+    function showToast(m) { 
+        const t = document.getElementById('toast'); 
+        t.innerText = m; t.style.opacity = '1'; 
+        setTimeout(() => t.style.opacity = '0', 3000); 
+    }
+
+    window.onload = loadCurrentConfigs;
+</script>

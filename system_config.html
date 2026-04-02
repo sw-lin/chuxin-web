@@ -13,6 +13,8 @@
         .input-disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb !important; }
         .input-enabled { background-color: #ffffff; color: #064E3B; border: 2px solid #059669 !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: none; z-index: 1000; backdrop-filter: blur(4px); }
+        .config-label { font-size: 0.75rem; font-weight: 900; color: #064E3B; letter-spacing: 0.05em; margin-left: 0.25rem; }
+        .sub-label { font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; display: block; }
     </style>
 </head>
 <body class="pb-20">
@@ -22,67 +24,76 @@
             <i class="fas fa-chevron-left"></i>
             <span class="text-lg font-bold">返回</span>
         </div>
-        
         <h1 class="text-xl md:text-2xl font-black tracking-widest text-center flex-1">系統參數設定</h1>
-        
-        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">
+        <button id="navEditBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition active:scale-95">
             <i class="fas fa-edit mr-1"></i>編輯模式
         </button>
-                                                                          
     </nav>
 
     <main class="max-w-4xl mx-auto mt-8 px-6">
         <div class="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-emerald-50">
             <div class="p-8 md:p-12">
-                <div class="space-y-8">
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="space-y-2">
-                            <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">閱讀心得資料夾</label>
-                            <input type="text" id="reading_folder_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">活動照片相簿</label>
-                            <input type="text" id="photo_gallery_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-xs font-black text-emerald-800 uppercase tracking-widest ml-1">關於我們頁面連結</label>
-                        <input type="text" id="about_us_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
-                    </div>
-
-                    <div class="pt-6 border-t border-gray-100">
+                <div class="space-y-10">
+                    
+                    <div class="pb-6 border-b border-gray-100">
                         <h3 class="text-sm font-black text-emerald-900 mb-6 flex items-center">
-                            <i class="fas fa-images mr-2 text-amber-500"></i> 首頁輪播照片連結 (Google Drive)
+                            <i class="fas fa-calendar-alt mr-2 text-orange-500"></i> 宣傳活動期間設定
                         </h3>
-                        <div class="grid gap-4">
-                            <div class="flex items-center space-x-4">
-                                <span class="text-xs font-bold text-gray-400 w-8">#1</span>
-                                <input type="text" id="slide_img1" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="config-label">開始日期</label>
+                                <input type="date" id="promo_start" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
                             </div>
-                            <div class="flex items-center space-x-4">
-                                <span class="text-xs font-bold text-gray-400 w-8">#2</span>
-                                <input type="text" id="slide_img2" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly>
+                            <div class="space-y-2">
+                                <label class="config-label">結束日期</label>
+                                <input type="date" id="promo_end" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
                             </div>
-                            <div class="flex items-center space-x-4">
-                                <span class="text-xs font-bold text-gray-400 w-8">#3</span>
-                                <input type="text" id="slide_img3" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8">
+                        <h3 class="text-sm font-black text-emerald-900 mb-2 flex items-center">
+                            <i class="fas fa-link mr-2 text-emerald-600"></i> 常規功能連結設定
+                        </h3>
+                        
+                        <div id="section_reading" class="space-y-3">
+                            <label class="config-label">閱讀心得資料夾</label>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div><span class="sub-label text-orange-600">宣傳期 B欄</span><input type="text" id="reading_folder_url_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                                <div><span class="sub-label text-gray-400">常態期 C欄</span><input type="text" id="reading_folder_url_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
                             </div>
-                            <div class="flex items-center space-x-4">
-                                <span class="text-xs font-bold text-gray-400 w-8">#4</span>
-                                <input type="text" id="slide_img4" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly>
+                        </div>
+
+                        <div id="section_photo" class="space-y-3">
+                            <label class="config-label">活動照片相簿</label>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div><span class="sub-label text-orange-600">宣傳期 B欄</span><input type="text" id="photo_gallery_url_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                                <div><span class="sub-label text-gray-400">常態期 C欄</span><input type="text" id="photo_gallery_url_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
                             </div>
-                            <div class="flex items-center space-x-4">
-                                <span class="text-xs font-bold text-gray-400 w-8">#5</span>
-                                <input type="text" id="slide_img5" class="config-input flex-1 p-3 rounded-xl outline-none transition input-disabled" readonly>
-                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 border-t border-gray-100">
+                        <h3 class="text-sm font-black text-emerald-900 mb-6 flex items-center">
+                            <i class="fas fa-images mr-2 text-amber-500"></i> 首頁輪播照片 (宣傳優先)
+                        </h3>
+                        <div class="space-y-6">
+                            <div id="img_container" class="space-y-6">
+                                <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
+                                    <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #1</span>
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img1_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                                        <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img1_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                                    </div>
+                                </div>
+                                </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="saveActions" class="hidden mt-12 pt-8 border-t border-gray-100 flex space-x-4">
-                    <button onclick="saveConfigs()" class="flex-1 bg-emerald-800 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition active:scale-95">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i>確認並儲存變更
+                    <button onclick="saveConfigs()" class="flex-1 bg-emerald-800 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition active:scale-95">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i>確認並儲存所有變更
                     </button>
                 </div>
             </div>
@@ -99,6 +110,21 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let isEditMode = false;
 
+        // 初始化圖片區塊 (補足 2-5)
+        const container = document.getElementById('img_container');
+        let imgHtml = container.innerHTML; // 已經有第1張了
+        for(let i=2; i<=5; i++){
+            imgHtml += `
+                <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
+                    <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #${i}</span>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img${i}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                        <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img${i}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                    </div>
+                </div>`;
+        }
+        container.innerHTML = imgHtml;
+
         async function loadCurrentConfigs() {
             showLoading(true);
             try {
@@ -106,19 +132,31 @@
                 const data = await res.json();
                 const config = data.config || {};
                 
-                // 精確對應資料庫 Key 值
-                document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
-                document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
-                document.getElementById('about_us_url').value = config.about_us_url || '';
-                document.getElementById('slide_img1').value = config.slide_img1 || '';
-                document.getElementById('slide_img2').value = config.slide_img2 || '';
-                document.getElementById('slide_img3').value = config.slide_img3 || '';
-                document.getElementById('slide_img4').value = config.slide_img4 || '';
-                document.getElementById('slide_img5').value = config.slide_img5 || '';
+                // 處理雙欄位填入的輔助函式
+                const fillDual = (key) => {
+                    const item = config[key];
+                    const pIn = document.getElementById(key + '_promo');
+                    const nIn = document.getElementById(key + '_normal');
+                    
+                    if(typeof item === 'object' && item !== null) {
+                        if(pIn) pIn.value = item.promo || '';
+                        if(nIn) nIn.value = item.normal || '';
+                    } else {
+                        // 舊資料相容：如果不是物件，填入常態欄位
+                        if(nIn) nIn.value = item || '';
+                        if(pIn) pIn.value = '';
+                    }
+                };
+
+                // 填入日期
+                document.getElementById('promo_start').value = config.promo_start?.promo || config.promo_start || '';
+                document.getElementById('promo_end').value = config.promo_end?.promo || config.promo_end || '';
+
+                // 填入所有連結與圖片
+                ['reading_folder_url', 'photo_gallery_url', 'about_us_url'].forEach(fillDual);
+                for(let i=1; i<=5; i++) fillDual(`slide_img${i}`);
                 
-            } catch (e) { 
-                showToast("❌ 無法獲取資料，請檢查網路"); 
-            }
+            } catch (e) { showToast("❌ 無法獲取資料"); }
             showLoading(false);
         }
 
@@ -129,41 +167,41 @@
             const saveActions = document.getElementById('saveActions');
 
             inputs.forEach(input => {
-                if(isEditMode) {
-                    input.readOnly = false;
-                    input.classList.remove('input-disabled');
-                    input.classList.add('input-enabled');
-                } else {
-                    input.readOnly = true;
-                    input.classList.remove('input-enabled');
-                    input.classList.add('input-disabled');
-                }
+                input.readOnly = !isEditMode;
+                input.className = isEditMode ? 'config-input w-full p-3 rounded-xl outline-none transition input-enabled' : 'config-input w-full p-3 rounded-xl outline-none transition input-disabled';
             });
 
             if (isEditMode) {
                 navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>結束編輯';
                 navEditBtn.className = "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md";
-                                
                 saveActions.classList.remove('hidden');
             } else {
                 navEditBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
                 navEditBtn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
                 saveActions.classList.add('hidden');
             }
-        }                              
+        }
+
         async function saveConfigs() {
+            const getDual = (key) => ({
+                promo: document.getElementById(key + '_promo').value,
+                normal: document.getElementById(key + '_normal').value
+            });
+
             const payload = {
                 type: 'update_config',
                 key: sessionStorage.getItem('staff_key'),
                 configs: {
-                    reading_folder_url: document.getElementById('reading_folder_url').value,
-                    photo_gallery_url: document.getElementById('photo_gallery_url').value,
-                    about_us_url: document.getElementById('about_us_url').value,
-                    slide_img1: document.getElementById('slide_img1').value,
-                    slide_img2: document.getElementById('slide_img2').value,
-                    slide_img3: document.getElementById('slide_img3').value,
-                    slide_img4: document.getElementById('slide_img4').value,
-                    slide_img5: document.getElementById('slide_img5').value
+                    promo_start: document.getElementById('promo_start').value,
+                    promo_end: document.getElementById('promo_end').value,
+                    reading_folder_url: getDual('reading_folder_url'),
+                    photo_gallery_url: getDual('photo_gallery_url'),
+                    about_us_url: getDual('about_us_url'),
+                    slide_img1: getDual('slide_img1'),
+                    slide_img2: getDual('slide_img2'),
+                    slide_img3: getDual('slide_img3'),
+                    slide_img4: getDual('slide_img4'),
+                    slide_img5: getDual('slide_img5')
                 }
             };
             
@@ -173,12 +211,9 @@
                 const result = await res.json();
                 if(result.result === "SUCCESS") {
                     showToast("✅ 設定已成功同步至雲端");
-                    isEditMode = true; 
-                    toggleEditMode(); // 回到唯讀模式
-                } else {
-                    showToast("❌ 儲存失敗：" + result.message);
-                }
-            } catch (e) { showToast("❌ 連線異常，請稍後再試"); }
+                    isEditMode = true; toggleEditMode();
+                } else { showToast("❌ 儲存失敗：" + result.message); }
+            } catch (e) { showToast("❌ 連線異常"); }
             showLoading(false);
         }
 

@@ -517,11 +517,37 @@ async function processCheckin(scanData) {
 let tempRegTitle = ""; // 用於暫存目前正在報名的活動名稱
     
 // 修改後的 handleReg：只負責打開選單
-async function handleReg(title) {
-    tempRegTitle = title;
-    document.getElementById('regEventTitle').innerText = `報名：${title}`;
+async function handleReg(dataStr) {
+    const ev = JSON.parse(dataStr.replace(/&quot;/g, '"'));
+    tempRegTitle = ev.title;
+
+    // 設定 UI 顯示
+    document.getElementById('regEventTitle').innerText = ev.title;
+    document.getElementById('regEventDate').innerText = `活動日期：${ev.date}`;
+
+    // 邏輯 1：根據 H 欄 (needID) 判斷是否顯示身分證
+    const groupId = document.getElementById('group_id');
+    if (ev.needID === "Y") {
+        groupId.classList.remove('hidden');
+        // 如果目前登入者原本就有存身分證，就自動填入
+        document.getElementById('regID').value = currentUser.id || ""; 
+    } else {
+        groupId.classList.add('hidden');
+        document.getElementById('regID').value = ""; // 隱藏時清空
+    }
+
+    // 邏輯 2：根據 I 欄 (isBus) 判斷是否顯示交通選項
+    const groupTransport = document.getElementById('group_transport');
+    if (ev.isBus === "Y") {
+        groupTransport.classList.add('hidden');
+        document.getElementById('regTransport').value = "搭乘專車"; // 遊覽車行程強制設為專車
+    } else {
+        groupTransport.classList.remove('hidden');
+        document.getElementById('regTransport').value = "自行前往"; // 恢復預設
+    }
+
     document.getElementById('regOptionsModal').style.display = 'flex';
-} 
+}    
 // 關閉選單的輔助函數
 function closeRegModal(e, force=false) {
     if (force || e.target === document.getElementById('regOptionsModal')) {
@@ -667,23 +693,29 @@ window.addEventListener('load', () => {
 });
     
 </script>
-<div id="regOptionsModal" class="modal-overlay" onclick="closeRegModal(event)">
+<div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
     <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative" onclick="event.stopPropagation()">
-        <button onclick="closeRegModal(event, true)" class="absolute top-5 right-6 text-gray-400 hover:text-gray-600 text-2xl">×</button>
-        <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-6 text-center">活動報名</h3>
+        <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center text-balance">活動報名</h3>
+        <p id="regEventDate" class="text-[10px] text-emerald-600 font-bold text-center mb-6"></p>
         
-        <div class="space-y-5">
-            <div>
-                <label class="block text-xs font-bold text-emerald-800 mb-2 ml-1">餐食選擇</label>
+        <div class="space-y-4">
+            <div id="group_id" class="hidden">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號 (保險需求)</label>
+                <input type="text" id="regID" placeholder="請輸入身分證字號" 
+                       class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 font-mono">
+            </div>
+
+            <div id="group_meal">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">餐食選擇</label>
                 <select id="regMeal" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
                     <option value="葷食">葷食</option>
                     <option value="素食">素食</option>
-                    <option value="不消用餐">不需用餐</option>
+                    <option value="不需用餐">不需用餐</option>
                 </select>
             </div>
             
-            <div>
-                <label class="block text-xs font-bold text-emerald-800 mb-2 ml-1">交通方式</label>
+            <div id="group_transport">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
                 <select id="regTransport" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
                     <option value="自行前往">自行前往</option>
                     <option value="搭乘專車">搭乘專車</option>
@@ -691,7 +723,7 @@ window.addEventListener('load', () => {
                 </select>
             </div>
 
-            <button onclick="submitRegistration()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-xl font-black tracking-widest active:scale-95 transition-all shadow-md">確認提交報名</button>
+            <button onclick="submitRegistration()" class="w-full mt-2 bg-emerald-800 text-white py-4 rounded-xl font-black tracking-widest active:scale-95 transition-all shadow-md">確認報名</button>
         </div>
     </div>
 </div>    

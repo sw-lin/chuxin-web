@@ -24,7 +24,7 @@
             <span class="text-2xl md:text-3xl font-bold tracking-tighter text-emerald-900">築心讀書會</span>
         </div>
         <button onclick="openLogin()" class="bg-emerald-800 text-white px-6 py-2 rounded-full text-sm font-bold shadow-md hover:bg-emerald-700 transition active:scale-95">
-            進入會館
+            會員進入
         </button>
     </nav>
 
@@ -56,14 +56,17 @@
                 <h2 class="text-3xl font-bold text-emerald-900 mb-2">加入我們</h2>
                 <p class="text-gray-500">期待與您在書香中相遇</p>
             </div>
-            <form action="https://formspree.io/f/xpqjvblg" method="POST" class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-emerald-100 space-y-6">
+                <form action="https://formspree.io/f/xpqjvblg" method="POST" class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-emerald-100 space-y-6">
                 <input type="text" name="姓名" required placeholder="您的姓名" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 <input type="email" name="Email" required placeholder="您的電子郵件 (Email)" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 <input type="tel" name="電話" required placeholder="手機號碼" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                
+                <textarea name="如何知道築心與建議" rows="3" placeholder="從何管道或哪個會員推薦？對讀書會有什麼建議或想提問的事項？" class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold resize-none"></textarea>
+                
                 <button type="submit" class="w-full bg-emerald-800 text-white font-bold py-5 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">
                     提交報名資料
                 </button>
-            </form>
+                </form>            
         </div>
     </section>
 

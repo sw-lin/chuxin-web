@@ -51,42 +51,32 @@
                         </div>
                     </div>
 
-                    <div class="space-y-8">
-                        <h3 class="text-sm font-black text-emerald-900 mb-2 flex items-center">
-                            <i class="fas fa-link mr-2 text-emerald-600"></i> 常規功能連結設定
-                        </h3>
-                        
-                        <div id="section_reading" class="space-y-3">
-                            <label class="config-label">閱讀心得資料夾</label>
-                            <div class="grid md:grid-cols-2 gap-4">
-                                <div><span class="sub-label text-orange-600">宣傳期 B欄</span><input type="text" id="reading_folder_url_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                                <div><span class="sub-label text-gray-400">常態期 C欄</span><input type="text" id="reading_folder_url_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                            </div>
-                        </div>
-
-                        <div id="section_photo" class="space-y-3">
-                            <label class="config-label">活動照片相簿</label>
-                            <div class="grid md:grid-cols-2 gap-4">
-                                <div><span class="sub-label text-orange-600">宣傳期 B欄</span><input type="text" id="photo_gallery_url_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                                <div><span class="sub-label text-gray-400">常態期 C欄</span><input type="text" id="photo_gallery_url_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-8 border-t border-gray-100">
+                    <div>
                         <h3 class="text-sm font-black text-emerald-900 mb-6 flex items-center">
                             <i class="fas fa-images mr-2 text-amber-500"></i> 首頁輪播照片 (宣傳優先)
                         </h3>
-                        <div class="space-y-6">
-                            <div id="img_container" class="space-y-6">
-                                <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
-                                    <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #1</span>
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                        <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img1_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                                        <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img1_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                                    </div>
-                                </div>
-                                </div>
+                        <div id="img_container" class="space-y-6">
+                            </div>
+                    </div>
+
+                    <div class="pt-8 border-t border-gray-100 space-y-8">
+                        <h3 class="text-sm font-black text-emerald-900 mb-2 flex items-center">
+                            <i class="fas fa-link mr-2 text-emerald-600"></i> 常規連結設定 (單欄固定)
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <label class="config-label">導讀資料資料夾網址</label>
+                            <input type="text" id="reading_folder_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="config-label">活動剪影相簿網址</label>
+                            <input type="text" id="photo_gallery_url" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="config-label">關於我 (首頁文字介紹)</label>
+                            <textarea id="about_us_url" rows="4" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled resize-none" readonly></textarea>
                         </div>
                     </div>
                 </div>
@@ -110,20 +100,17 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
         let isEditMode = false;
 
-        // 初始化圖片區塊 (補足 2-5)
+        // 生成 1-5 張圖片輸入框
         const container = document.getElementById('img_container');
-        let imgHtml = container.innerHTML; // 已經有第1張了
-        for(let i=2; i<=5; i++){
-            imgHtml += `
-                <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
-                    <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #${i}</span>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img${i}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                        <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img${i}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                    </div>
-                </div>`;
-        }
-        container.innerHTML = imgHtml;
+        container.innerHTML = Array.from({length: 5}, (_, i) => `
+            <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
+                <span class="text-xs font-black text-emerald-800 mb-3 block italic">IMAGE SLIDE #${i+1}</span>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div><span class="sub-label text-orange-600">宣傳圖 (B欄)</span><input type="text" id="slide_img${i+1}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                    <div><span class="sub-label text-gray-400">常態圖 (C欄)</span><input type="text" id="slide_img${i+1}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                </div>
+            </div>
+        `).join('');
 
         async function loadCurrentConfigs() {
             showLoading(true);
@@ -132,29 +119,30 @@
                 const data = await res.json();
                 const config = data.config || {};
                 
-                // 處理雙欄位填入的輔助函式
-                const fillDual = (key) => {
-                    const item = config[key];
-                    const pIn = document.getElementById(key + '_promo');
-                    const nIn = document.getElementById(key + '_normal');
-                    
+                // 1. 填入日期
+                document.getElementById('promo_start').value = (config.promo_start?.promo || config.promo_start || '');
+                document.getElementById('promo_end').value = (config.promo_end?.promo || config.promo_end || '');
+
+                // 2. 填入 5 張輪播圖 (雙欄)
+                for(let i=1; i<=5; i++) {
+                    const item = config[`slide_img${i}`];
                     if(typeof item === 'object' && item !== null) {
-                        if(pIn) pIn.value = item.promo || '';
-                        if(nIn) nIn.value = item.normal || '';
+                        document.getElementById(`slide_img${i}_promo`).value = item.promo || '';
+                        document.getElementById(`slide_img${i}_normal`).value = item.normal || '';
                     } else {
-                        // 舊資料相容：如果不是物件，填入常態欄位
-                        if(nIn) nIn.value = item || '';
-                        if(pIn) pIn.value = '';
+                        document.getElementById(`slide_img${i}_normal`).value = item || '';
                     }
+                }
+
+                // 3. 填入基礎連結 (單欄)
+                const fillSingle = (id, key) => {
+                    const val = config[key];
+                    // 如果後端傳來的是物件，我們只取 normal 欄位作為顯示
+                    document.getElementById(id).value = (typeof val === 'object') ? (val.normal || val.promo || '') : (val || '');
                 };
-
-                // 填入日期
-                document.getElementById('promo_start').value = config.promo_start?.promo || config.promo_start || '';
-                document.getElementById('promo_end').value = config.promo_end?.promo || config.promo_end || '';
-
-                // 填入所有連結與圖片
-                ['reading_folder_url', 'photo_gallery_url', 'about_us_url'].forEach(fillDual);
-                for(let i=1; i<=5; i++) fillDual(`slide_img${i}`);
+                fillSingle('reading_folder_url', 'reading_folder_url');
+                fillSingle('photo_gallery_url', 'photo_gallery_url');
+                fillSingle('about_us_url', 'about_us_url');
                 
             } catch (e) { showToast("❌ 無法獲取資料"); }
             showLoading(false);
@@ -168,7 +156,12 @@
 
             inputs.forEach(input => {
                 input.readOnly = !isEditMode;
-                input.className = isEditMode ? 'config-input w-full p-3 rounded-xl outline-none transition input-enabled' : 'config-input w-full p-3 rounded-xl outline-none transition input-disabled';
+                input.className = isEditMode ? 'config-input w-full p-4 rounded-2xl outline-none transition input-enabled' : 'config-input w-full p-4 rounded-2xl outline-none transition input-disabled';
+                // 圖片小輸入框保持 p-3
+                if(input.id.includes('slide_img')) {
+                    input.classList.replace('p-4', 'p-3');
+                    input.classList.replace('rounded-2xl', 'rounded-xl');
+                }
             });
 
             if (isEditMode) {
@@ -183,25 +176,22 @@
         }
 
         async function saveConfigs() {
-            const getDual = (key) => ({
-                promo: document.getElementById(key + '_promo').value,
-                normal: document.getElementById(key + '_normal').value
-            });
-
             const payload = {
                 type: 'update_config',
                 key: sessionStorage.getItem('staff_key'),
                 configs: {
                     promo_start: document.getElementById('promo_start').value,
                     promo_end: document.getElementById('promo_end').value,
-                    reading_folder_url: getDual('reading_folder_url'),
-                    photo_gallery_url: getDual('photo_gallery_url'),
-                    about_us_url: getDual('about_us_url'),
-                    slide_img1: getDual('slide_img1'),
-                    slide_img2: getDual('slide_img2'),
-                    slide_img3: getDual('slide_img3'),
-                    slide_img4: getDual('slide_img4'),
-                    slide_img5: getDual('slide_img5')
+                    // 圖片依然維持雙欄傳輸
+                    slide_img1: { promo: document.getElementById('slide_img1_promo').value, normal: document.getElementById('slide_img1_normal').value },
+                    slide_img2: { promo: document.getElementById('slide_img2_promo').value, normal: document.getElementById('slide_img2_normal').value },
+                    slide_img3: { promo: document.getElementById('slide_img3_promo').value, normal: document.getElementById('slide_img3_normal').value },
+                    slide_img4: { promo: document.getElementById('slide_img4_promo').value, normal: document.getElementById('slide_img4_normal').value },
+                    slide_img5: { promo: document.getElementById('slide_img5_promo').value, normal: document.getElementById('slide_img5_normal').value },
+                    // 下方三項改為單一值傳輸 (GAS 會自動填入 normal 欄位)
+                    reading_folder_url: document.getElementById('reading_folder_url').value,
+                    photo_gallery_url: document.getElementById('photo_gallery_url').value,
+                    about_us_url: document.getElementById('about_us_url').value
                 }
             };
             

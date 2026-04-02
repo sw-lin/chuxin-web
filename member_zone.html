@@ -513,26 +513,41 @@ async function processCheckin(scanData) {
         document.getElementById('loadingOverlay').style.display = 'none'; 
     }
 }
-
-    async function handleReg(title) {
-    // 1. 彈出確認視窗並收集簡單資訊（或引導至詳細表單，此處先以自動帶入基本資料為例）
-    if(!confirm(`確認報名「${title}」？\n系統將自動提交您的基本資料與預設餐食。`)) return;
+    
+let tempRegTitle = ""; // 用於暫存目前正在報名的活動名稱
+    
+// 修改後的 handleReg：只負責打開選單
+async function handleReg(title) {
+    tempRegTitle = title;
+    document.getElementById('regEventTitle').innerText = `報名：${title}`;
+    document.getElementById('regOptionsModal').style.display = 'flex';
+} 
+// 關閉選單的輔助函數
+function closeRegModal(e, force=false) {
+    if (force || e.target === document.getElementById('regOptionsModal')) {
+        document.getElementById('regOptionsModal').style.display = 'none';
+    }
+} 
+// 新增的提交函數：真正把資料送出
+async function submitRegistration() {
+    const meal = document.getElementById('regMeal').value;
+    const transport = document.getElementById('regTransport').value;
     
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
-    
+    closeRegModal(null, true); // 關閉選單
+
     try {
-        // 2. 構建符合新版後端 handleComplexRegistration 規格的資料包
         const payload = {
-            type: 'complex_register', // 確保後端 switch case 有對應到此 type
-            activityName: title,
+            type: 'complex_register',
+            activityName: tempRegTitle,
             userName: currentUser.name,
             userPhone: currentUser.phone,
-            userID: currentUser.id || "未提供", // 若會員資料有 ID 則帶入
-            userMeal: "葷食(預設)",           // 可改為讓使用者選擇的變數
-            transport: "自行前往",           // 可改為讓使用者選擇的變數
-            totalCount: 1,                 // 本人報名預設 1 人
-            totalFee: 0                    // 費用視活動性質而定
+            userID: currentUser.id || "未提供",
+            userMeal: meal,
+            transport: transport,
+            totalCount: 1,
+            totalFee: 0 
         };
 
         const res = await fetch(GAS_URL, { 
@@ -545,7 +560,7 @@ async function processCheckin(scanData) {
         if (result.result === "SUCCESS") { 
             showToast("報名成功！資料已同步"); 
             confetti({ particleCount: 150, spread: 70 });
-            await syncData(); // 重新整理狀態
+            await syncData(); 
         } else if (result.result === "ALREADY_DONE") {
             showToast("您已經報名過這個活動囉！", "error");
         } else { 
@@ -557,7 +572,7 @@ async function processCheckin(scanData) {
     } finally { 
         overlay.style.display = 'none'; 
     }
-}
+}   
 
     async function enterStaffMode() {
         var key = prompt("輸入管理金鑰：");
@@ -652,5 +667,33 @@ window.addEventListener('load', () => {
 });
     
 </script>
+<div id="regOptionsModal" class="modal-overlay" onclick="closeRegModal(event)">
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative" onclick="event.stopPropagation()">
+        <button onclick="closeRegModal(event, true)" class="absolute top-5 right-6 text-gray-400 hover:text-gray-600 text-2xl">×</button>
+        <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-6 text-center">活動報名</h3>
+        
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-emerald-800 mb-2 ml-1">餐食選擇</label>
+                <select id="regMeal" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+                    <option value="葷食">葷食</option>
+                    <option value="素食">素食</option>
+                    <option value="不消用餐">不需用餐</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-emerald-800 mb-2 ml-1">交通方式</label>
+                <select id="regTransport" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+                    <option value="自行前往">自行前往</option>
+                    <option value="搭乘專車">搭乘專車</option>
+                    <option value="共乘">共乘</option>
+                </select>
+            </div>
+
+            <button onclick="submitRegistration()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-xl font-black tracking-widest active:scale-95 transition-all shadow-md">確認提交報名</button>
+        </div>
+    </div>
+</div>    
 </body>
 </html>

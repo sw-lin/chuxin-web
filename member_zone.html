@@ -525,44 +525,45 @@ async function processCheckin(scanData) {
     }
 }
     
-let tempRegTitle = ""; // 用於暫存目前正在報名的活動名稱
-    
-// 修改後的 handleReg：只負責打開選單
-async function handleReg(dataStr) {
-    const ev = JSON.parse(dataStr.replace(/&quot;/g, '"'));
+let currentNeedID = "N"; // 追蹤活動是否需要身分證
+
+// 修改 handleReg，讓它能正確初始化 Modal
+function handleReg(evDataStr) {
+    const ev = JSON.parse(evDataStr);
     tempRegTitle = ev.title;
-
-    // 設定 UI 顯示
+    currentNeedID = ev.needID || "N"; // 儲存身分證需求狀態
+    
     document.getElementById('regEventTitle').innerText = ev.title;
-    document.getElementById('regEventDate').innerText = `活動日期：${ev.date}`;
+    document.getElementById('regEventDate').innerText = "活動日期：" + (ev.date || "未定");
+    
+    // 處理身分證欄位顯示
+    const idGroup = document.getElementById('group_id');
+    if (currentNeedID === 'Y') idGroup.classList.remove('hidden');
+    else idGroup.classList.add('hidden');
 
-    // 邏輯 1：根據 H 欄 (needID) 判斷是否顯示身分證
-    const groupId = document.getElementById('group_id');
-    if (ev.needID === "Y") {
-        groupId.classList.remove('hidden');
-        // 如果目前登入者原本就有存身分證，就自動填入
-        document.getElementById('regID').value = currentUser.id || ""; 
+    // 處理遊覽車與交通
+    const optBus = document.getElementById('opt_bus');
+    const transSelect = document.getElementById('regTransport');
+    if (ev.isBus === 'Y') {
+        optBus.style.display = 'block';
+        transSelect.value = '搭乘專車';
+        document.getElementById('group_car_details').classList.add('hidden');
     } else {
-        groupId.classList.add('hidden');
-        document.getElementById('regID').value = ""; // 隱藏時清空
+        optBus.style.display = 'none';
+        transSelect.value = '自行開車';
+        toggleCarDetails();
     }
 
-    // 邏輯 2：根據 I 欄 (isBus) 判斷是否顯示交通選項
-    const groupTransport = document.getElementById('group_transport');
-    if (ev.isBus === "Y") {
-        groupTransport.classList.add('hidden');
-        document.getElementById('regTransport').value = "搭乘專車"; // 遊覽車行程強制設為專車
-    } else {
-        groupTransport.classList.remove('hidden');
-        document.getElementById('regTransport').value = "自行前往"; // 恢復預設
-    }
-
+    // 重置攜伴
+    document.getElementById('partnerCount').value = "0";
+    document.getElementById('partnerContainer').innerHTML = "";
+    
     document.getElementById('regOptionsModal').style.display = 'flex';
-} 
+}    
     
 let currentNeedID = "N"; // 全域變數追蹤當前活動需求
 
-// 1. 根據選擇人數生成表單
+// 動態產合同行人欄位
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
@@ -570,15 +571,17 @@ function renderPartnerFields() {
     
     for (let i = 1; i <= count; i++) {
         container.innerHTML += `
-            <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-3">
-                <p class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">同行人 ${i}</p>
-                <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm">
-                <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm">
-                ${currentNeedID === 'Y' ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono">` : ''}
+            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
+                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">同行人 ${i} (非會員)</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm">
+                    <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm">
+                </div>
+                ${currentNeedID === 'Y' ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase">` : ''}
                 <select class="p-meal w-full px-3 py-2 rounded-lg border text-sm">
-                    <option value="葷食">葷食</option>
-                    <option value="素食">素食</option>
-                    <option value="不拘">不拘</option>
+                    <option value="葷食">餐食：葷食</option>
+                    <option value="素食">餐食：素食</option>
+                    <option value="不拘">餐食：不拘</option>
                 </select>
             </div>
         `;
@@ -590,8 +593,13 @@ function closeRegModal(e, force=false) {
         document.getElementById('regOptionsModal').style.display = 'none';
     }
 } 
-// 新增的提交函數：真正把資料送出
+
+// 提交報名邏輯
 async function submitRegistration() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
+
+    // 蒐集同行人資料
     const partners = [];
     const pNames = document.querySelectorAll('.p-name');
     const pPhones = document.querySelectorAll('.p-phone');
@@ -599,12 +607,14 @@ async function submitRegistration() {
     const pMeals = document.querySelectorAll('.p-meal');
 
     pNames.forEach((el, i) => {
-        partners.push({
-            name: el.value,
-            phone: pPhones[i].value,
-            id: pIDs[i] ? pIDs[i].value : "",
-            meal: pMeals[i].value
-        });
+        if (el.value.trim()) {
+            partners.push({
+                name: el.value.trim(),
+                phone: pPhones[i].value.trim(),
+                id: pIDs[i] ? pIDs[i].value.toUpperCase().trim() : "",
+                meal: pMeals[i].value
+            });
+        }
     });
 
     const payload = {
@@ -612,20 +622,20 @@ async function submitRegistration() {
         activityName: tempRegTitle,
         userName: currentUser.name,
         userPhone: currentUser.phone,
-        userID: document.getElementById('regID').value,
+        userID: document.getElementById('regID').value.toUpperCase().trim(),
         userMeal: document.getElementById('regMeal').value,
         transport: document.getElementById('regTransport').value,
-        carCapacity: document.getElementById('carCapacity') ? document.getElementById('carCapacity').value : 0,
+        carCapacity: document.getElementById('carCapacity').value,
         partners: partners
     };
 
+    try {
         const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
         const result = await res.json();
-        
         if (result.result === "SUCCESS") {
             showToast("報名成功！");
             closeRegModal(null, true);
-            await syncData();
+            syncData(); // 同步更新畫面
         } else {
             showToast(result.message || "報名失敗", "error");
         }
@@ -634,7 +644,7 @@ async function submitRegistration() {
     } finally {
         overlay.style.display = 'none';
     }
-}    
+}
     
 function toggleCarDetails() {
     const transport = document.getElementById('regTransport').value;
@@ -749,73 +759,62 @@ window.addEventListener('load', () => {
 });
     
 </script>
-<div class="pt-4 border-t border-emerald-100">
-    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">攜伴人數 (最多3位)</label>
-    <select id="partnerCount" onchange="renderPartnerFields()" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
-        <option value="0">不攜伴</option>
-        <option value="1">攜伴 1 人</option>
-        <option value="2">攜伴 2 人</option>
-        <option value="3">攜伴 3 人</option>
-    </select>
-    
-    <div id="partnerContainer" class="space-y-4 mt-4"></div>
-</div>    
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
-    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+    <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
         <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center">活動報名</h3>
         <p id="regEventDate" class="text-[10px] text-emerald-600 font-bold text-center mb-6"></p>
         
         <div class="space-y-4">
-            <div id="group_id" class="hidden">
-                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號</label>
-                <input type="text" id="regID" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 font-mono" placeholder="請輸入身分證字號">
+            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <p class="text-[10px] font-black text-emerald-700 mb-3 tracking-widest">本人資料 (會員)</p>
+                <div id="group_id" class="hidden mb-3">
+                    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號</label>
+                    <input type="text" id="regID" class="w-full px-4 py-3 bg-white rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 font-mono" placeholder="請輸入身分證字號">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">餐食</label>
+                        <select id="regMeal" class="w-full px-4 py-3 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+                            <option value="葷食">葷食</option>
+                            <option value="素食">素食</option>
+                            <option value="不拘">不拘</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
+                        <select id="regTransport" onchange="toggleCarDetails()" class="w-full px-4 py-3 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+                            <option value="自行開車">自行開車</option>
+                            <option value="共乘不開車">共乘不開車</option>
+                            <option value="搭乘專車" id="opt_bus" style="display:none;">搭乘專車</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="group_car_details" class="hidden mt-3 pt-3 border-t border-emerald-100">
+                    <label class="block text-[10px] font-bold text-emerald-800 mb-2">是否可載人？ (不含駕駛)</label>
+                    <div class="flex items-center gap-4">
+                        <select id="carCapacity" class="px-3 py-2 bg-white rounded-lg text-sm border border-emerald-200">
+                            <option value="0">不可載人</option>
+                            <option value="1">可載 1 人</option>
+                            <option value="2">可載 2 人</option>
+                            <option value="3">可載 3 人</option>
+                            <option value="4">可載 4 人以上</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div id="group_meal">
-                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">餐食選擇</label>
-                <select id="regMeal" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
-                    <option value="葷食">葷食</option>
-                    <option value="素食">素食</option>
-                    <option value="不拘">不拘</option>
+            <div class="pt-2">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">是否攜伴參加？ (含本人最多4人)</label>
+                <select id="partnerCount" onchange="renderPartnerFields()" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+                    <option value="0">僅本人參加</option>
+                    <option value="1">攜伴 1 人</option>
+                    <option value="2">攜伴 2 人</option>
+                    <option value="3">攜伴 3 人</option>
                 </select>
-            </div>
-            
-            <div id="group_transport">
-                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
-                <select id="regTransport" onchange="toggleCarDetails()" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
-                    <option value="自行開車">自行開車</option>
-                    <option value="共乘不開車">共乘不開車</option>
-                    <option value="搭乘專車" id="opt_bus" style="display:none;">搭乘專車</option>
-                </select>
+                <div id="partnerContainer" class="space-y-4 mt-4"></div>
             </div>
 
-            <div id="group_car_details" class="hidden bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                <label class="block text-[10px] font-bold text-emerald-800 mb-2">是否可載人？</label>
-                <div class="flex gap-4 mb-3">
-                    <label class="flex items-center text-sm font-bold text-emerald-900"><input type="radio" name="canDriveOthers" value="Y" class="mr-1"> 是</label>
-                    <label class="flex items-center text-sm font-bold text-emerald-900"><input type="radio" name="canDriveOthers" value="N" checked class="mr-1"> 否</label>
-                </div>
-                <label class="block text-[10px] font-bold text-emerald-800 mb-1">可載人數 (不含駕駛)</label>
-                <input type="number" id="carCapacity" value="0" min="0" max="8" class="w-full px-3 py-2 bg-white rounded-lg text-sm border border-emerald-200">
-            </div>
-
-            <div class="pt-2 border-t border-gray-100">
-                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">是否攜伴？</label>
-                <div class="flex gap-4 mb-3">
-                    <label class="flex items-center text-sm font-bold text-emerald-900" onclick="togglePartner(true)"><input type="radio" name="hasPartner" value="Y" class="mr-1"> 是</label>
-                    <label class="flex items-center text-sm font-bold text-emerald-900" onclick="togglePartner(false)"><input type="radio" name="hasPartner" value="N" checked class="mr-1"> 否</label>
-                </div>
-                <div id="group_partner" class="hidden space-y-3 bg-gray-50 p-4 rounded-2xl">
-                    <input type="text" id="partnerName" placeholder="伴侶姓名" class="w-full px-4 py-2 bg-white rounded-lg text-sm border border-gray-200">
-                    <select id="partnerMeal" class="w-full px-4 py-2 bg-white rounded-lg text-sm border border-gray-200">
-                        <option value="葷食">伴侶餐食：葷食</option>
-                        <option value="素食">伴侶餐食：素食</option>
-                        <option value="不拘">伴侶餐食：不拘</option>
-                    </select>
-                </div>
-            </div>
-
-            <button onclick="submitRegistration()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-xl font-black shadow-md">確認提交報名</button>
+            <button onclick="submitRegistration()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認提交報名</button>
         </div>
     </div>
 </div>    

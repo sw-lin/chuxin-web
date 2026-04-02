@@ -513,18 +513,51 @@ async function processCheckin(scanData) {
         document.getElementById('loadingOverlay').style.display = 'none'; 
     }
 }
-    
+
     async function handleReg(title) {
-        if(!confirm(`確認報名「${title}」？`)) return;
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'register_event', phone: currentUser.phone, name: currentUser.name, eventTitle: title }) });
-            const result = await res.json();
-            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") { showToast(result.message || "報名成功！"); syncData(); } 
-            else { showToast(result.message, "error"); }
-        } catch (e) { showToast("連線異常", "error"); }
-        finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+    // 1. 彈出確認視窗並收集簡單資訊（或引導至詳細表單，此處先以自動帶入基本資料為例）
+    if(!confirm(`確認報名「${title}」？\n系統將自動提交您的基本資料與預設餐食。`)) return;
+    
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
+    
+    try {
+        // 2. 構建符合新版後端 handleComplexRegistration 規格的資料包
+        const payload = {
+            type: 'complex_register', // 確保後端 switch case 有對應到此 type
+            activityName: title,
+            userName: currentUser.name,
+            userPhone: currentUser.phone,
+            userID: currentUser.id || "未提供", // 若會員資料有 ID 則帶入
+            userMeal: "葷食(預設)",           // 可改為讓使用者選擇的變數
+            transport: "自行前往",           // 可改為讓使用者選擇的變數
+            totalCount: 1,                 // 本人報名預設 1 人
+            totalFee: 0                    // 費用視活動性質而定
+        };
+
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        
+        const result = await res.json();
+        
+        if (result.result === "SUCCESS") { 
+            showToast("報名成功！資料已同步"); 
+            confetti({ particleCount: 150, spread: 70 });
+            await syncData(); // 重新整理狀態
+        } else if (result.result === "ALREADY_DONE") {
+            showToast("您已經報名過這個活動囉！", "error");
+        } else { 
+            showToast(result.message || "報名失敗", "error"); 
+        }
+    } catch (e) { 
+        console.error("報名出錯:", e);
+        showToast("網路連線異常", "error"); 
+    } finally { 
+        overlay.style.display = 'none'; 
     }
+}
 
     async function enterStaffMode() {
         var key = prompt("輸入管理金鑰：");

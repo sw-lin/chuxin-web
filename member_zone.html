@@ -567,12 +567,22 @@ function closeRegModal(e, force=false) {
 } 
 // 新增的提交函數：真正把資料送出
 async function submitRegistration() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
+
+    // 讀取所有資料
+    const idNumber = document.getElementById('regID').value;
     const meal = document.getElementById('regMeal').value;
     const transport = document.getElementById('regTransport').value;
     
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = 'flex';
-    closeRegModal(null, true); // 關閉選單
+    // 開車詳情
+    const canDriveOthers = document.querySelector('input[name="canDriveOthers"]:checked').value;
+    const carCapacity = document.getElementById('carCapacity').value;
+    
+    // 伴侶詳情
+    const hasPartner = document.querySelector('input[name="hasPartner"]:checked').value;
+    const partnerName = document.getElementById('partnerName').value;
+    const partnerMeal = document.getElementById('partnerMeal').value;
 
     try {
         const payload = {
@@ -580,36 +590,53 @@ async function submitRegistration() {
             activityName: tempRegTitle,
             userName: currentUser.name,
             userPhone: currentUser.phone,
-            userID: currentUser.id || "未提供",
+            userID: idNumber,           // 身分證字號
             userMeal: meal,
             transport: transport,
-            totalCount: 1,
-            totalFee: 0 
+            canDriveOthers: canDriveOthers,
+            carCapacity: carCapacity,
+            hasPartner: hasPartner,
+            partnerName: partnerName,
+            partnerMeal: partnerMeal,
+            totalCount: (hasPartner === 'Y' ? 2 : 1) // 計算總人數
         };
 
-        const res = await fetch(GAS_URL, { 
-            method: 'POST', 
-            body: JSON.stringify(payload) 
-        });
-        
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
         const result = await res.json();
         
-        if (result.result === "SUCCESS") { 
-            showToast("報名成功！資料已同步"); 
-            confetti({ particleCount: 150, spread: 70 });
-            await syncData(); 
-        } else if (result.result === "ALREADY_DONE") {
-            showToast("您已經報名過這個活動囉！", "error");
-        } else { 
-            showToast(result.message || "報名失敗", "error"); 
+        if (result.result === "SUCCESS") {
+            showToast("報名成功！");
+            closeRegModal(null, true);
+            await syncData();
+        } else {
+            showToast(result.message || "報名失敗", "error");
         }
-    } catch (e) { 
-        console.error("報名出錯:", e);
-        showToast("網路連線異常", "error"); 
-    } finally { 
-        overlay.style.display = 'none'; 
+    } catch (e) {
+        showToast("網路錯誤", "error");
+    } finally {
+        overlay.style.display = 'none';
     }
-}   
+}    
+    
+function toggleCarDetails() {
+    const transport = document.getElementById('regTransport').value;
+    const carDetails = document.getElementById('group_car_details');
+    if (transport === '自行開車') {
+        carDetails.classList.remove('hidden');
+    } else {
+        carDetails.classList.add('hidden');
+    }
+}
+
+// 控制伴侶欄位
+function togglePartner(show) {
+    const partnerGroup = document.getElementById('group_partner');
+    if (show) {
+        partnerGroup.classList.remove('hidden');
+    } else {
+        partnerGroup.classList.add('hidden');
+    }
+}    
 
     async function enterStaffMode() {
         var key = prompt("輸入管理金鑰：");
@@ -705,15 +732,14 @@ window.addEventListener('load', () => {
     
 </script>
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
-    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative" onclick="event.stopPropagation()">
-        <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center text-balance">活動報名</h3>
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center">活動報名</h3>
         <p id="regEventDate" class="text-[10px] text-emerald-600 font-bold text-center mb-6"></p>
         
         <div class="space-y-4">
             <div id="group_id" class="hidden">
-                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號 (保險需求)</label>
-                <input type="text" id="regID" placeholder="請輸入身分證字號" 
-                       class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 font-mono">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號</label>
+                <input type="text" id="regID" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 font-mono" placeholder="請輸入身分證字號">
             </div>
 
             <div id="group_meal">
@@ -721,20 +747,46 @@ window.addEventListener('load', () => {
                 <select id="regMeal" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
                     <option value="葷食">葷食</option>
                     <option value="素食">素食</option>
-                    <option value="不需用餐">不需用餐</option>
+                    <option value="不拘">不拘</option>
                 </select>
             </div>
             
             <div id="group_transport">
                 <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
-                <select id="regTransport" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
-                    <option value="自行前往">自行前往</option>
-                    <option value="搭乘專車">搭乘專車</option>
-                    <option value="共乘">共乘</option>
+                <select id="regTransport" onchange="toggleCarDetails()" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
+                    <option value="自行開車">自行開車</option>
+                    <option value="共乘不開車">共乘不開車</option>
+                    <option value="搭乘專車" id="opt_bus" style="display:none;">搭乘專車</option>
                 </select>
             </div>
 
-            <button onclick="submitRegistration()" class="w-full mt-2 bg-emerald-800 text-white py-4 rounded-xl font-black tracking-widest active:scale-95 transition-all shadow-md">確認報名</button>
+            <div id="group_car_details" class="hidden bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2">是否可載人？</label>
+                <div class="flex gap-4 mb-3">
+                    <label class="flex items-center text-sm font-bold text-emerald-900"><input type="radio" name="canDriveOthers" value="Y" class="mr-1"> 是</label>
+                    <label class="flex items-center text-sm font-bold text-emerald-900"><input type="radio" name="canDriveOthers" value="N" checked class="mr-1"> 否</label>
+                </div>
+                <label class="block text-[10px] font-bold text-emerald-800 mb-1">可載人數 (不含駕駛)</label>
+                <input type="number" id="carCapacity" value="0" min="0" max="8" class="w-full px-3 py-2 bg-white rounded-lg text-sm border border-emerald-200">
+            </div>
+
+            <div class="pt-2 border-t border-gray-100">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">是否攜伴？</label>
+                <div class="flex gap-4 mb-3">
+                    <label class="flex items-center text-sm font-bold text-emerald-900" onclick="togglePartner(true)"><input type="radio" name="hasPartner" value="Y" class="mr-1"> 是</label>
+                    <label class="flex items-center text-sm font-bold text-emerald-900" onclick="togglePartner(false)"><input type="radio" name="hasPartner" value="N" checked class="mr-1"> 否</label>
+                </div>
+                <div id="group_partner" class="hidden space-y-3 bg-gray-50 p-4 rounded-2xl">
+                    <input type="text" id="partnerName" placeholder="伴侶姓名" class="w-full px-4 py-2 bg-white rounded-lg text-sm border border-gray-200">
+                    <select id="partnerMeal" class="w-full px-4 py-2 bg-white rounded-lg text-sm border border-gray-200">
+                        <option value="葷食">伴侶餐食：葷食</option>
+                        <option value="素食">伴侶餐食：素食</option>
+                        <option value="不拘">伴侶餐食：不拘</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="submitRegistration()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-xl font-black shadow-md">確認提交報名</button>
         </div>
     </div>
 </div>    

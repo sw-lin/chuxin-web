@@ -525,23 +525,27 @@ async function processCheckin(scanData) {
     }
 }
     
-let currentNeedID = "N"; // 追蹤活動是否需要身分證
+// 確保全域變數 currentNeedID 存在
+let currentNeedID = "N";
 
 // 修改 handleReg，讓它能正確初始化 Modal
 function handleReg(evDataStr) {
     const ev = JSON.parse(evDataStr);
     tempRegTitle = ev.title;
-    currentNeedID = ev.needID || "N"; // 關鍵：存下本次活動是否需要 ID
+    currentNeedID = ev.needID || "N"; // 取得活動是否需要身分證
     
     document.getElementById('regEventTitle').innerText = ev.title;
     document.getElementById('regEventDate').innerText = "活動日期：" + (ev.date || "未定");
     
-    // 處理身分證欄位
+    // 1. 本人身分證欄位顯示/隱藏
     const idGroup = document.getElementById('group_id');
-    if (currentNeedID === 'Y') idGroup.classList.remove('hidden');
-    else idGroup.classList.add('hidden');
+    if (currentNeedID === 'Y') {
+        idGroup.classList.remove('hidden');
+    } else {
+        idGroup.classList.add('hidden');
+    }
 
-    // 處理交通方式
+    // 2. 交通方式與載人調查連動
     const optBus = document.getElementById('opt_bus');
     const transSelect = document.getElementById('regTransport');
     const carGroup = document.getElementById('group_car_details');
@@ -556,7 +560,7 @@ function handleReg(evDataStr) {
         carGroup.classList.remove('hidden');
     }
 
-    // 重要：重置攜伴人數為 0 並清空容器
+    // 3. 重置攜伴選單
     document.getElementById('partnerCount').value = "0";
     document.getElementById('partnerContainer').innerHTML = "";
     
@@ -569,12 +573,12 @@ let currentNeedID = "N"; // 全域變數追蹤當前活動需求
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
-    container.innerHTML = ''; // 先清空
+    container.innerHTML = ''; // 清空舊內容
     
     for (let i = 1; i <= count; i++) {
         container.innerHTML += `
-            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">同行人 ${i} (非會員)</p>
+            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3 mt-3">
+                <p class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">同行人 ${i} (非會員)</p>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
                     <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
@@ -589,7 +593,8 @@ function renderPartnerFields() {
             </div>
         `;
     }
-}    
+}
+    
 // 關閉選單的輔助函數
 function closeRegModal(e, force=false) {
     if (force || e.target === document.getElementById('regOptionsModal')) {
@@ -602,7 +607,7 @@ async function submitRegistration() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
 
-    // 蒐集同行人資料陣列
+    // 1. 蒐集同行人 (非會員) 資料
     const partners = [];
     const pNames = document.querySelectorAll('.p-name');
     const pPhones = document.querySelectorAll('.p-phone');
@@ -610,22 +615,23 @@ async function submitRegistration() {
     const pMeals = document.querySelectorAll('.p-meal');
 
     pNames.forEach((el, i) => {
-        if (el.value.trim()) { // 有填姓名才列入
+        if (el.value.trim()) { // 姓名必填
             partners.push({
                 name: el.value.trim(),
-                phone: pPhones[i].value.trim(),
+                phone: pPhones[i] ? pPhones[i].value.trim() : "",
                 id: pIDs[i] ? pIDs[i].value.toUpperCase().trim() : "",
-                meal: pMeals[i].value
+                meal: pMeals[i] ? pMeals[i].value : "葷食"
             });
         }
     });
 
+    // 2. 封裝傳送物件 (對應 GAS 的 complex_register 邏輯)
     const payload = {
       type: 'complex_register',
       activityName: tempRegTitle,
       userName: currentUser.name,
       userPhone: currentUser.phone,
-      userID: document.getElementById('regID').value.toUpperCase().trim(),
+      userID: (document.getElementById('regID').value || "").toUpperCase().trim(),
       userMeal: document.getElementById('regMeal').value,
       transport: document.getElementById('regTransport').value,
       carCapacity: document.getElementById('carCapacity').value,
@@ -635,15 +641,18 @@ async function submitRegistration() {
     try {
       const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
       const result = await res.json();
+      
       if (result.result === "SUCCESS") {
         showToast("報名成功！");
-        closeRegModal(null, true);
-        syncData(); // 重新整理畫面
+        // 成功後關閉視窗並刷新資料
+        document.getElementById('regOptionsModal').style.display = 'none';
+        syncData(); 
       } else {
         showToast(result.message || "報名失敗", "error");
       }
     } catch (e) {
-      showToast("系統連線錯誤", "error");
+      console.error("Submit error:", e);
+      showToast("系統連線失敗", "error");
     } finally {
       overlay.style.display = 'none';
     }

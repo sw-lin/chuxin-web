@@ -156,36 +156,55 @@ async function initData() {
         }
         console.log("目前是否為宣傳期:", isPromoTime);
 
-        // --- 3. 處理 5 張輪播圖邏輯 ---
-        const slides = [];
-        for (let i = 1; i <= 5; i++) {
-            const item = config[`slide_img${i}`];
-            if (!item) continue;
+        // --- 3. 處理輪播圖邏輯 (宣傳優先，不混用) ---
+        let slides = [];
+        const now = new Date();
+        let isPromoTime = false;
 
-            let finalUrl = "";
-            if (isPromoTime) {
-                // 宣傳期：優先用 promo (B欄)，沒填就用 normal (C欄) 保底
-                finalUrl = item.promo || item.normal;
-            } else {
-                // 平時：只用 normal (C欄)
-                finalUrl = item.normal;
-            }
+        // 判斷日期 (與之前相同)
+        const startDateStr = config.promo_start ? (config.promo_start.promo || config.promo_start) : "";
+        const endDateStr = config.promo_end ? (config.promo_end.promo || config.promo_end) : "";
 
-            // 如果有網址，進行轉換；若完全沒填則略過此張
-            if (finalUrl && finalUrl.trim() !== "") {
-                slides.push(transformDriveUrl(finalUrl));
-            }
+        if (startDateStr && endDateStr) {
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            end.setHours(23, 59, 59, 999);
+            if (now >= start && now <= end) isPromoTime = true;
         }
 
-        // --- 4. 渲染圖片 (若無圖則顯示預設圖) ---
+        if (isPromoTime) {
+            // 【新邏輯】先檢查 B 欄 (promo) 有沒有任何一張圖
+            for (let i = 1; i <= 5; i++) {
+                const imgUrl = config[`slide_img${i}`]?.promo;
+                if (imgUrl && imgUrl.trim() !== "" && !imgUrl.includes("images/")) {
+                    slides.push(transformDriveUrl(imgUrl));
+                }
+            }
+            console.log(`宣傳期間，抓取到 ${slides.length} 張宣傳圖`);
+        }
+
+        // 【關鍵判斷】如果不是宣傳期，或者「宣傳期內完全沒填圖」，才抓常態圖
+        if (slides.length === 0) {
+            for (let i = 1; i <= 5; i++) {
+                // 常態圖可能在 .normal 或直接是字串，視您的 GAS 回傳格式而定
+                const item = config[`slide_img${i}`];
+                const imgUrl = (typeof item === 'object') ? item.normal : item;
+                
+                if (imgUrl && imgUrl.trim() !== "" && !imgUrl.includes("images/")) {
+                    slides.push(transformDriveUrl(imgUrl));
+                }
+            }
+            console.log(`使用常態模式，共 ${slides.length} 張圖`);
+        }
+
+        // --- 4. 渲染圖片 ---
         if (slides.length > 0) {
             container.innerHTML = slides.map((url, idx) => 
                 `<img class="slide" src="${url}" onerror="this.src='${idx + 1}.jpg'">`
             ).join('');
         } else {
-            // 完全沒設定時的保底
             container.innerHTML = `<img class="slide" src="1.jpg" style="display:block">`;
-        }
+        }        
         
         startSlides();
 

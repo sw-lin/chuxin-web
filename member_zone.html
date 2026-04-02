@@ -308,24 +308,35 @@ function renderTextOnlyCard(title, date) {
         </div>`;
 } 
     
-    function renderEventSection(events) {
-        var container = document.getElementById('eventSection');
-        var today = new Date().toISOString().split('T')[0];
-        var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
-        if (activeEvents.length === 0) { container.innerHTML = ""; return; }
+function renderEventSection(events) {
+    var container = document.getElementById('eventSection');
+    var today = new Date().toISOString().split('T')[0];
+    var activeEvents = (events || []).filter(ev => today >= ev.start_date && today <= ev.display_until);
+    if (activeEvents.length === 0) { container.innerHTML = ""; return; }
 
-        container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
-        activeEvents.map(ev => {
-            const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
-            const displayUrl = getDirectImageUrl(ev.poster_url);
-            if (displayUrl && displayUrl.includes('http')) {
-                return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6"><img src="${displayUrl}" class="w-full object-cover">${isRegEnabled ? `<div class="p-5 bg-white"><button onclick="handleReg('${ev.title}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all">立即報名</button></div>` : ''}</div>`;
-            } else {
-                return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4"><h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4><p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>${isRegEnabled ? `<button onclick="handleReg('${ev.title}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>` : `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic text-center py-2 bg-gray-50 rounded-lg">PROMOTION ONLY</div>`}</div>`;
-            }
-        }).join('');
-    }
+    container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
+    activeEvents.map(ev => {
+        // --- 關鍵修改：打包所有需要的資訊 (標題、日期、簡介、H欄、I欄) ---
+        const evData = JSON.stringify({
+            title: ev.title,
+            date: ev.date || "未定",
+            desc: ev.desc || "",
+            needID: ev.needID || "N", // H 欄
+            isBus: ev.isBus || "N"    // I 欄
+        }).replace(/"/g, '&quot;'); // 轉義引號，避免 HTML 標籤解析錯誤
 
+        const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
+        const displayUrl = getDirectImageUrl(ev.poster_url);
+
+        if (displayUrl && displayUrl.includes('http')) {
+            // 修改處：onclick="handleReg('${evData}')"
+            return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6"><img src="${displayUrl}" class="w-full object-cover">${isRegEnabled ? `<div class="p-5 bg-white"><button onclick="handleReg('${evData}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all">立即報名</button></div>` : ''}</div>`;
+        } else {
+            // 修改處：onclick="handleReg('${evData}')"
+            return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4"><h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4><p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>${isRegEnabled ? `<button onclick="handleReg('${evData}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>` : `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic text-center py-2 bg-gray-50 rounded-lg">PROMOTION ONLY</div>`}</div>`;
+        }
+    }).join('');
+}
     // 其餘邏輯 (handleUpdateProfile, processCheckin, openHistoryModal, etc.) 略...
     // 確保 openHistoryModal 也調用 getDirectImageUrl
     function openHistoryModal() {

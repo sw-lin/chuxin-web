@@ -123,50 +123,77 @@ async function initData() {
         const res = await fetch(GAS_URL + "?t=" + Date.now());
         const data = await res.json();
         
-        // 1. 重要：先宣告 config 變數，並做好防呆
         const config = data.config || {};
-        console.log("從 GAS 接收到的完整 Config:", config);      
+        console.log("接收到的 Config:", config);      
 
-        // 2. 處理「關於築心」文字 (優先處理，確保文字一定會出來)
-        // 這裡同時檢查 about_content 或 about_us_url 兩個 Key
-        const aboutText = config.about_content || config.about_us_url;
+        // --- 1. 處理「關於築心」文字 ---
+        // 因為 GAS 現在把 about_content 也包成了物件 {promo: '...', normal: ''}
+        const aboutObj = config.about_content || config.about_us_url;
+        const aboutText = (typeof aboutObj === 'object') ? aboutObj.promo : aboutObj;
         
         if (aboutText) {
             contentDiv.innerHTML = aboutText.replace(/\n/g, '<br>');
         } else {
-            contentDiv.innerHTML = "系統目前無法取得介紹內容，請檢查試算表設定。";
+            contentDiv.innerHTML = "系統目前無法取得介紹內容。";
         }   
         
-        // 3. 處理 5 張圖片
-        const rawSlides = [
-            config.slide_img1, 
-            config.slide_img2, 
-            config.slide_img3, 
-            config.slide_img4, 
-            config.slide_img5
-        ];
-
-        // 轉換並過濾網址
-        const slides = rawSlides.map((url, index) => {
-            const transformed = transformDriveUrl(url);
-            // 只有當 transformed 是有效的 http 網址才使用，否則回歸 1.jpg, 2.jpg...
-            return (transformed && transformed.startsWith('http')) ? transformed : `${index + 1}.jpg`;
-        });
-
-        // 渲染圖片到容器
-        container.innerHTML = slides.map((url, idx) => 
-            `<img class="slide" src="${url}" onerror="this.src='${idx + 1}.jpg'">`
-        ).join('');
+        // --- 2. 判斷是否為宣傳期 ---
+        const now = new Date();
+        let isPromoTime = false;
         
-        // 啟動輪播
+        // 從 config 取得日期字串 (格式通常為 2026-04-01)
+        const startDateStr = config.promo_start ? config.promo_start.promo : "";
+        const endDateStr = config.promo_end ? config.promo_end.promo : "";
+
+        if (startDateStr && endDateStr) {
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            // 將結束日期設為當天的 23:59:59
+            end.setHours(23, 59, 59, 999);
+            if (now >= start && now <= end) {
+                isPromoTime = true;
+            }
+        }
+        console.log("目前是否為宣傳期:", isPromoTime);
+
+        // --- 3. 處理 5 張輪播圖邏輯 ---
+        const slides = [];
+        for (let i = 1; i <= 5; i++) {
+            const item = config[`slide_img${i}`];
+            if (!item) continue;
+
+            let finalUrl = "";
+            if (isPromoTime) {
+                // 宣傳期：優先用 promo (B欄)，沒填就用 normal (C欄) 保底
+                finalUrl = item.promo || item.normal;
+            } else {
+                // 平時：只用 normal (C欄)
+                finalUrl = item.normal;
+            }
+
+            // 如果有網址，進行轉換；若完全沒填則略過此張
+            if (finalUrl && finalUrl.trim() !== "") {
+                slides.push(transformDriveUrl(finalUrl));
+            }
+        }
+
+        // --- 4. 渲染圖片 (若無圖則顯示預設圖) ---
+        if (slides.length > 0) {
+            container.innerHTML = slides.map((url, idx) => 
+                `<img class="slide" src="${url}" onerror="this.src='${idx + 1}.jpg'">`
+            ).join('');
+        } else {
+            // 完全沒設定時的保底
+            container.innerHTML = `<img class="slide" src="1.jpg" style="display:block">`;
+        }
+        
         startSlides();
 
     } catch (e) {
-        console.error("initData 執行失敗:", e);
-        contentDiv.innerHTML = "連線失敗，請檢查網路或 GAS 部署狀態。";
+        console.error("initData 失敗:", e);
+        contentDiv.innerHTML = "連線失敗，請檢查網路。";
     }
 }
-
 function startSlides() {
     let slides = document.getElementsByClassName("slide");
     if (slides.length === 0) return;

@@ -531,35 +531,37 @@ let currentNeedID = "N"; // 追蹤活動是否需要身分證
 function handleReg(evDataStr) {
     const ev = JSON.parse(evDataStr);
     tempRegTitle = ev.title;
-    currentNeedID = ev.needID || "N"; // 儲存身分證需求狀態
+    currentNeedID = ev.needID || "N"; // 關鍵：存下本次活動是否需要 ID
     
     document.getElementById('regEventTitle').innerText = ev.title;
     document.getElementById('regEventDate').innerText = "活動日期：" + (ev.date || "未定");
     
-    // 處理身分證欄位顯示
+    // 處理身分證欄位
     const idGroup = document.getElementById('group_id');
     if (currentNeedID === 'Y') idGroup.classList.remove('hidden');
     else idGroup.classList.add('hidden');
 
-    // 處理遊覽車與交通
+    // 處理交通方式
     const optBus = document.getElementById('opt_bus');
     const transSelect = document.getElementById('regTransport');
+    const carGroup = document.getElementById('group_car_details');
+
     if (ev.isBus === 'Y') {
         optBus.style.display = 'block';
         transSelect.value = '搭乘專車';
-        document.getElementById('group_car_details').classList.add('hidden');
+        carGroup.classList.add('hidden');
     } else {
         optBus.style.display = 'none';
         transSelect.value = '自行開車';
-        toggleCarDetails();
+        carGroup.classList.remove('hidden');
     }
 
-    // 重置攜伴
+    // 重要：重置攜伴人數為 0 並清空容器
     document.getElementById('partnerCount').value = "0";
     document.getElementById('partnerContainer').innerHTML = "";
     
     document.getElementById('regOptionsModal').style.display = 'flex';
-}    
+}
     
 let currentNeedID = "N"; // 全域變數追蹤當前活動需求
 
@@ -567,18 +569,19 @@ let currentNeedID = "N"; // 全域變數追蹤當前活動需求
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
-    container.innerHTML = '';
+    container.innerHTML = ''; // 先清空
     
     for (let i = 1; i <= count; i++) {
         container.innerHTML += `
             <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
-                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">同行人 ${i} (非會員)</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">同行人 ${i} (非會員)</p>
                 <div class="grid grid-cols-2 gap-2">
-                    <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm">
-                    <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm">
+                    <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
+                    <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
                 </div>
-                ${currentNeedID === 'Y' ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase">` : ''}
-                <select class="p-meal w-full px-3 py-2 rounded-lg border text-sm">
+                ${currentNeedID === 'Y' ? 
+                  `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase focus:border-emerald-500 outline-none">` : ''}
+                <select class="p-meal w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
                     <option value="葷食">餐食：葷食</option>
                     <option value="素食">餐食：素食</option>
                     <option value="不拘">餐食：不拘</option>
@@ -599,7 +602,7 @@ async function submitRegistration() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
 
-    // 蒐集同行人資料
+    // 蒐集同行人資料陣列
     const partners = [];
     const pNames = document.querySelectorAll('.p-name');
     const pPhones = document.querySelectorAll('.p-phone');
@@ -607,7 +610,7 @@ async function submitRegistration() {
     const pMeals = document.querySelectorAll('.p-meal');
 
     pNames.forEach((el, i) => {
-        if (el.value.trim()) {
+        if (el.value.trim()) { // 有填姓名才列入
             partners.push({
                 name: el.value.trim(),
                 phone: pPhones[i].value.trim(),
@@ -618,33 +621,33 @@ async function submitRegistration() {
     });
 
     const payload = {
-        type: 'complex_register',
-        activityName: tempRegTitle,
-        userName: currentUser.name,
-        userPhone: currentUser.phone,
-        userID: document.getElementById('regID').value.toUpperCase().trim(),
-        userMeal: document.getElementById('regMeal').value,
-        transport: document.getElementById('regTransport').value,
-        carCapacity: document.getElementById('carCapacity').value,
-        partners: partners
+      type: 'complex_register',
+      activityName: tempRegTitle,
+      userName: currentUser.name,
+      userPhone: currentUser.phone,
+      userID: document.getElementById('regID').value.toUpperCase().trim(),
+      userMeal: document.getElementById('regMeal').value,
+      transport: document.getElementById('regTransport').value,
+      carCapacity: document.getElementById('carCapacity').value,
+      partners: partners
     };
 
     try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-            showToast("報名成功！");
-            closeRegModal(null, true);
-            syncData(); // 同步更新畫面
-        } else {
-            showToast(result.message || "報名失敗", "error");
-        }
+      const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+      const result = await res.json();
+      if (result.result === "SUCCESS") {
+        showToast("報名成功！");
+        closeRegModal(null, true);
+        syncData(); // 重新整理畫面
+      } else {
+        showToast(result.message || "報名失敗", "error");
+      }
     } catch (e) {
-        showToast("網路錯誤", "error");
+      showToast("系統連線錯誤", "error");
     } finally {
-        overlay.style.display = 'none';
+      overlay.style.display = 'none';
     }
-}
+}    
     
 function toggleCarDetails() {
     const transport = document.getElementById('regTransport').value;
@@ -655,16 +658,7 @@ function toggleCarDetails() {
         carDetails.classList.add('hidden');
     }
 }
-
-// 控制伴侶欄位
-function togglePartner(show) {
-    const partnerGroup = document.getElementById('group_partner');
-    if (show) {
-        partnerGroup.classList.remove('hidden');
-    } else {
-        partnerGroup.classList.add('hidden');
-    }
-}    
+  
 
     async function enterStaffMode() {
         var key = prompt("輸入管理金鑰：");

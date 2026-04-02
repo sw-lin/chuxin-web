@@ -96,25 +96,25 @@
             </div>
         </div>
     </div>
-
-    <script>
+<script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-NXMvrbROK1FtSjK9WW_8V7WjbncWCh8l5OIiLxzZMfY/exec";
 let slideIndex = 0;
 
 // 強化後的網址轉換邏輯
 function transformDriveUrl(url) {
     if (!url) return "";
-        if (!url.includes('drive.google.com')) return url;
-        let id = "";
-        if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
-        else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
-        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
+    if (!url.includes('drive.google.com')) return url;
+    let id = "";
+    if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
+    else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
+    return id ? `https://lh3.googleusercontent.com/d/${id}` : url;
 }
 
 function toHalfWidth(str) {
     if (!str) return "";
     return str.replace(/[０-９Ａ-Ｚａ-ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/\s/g, "");
 }
+
 async function initData() {
     const contentDiv = document.getElementById('aboutContent');
     const container = document.getElementById('slideContainer');
@@ -122,48 +122,22 @@ async function initData() {
     try {
         const res = await fetch(GAS_URL + "?t=" + Date.now());
         const data = await res.json();
-        
         const config = data.config || {};
         console.log("接收到的 Config:", config);      
 
         // --- 1. 處理「關於築心」文字 ---
-        // 因為 GAS 現在把 about_content 也包成了物件 {promo: '...', normal: ''}
         const aboutObj = config.about_content || config.about_us_url;
         const aboutText = (typeof aboutObj === 'object') ? aboutObj.promo : aboutObj;
-        
-        if (aboutText) {
-            contentDiv.innerHTML = aboutText.replace(/\n/g, '<br>');
-        } else {
-            contentDiv.innerHTML = "系統目前無法取得介紹內容。";
-        }   
+        contentDiv.innerHTML = aboutText ? aboutText.replace(/\n/g, '<br>') : "系統目前無法取得介紹內容。";
         
         // --- 2. 判斷是否為宣傳期 ---
         const now = new Date();
         let isPromoTime = false;
         
-        // 從 config 取得日期字串 (格式通常為 2026-04-01)
-        const startDateStr = config.promo_start ? config.promo_start.promo : "";
-        const endDateStr = config.promo_end ? config.promo_end.promo : "";
-
-        if (startDateStr && endDateStr) {
-            const start = new Date(startDateStr);
-            const end = new Date(endDateStr);
-            // 將結束日期設為當天的 23:59:59
-            end.setHours(23, 59, 59, 999);
-            if (now >= start && now <= end) {
-                isPromoTime = true;
-            }
-        }
-        console.log("目前是否為宣傳期:", isPromoTime);
-
-        // --- 3. 處理輪播圖邏輯 (宣傳優先，不混用) ---
-        let slides = [];
-        const now = new Date();
-        let isPromoTime = false;
-
-        // 判斷日期 (與之前相同)
-        const startDateStr = config.promo_start ? (config.promo_start.promo || config.promo_start) : "";
-        const endDateStr = config.promo_end ? (config.promo_end.promo || config.promo_end) : "";
+        // 取得日期 (相容物件格式與純字串格式)
+        const getVal = (obj) => (obj && typeof obj === 'object') ? obj.promo : (obj || "");
+        const startDateStr = getVal(config.promo_start);
+        const endDateStr = getVal(config.promo_end);
 
         if (startDateStr && endDateStr) {
             const start = new Date(startDateStr);
@@ -171,35 +145,35 @@ async function initData() {
             end.setHours(23, 59, 59, 999);
             if (now >= start && now <= end) isPromoTime = true;
         }
+        console.log("目前是否為宣傳期:", isPromoTime);
+
+        // --- 3. 處理輪播圖邏輯 (宣傳優先) ---
+        let slidesUrls = [];
 
         if (isPromoTime) {
-            // 【新邏輯】先檢查 B 欄 (promo) 有沒有任何一張圖
+            // 嘗試抓取 B 欄宣傳圖
             for (let i = 1; i <= 5; i++) {
                 const imgUrl = config[`slide_img${i}`]?.promo;
                 if (imgUrl && imgUrl.trim() !== "" && !imgUrl.includes("images/")) {
-                    slides.push(transformDriveUrl(imgUrl));
+                    slidesUrls.push(transformDriveUrl(imgUrl));
                 }
             }
-            console.log(`宣傳期間，抓取到 ${slides.length} 張宣傳圖`);
         }
 
-        // 【關鍵判斷】如果不是宣傳期，或者「宣傳期內完全沒填圖」，才抓常態圖
-        if (slides.length === 0) {
+        // 如果不是宣傳期，或者宣傳期 B 欄完全沒圖，才抓常態圖
+        if (slidesUrls.length === 0) {
             for (let i = 1; i <= 5; i++) {
-                // 常態圖可能在 .normal 或直接是字串，視您的 GAS 回傳格式而定
                 const item = config[`slide_img${i}`];
                 const imgUrl = (typeof item === 'object') ? item.normal : item;
-                
                 if (imgUrl && imgUrl.trim() !== "" && !imgUrl.includes("images/")) {
-                    slides.push(transformDriveUrl(imgUrl));
+                    slidesUrls.push(transformDriveUrl(imgUrl));
                 }
             }
-            console.log(`使用常態模式，共 ${slides.length} 張圖`);
         }
 
         // --- 4. 渲染圖片 ---
-        if (slides.length > 0) {
-            container.innerHTML = slides.map((url, idx) => 
+        if (slidesUrls.length > 0) {
+            container.innerHTML = slidesUrls.map((url, idx) => 
                 `<img class="slide" src="${url}" onerror="this.src='${idx + 1}.jpg'">`
             ).join('');
         } else {
@@ -213,6 +187,7 @@ async function initData() {
         contentDiv.innerHTML = "連線失敗，請檢查網路。";
     }
 }
+
 function startSlides() {
     let slides = document.getElementsByClassName("slide");
     if (slides.length === 0) return;
@@ -252,6 +227,6 @@ async function handleLogin() {
 function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
 window.onload = initData;        
-    </script>
+</script>
 </body>
 </html>

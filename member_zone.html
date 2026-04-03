@@ -654,28 +654,30 @@ function closeRegModal() {
 // 提交報名邏輯
 function submitRegistration() {
     try {
-        // 1. 抓取本人姓名
-        const nameElem = document.getElementById('userName');
+        // 1. 抓取本人姓名 (修正 ID 為 userNameDisplay)
+        const nameElem = document.getElementById('userNameDisplay');
         const mainName = nameElem ? nameElem.innerText.trim() : "";
-        if (!mainName || mainName === "載入中...") {
-            alert("資料讀取中，請稍候再試。");
+        
+        // 如果上面抓不到，試著抓另一個可能的 ID (預防萬一)
+        const altName = mainName || (document.getElementById('userName') ? document.getElementById('userName').innerText.trim() : "");
+        
+        if (!altName || altName === "載入中...") {
+            alert("系統尚未讀取到您的會員姓名，請稍候再試。");
             return;
         }
 
-        // 2. 抓取本人電話 (修正：HTML 裡是 userPhone 這個 span)
-        const phoneElem = document.getElementById('userPhone');
+        // 2. 抓取本人電話 (修正 ID 為 userPhoneDisplay)
+        const phoneElem = document.getElementById('userPhoneDisplay') || document.getElementById('userPhone');
         const mainPhone = phoneElem ? phoneElem.innerText.trim() : "";
 
-        // 3. 處理「本人」身分證 (修正：ID 應為 reg_id)
+        // 3. 處理本人身分證 (ID 為 reg_id)
         let mainIdVal = "";
         const idGroup = document.getElementById('group_id');
         const isIdRequired = idGroup && !idGroup.classList.contains('hidden');
         
         if (isIdRequired) {
-            const idInput = document.getElementById('reg_id'); // <--- 關鍵修正：加上底線
-            if (!idInput) {
-                console.error("找不到 ID 為 reg_id 的輸入框");
-            } else {
+            const idInput = document.getElementById('reg_id');
+            if (idInput) {
                 mainIdVal = idInput.value.trim();
                 if (!mainIdVal) {
                     alert("本活動需辦理保險，請填寫您的身分證字號。");
@@ -685,7 +687,7 @@ function submitRegistration() {
             }
         }
 
-        // 4. 收集同行人
+        // 4. 收集同行人 (保持穩定邏輯)
         const partners = [];
         const pNames = document.getElementsByClassName('p-name');
         const pIds = document.getElementsByClassName('p-id');
@@ -696,7 +698,7 @@ function submitRegistration() {
         for (let i = 0; i < pCount; i++) {
             const n = pNames[i].value.trim();
             if (!n) {
-                alert(`請填寫同行人 ${i + 1} 的姓名。`);
+                alert(`請填寫同行人 ${i+1} 的姓名。`);
                 pNames[i].focus();
                 return;
             }
@@ -704,7 +706,7 @@ function submitRegistration() {
             if (isIdRequired) {
                 pid = pIds[i] ? pIds[i].value.trim() : "";
                 if (!pid) {
-                    alert(`請填寫同行人 ${i + 1} 的身分證字號。`);
+                    alert(`請填寫同行人 ${i+1} 的身分證字號。`);
                     pIds[i].focus();
                     return;
                 }
@@ -724,21 +726,18 @@ function submitRegistration() {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
         }
 
-        // 6. 組合送出資料 (加入防呆)
-        const transElem = document.getElementById('regTransport');
-        const noteElem = document.getElementById('regNote');
-
+        // 6. 封裝資料
         const payload = {
             title: tempRegTitle,
-            name: mainName,
+            name: altName,
             id: mainIdVal,
             phone: mainPhone,
-            transport: transElem ? transElem.value : "無",
-            note: noteElem ? noteElem.value : "",
+            transport: document.getElementById('regTransport')?.value || "無",
+            note: document.getElementById('regNote')?.value || "",
             partners: JSON.stringify(partners)
         };
 
-        console.log("準備送出的 Payload:", payload);
+        console.log("發送報名資料:", payload);
 
         google.script.run
             .withSuccessHandler(function(res) {
@@ -748,15 +747,14 @@ function submitRegistration() {
                 syncData(); 
             })
             .withFailureHandler(function(err) {
-                alert("提交失敗：" + err);
+                alert("提交失敗 (GAS 錯誤)：" + err);
                 if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
             })
             .submitToGAS(payload);
 
     } catch (e) {
         alert("程式執行發生錯誤: " + e.message);
-        console.error(e);
-        // 發生意外時恢復按鈕
+        console.error("Debug Info:", e);
         const btn = document.querySelector('button[onclick="submitRegistration()"]');
         if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
     }

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
+    <meta。charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>    
     
@@ -536,6 +536,16 @@ function handleReg(evDataStr) {
     try {
         const ev = JSON.parse(evDataStr);
         tempRegTitle = ev.title;
+
+        // --- 新增：即時阻擋重複報名 ---
+    // 檢查 window.currentAttendedData 裡面是否有相同標題的活動
+    const isAlreadyRegistered = (window.currentAttendedData || []).some(reg => reg.title === ev.title);
+    
+    if (isAlreadyRegistered) {
+        // 使用更漂亮的 SweetAlert 或簡單的 alert
+        alert("⚠️ 您已經報名過「" + ev.title + "」囉！\n如需修改資料請聯繫活動組。");
+        return; // 直接中斷，不開啟彈窗
+    }
         
         // 1. 更新 UI 文字
         document.getElementById('regEventTitle').innerText = ev.title;
@@ -583,23 +593,19 @@ function renderPartnerFields() {
     container.innerHTML = ''; // 清空舊內容
     
     for (let i = 1; i <= count; i++) {
-        container.innerHTML += `
-            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3 mt-3">
-                <p class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">同行人 ${i} (非會員)</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
-                    
-    <div class="space-y-1">
-    <label class="block text-[10px] font-bold text-emerald-800 ml-1">聯絡電話</label>
-    <input type="tel" 
-           id="regPhone" 
-           maxlength="10" 
-           oninput="this.value=this.value.replace(/[^\d]/g,'')" 
-           placeholder="請輸入 10 位手機號碼" 
-           class="w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
-    <p id="phoneError" class="text-red-500 text-[10px] hidden ml-1">請輸入正確的 10 位手機號碼</p>
-    </div>
-                             
+             container.innerHTML += `
+             <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full">同行人 ${i}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" placeholder="姓名" 
+                        class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
+                        style="height: 48px;">
+                    <input type="tel" placeholder="電話" maxlength="10"
+                        oninput="this.value=this.value.replace(/[^\\d]/g,'')"
+                        class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
+                        style="height: 48px;">
                 </div>
                 ${currentNeedID === 'Y' ? 
                   `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase focus:border-emerald-500 outline-none">` : ''}
@@ -627,72 +633,76 @@ async function submitRegistration() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
 
-    // 1. 蒐集同行人 (非會員) 資料
+    // 1. 蒐集同行人資料
     const partners = [];
     const pNames = document.querySelectorAll('.p-name');
     const pPhones = document.querySelectorAll('.p-phone');
     const pIDs = document.querySelectorAll('.p-id');
-    const pMeals = document.querySelectorAll('.p-meal');
 
     pNames.forEach((el, i) => {
-        if (el.value.trim()) { // 姓名必填
+        if (el.value.trim()) {
             partners.push({
                 name: el.value.trim(),
                 phone: pPhones[i] ? pPhones[i].value.trim() : "",
                 id: pIDs[i] ? pIDs[i].value.toUpperCase().trim() : "",
-                meal: pMeals[i] ? pMeals[i].value : "葷食"
+                meal: "葷食" // 預設或從下拉選單抓取
             });
         }
     });
 
-    // 2. 封裝傳送物件 (對應 GAS 的 complex_register 邏輯)
     const payload = {
-      type: 'complex_register',
-      activityName: tempRegTitle,
-      userName: currentUser.name,
-      userPhone: currentUser.phone,
-      userID: (document.getElementById('regID').value || "").toUpperCase().trim(),
-      userMeal: document.getElementById('regMeal').value,
-      transport: document.getElementById('regTransport').value,
-      carCapacity: document.getElementById('carCapacity').value,
-      note: document.getElementById('regNote').value.trim(), // 新增這行
-      partners: partners
+        type: 'complex_register',
+        activityName: tempRegTitle,
+        userName: currentUser.name,
+        userPhone: currentUser.phone,
+        userID: (document.getElementById('regID').value || "").toUpperCase().trim(),
+        userMeal: document.getElementById('regMeal').value,
+        transport: document.getElementById('regTransport').value,
+        carCapacity: document.getElementById('carCapacity').value,
+        note: document.getElementById('regNote').value.trim(),
+        partners: partners
     };
 
     try {
-      const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-      const result = await res.json();
-      
-      if (result.result === "SUCCESS") {
-        showToast("報名成功！");
-        // 成功後關閉視窗並刷新資料
-        document.getElementById('regOptionsModal').style.display = 'none';
-        syncData(); 
-      } else {
-        showToast(result.message || "報名失敗", "error");
-      }
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        
+        if (result.result === "SUCCESS") {
+            showToast("報名成功！");
+            document.getElementById('regOptionsModal').style.display = 'none';
+            syncData(); // 刷新資料，這會更新 window.currentAttendedData
+        } 
+        // --- 修正重複報名判斷邏輯 ---
+        else if (result.result === "ALREADY_DONE") {
+            alert(result.message); // 顯示 "您已經報名過此活動囉"
+            document.getElementById('regOptionsModal').style.display = 'none';
+        } else {
+            showToast(result.message || "報名失敗", "error");
+        }
     } catch (e) {
-      console.error("Submit error:", e);
-      showToast("系統連線失敗", "error");
+        console.error("Submit error:", e);
+        showToast("系統連線失敗", "error");
     } finally {
-      overlay.style.display = 'none';
+        overlay.style.display = 'none';
     }
-}    
+}
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {
-    const transValue = document.getElementById('regTransport').value;
+    const transSelect = document.getElementById('regTransport');
     const carDetails = document.getElementById('group_car_details');
     
-    // 只有在「自行前往」且「不是搭專車」的情況下才顯示載人選項
-    if (transValue === '自行前往' || transValue === '共乘') {
+    if (!transSelect || !carDetails) return;
+
+    const val = transSelect.value;
+    // 只有「自行前往」才顯示可載人數
+    if (val === '自行前往') {
         carDetails.classList.remove('hidden');
     } else {
         carDetails.classList.add('hidden');
-        document.getElementById('carCapacity').value = "0"; // 隱藏時重置為不可載人
+        document.getElementById('carCapacity').value = "0"; // 隱藏時歸零
     }
-}
-  
+}  
 
     async function enterStaffMode() {
         var key = prompt("輸入管理金鑰：");

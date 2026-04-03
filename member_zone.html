@@ -318,26 +318,25 @@ function renderEventSection(events) {
 
     container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
     activeEvents.map(ev => {
-        // 先做初步檢查
-        const isRegistered = (window.currentAttendedData || []).some(reg => String(reg.title).trim() === String(ev.title).trim());
-        
-        // 使用 Base64 編碼避免任何引號或特殊字元衝突
-        const evData = btoa(unescape(encodeURIComponent(JSON.stringify({
+        // --- 1. 資料封裝 (URL 編碼，最穩定) ---
+        const safeData = encodeURIComponent(JSON.stringify({
             title: ev.title,
             date: ev.date || "未定",
             needID: ev.needID || "N", 
             isBus: ev.isBus || "N"
-        }))));
+        }));
 
+        // --- 2. 初始按鈕狀態 (基於本地緩存，減少等待感) ---
+        const isRegistered = (window.currentAttendedData || []).some(reg => String(reg.title).trim() === String(ev.title).trim());
         const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
         const displayUrl = getDirectImageUrl(ev.poster_url);
 
         let btnHtml = "";
         if (isRegEnabled) {
             if (isRegistered) {
-                btnHtml = `<button disabled class="w-full py-4 bg-gray-200 text-gray-500 rounded-2xl font-black tracking-widest cursor-not-allowed">已完成報名</button>`;
+                btnHtml = `<button disabled class="w-full py-4 bg-gray-200 text-gray-400 rounded-2xl font-black cursor-not-allowed">您已完成報名</button>`;
             } else {
-                btnHtml = `<button onclick="handleReg('${evData}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all shadow-md">立即報名</button>`;
+                btnHtml = `<button onclick="handleReg('${safeData}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black active:scale-95 transition-all shadow-md">立即報名</button>`;
             }
         }
 
@@ -347,19 +346,19 @@ function renderEventSection(events) {
                         <div class="p-5 bg-white">${btnHtml}</div>
                     </div>`;
         } else {
+            // 文字版處理
             const textBtn = isRegistered 
-                ? `<button disabled class="w-full mt-3 py-3.5 bg-gray-200 text-gray-400 rounded-xl font-black text-sm">已報名</button>`
-                : `<button onclick="handleReg('${evData}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>`;
+                ? `<button disabled class="w-full mt-3 py-3.5 bg-gray-100 text-gray-400 rounded-xl font-black">已報名</button>`
+                : `<button onclick="handleReg('${safeData}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black active:bg-emerald-200">點我報名</button>`;
             
             return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4">
                         <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
                         <p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>
-                        ${isRegEnabled ? textBtn : `<div class="mt-4 text-[10px] font-bold text-emerald-600/50 italic text-center py-2 bg-gray-50 rounded-lg">PROMOTION ONLY</div>`}
+                        ${isRegEnabled ? textBtn : `<div class="mt-4 text-xs italic text-emerald-600/50">PROMOTION ONLY</div>`}
                     </div>`;
         }
     }).join('');
-}
-    
+}    
     // 其餘邏輯 (handleUpdateProfile, processCheckin, openHistoryModal, etc.) 略...
     // 確保 openHistoryModal 也調用 getDirectImageUrl
     function openHistoryModal() {
@@ -575,59 +574,61 @@ document.addEventListener('input', function (e) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
-function handleReg(base64Data) {
+function handleReg(encodedData) {
     try {
-        // 解碼資料
-        const ev = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
+        // 1. 解析資料 (使用 decodeURIComponent 解決先前的報錯)
+        const ev = JSON.parse(decodeURIComponent(encodedData));
         const eventTitle = ev.title;
-        const userName = currentUser.name;
+        const userName = currentUser.name; // 從全域變數取得當前姓名
 
-        // 鎖定當前按鈕防止連點
+        // 2. 視覺反饋：鎖定按鈕避免連點
         const btn = event.currentTarget;
-        const oldText = btn.innerText;
+        const originalText = btn.innerText;
         btn.disabled = true;
-        btn.innerText = "驗證報名資格中...";
+        btn.innerText = "查詢中...";
 
-        // --- 向 GAS 即時查詢 ---
+        // 3. 即時向 GAS 查詢是否已報名過該活動
         google.script.run
-            .withSuccessHandler(function(alreadyDone) {
+            .withSuccessHandler(function(isAlreadyDone) {
                 btn.disabled = false;
-                btn.innerText = oldText;
+                btn.innerText = originalText;
 
-                if (alreadyDone) {
-                    alert("您已報名過「" + eventTitle + "」，請勿重複操作。");
-                    syncData(); // 順便刷新本地狀態
+                if (isAlreadyDone) {
+                    alert("⚠️ 系統偵測：您已經報名過「" + eventTitle + "」囉！請勿重複填寫。");
+                    syncData(); // 同步刷新按鈕狀態
                     return;
                 }
 
-                // 未報名，開啟視窗
-                openRegModal(ev);
+                // 4. 沒報過，開啟視窗
+                showRegModal(ev);
             })
             .withFailureHandler(function() {
                 btn.disabled = false;
-                btn.innerText = oldText;
-                alert("伺服器繁忙，請稍後再試");
+                btn.innerText = originalText;
+                alert("伺服器連線異常，請稍後再試。");
             })
-            .checkIfRegistered(userName, eventTitle); // 這是您要在 GAS 寫的 Function
+            .checkIfRegistered(userName, eventTitle); // 呼叫 GAS 函式
 
     } catch (e) {
-        console.error("解析失敗", e);
+        console.error("報名解析失敗:", e);
+        alert("資料載入失敗，請重整頁面。");
     }
-}    
-// 抽取出來的開啟視窗邏輯
-function openRegModal(ev) {
+} 
+// 抽離出來的 Modal 開啟函式
+function showRegModal(ev) {
     tempRegTitle = ev.title;
     document.getElementById('regEventTitle').innerText = ev.title;
-    
-    // 設定身分證與交通狀態
+    document.getElementById('regEventDate').innerText = ev.date || "未定";
+
+    // 身分證欄位顯示邏輯
     currentNeedID = (String(ev.needID).trim().toUpperCase() === 'Y' || ev.needID === '是') ? 'Y' : 'N';
     const idGroup = document.getElementById('group_id');
     if (idGroup) idGroup.classList.toggle('hidden', currentNeedID !== 'Y');
 
+    // 交通方式顯示邏輯
     const isBus = String(ev.isBus || "").trim().toUpperCase();
     const transContainer = document.getElementById('group_transport_container');
     const transSelect = document.getElementById('regTransport');
-    
     if (isBus === 'Y' || isBus === '是') {
         transContainer.classList.add('hidden');
         transSelect.value = "搭乘專車";
@@ -637,9 +638,10 @@ function openRegModal(ev) {
     }
 
     document.getElementById('partnerCount').value = "0";
-    renderPartnerFields(); // 內含電話補0邏輯
+    renderPartnerFields(); // 帶入電話補 0
     document.getElementById('regOptionsModal').style.display = 'flex';
-}    
+}
+
 function formatPhone(phone) {
     let p = String(phone || "").trim();
     // 如果是 9 位數且開頭是 9，補上 0

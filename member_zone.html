@@ -593,23 +593,31 @@ function renderPartnerFields() {
     container.innerHTML = ''; // 清空舊內容
     
     for (let i = 1; i <= count; i++) {
-             container.innerHTML += `
-             <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+        container.innerHTML += `
+            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-sm">
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full">同行人 ${i}</span>
+                    <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">同行人 ${i}</span>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <input type="text" placeholder="姓名" 
                         class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                         style="height: 48px;">
+                    
                     <input type="tel" placeholder="電話" maxlength="10"
                         oninput="this.value=this.value.replace(/[^\\d]/g,'')"
                         class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                         style="height: 48px;">
                 </div>
-                ${currentNeedID === 'Y' ? 
-                  `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase focus:border-emerald-500 outline-none">` : ''}
-                <select class="p-meal w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
+                
+                ${currentNeedID === 'Y' ? `
+                <div class="space-y-1">
+                    <input type="text" placeholder="身分證字號" 
+                        class="p-id w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm font-mono uppercase"
+                        style="height: 48px;">
+                </div>` : ''}
+
+                <select class="p-meal w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
+                    style="height: 48px;">
                     <option value="葷食">餐食：葷食</option>
                     <option value="素食">餐食：素食</option>
                     <option value="不拘">餐食：不拘</option>
@@ -617,8 +625,7 @@ function renderPartnerFields() {
             </div>
         `;
     }
-}
-    
+}    
 // 關閉選單的輔助函數
 // 確保函式名稱完全一致，且 Modal ID 與 HTML 對應
 function closeRegModal() {

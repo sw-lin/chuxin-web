@@ -598,17 +598,18 @@ function renderPartnerFields() {
                 <div class="flex items-center gap-2 mb-1">
                     <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">同行人 ${i}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" placeholder="姓名" 
-                        class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
-                        style="height: 48px;">
-                    
-                    <input type="tel" placeholder="電話" maxlength="10"
-                        oninput="this.value=this.value.replace(/[^\\d]/g,'')"
-                        class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
-                        style="height: 48px;">
-                </div>
                 
+    <div class="grid grid-cols-2 gap-3">
+    <input type="text" placeholder="姓名" 
+        class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
+        style="height: 48px;">
+    
+    <input type="tel" placeholder="電話" maxlength="10"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')" 
+        class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
+        style="height: 48px;">
+    </div>
+               
                 ${currentNeedID === 'Y' ? `
                 <div class="space-y-1">
                     <input type="text" placeholder="身分證字號" 

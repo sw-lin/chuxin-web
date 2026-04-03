@@ -554,50 +554,52 @@ document.addEventListener('input', function (e) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
- function handleReg(evDataStr) {
+function handleReg(evDataStr) {
     try {
         const ev = JSON.parse(evDataStr);
         
-        // --- 1. 即時阻擋重複報名 ---
-        // 檢查 window.currentAttendedData 裡面是否有相同標題的活動
-        // 註：請確保您的 syncData() 有將已報名資料存入此全域變數
-        const registeredList = window.currentAttendedData || [];
-        const isAlreadyRegistered = registeredList.some(reg => reg.title === ev.title);
-        
+        // 阻擋重複報名邏輯 (維持您的版本)
+        const isAlreadyRegistered = (window.currentAttendedData || []).some(reg => reg.title === ev.title);
         if (isAlreadyRegistered) {
-            alert("⚠️ 您已經報名過「" + ev.title + "」囉！\n如需修改資料請聯繫活動組。");
-            return; // 直接中斷，不開啟彈窗
+            alert("⚠️ 您已經報名過「" + ev.title + "」囉！");
+            return;
         }
 
-        // --- 2. 通過檢查後，開始準備開啟報名表 ---
-tempRegTitle = ev.title;
+        tempRegTitle = ev.title;
         document.getElementById('regEventTitle').innerText = ev.title;
 
-        // 交通方式判斷
+        // 1. 關鍵修正：身分證判斷
+        // 確保 ev.needID 的判斷涵蓋所有可能情況
+        const needIDVal = String(ev.needID || "").trim().toUpperCase();
+        currentNeedID = (needIDVal === 'Y' || needIDVal === '是') ? 'Y' : 'N';
+        
+        // 更新報名者本人的身分證欄位顯示狀態
+        const mainIdGroup = document.getElementById('group_id');
+        if (mainIdGroup) {
+            mainIdGroup.classList.toggle('hidden', currentNeedID !== 'Y');
+        }
+
+        // 2. 交通方式判斷 (符合您的自駕需求)
         const transContainer = document.getElementById('group_transport_container');
-        const transSelect = document.getElementById('regTransport');
         const isBus = String(ev.isBus || "").trim().toUpperCase();
 
         if (isBus === 'Y' || isBus === '是') {
-            // 是專車活動：隱藏選單，後端 payload 帶入「搭乘專車」
             transContainer.classList.add('hidden');
-            transSelect.value = "搭乘專車"; // 此隱藏值供後端紀錄
+            document.getElementById('regTransport').value = "搭乘專車";
         } else {
-            // 非專車活動：顯示選單，預設為「共乘不開車」避免誤點自行開車
             transContainer.classList.remove('hidden');
-            transSelect.value = "共乘不開車"; 
+            // 強制設定為其中一個必選項，不能為空
+            document.getElementById('regTransport').value = "共乘不開車";
         }
 
-        // 初始化攜伴與載客狀態
+        // 3. 重置攜伴人數並觸發渲染 (此時 renderPartnerFields 會根據新設定的 currentNeedID 運作)
         document.getElementById('partnerCount').value = "0";
         renderPartnerFields();
-        toggleCarDetails(); // 根據剛剛設定的預設值跑一次顯示邏輯
+        toggleCarDetails(); // 確保載客選單隱藏
 
         document.getElementById('regOptionsModal').style.display = 'flex';
-
     } catch (e) {
-        console.error("報名表開啟失敗:", e);
-        alert("資料解析錯誤，請重新載入頁面");
+        console.error("解析失敗", e);
     }
 }
     
@@ -607,6 +609,9 @@ function renderPartnerFields() {
     const container = document.getElementById('partnerContainer');
     container.innerHTML = ''; 
     
+    // 取得當前使用者的電話作為預設值 (避免 PC 輸入法衝突)
+    const defaultPhone = (typeof currentUser !== 'undefined' && currentUser.phone) ? currentUser.phone : "";
+
     for (let i = 1; i <= count; i++) {
         container.innerHTML += `
             <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-sm">
@@ -617,16 +622,18 @@ function renderPartnerFields() {
                     <input type="text" placeholder="姓名" 
                         class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                         style="height: 48px;">
-                   
-                    <input type="tel" placeholder="電話" maxlength="10"
+                    
+                    <input type="tel" placeholder="電話" maxlength="10" value="${defaultPhone}"
                         class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
-                        style="height: 48px;">                    
+                        style="height: 48px;">
                 </div>
                 
                 ${currentNeedID === 'Y' ? `
-                <input type="text" placeholder="身分證字號" 
-                    class="p-id w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm font-mono uppercase"
-                    style="height: 48px;">` : ''}
+                <div class="w-full">
+                    <input type="text" placeholder="身分證字號" 
+                        class="p-id w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm font-mono uppercase"
+                        style="height: 48px;">
+                </div>` : ''}
 
                 <select class="p-meal w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                     style="height: 48px;">
@@ -812,21 +819,15 @@ window.addEventListener('load', () => {
     syncData();
 });
     
-// 使用事件代理 (Event Delegation)，這是最穩定的做法
-// 使用事件委派，確保動態產生的欄位也能被監聽到
-// 全域監聽所有帶有 p-phone 類別的輸入框
+// 全域處理電話欄位：只允許數字，並優化 PC 端輸入體驗
 document.addEventListener('input', function(e) {
     if (e.target && e.target.classList.contains('p-phone')) {
-        // 1. 紀錄目前游標位置
-        let selectionStart = e.target.selectionStart;
-        // 2. 只保留數字
         const originalValue = e.target.value;
-        const cleanedValue = originalValue.replace(/[^\d]/g, '');
+        // 僅允許數字，不使用複雜的正則轉義以相容所有瀏覽器
+        const cleanedValue = originalValue.split('').filter(char => char >= '0' && char <= '9').join('');
         
         if (originalValue !== cleanedValue) {
             e.target.value = cleanedValue;
-            // 3. 恢復游標位置，防止輸入時跳動
-            e.target.setSelectionRange(selectionStart - 1, selectionStart - 1);
         }
     }
 });

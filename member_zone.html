@@ -532,26 +532,29 @@ async function processCheckin(scanData) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
-function handleReg(evDataStr) {
+ function handleReg(evDataStr) {
     try {
         const ev = JSON.parse(evDataStr);
+        
+        // --- 1. 即時阻擋重複報名 ---
+        // 檢查 window.currentAttendedData 裡面是否有相同標題的活動
+        // 註：請確保您的 syncData() 有將已報名資料存入此全域變數
+        const registeredList = window.currentAttendedData || [];
+        const isAlreadyRegistered = registeredList.some(reg => reg.title === ev.title);
+        
+        if (isAlreadyRegistered) {
+            alert("⚠️ 您已經報名過「" + ev.title + "」囉！\n如需修改資料請聯繫活動組。");
+            return; // 直接中斷，不開啟彈窗
+        }
+
+        // --- 2. 通過檢查後，開始準備開啟報名表 ---
         tempRegTitle = ev.title;
 
-        // --- 新增：即時阻擋重複報名 ---
-    // 檢查 window.currentAttendedData 裡面是否有相同標題的活動
-    const isAlreadyRegistered = (window.currentAttendedData || []).some(reg => reg.title === ev.title);
-    
-    if (isAlreadyRegistered) {
-        // 使用更漂亮的 SweetAlert 或簡單的 alert
-        alert("⚠️ 您已經報名過「" + ev.title + "」囉！\n如需修改資料請聯繫活動組。");
-        return; // 直接中斷，不開啟彈窗
-    }
-        
-        // 1. 更新 UI 文字
+        // 更新 UI 文字
         document.getElementById('regEventTitle').innerText = ev.title;
         document.getElementById('regEventDate').innerText = ev.date || "未定";
 
-        // 2. 判斷身分證 (H 欄)
+        // 3. 判斷是否需要身分證 (H 欄)
         const idContainer = document.getElementById('group_id');
         currentNeedID = (String(ev.needID).trim().toUpperCase() === 'Y' || ev.needID === '是') ? 'Y' : 'N';
         
@@ -561,44 +564,46 @@ function handleReg(evDataStr) {
             idContainer.classList.add('hidden');
         }
 
-        // 3. 判斷交通/專車 (I 欄)
+        // 4. 判斷交通/專車 (I 欄)
         const transContainer = document.getElementById('group_transport_container');
         const transSelect = document.getElementById('regTransport');
         const isBus = String(ev.isBus || "").trim().toUpperCase();
 
         if (isBus === 'Y' || isBus === '是') {
-            transContainer.classList.add('hidden');
-            transSelect.value = '搭乘專車';
+            // 如果後端設定為專車活動，強制隱藏交通選擇並設為專車
+            if (transContainer) transContainer.classList.add('hidden');
+            if (transSelect) transSelect.value = '搭乘專車';
         } else {
-            transContainer.classList.remove('hidden');
-            transSelect.value = '自行前往';
+            // 一般活動顯示交通選擇，預設自行前往
+            if (transContainer) transContainer.classList.remove('hidden');
+            if (transSelect) transSelect.value = '自行前往';
         }
 
-        // 4. 重置與顯示
+        // 5. 初始化攜伴與載客欄位
         document.getElementById('partnerCount').value = "0";
+        
+        // 執行相關 UI 初始化函式
         if (typeof renderPartnerFields === 'function') renderPartnerFields();
-        if (typeof toggleCarDetails === 'function') toggleCarDetails();
+        
+        // 使用微小延遲確保 DOM 已渲染再檢查載客選單
+        setTimeout(() => {
+            if (typeof toggleCarDetails === 'function') toggleCarDetails();
+        }, 50);
 
+        // 6. 最後顯示 Modal
         document.getElementById('regOptionsModal').style.display = 'flex';
+
     } catch (e) {
-        console.error("報名表解析失敗:", e);
-        alert("資料讀取發生錯誤，請重新載入頁面");
+        console.error("報名表開啟失敗:", e);
+        alert("資料解析錯誤，請重新載入頁面");
     }
-} 
-    // 專門處理電話輸入的函式，保證不再衝突
-function validatePhone(el) {
-    // 1. 只允許數字
-    el.value = el.value.replace(/[^0-9]/g, '');
-    
-    // 2. 除錯用：如果還是不能打字，請看瀏覽器的 F12 Console
-    console.log("當前電話輸入值:", el.value);
 }
     
 // 動態產合同行人欄位
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
-    container.innerHTML = ''; // 清空舊內容
+    container.innerHTML = ''; 
     
     for (let i = 1; i <= count; i++) {
         container.innerHTML += `
@@ -606,24 +611,20 @@ function renderPartnerFields() {
                 <div class="flex items-center gap-2 mb-1">
                     <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">同行人 ${i}</span>
                 </div>
-                
-    <div class="grid grid-cols-2 gap-3">
-    <input type="text" placeholder="姓名" 
-        class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
-        style="height: 48px;">
-    
-    <input type="tel" placeholder="電話" maxlength="10"
-        oninput="validatePhone(this)"
-        class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
-        style="height: 48px;">
-    </div>
-               
-                ${currentNeedID === 'Y' ? `
-                <div class="space-y-1">
-                    <input type="text" placeholder="身分證字號" 
-                        class="p-id w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm font-mono uppercase"
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" placeholder="姓名" 
+                        class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                         style="height: 48px;">
-                </div>` : ''}
+                    
+                    <input type="tel" placeholder="電話" maxlength="10"
+                        class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
+                        style="height: 48px;">
+                </div>
+                
+                ${currentNeedID === 'Y' ? `
+                <input type="text" placeholder="身分證字號" 
+                    class="p-id w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm font-mono uppercase"
+                    style="height: 48px;">` : ''}
 
                 <select class="p-meal w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                     style="height: 48px;">
@@ -812,6 +813,19 @@ window.addEventListener('load', () => {
     syncData();
 });
     
+// 使用事件代理 (Event Delegation)，這是最穩定的做法
+document.addEventListener('input', function (e) {
+    if (e.target && e.target.classList.contains('p-phone')) {
+        // 強制只允許數字
+        const originalValue = e.target.value;
+        const newValue = originalValue.replace(/[^\d]/g, '');
+        
+        // 只有當值真的改變時才賦值，避免游標跳動
+        if (originalValue !== newValue) {
+            e.target.value = newValue;
+        }
+    }
+});    
 </script>
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
     <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">

@@ -531,45 +531,41 @@ async function processCheckin(scanData) {
  * 1. 打開報名表並判斷欄位隱藏邏輯
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
+// 1. 打開報名表並判斷欄位隱藏邏輯
 function handleReg(evDataStr) {
     const ev = JSON.parse(evDataStr);
     tempRegTitle = ev.title;
     
-    // 1. 更新 UI 文字
+    // UI 文字與基本重置
     document.getElementById('regEventTitle').innerText = ev.title;
-    document.getElementById('regEventDate').innerText = ev.date || "";
+    document.getElementById('regEventDate').innerText = ev.date || "未定";
+    document.getElementById('regPhone').value = ""; // 清空電話
+    document.getElementById('phoneError').classList.add('hidden');
 
-    // 2. 取得元件 (請確認 HTML 中 ID 必須完全對應)
+    // 強化的資料判斷 (防呆、去空格)
+    const needIDValue = String(ev.needID || "").trim().toUpperCase();
+    const isBusValue = String(ev.isBus || "").trim().toUpperCase();
+
+    // 身分證容器處理
     const idContainer = document.getElementById('group_id');
+    currentNeedID = (needIDValue === 'Y' || needIDValue === '是') ? 'Y' : 'N';
+    idContainer.classList.toggle('hidden', currentNeedID !== 'Y');
+
+    // 交通選擇邏輯
     const transContainer = document.getElementById('group_transport_container');
     const transSelect = document.getElementById('regTransport');
-    const carDetails = document.getElementById('group_car_details');
-
-    // --- 身分證隱藏邏輯 (H 欄) ---
-    currentNeedID = (ev.needID === 'Y' || ev.needID === '是') ? 'Y' : 'N';
-    if (currentNeedID === 'Y') {
-        idContainer.classList.remove('hidden');
+    
+    if (isBusValue === 'Y' || isBusValue === '是') {
+        transContainer.classList.add('hidden');
+        transSelect.value = '搭乘專車';
     } else {
-        idContainer.classList.add('hidden');
+        transContainer.classList.remove('hidden');
+        transSelect.value = '自行前往';
     }
+    
+    // *** 重要：手動觸發一次載人判斷 ***
+    toggleCarDetails(); 
 
-    // --- 交通欄位隱藏邏輯 (I 欄) ---
-    if (ev.isBus === 'Y' || ev.isBus === '是') {
-        if (transContainer) transContainer.classList.add('hidden');
-        if (transSelect) transSelect.value = '搭乘專車';
-        if (carDetails) carDetails.classList.add('hidden');
-    } else {
-        if (transContainer) transContainer.classList.remove('hidden');
-        if (transSelect) transSelect.value = '自行前往';
-        // 觸發檢查是否顯示載人下拉單
-        if (typeof toggleCarDetails === 'function') toggleCarDetails();
-    }
-
-    // 3. 重置表單數值
-    document.getElementById('partnerCount').value = "0";
-    if (typeof renderPartnerFields === 'function') renderPartnerFields();
-
-    // 4. 顯示 Modal
     document.getElementById('regOptionsModal').style.display = 'flex';
 }
     
@@ -585,7 +581,17 @@ function renderPartnerFields() {
                 <p class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">同行人 ${i} (非會員)</p>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
-                    <input type="text" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
+                    <div class="space-y-1">
+                      <label class="block text-[10px] font-bold text-emerald-800 ml-1">聯絡電話 (10位數字)</label>
+                      <input type="tel" 
+                       id="regPhone" 
+                       placeholder="例：0912345678" 
+                       maxlength="10"
+                       oninput="this.value=this.value.replace(/[^\d]/g,'')" 
+                       class="w-full px-4 py-3 bg-white rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 transition-all">
+                       <p id="phoneError" class="text-red-500 text-[10px] hidden ml-1">請輸入正確的 10 位手機號碼</p>
+                 </div>
+                             
                 </div>
                 ${currentNeedID === 'Y' ? 
                   `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg border text-sm font-mono uppercase focus:border-emerald-500 outline-none">` : ''}
@@ -600,19 +606,14 @@ function renderPartnerFields() {
 }
     
 // 關閉選單的輔助函數
-function closeRegModal(e, force = false) {
+// 確保函式名稱完全一致，且 Modal ID 與 HTML 對應
+function closeRegModal() {
     const modal = document.getElementById('regOptionsModal');
-    
-    // 邏輯：如果是強制關閉(按鈕)，或是點擊對象剛好是背景遮罩本身
-    if (force === true || (e && e.target === modal)) {
+    if (modal) {
         modal.style.display = 'none';
-        // --- 加強安全性：關閉時自動重設表單 ---
-        document.getElementById('regID').value = ''; // 清空身分證
-        document.getElementById('regNote').value = ''; // 清空備註
-        document.getElementById('partnerCount').value = '0'; // 恢復僅本人
-        renderPartnerFields(); // 觸發隱藏攜伴欄位        
-        // 建議外加：關閉時滾回頂部，確保下次打開活動時不會停留在下方
-        modal.querySelector('.bg-white').scrollTop = 0;
+        console.log("Modal 已關閉"); // 除錯用
+    } else {
+        console.error("找不到 ID 為 regOptionsModal 的元素");
     }
 }
 
@@ -675,12 +676,15 @@ async function submitRegistration() {
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {
-    const transport = document.getElementById('regTransport').value;
+    const transValue = document.getElementById('regTransport').value;
     const carDetails = document.getElementById('group_car_details');
-    if (transport === '自行前往') { // 對應 HTML 選項文字
+    
+    // 只有在「自行前往」且「不是搭專車」的情況下才顯示載人選項
+    if (transValue === '自行前往' || transValue === '共乘') {
         carDetails.classList.remove('hidden');
     } else {
         carDetails.classList.add('hidden');
+        document.getElementById('carCapacity').value = "0"; // 隱藏時重置為不可載人
     }
 }
   
@@ -783,7 +787,7 @@ window.addEventListener('load', () => {
         
         <button onclick="closeRegModal()" class="text-gray-400 hover:text-gray-600 p-2">
             <i class="fas fa-times text-xl"></i>
-        </button>
+        </button>   
         
         <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center">活動報名</h3>
         <p id="regEventDate" class="text-[10px] text-emerald-600 font-bold text-center mb-6"></p>

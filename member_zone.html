@@ -653,18 +653,22 @@ function closeRegModal() {
 
 // 提交報名邏輯
 function submitRegistration() {
-    // 1. 直接抓取畫面上的姓名，最保險
+    // 1. 抓取姓名 (從 span 標籤抓取文字)
     const mainName = document.getElementById('userName').innerText;
     if (!mainName || mainName === "載入中...") {
         alert("資料尚未讀取完成，請稍候。");
         return;
     }
 
-    // 2. 驗證本人身分證 (檢查 ID 欄位是否隱藏來判斷是否必填)
+    // 2. 抓取電話 (修正點：HTML 裡是 userPhone 這個 span)
+    let mainPhone = "";
+    const phoneElem = document.getElementById('userPhone');
+    mainPhone = phoneElem ? phoneElem.innerText : "";
+
+    // 3. 處理「本人」身分證
     let mainIdVal = "";
     const idGroup = document.getElementById('group_id');
     const isIdRequired = idGroup && !idGroup.classList.contains('hidden');
-
     if (isIdRequired) {
         const idInput = document.getElementById('regID');
         mainIdVal = idInput ? idInput.value.trim() : "";
@@ -675,7 +679,7 @@ function submitRegistration() {
         }
     }
 
-    // 3. 收集同行人
+    // 4. 收集同行人 (保持原樣)
     const partners = [];
     const pNames = document.getElementsByClassName('p-name');
     const pIds = document.getElementsByClassName('p-id');
@@ -690,9 +694,7 @@ function submitRegistration() {
             pNames[i].focus();
             return;
         }
-
         let pid = "";
-        // 如果本人要填身分證，同行人通常也要填
         if (isIdRequired) {
             pid = pIds[i] ? pIds[i].value.trim() : "";
             if (!pid) {
@@ -701,7 +703,6 @@ function submitRegistration() {
                 return;
             }
         }
-
         partners.push({
             name: n,
             phone: pPhones[i].value,
@@ -710,23 +711,28 @@ function submitRegistration() {
         });
     }
 
-    // 4. 按鈕鎖定
+    // 5. 鎖定按鈕
     const btn = document.querySelector('button[onclick="submitRegistration()"]');
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
     }
 
-    // 5. 送出
+    // 6. 組合送出資料 (修正所有 getElementById 的潛在錯誤)
+    const transportElem = document.getElementById('regTransport');
+    const noteElem = document.getElementById('regNote');
+
     const payload = {
         title: tempRegTitle,
         name: mainName,
         id: mainIdVal,
-        phone: document.getElementById('regPhone').value,
-        transport: document.getElementById('regTransport').value,
-        note: document.getElementById('regNote').value,
+        phone: mainPhone, // 這裡已經修正為從 userPhone 抓取
+        transport: transportElem ? transportElem.value : "搭乘專車",
+        note: noteElem ? noteElem.value : "",
         partners: JSON.stringify(partners)
     };
+
+    console.log("最終發送 Payload:", payload);
 
     google.script.run
         .withSuccessHandler(function(res) {

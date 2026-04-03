@@ -526,6 +526,28 @@ async function processCheckin(scanData) {
         document.getElementById('loadingOverlay').style.display = 'none'; 
     }
 }
+// 宣告一個變數記錄是否正在組字 (PC 中文輸入法專用)
+let isComposing = false;
+
+document.addEventListener('compositionstart', () => { isComposing = true; });
+document.addEventListener('compositionend', (e) => {
+    isComposing = false;
+    // 組字結束時，手動觸發一次過濾
+    if (e.target.classList.contains('p-phone')) {
+        e.target.value = e.target.value.replace(/[^\d]/g, '');
+    }
+});
+
+document.addEventListener('input', function (e) {
+    if (e.target && e.target.classList.contains('p-phone')) {
+        // 如果正在組字 (PC 中文輸入中)，先不處理，避免卡死
+        if (isComposing) return;
+
+        // 正常輸入或貼上時，只保留數字
+        const val = e.target.value;
+        e.target.value = val.replace(/[^\d]/g, '');
+    }
+});    
     
 /**
  * 1. 打開報名表並判斷欄位隱藏邏輯

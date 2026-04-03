@@ -585,6 +585,14 @@ function handleReg(evDataStr) {
         alert("資料讀取發生錯誤，請重新載入頁面");
     }
 } 
+    // 專門處理電話輸入的函式，保證不再衝突
+function validatePhone(el) {
+    // 1. 只允許數字
+    el.value = el.value.replace(/[^0-9]/g, '');
+    
+    // 2. 除錯用：如果還是不能打字，請看瀏覽器的 F12 Console
+    console.log("當前電話輸入值:", el.value);
+}
     
 // 動態產合同行人欄位
 function renderPartnerFields() {
@@ -605,7 +613,7 @@ function renderPartnerFields() {
         style="height: 48px;">
     
     <input type="tel" placeholder="電話" maxlength="10"
-        oninput="this.value=this.value.replace(/[^0-9]/g,'')" 
+        oninput="validatePhone(this)"
         class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
         style="height: 48px;">
     </div>

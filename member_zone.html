@@ -532,62 +532,47 @@ async function processCheckin(scanData) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 function handleReg(evDataStr) {
-    // 解析傳入的活動資料物件
     const ev = JSON.parse(evDataStr);
+    tempRegTitle = ev.title;
     
-    // --- [基礎資訊重置] ---
-    tempRegTitle = ev.title; // 存入全域變數供提交使用
+    // 1. 更新 UI 文字
     document.getElementById('regEventTitle').innerText = ev.title;
-    document.getElementById('regEventDate').innerText = ev.date || "未定";
-    
-    // 清空舊輸入內容（確保每次點開都是乾淨的）
-    document.getElementById('regID').value = "";
-    document.getElementById('regNote').value = "";
-    document.getElementById('partnerCount').value = "0";
-    document.getElementById('carCapacity').value = "0";
+    document.getElementById('regEventDate').innerText = ev.date || "";
 
-    // --- [取得 DOM 元件] ---
-    const idContainer = document.getElementById('group_id');              // 本人身分證容器
-    const transContainer = document.getElementById('group_transport_container'); // 交通選擇容器
-    const transSelect = document.getElementById('regTransport');          // 交通 Select 本體
-    const carDetails = document.getElementById('group_car_details');      // 載人詳情容器
+    // 2. 取得元件 (請確認 HTML 中 ID 必須完全對應)
+    const idContainer = document.getElementById('group_id');
+    const transContainer = document.getElementById('group_transport_container');
+    const transSelect = document.getElementById('regTransport');
+    const carDetails = document.getElementById('group_car_details');
 
-    // --- [邏輯一：身分證隱藏判斷 (H 欄)] ---
-    // 更新全域變數 currentNeedID，這會影響稍後 renderPartnerFields 產出的同行人欄位
+    // --- 身分證隱藏邏輯 (H 欄) ---
     currentNeedID = (ev.needID === 'Y' || ev.needID === '是') ? 'Y' : 'N';
-    
     if (currentNeedID === 'Y') {
         idContainer.classList.remove('hidden');
     } else {
         idContainer.classList.add('hidden');
     }
 
-    // --- [邏輯二：交通/專車隱藏判斷 (I 欄)] ---
+    // --- 交通欄位隱藏邏輯 (I 欄) ---
     if (ev.isBus === 'Y' || ev.isBus === '是') {
-        // 如果是專車活動：
-        if (transContainer) transContainer.classList.add('hidden'); // 徹底隱藏交通選單
-        transSelect.value = '搭乘專車';                             // 強制設定值為專車
-        if (carDetails) carDetails.classList.add('hidden');         // 隱藏「載人」相關選項
+        if (transContainer) transContainer.classList.add('hidden');
+        if (transSelect) transSelect.value = '搭乘專車';
+        if (carDetails) carDetails.classList.add('hidden');
     } else {
-        // 如果不是專車活動（自行前往/共乘）：
-        if (transContainer) transContainer.classList.remove('hidden'); // 顯示交通選單
-        transSelect.value = '自行前往';                                 // 預設為自行前往
-        // 呼叫 toggleCarDetails 依據選單值決定是否顯示「載人」選項
+        if (transContainer) transContainer.classList.remove('hidden');
+        if (transSelect) transSelect.value = '自行前往';
+        // 觸發檢查是否顯示載人下拉單
         if (typeof toggleCarDetails === 'function') toggleCarDetails();
     }
 
-    // --- [邏輯三：同行人欄位重繪] ---
-    // 因為 currentNeedID 改變了，必須重新執行一次渲染，確保同行人欄位（若有）的身分證框正確顯示或隱藏
+    // 3. 重置表單數值
+    document.getElementById('partnerCount').value = "0";
     if (typeof renderPartnerFields === 'function') renderPartnerFields();
 
-    // --- [顯示彈窗] ---
-    const modal = document.getElementById('regOptionsModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.scrollTop = 0; // 捲軸歸零
-    }
+    // 4. 顯示 Modal
+    document.getElementById('regOptionsModal').style.display = 'flex';
 }
-
+    
 // 動態產合同行人欄位
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
@@ -795,9 +780,11 @@ window.addEventListener('load', () => {
 </script>
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
     <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-        <button onclick="closeRegModal(null)" class="absolute top-6 right-6 text-emerald-900/30 hover:text-emerald-900 transition-colors">
-            <i class="fas fa-times-circle text-2xl"></i>
-        </button>        
+        
+        <button onclick="closeRegModal()" class="text-gray-400 hover:text-gray-600 p-2">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        
         <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center">活動報名</h3>
         <p id="regEventDate" class="text-[10px] text-emerald-600 font-bold text-center mb-6"></p>
         

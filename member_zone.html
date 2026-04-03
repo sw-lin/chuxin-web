@@ -567,26 +567,28 @@ document.addEventListener('input', function (e) {
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
 // 修正後的 handleReg
-function handleReg(encodedData) {
-    const ev = JSON.parse(decodeURIComponent(encodedData));
-    tempRegTitle = ev.title;
-    document.getElementById('regEventTitle').innerText = ev.title;
-    document.getElementById('regEventDate').innerText = ev.date || "未定";
+function handleReg(title, date, needID, isBus) {
+    // 1. 直接接收純字串，不再做任何 JSON 解析
+    tempRegTitle = title;
+    document.getElementById('regEventTitle').innerText = title;
+    document.getElementById('regEventDate').innerText = date || "未定";
 
-    // --- 關鍵修正：確保正確抓取 needID 並存入全域變數 ---
-    const rawNeedID = String(ev.needID || "").trim().toUpperCase();
+    // 2. 身分證欄位顯示判斷 (確實將狀態存入全域變數 currentNeedID)
+    const rawNeedID = String(needID || "").trim().toUpperCase();
     currentNeedID = (rawNeedID === 'Y' || rawNeedID === '是') ? 'Y' : 'N';
-
+    
+    // 控制「本人」的身分證欄位顯示
     const idGroup = document.getElementById('group_id');
     if (idGroup) {
         idGroup.classList.toggle('hidden', currentNeedID !== 'Y');
     }
 
-    // 交通工具邏輯
-    const isBus = String(ev.isBus || "").trim().toUpperCase();
+    // 3. 交通工具顯示判斷
+    const busStatus = String(isBus || "").trim().toUpperCase();
     const transContainer = document.getElementById('group_transport_container');
     const transSelect = document.getElementById('regTransport');
-    if (isBus === 'Y' || isBus === '是') {
+    
+    if (busStatus === 'Y' || busStatus === '是') {
         transContainer.classList.add('hidden');
         transSelect.value = "搭乘專車";
     } else {
@@ -594,10 +596,13 @@ function handleReg(encodedData) {
         transSelect.value = "共乘不開車";
     }
 
+    // 4. 重置同行人數量，並觸發渲染 (此時 renderPartnerFields 就能讀到正確的 currentNeedID)
     document.getElementById('partnerCount').value = "0";
-    renderPartnerFields(); // 這裡會根據剛才設定好的 currentNeedID 來決定要不要秀身分證
+    renderPartnerFields(); 
+    
+    // 5. 顯示報名視窗
     document.getElementById('regOptionsModal').style.display = 'flex';
-}    
+}
 
 function formatPhone(phone) {
     let p = String(phone || "").trim();

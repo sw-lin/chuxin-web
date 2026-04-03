@@ -320,13 +320,13 @@ function renderEventSection(events) {
     activeEvents.map(ev => {
         // --- 關鍵修改：打包所有需要的資訊 (標題、日期、簡介、H欄、I欄) ---
         const evData = JSON.stringify({
-            title: ev.title,
-            date: ev.date || "未定",
-            desc: ev.desc || "",
-            needID: ev.needID || "N", // 對應 H 欄
-            isBus: ev.isBus || "N"    // 對應 I 欄，請正名為 isBus
-        }).replace(/"/g, '&quot;'); // 轉義引號，避免 HTML 標籤解析錯誤
-
+          title: ev.title,
+          date: ev.date || "未定",
+          desc: ev.desc || "",
+          needID: ev.needID || "N", 
+          isBus: ev.isBus || "N"    // 確保這裡叫 isBus，不再誤用 currentNeedID
+        }).replace(/'/g, "\\'").replace(/"/g, '&quot;'); // 同時處理單引號與雙引號
+        
         const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
         const displayUrl = getDirectImageUrl(ev.poster_url);
 
@@ -533,41 +533,48 @@ async function processCheckin(scanData) {
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
 function handleReg(evDataStr) {
-    const ev = JSON.parse(evDataStr);
-    tempRegTitle = ev.title;
-    
-    // UI 文字與基本重置
-    document.getElementById('regEventTitle').innerText = ev.title;
-    document.getElementById('regEventDate').innerText = ev.date || "未定";
-    document.getElementById('regPhone').value = ""; // 清空電話
-    document.getElementById('phoneError').classList.add('hidden');
+    try {
+        const ev = JSON.parse(evDataStr);
+        tempRegTitle = ev.title;
+        
+        // 1. 更新 UI 文字
+        document.getElementById('regEventTitle').innerText = ev.title;
+        document.getElementById('regEventDate').innerText = ev.date || "未定";
 
-    // 強化的資料判斷 (防呆、去空格)
-    const needIDValue = String(ev.needID || "").trim().toUpperCase();
-    const isBusValue = String(ev.isBus || "").trim().toUpperCase();
+        // 2. 判斷身分證 (H 欄)
+        const idContainer = document.getElementById('group_id');
+        currentNeedID = (String(ev.needID).trim().toUpperCase() === 'Y' || ev.needID === '是') ? 'Y' : 'N';
+        
+        if (currentNeedID === 'Y') {
+            idContainer.classList.remove('hidden');
+        } else {
+            idContainer.classList.add('hidden');
+        }
 
-    // 身分證容器處理
-    const idContainer = document.getElementById('group_id');
-    currentNeedID = (needIDValue === 'Y' || needIDValue === '是') ? 'Y' : 'N';
-    idContainer.classList.toggle('hidden', currentNeedID !== 'Y');
+        // 3. 判斷交通/專車 (I 欄)
+        const transContainer = document.getElementById('group_transport_container');
+        const transSelect = document.getElementById('regTransport');
+        const isBus = String(ev.isBus || "").trim().toUpperCase();
 
-    // 交通選擇邏輯
-    const transContainer = document.getElementById('group_transport_container');
-    const transSelect = document.getElementById('regTransport');
-    
-    if (isBusValue === 'Y' || isBusValue === '是') {
-        transContainer.classList.add('hidden');
-        transSelect.value = '搭乘專車';
-    } else {
-        transContainer.classList.remove('hidden');
-        transSelect.value = '自行前往';
+        if (isBus === 'Y' || isBus === '是') {
+            transContainer.classList.add('hidden');
+            transSelect.value = '搭乘專車';
+        } else {
+            transContainer.classList.remove('hidden');
+            transSelect.value = '自行前往';
+        }
+
+        // 4. 重置與顯示
+        document.getElementById('partnerCount').value = "0";
+        if (typeof renderPartnerFields === 'function') renderPartnerFields();
+        if (typeof toggleCarDetails === 'function') toggleCarDetails();
+
+        document.getElementById('regOptionsModal').style.display = 'flex';
+    } catch (e) {
+        console.error("報名表解析失敗:", e);
+        alert("資料讀取發生錯誤，請重新載入頁面");
     }
-    
-    // *** 重要：手動觸發一次載人判斷 ***
-    toggleCarDetails(); 
-
-    document.getElementById('regOptionsModal').style.display = 'flex';
-}
+} 
     
 // 動態產合同行人欄位
 function renderPartnerFields() {
@@ -581,16 +588,17 @@ function renderPartnerFields() {
                 <p class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">同行人 ${i} (非會員)</p>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
-                    <div class="space-y-1">
-                      <label class="block text-[10px] font-bold text-emerald-800 ml-1">聯絡電話 (10位數字)</label>
-                      <input type="tel" 
-                       id="regPhone" 
-                       placeholder="例：0912345678" 
-                       maxlength="10"
-                       oninput="this.value=this.value.replace(/[^\d]/g,'')" 
-                       class="w-full px-4 py-3 bg-white rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 transition-all">
-                       <p id="phoneError" class="text-red-500 text-[10px] hidden ml-1">請輸入正確的 10 位手機號碼</p>
-                 </div>
+                    
+    <div class="space-y-1">
+    <label class="block text-[10px] font-bold text-emerald-800 ml-1">聯絡電話</label>
+    <input type="tel" 
+           id="regPhone" 
+           maxlength="10" 
+           oninput="this.value=this.value.replace(/[^\d]/g,'')" 
+           placeholder="請輸入 10 位手機號碼" 
+           class="w-full px-3 py-2 rounded-lg border text-sm focus:border-emerald-500 outline-none">
+    <p id="phoneError" class="text-red-500 text-[10px] hidden ml-1">請輸入正確的 10 位手機號碼</p>
+    </div>
                              
                 </div>
                 ${currentNeedID === 'Y' ? 
@@ -611,9 +619,6 @@ function closeRegModal() {
     const modal = document.getElementById('regOptionsModal');
     if (modal) {
         modal.style.display = 'none';
-        console.log("Modal 已關閉"); // 除錯用
-    } else {
-        console.error("找不到 ID 為 regOptionsModal 的元素");
     }
 }
 

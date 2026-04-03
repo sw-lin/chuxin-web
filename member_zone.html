@@ -570,49 +570,29 @@ document.addEventListener('input', function (e) {
         }
 
         // --- 2. 通過檢查後，開始準備開啟報名表 ---
-        tempRegTitle = ev.title;
-
-        // 更新 UI 文字
+tempRegTitle = ev.title;
         document.getElementById('regEventTitle').innerText = ev.title;
-        document.getElementById('regEventDate').innerText = ev.date || "未定";
 
-        // 3. 判斷是否需要身分證 (H 欄)
-        const idContainer = document.getElementById('group_id');
-        currentNeedID = (String(ev.needID).trim().toUpperCase() === 'Y' || ev.needID === '是') ? 'Y' : 'N';
-        
-        if (currentNeedID === 'Y') {
-            idContainer.classList.remove('hidden');
-        } else {
-            idContainer.classList.add('hidden');
-        }
-
-        // 4. 判斷交通/專車 (I 欄)
+        // 交通方式判斷
         const transContainer = document.getElementById('group_transport_container');
         const transSelect = document.getElementById('regTransport');
         const isBus = String(ev.isBus || "").trim().toUpperCase();
 
         if (isBus === 'Y' || isBus === '是') {
-            // 如果後端設定為專車活動，強制隱藏交通選擇並設為專車
-            if (transContainer) transContainer.classList.add('hidden');
-            if (transSelect) transSelect.value = '搭乘專車';
+            // 是專車活動：隱藏選單，後端 payload 帶入「搭乘專車」
+            transContainer.classList.add('hidden');
+            transSelect.value = "搭乘專車"; // 此隱藏值供後端紀錄
         } else {
-            // 一般活動顯示交通選擇，預設自行前往
-            if (transContainer) transContainer.classList.remove('hidden');
-            if (transSelect) transSelect.value = '自行前往';
+            // 非專車活動：顯示選單，預設為「共乘不開車」避免誤點自行開車
+            transContainer.classList.remove('hidden');
+            transSelect.value = "共乘不開車"; 
         }
 
-        // 5. 初始化攜伴與載客欄位
+        // 初始化攜伴與載客狀態
         document.getElementById('partnerCount').value = "0";
-        
-        // 執行相關 UI 初始化函式
-        if (typeof renderPartnerFields === 'function') renderPartnerFields();
-        
-        // 使用微小延遲確保 DOM 已渲染再檢查載客選單
-        setTimeout(() => {
-            if (typeof toggleCarDetails === 'function') toggleCarDetails();
-        }, 50);
+        renderPartnerFields();
+        toggleCarDetails(); // 根據剛剛設定的預設值跑一次顯示邏輯
 
-        // 6. 最後顯示 Modal
         document.getElementById('regOptionsModal').style.display = 'flex';
 
     } catch (e) {
@@ -637,10 +617,10 @@ function renderPartnerFields() {
                     <input type="text" placeholder="姓名" 
                         class="p-name w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
                         style="height: 48px;">
-                    
+                   
                     <input type="tel" placeholder="電話" maxlength="10"
                         class="p-phone w-full px-3 py-3 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm"
-                        style="height: 48px;">
+                        style="height: 48px;">                    
                 </div>
                 
                 ${currentNeedID === 'Y' ? `
@@ -728,21 +708,18 @@ async function submitRegistration() {
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {
-    const transSelect = document.getElementById('regTransport');
+    const transVal = document.getElementById('regTransport').value;
     const carDetails = document.getElementById('group_car_details');
     
-    if (!transSelect || !carDetails) return;
-
-    const val = transSelect.value;
-    // 只有「自行前往」才顯示可載人數
-    if (val === '自行前往') {
+    // 只有選「自行開車」時才顯示載人選單
+    if (transVal === '自行開車') {
         carDetails.classList.remove('hidden');
     } else {
         carDetails.classList.add('hidden');
-        document.getElementById('carCapacity').value = "0"; // 隱藏時歸零
+        // 若不是開車，載人數重設為 0 或預設值
+        document.getElementById('carCapacity').value = "0"; 
     }
-}  
-
+}
     async function enterStaffMode() {
         var key = prompt("輸入管理金鑰：");
         if (!key) return;
@@ -836,18 +813,24 @@ window.addEventListener('load', () => {
 });
     
 // 使用事件代理 (Event Delegation)，這是最穩定的做法
-document.addEventListener('input', function (e) {
+// 使用事件委派，確保動態產生的欄位也能被監聽到
+// 全域監聽所有帶有 p-phone 類別的輸入框
+document.addEventListener('input', function(e) {
     if (e.target && e.target.classList.contains('p-phone')) {
-        // 強制只允許數字
+        // 1. 紀錄目前游標位置
+        let selectionStart = e.target.selectionStart;
+        // 2. 只保留數字
         const originalValue = e.target.value;
-        const newValue = originalValue.replace(/[^\d]/g, '');
+        const cleanedValue = originalValue.replace(/[^\d]/g, '');
         
-        // 只有當值真的改變時才賦值，避免游標跳動
-        if (originalValue !== newValue) {
-            e.target.value = newValue;
+        if (originalValue !== cleanedValue) {
+            e.target.value = cleanedValue;
+            // 3. 恢復游標位置，防止輸入時跳動
+            e.target.setSelectionRange(selectionStart - 1, selectionStart - 1);
         }
     }
-});    
+});
+    
 </script>
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
     <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
@@ -877,25 +860,24 @@ document.addEventListener('input', function (e) {
             <option value="不拘">不拘</option>
         </select>
     </div>
-    <div id="group_transport_container">
-        <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
-        <select id="regTransport" onchange="toggleCarDetails()" class="w-full px-4 py-3 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500">
-            <option value="自行開車">自行開車</option>
-            <option value="共乘不開車">共乘不開車</option>
-        </select>
+    <div id="group_transport_container" class="mt-3">
+      <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
+      <select id="regTransport" onchange="toggleCarDetails()" class="w-full px-4 py-3 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500 shadow-sm">
+        <option value="自行開車">自行開車 (需調查載客人數)</option>
+        <option value="共乘不開車">共乘不開車 (由幹部安排)</option>
+      </select>
     </div>
 </div>
                 
-                <div id="group_car_details" class="hidden mt-3 pt-3 border-t border-emerald-100">
-                    <label class="block text-[10px] font-bold text-emerald-800 mb-2">是否可載人？ (不含駕駛)</label>
-                    <select id="carCapacity" class="w-full px-4 py-3 bg-white rounded-xl text-sm border-2 border-transparent focus:border-emerald-500">
-                        <option value="0">不可載人</option>
-                        <option value="1">可載 1 人</option>
-                        <option value="2">可載 2 人</option>
-                        <option value="3">可載 3 人</option>
-                        <option value="4">可載 4 人以上</option>
-                    </select>
-                </div>
+<div id="group_car_details" class="mt-3 hidden">
+    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">若您開車，含您本人最多可載幾人？</label>
+    <select id="carCapacity" class="w-full px-4 py-3 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500 shadow-sm">
+        <option value="1">1 人 (僅本人)</option>
+        <option value="2">2 人</option>
+        <option value="3">3 人</option>
+        <option value="4">4 人以上</option>
+    </select>
+</div>
 
                 <div class="mt-3">
                     <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">特別需求備註</label>

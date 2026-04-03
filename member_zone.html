@@ -659,82 +659,103 @@ function closeRegModal() {
 
 // 提交報名邏輯
 function submitRegistration() {
-    // 1. 取得基本欄位資料
-    const name = currentUser.name; 
-    const phone = document.getElementById('regPhone').value;
-    const transport = document.getElementById('regTransport').value;
-    const note = document.getElementById('regNote').value;
-    const pCount = parseInt(document.getElementById('partnerCount').value);
-
-    // 2. 驗證：姓名絕對不能為空 (保險要求)
-    if (!name || name.trim() === "") {
-        alert("錯誤：無法取得您的會員姓名，請重新登入或聯絡管理員。");
+    // --- 1. 檢查本人基本資料 ---
+    if (!currentUser || !currentUser.name) {
+        alert("無法讀取會員資料，請重新整理頁面。");
         return;
     }
 
-    // 3. 收集同行人資料並進行「必填驗證」
+    // --- 2. 驗證本人身分證 (如果活動有要求保險) ---
+    let mainIdVal = "";
+    if (currentNeedID === 'Y') {
+        const mainIdInput = document.getElementById('regID');
+        mainIdVal = mainIdInput ? mainIdInput.value.trim() : "";
+        if (!mainIdVal) {
+            alert("本活動需辦理保險，請填寫「您本人」的身分證字號。");
+            if (mainIdInput) mainIdInput.focus();
+            return;
+        }
+    }
+
+    // --- 3. 收集並驗證同行人資料 ---
     const partners = [];
     const pNames = document.getElementsByClassName('p-name');
     const pPhones = document.getElementsByClassName('p-phone');
-    const pIds = document.getElementsByClassName('p-id'); // 這是在 renderPartnerFields 動態產生的
+    const pIds = document.getElementsByClassName('p-id');
     const pMeals = document.getElementsByClassName('p-meal');
+    const pCount = parseInt(document.getElementById('partnerCount').value);
 
     for (let i = 0; i < pCount; i++) {
-        const pName = pNames[i].value.trim();
-        const pId = pIds[i] ? pIds[i].value.trim() : ""; // 如果沒要求身分證，這會是空字串
-
-        // --- 核心驗證邏輯 ---
-        
-        // 驗證同行人姓名 (必填)
-        if (!pName) {
-            alert(`請填寫「同行人 ${i + 1}」的姓名，這是保險要求的必要資訊。`);
+        const nameVal = pNames[i].value.trim();
+        // 姓名必填
+        if (!nameVal) {
+            alert(`請填寫同行人 ${i + 1} 的姓名。`);
             pNames[i].focus();
             return;
         }
 
-        // 驗證身分證 (如果該活動要求身分證 currentNeedID === 'Y')
-        if (currentNeedID === 'Y' && !pId) {
-            alert(`本活動需辦理保險，請填寫「同行人 ${i + 1}」的身分證字號。`);
-            if(pIds[i]) pIds[i].focus();
-            return;
+        // 身分證必填 (如果活動有要求)
+        let idVal = "";
+        if (currentNeedID === 'Y') {
+            idVal = pIds[i].value.trim();
+            if (!idVal) {
+                alert(`本活動需辦理保險，請填寫同行人 ${i + 1} 的身分證字號。`);
+                pIds[i].focus();
+                return;
+            }
         }
 
         partners.push({
-            name: pName,
+            name: nameVal,
             phone: pPhones[i].value,
-            id: pId,
+            id: idVal,
             meal: pMeals[i].value
         });
     }
 
-    // 4. 驗證通過，準備送出
-    const btn = event.currentTarget;
-    btn.disabled = true;
-    btn.innerText = "提交中...";
+    // --- 4. 鎖定按鈕 (修復原本 event 報錯的元凶) ---
+    // 改用 querySelector 精準抓取，保證跨瀏覽器 100% 穩定
+    const submitBtn = document.querySelector('button[onclick="submitRegistration()"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "提交中...";
+    }
 
+    // --- 5. 組合資料送給後端 GAS ---
     const payload = {
         title: tempRegTitle,
-        name: name,
-        phone: phone,
-        transport: transport,
-        note: note,
+        name: currentUser.name,
+        id: mainIdVal, // <--- 將本人的身分證也送過去
+        phone: document.getElementById('regPhone').value,
+        transport: document.getElementById('regTransport').value,
+        note: document.getElementById('regNote').value,
         partners: JSON.stringify(partners)
     };
 
-    // 執行 GAS 送出
     google.script.run
         .withSuccessHandler(function(res) {
             alert("報名成功！");
             document.getElementById('regOptionsModal').style.display = 'none';
-            syncData(); // 重新整理狀態
+            syncData(); // 重新整理按鈕狀態
+            
+            // 恢復按鈕狀態
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "確認報名";
+            }
         })
         .withFailureHandler(function(err) {
-            alert("提交失敗，請檢查網路連線");
-            btn.disabled = false;
-            btn.innerText = "確認報名";
+            alert("提交失敗，請檢查網路連線或重試");
+            console.error(err);
+            
+            // 失敗時也要恢復按鈕，否則會永久卡死
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "確認報名";
+            }
         })
         .submitToGAS(payload); 
-}
+}    
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {

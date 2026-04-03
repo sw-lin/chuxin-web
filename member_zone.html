@@ -572,58 +572,49 @@ function handleReg(title, date, needID, isBus) {
     document.getElementById('regEventTitle').innerText = title;
     document.getElementById('regEventDate').innerText = date || "未定";
 
-    // A. 身分證欄位控制
+    // 身分證控制
     const nid = String(needID || "").trim().toUpperCase();
-    const idGroup = document.getElementById('group_id');
     const hasID = (nid === 'Y' || nid === '是');
-    idGroup.classList.toggle('hidden', !hasID);
+    document.getElementById('group_id')?.classList.toggle('hidden', !hasID);
 
-    // B. 專車過濾原則
+    // 原則一：專車過濾 (ID 修正為 group_transport)
     const bus = String(isBus || "").trim().toUpperCase();
     const isBusEvent = (bus === 'Y' || bus === '是');
-    const transContainer = document.getElementById('group_transport_container');
-    const carCapacityContainer = document.getElementById('group_car_capacity');
-    const transportSelect = document.getElementById('regTransport');
+    
+    const transGroup = document.getElementById('group_transport');
+    const carGroup = document.getElementById('group_car_capacity');
+    const transSelect = document.getElementById('regTransport');
 
     if (isBusEvent) {
-        // 專車活動：隱藏交通選單，強制設為「搭乘專車」
-        transContainer.classList.add('hidden');
-        carCapacityContainer.classList.add('hidden');
-        transportSelect.value = "搭乘專車";
+        // 專車活動：全部隱藏，強制寫入「搭乘專車」
+        if(transGroup) transGroup.classList.add('hidden');
+        if(carGroup) carGroup.classList.add('hidden');
+        if(transSelect) transSelect.value = "搭乘專車";
     } else {
         // 非專車活動：顯示選單，預設「共乘不開車」
-        transContainer.classList.remove('hidden');
-        transportSelect.value = "共乘不開車";
-        carCapacityContainer.classList.add('hidden'); // 初始隱藏，待選擇自行開車才顯示
+        if(transGroup) transGroup.classList.remove('hidden');
+        if(transSelect) transSelect.value = "共乘不開車";
+        if(carGroup) carGroup.classList.add('hidden'); // 初始隱藏
     }
 
-    // C. 同行人初始化
     document.getElementById('partnerCount').value = "0";
     renderPartnerFields(); 
     document.getElementById('regOptionsModal').style.display = 'flex';
 }
-
+    
 // 聯動調查：監聽交通選單變動
 function updateTransportUI() {
-    const transportSelect = document.getElementById('regTransport');
-    const carCapacityContainer = document.getElementById('group_car_capacity');
-    // 只有選擇「自行開車」時，才顯示「可載人數」
-    if (transportSelect.value === "自行開車") {
-        carCapacityContainer.classList.remove('hidden');
-    } else {
-        carCapacityContainer.classList.add('hidden');
-    }
-}
+    const transSelect = document.getElementById('regTransport');
+    const carGroup = document.getElementById('group_car_capacity');
+    if (!transSelect || !carGroup) return;
 
-// 務必在 HTML 的 <select id="regTransport"> 加上 onchange="updateTransportUI()"    
-function formatPhone(phone) {
-    let p = String(phone || "").trim();
-    // 如果是 9 位數且開頭是 9，補上 0
-    if (p.length === 9 && p.startsWith('9')) {
-        return '0' + p;
+    // 原則三：只有「自行開車」才顯示「可載人數」
+    if (transSelect.value === "自行開車") {
+        carGroup.classList.remove('hidden');
+    } else {
+        carGroup.classList.add('hidden');
     }
-    return p;
-}    
+}  
     
 // 動態產合同行人欄位
 function renderPartnerFields() {
@@ -671,35 +662,23 @@ function closeRegModal() {
 
 // 提交報名邏輯
 function submitRegistration() {
-    // 1. 安全抓取會員資訊
+    // A. 抓取本人基礎資料 (精準 ID)
     const nameElem = document.getElementById('userNameDisplay');
+    const phoneElem = document.getElementById('userPhoneDisplay');
     if (!nameElem || nameElem.innerText.includes("載入中")) {
-        alert("資料讀取中，請稍候。");
-        return;
-    }
-    const mainName = nameElem.innerText.trim();
-    const mainPhone = document.getElementById('userPhoneDisplay')?.innerText.trim() || "";
-
-    // 2. 身分證驗證 (依據 UI 是否顯示判斷)
-    let mainIdVal = "";
-    const idInput = document.getElementById('reg_id');
-    const idGroup = document.getElementById('group_id');
-    if (idGroup && !idGroup.classList.contains('hidden')) {
-        mainIdVal = idInput ? idInput.value.trim() : "";
-        if (!mainIdVal) { alert("請填寫身分證字號(保險用)"); idInput.focus(); return; }
+        alert("資料讀取中，請稍候。"); return;
     }
 
-    // 3. 交通方式與聯動資訊
+    // B. 交通方式處理 (原則二)
     const transSelect = document.getElementById('regTransport');
     const carSelect = document.getElementById('regCarCapacity');
-    let finalTransport = transSelect ? transSelect.value : "無";
-    
-    // 如果是自行開車，把可載人數加進去方便管理員讀取
+    let finalTransport = transSelect ? transSelect.value : "無資料";
+
     if (finalTransport === "自行開車" && carSelect) {
         finalTransport += ` (可載 ${carSelect.value} 人)`;
     }
 
-    // 4. 同行人資料收集
+    // C. 收集同行人 (原則四：簡化，不需重複抓交通)
     const partners = [];
     const pCount = parseInt(document.getElementById('partnerCount').value) || 0;
     const pNames = document.getElementsByClassName('p-name');
@@ -707,32 +686,30 @@ function submitRegistration() {
     const pMeals = document.getElementsByClassName('p-meal');
 
     for (let i = 0; i < pCount; i++) {
-        const n = pNames[i].value.trim();
-        if (!n) { alert(`請填寫同行人 ${i+1} 姓名`); return; }
+        if (!pNames[i].value.trim()) { alert(`請填寫同行人 ${i+1} 姓名`); return; }
         partners.push({
-            name: n,
-            id: pIds[i] ? pIds[i].value : "",
+            name: pNames[i].value.trim(),
+            id: pIds[i] ? pIds[i].value.trim() : "",
             meal: pMeals[i] ? pMeals[i].value : "葷"
         });
     }
 
-    // 5. 按鈕狀態切換
+    // D. 按鈕與 Payload
     const btn = document.querySelector('button[onclick="submitRegistration()"]');
-    if (btn) { btn.disabled = true; btn.innerText = "正在送出..."; }
+    if (btn) { btn.disabled = true; btn.innerText = "提交中..."; }
 
-    // 6. 封裝 Payload 並送出
     const payload = {
         title: tempRegTitle,
-        name: mainName,
-        id: mainIdVal,
-        phone: mainPhone,
+        name: nameElem.innerText.trim(),
+        id: document.getElementById('reg_id')?.value.trim() || "",
+        phone: phoneElem ? phoneElem.innerText.trim() : "",
         transport: finalTransport,
         note: document.getElementById('regNote')?.value || "",
         partners: JSON.stringify(partners)
     };
 
     google.script.run
-        .withSuccessHandler(function(res) {
+        .withSuccessHandler(function() {
             alert("報名成功！");
             document.getElementById('regOptionsModal').style.display = 'none';
             if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
@@ -895,7 +872,7 @@ document.addEventListener('input', function(e) {
     </div>
     <div id="group_transport_container">
         <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">交通方式</label>
-        <select id="regTransport" onchange="toggleCarDetails()" class="w-full px-4 h-12 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500 shadow-sm">
+        <select id="regTransport" onchange="updateTransportUI()" class="w-full px-4 h-12 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500 shadow-sm">
             <option value="自行開車">自行開車</option>
             <option value="共乘不開車">共乘不開車</option>
         </select>

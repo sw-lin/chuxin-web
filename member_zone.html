@@ -318,43 +318,39 @@ function renderEventSection(events) {
 
     container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
     activeEvents.map(ev => {
-        // --- 關鍵比對邏輯 ---
-        const isRegistered = (window.currentAttendedData || []).some(reg => reg.title === ev.title);
-
-        // 安全打包資料，避免引號導致 JS 報錯
-        const safeData = encodeURIComponent(JSON.stringify({
-          title: ev.title,
-          date: ev.date || "未定",
-          needID: ev.needID || "N", 
-          isBus: ev.isBus || "N"
-        }));
+        // 先做初步檢查
+        const isRegistered = (window.currentAttendedData || []).some(reg => String(reg.title).trim() === String(ev.title).trim());
         
+        // 使用 Base64 編碼避免任何引號或特殊字元衝突
+        const evData = btoa(unescape(encodeURIComponent(JSON.stringify({
+            title: ev.title,
+            date: ev.date || "未定",
+            needID: ev.needID || "N", 
+            isBus: ev.isBus || "N"
+        }))));
+
         const isRegEnabled = ev.reg_url && ev.reg_url !== "NONE";
         const displayUrl = getDirectImageUrl(ev.poster_url);
 
-        // 根據狀態產出不同的按鈕
-        let actionBtnHtml = "";
+        let btnHtml = "";
         if (isRegEnabled) {
             if (isRegistered) {
-                // 已報名：顯示灰色、禁用點擊
-                actionBtnHtml = `<button disabled class="w-full py-4 bg-gray-200 text-gray-400 rounded-2xl font-black tracking-widest cursor-not-allowed">已報名過此活動</button>`;
+                btnHtml = `<button disabled class="w-full py-4 bg-gray-200 text-gray-500 rounded-2xl font-black tracking-widest cursor-not-allowed">已完成報名</button>`;
             } else {
-                // 未報名：正常綠色按鈕
-                actionBtnHtml = `<button onclick="handleReg('${safeData}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all shadow-md">立即報名</button>`;
+                btnHtml = `<button onclick="handleReg('${evData}')" class="w-full py-4 emerald-gradient text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all shadow-md">立即報名</button>`;
             }
         }
 
         if (displayUrl && displayUrl.includes('http')) {
             return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6">
                         <img src="${displayUrl}" class="w-full object-cover">
-                        <div class="p-5 bg-white">${actionBtnHtml}</div>
+                        <div class="p-5 bg-white">${btnHtml}</div>
                     </div>`;
         } else {
-            // 文字版本
-            let textBtn = isRegistered 
-                ? `<button disabled class="w-full mt-3 py-3.5 bg-gray-100 text-gray-400 rounded-xl font-black text-sm cursor-not-allowed">已報名</button>`
-                : `<button onclick="handleReg('${safeData}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>`;
-
+            const textBtn = isRegistered 
+                ? `<button disabled class="w-full mt-3 py-3.5 bg-gray-200 text-gray-400 rounded-xl font-black text-sm">已報名</button>`
+                : `<button onclick="handleReg('${evData}')" class="w-full mt-3 py-3.5 bg-emerald-100 text-emerald-800 rounded-xl font-black text-sm active:bg-emerald-200">點我報名</button>`;
+            
             return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4">
                         <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
                         <p class="text-xs text-gray-500"><i class="far fa-calendar-alt"></i> 活動日期：${ev.date || '未定'}</p>
@@ -363,6 +359,7 @@ function renderEventSection(events) {
         }
     }).join('');
 }
+    
     // 其餘邏輯 (handleUpdateProfile, processCheckin, openHistoryModal, etc.) 略...
     // 確保 openHistoryModal 也調用 getDirectImageUrl
     function openHistoryModal() {
@@ -578,65 +575,69 @@ document.addEventListener('input', function (e) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
-function handleReg(safeDataStr) {
-    const ev = JSON.parse(decodeURIComponent(safeDataStr));
-    const userName = currentUser.name; // 取得當前會員姓名
-    const eventTitle = ev.title;
+function handleReg(base64Data) {
+    try {
+        // 解碼資料
+        const ev = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
+        const eventTitle = ev.title;
+        const userName = currentUser.name;
 
-    // 1. 顯示讀取中狀態 (可視化優化)
-    const originalBtn = event.currentTarget;
-    const originalText = originalBtn.innerText;
-    originalBtn.disabled = true;
-    originalBtn.innerText = "查詢報名狀態中...";
+        // 鎖定當前按鈕防止連點
+        const btn = event.currentTarget;
+        const oldText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "驗證報名資格中...";
 
-    // 2. 呼叫 GAS 後端進行即時比對
-    google.script.run
-        .withSuccessHandler(function(isAlreadyRegistered) {
-            // 恢復按鈕狀態
-            originalBtn.disabled = false;
-            originalBtn.innerText = originalText;
+        // --- 向 GAS 即時查詢 ---
+        google.script.run
+            .withSuccessHandler(function(alreadyDone) {
+                btn.disabled = false;
+                btn.innerText = oldText;
 
-            if (isAlreadyRegistered) {
-                alert("⚠️ 系統確認：您已經報名過「" + eventTitle + "」囉！");
-                // 順便更新一下本地狀態，讓按鈕變灰 (選擇性)
-                syncData(); 
-                return;
-            }
+                if (alreadyDone) {
+                    alert("您已報名過「" + eventTitle + "」，請勿重複操作。");
+                    syncData(); // 順便刷新本地狀態
+                    return;
+                }
 
-            // 3. 沒報過，執行原本的開啟表單邏輯
-            openRegistrationModal(ev);
-        })
-        .withFailureHandler(function(err) {
-            originalBtn.disabled = false;
-            originalBtn.innerText = originalText;
-            alert("網路連線異常，請稍後再試");
-        })
-        .checkIfRegistered(userName, eventTitle); // 呼叫 GAS 函式
-} 
-// 將原本 handleReg 的開啟邏輯抽離出來
-function openRegistrationModal(ev) {
+                // 未報名，開啟視窗
+                openRegModal(ev);
+            })
+            .withFailureHandler(function() {
+                btn.disabled = false;
+                btn.innerText = oldText;
+                alert("伺服器繁忙，請稍後再試");
+            })
+            .checkIfRegistered(userName, eventTitle); // 這是您要在 GAS 寫的 Function
+
+    } catch (e) {
+        console.error("解析失敗", e);
+    }
+}    
+// 抽取出來的開啟視窗邏輯
+function openRegModal(ev) {
     tempRegTitle = ev.title;
     document.getElementById('regEventTitle').innerText = ev.title;
-    document.getElementById('regEventDate').innerText = ev.date || "未定";
-
-    // 身分證與交通邏輯 (保持您之前的修正)
+    
+    // 設定身分證與交通狀態
     currentNeedID = (String(ev.needID).trim().toUpperCase() === 'Y' || ev.needID === '是') ? 'Y' : 'N';
-    const idContainer = document.getElementById('group_id');
-    if (idContainer) idContainer.classList.toggle('hidden', currentNeedID !== 'Y');
+    const idGroup = document.getElementById('group_id');
+    if (idGroup) idGroup.classList.toggle('hidden', currentNeedID !== 'Y');
 
     const isBus = String(ev.isBus || "").trim().toUpperCase();
+    const transContainer = document.getElementById('group_transport_container');
     const transSelect = document.getElementById('regTransport');
+    
     if (isBus === 'Y' || isBus === '是') {
-        document.getElementById('group_transport_container').classList.add('hidden');
-        transSelect.value = '搭乘專車';
+        transContainer.classList.add('hidden');
+        transSelect.value = "搭乘專車";
     } else {
-        document.getElementById('group_transport_container').classList.remove('hidden');
-        transSelect.value = '共乘不開車';
+        transContainer.classList.remove('hidden');
+        transSelect.value = "共乘不開車";
     }
 
-    // 重置同行人並帶入補 0 電話
     document.getElementById('partnerCount').value = "0";
-    renderPartnerFields();
+    renderPartnerFields(); // 內含電話補0邏輯
     document.getElementById('regOptionsModal').style.display = 'flex';
 }    
 function formatPhone(phone) {

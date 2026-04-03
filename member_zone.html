@@ -566,25 +566,27 @@ document.addEventListener('input', function (e) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
-function handleReg(title, date, needID, isBus) {
-    // 1. 設定標題與日期
-    tempRegTitle = title;
-    document.getElementById('regEventTitle').innerText = title;
-    document.getElementById('regEventDate').innerText = date || "未定";
+// 修正後的 handleReg
+function handleReg(encodedData) {
+    const ev = JSON.parse(decodeURIComponent(encodedData));
+    tempRegTitle = ev.title;
+    document.getElementById('regEventTitle').innerText = ev.title;
+    document.getElementById('regEventDate').innerText = ev.date || "未定";
 
-    // 2. 身分證欄位顯示判斷
-    currentNeedID = (String(needID).trim().toUpperCase() === 'Y' || needID === '是') ? 'Y' : 'N';
+    // --- 關鍵修正：確保正確抓取 needID 並存入全域變數 ---
+    const rawNeedID = String(ev.needID || "").trim().toUpperCase();
+    currentNeedID = (rawNeedID === 'Y' || rawNeedID === '是') ? 'Y' : 'N';
+
     const idGroup = document.getElementById('group_id');
     if (idGroup) {
         idGroup.classList.toggle('hidden', currentNeedID !== 'Y');
     }
 
-    // 3. 交通工具顯示判斷
-    const busStatus = String(isBus).trim().toUpperCase();
+    // 交通工具邏輯
+    const isBus = String(ev.isBus || "").trim().toUpperCase();
     const transContainer = document.getElementById('group_transport_container');
     const transSelect = document.getElementById('regTransport');
-    
-    if (busStatus === 'Y' || busStatus === '是') {
+    if (isBus === 'Y' || isBus === '是') {
         transContainer.classList.add('hidden');
         transSelect.value = "搭乘專車";
     } else {
@@ -592,11 +594,8 @@ function handleReg(title, date, needID, isBus) {
         transSelect.value = "共乘不開車";
     }
 
-    // 4. 重置同行人數量並渲染 (內含補 0)
     document.getElementById('partnerCount').value = "0";
-    renderPartnerFields();
-    
-    // 5. 顯示視窗
+    renderPartnerFields(); // 這裡會根據剛才設定好的 currentNeedID 來決定要不要秀身分證
     document.getElementById('regOptionsModal').style.display = 'flex';
 }    
 
@@ -615,7 +614,6 @@ function renderPartnerFields() {
     const container = document.getElementById('partnerContainer');
     container.innerHTML = ''; 
     
-    // 處理會員自動帶入的電話補 0
     let userPhone = (typeof currentUser !== 'undefined' && currentUser.phone) ? String(currentUser.phone).trim() : "";
     if (userPhone.length === 9 && userPhone.startsWith('9')) {
         userPhone = '0' + userPhone;
@@ -628,13 +626,13 @@ function renderPartnerFields() {
                     <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">同行人 ${i}</span>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <input type="text" placeholder="姓名" 
+                    <input type="text" placeholder="姓名(必填)" 
                         class="p-name w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm">
                     <input type="tel" placeholder="電話" maxlength="10" value="${userPhone}" 
                         class="p-phone w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm">
                 </div>
                 ${currentNeedID === 'Y' ? `
-                <input type="text" placeholder="身分證字號" 
+                <input type="text" placeholder="身分證字號(保險必填)" 
                     class="p-id w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm font-mono uppercase shadow-sm">` : ''}
                 <select class="p-meal w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm">
                     <option value="葷食">餐食：葷食</option>

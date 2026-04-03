@@ -568,27 +568,24 @@ document.addEventListener('input', function (e) {
 // 1. 打開報名表並判斷欄位隱藏邏輯
 // 修正後的 handleReg
 function handleReg(title, date, needID, isBus) {
-    // 1. 直接接收純字串，不再做任何 JSON 解析
     tempRegTitle = title;
     document.getElementById('regEventTitle').innerText = title;
     document.getElementById('regEventDate').innerText = date || "未定";
 
-    // 2. 身分證欄位顯示判斷 (確實將狀態存入全域變數 currentNeedID)
-    const rawNeedID = String(needID || "").trim().toUpperCase();
-    currentNeedID = (rawNeedID === 'Y' || rawNeedID === '是') ? 'Y' : 'N';
-    
-    // 控制「本人」的身分證欄位顯示
+    // 關鍵修正：將傳入的參數存入全域變數
+    const nid = String(needID || "").trim().toUpperCase();
+    currentNeedID = (nid === 'Y' || nid === '是') ? 'Y' : 'N';
+
     const idGroup = document.getElementById('group_id');
     if (idGroup) {
         idGroup.classList.toggle('hidden', currentNeedID !== 'Y');
     }
 
-    // 3. 交通工具顯示判斷
-    const busStatus = String(isBus || "").trim().toUpperCase();
+    // 交通工具判斷
+    const bus = String(isBus || "").trim().toUpperCase();
     const transContainer = document.getElementById('group_transport_container');
     const transSelect = document.getElementById('regTransport');
-    
-    if (busStatus === 'Y' || busStatus === '是') {
+    if (bus === 'Y' || bus === '是') {
         transContainer.classList.add('hidden');
         transSelect.value = "搭乘專車";
     } else {
@@ -596,14 +593,11 @@ function handleReg(title, date, needID, isBus) {
         transSelect.value = "共乘不開車";
     }
 
-    // 4. 重置同行人數量，並觸發渲染 (此時 renderPartnerFields 就能讀到正確的 currentNeedID)
     document.getElementById('partnerCount').value = "0";
     renderPartnerFields(); 
-    
-    // 5. 顯示報名視窗
     document.getElementById('regOptionsModal').style.display = 'flex';
 }
-
+    
 function formatPhone(phone) {
     let p = String(phone || "").trim();
     // 如果是 9 位數且開頭是 9，補上 0
@@ -659,35 +653,33 @@ function closeRegModal() {
 
 // 提交報名邏輯
 function submitRegistration() {
-    // 1. 強制從畫面抓取最準確的資料，不依賴 currentUser 全域變數
-    const mainName = document.getElementById('userName')?.innerText || "";
-    const mainPhone = document.getElementById('regPhone')?.value || "";
-    const mainNote = document.getElementById('regNote')?.value || "";
-    const mainTransport = document.getElementById('regTransport')?.value || "";
-    
-    // 2. 驗證姓名
+    // 1. 直接抓取畫面上的姓名，最保險
+    const mainName = document.getElementById('userName').innerText;
     if (!mainName || mainName === "載入中...") {
-        alert("尚未讀取到會員資料，請稍候再試。");
+        alert("資料尚未讀取完成，請稍候。");
         return;
     }
 
-    // 3. 處理「本人」身分證 (如果活動要求)
+    // 2. 驗證本人身分證 (檢查 ID 欄位是否隱藏來判斷是否必填)
     let mainIdVal = "";
-    if (currentNeedID === 'Y') {
-        const idElem = document.getElementById('regID');
-        mainIdVal = idElem ? idElem.value.trim() : "";
+    const idGroup = document.getElementById('group_id');
+    const isIdRequired = idGroup && !idGroup.classList.contains('hidden');
+
+    if (isIdRequired) {
+        const idInput = document.getElementById('regID');
+        mainIdVal = idInput ? idInput.value.trim() : "";
         if (!mainIdVal) {
             alert("本活動需辦理保險，請填寫您的身分證字號。");
-            idElem.focus();
+            idInput.focus();
             return;
         }
     }
 
-    // 4. 收集同行人
+    // 3. 收集同行人
     const partners = [];
     const pNames = document.getElementsByClassName('p-name');
-    const pPhones = document.getElementsByClassName('p-phone');
     const pIds = document.getElementsByClassName('p-id');
+    const pPhones = document.getElementsByClassName('p-phone');
     const pMeals = document.getElementsByClassName('p-meal');
     const pCount = parseInt(document.getElementById('partnerCount').value) || 0;
 
@@ -700,10 +692,11 @@ function submitRegistration() {
         }
 
         let pid = "";
-        if (currentNeedID === 'Y') {
-            pid = pIds[i].value.trim();
+        // 如果本人要填身分證，同行人通常也要填
+        if (isIdRequired) {
+            pid = pIds[i] ? pIds[i].value.trim() : "";
             if (!pid) {
-                alert(`請填寫同行人 ${i + 1} 的身分證字號（保險用）。`);
+                alert(`請填寫同行人 ${i + 1} 的身分證字號。`);
                 pIds[i].focus();
                 return;
             }
@@ -717,45 +710,34 @@ function submitRegistration() {
         });
     }
 
-    // 5. 鎖定按鈕與送出
-    // 注意：這裡直接抓取按鈕，不使用 event.currentTarget
-    const allBtns = document.getElementsByTagName('button');
-    let submitBtn;
-    for(let b of allBtns) { if(b.innerText.includes("確認報名")) submitBtn = b; }
-
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerText = "提交中...";
+    // 4. 按鈕鎖定
+    const btn = document.querySelector('button[onclick="submitRegistration()"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
     }
 
+    // 5. 送出
     const payload = {
         title: tempRegTitle,
         name: mainName,
         id: mainIdVal,
-        phone: mainPhone,
-        transport: mainTransport,
-        note: mainNote,
+        phone: document.getElementById('regPhone').value,
+        transport: document.getElementById('regTransport').value,
+        note: document.getElementById('regNote').value,
         partners: JSON.stringify(partners)
     };
-
-    console.log("送出的資料：", payload); // 您可以在控制台看到送出了什麼
 
     google.script.run
         .withSuccessHandler(function(res) {
             alert("報名成功！");
             document.getElementById('regOptionsModal').style.display = 'none';
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "確認報名";
-            }
-            syncData(); // 重新整理畫面
+            if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
+            syncData(); 
         })
         .withFailureHandler(function(err) {
-            alert("提交失敗，原因：" + err);
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "確認報名";
-            }
+            alert("提交失敗：" + err);
+            if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
         })
         .submitToGAS(payload);
 }

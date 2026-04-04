@@ -736,7 +736,9 @@ function submitRegistration() {
         note: document.getElementById('regNote')?.value || "",
         partners: JSON.stringify(partners)
     };
-
+    // 在 member_zone.html 的 submitRegistration 函式內
+console.log("準備送出的資料:", payload); // <-- 加這行在 F12 檢查
+    
 google.script.run
     .withSuccessHandler(function(res) {
         // 1. 根據後端回傳的狀態字串進行判斷

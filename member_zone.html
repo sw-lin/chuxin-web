@@ -659,22 +659,26 @@ function closeRegModal() {
 }
 
 // 新增這個函式來解決 ReferenceError
+// 補上這個缺失的函式，專門負責收集同行人資料
 function getPartnerData() {
     const partners = [];
     const container = document.getElementById('partnerContainer');
     if (!container) return partners;
 
+    // 抓取所有同行人的輸入區塊
     const partnerBlocks = container.querySelectorAll('.partner-block');
     partnerBlocks.forEach(block => {
-        partners.push({
-            name: block.querySelector('[name="partnerName"]')?.value || "",
-            meal: block.querySelector('[name="partnerMeal"]')?.value || "葷",
-            id: block.querySelector('[name="partnerID"]')?.value || ""
-        });
+        const name = block.querySelector('[name="partnerName"]')?.value;
+        if (name) { // 只有填了名字的才抓
+            partners.push({
+                name: name,
+                meal: block.querySelector('[name="partnerMeal"]')?.value || "葷",
+                id: block.querySelector('[name="partnerID"]')?.value || ""
+            });
+        }
     });
     return partners;
-}
-    
+}    
 
 // 提交報名邏輯
 /**
@@ -707,7 +711,7 @@ function submitRegistration() {
             carSeats: carSeatsEl ? carSeatsEl.value : 0,
             note: document.getElementById('regNote')?.value || "",
             // 修改重點：如果函式不存在就回傳空陣列字串
-            partners: JSON.stringify(typeof getPartnerData === 'function' ? getPartnerData() : [])
+            partners: JSON.stringify(typeof getPartnerData === 'function' ? getPartnerData() : []),
         };
 
         console.log("Debug - Payload:", payload);

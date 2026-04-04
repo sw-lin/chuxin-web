@@ -737,20 +737,40 @@ function submitRegistration() {
         partners: JSON.stringify(partners)
     };
 
-    // 重要：請確認您 Code.gs 裡的後端函式名稱是否真的叫 submitRegistration
-    // 如果後端函式叫 processForm，請改為 google.script.run...processForm(payload)
-    google.script.run
-        .withSuccessHandler(function(res) {
+google.script.run
+    .withSuccessHandler(function(res) {
+        // 1. 根據後端回傳的狀態字串進行判斷
+        if (res === "SUCCESS") {
             alert("報名成功！");
             document.getElementById('regOptionsModal').style.display = 'none';
-            if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
             syncData(); // 重新整理列表
-        })
-        .withFailureHandler(function(err) {
-            alert("提交失敗，請洽管理員：" + err);
-            if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
-        })
-        .submitRegistration(payload); 
+        } 
+        else if (res === "DUPLICATE") {
+            // 處理重複報名的情況，不關閉 Modal 讓使用者確認，或直接關閉皆可
+            alert("提示：您（或該手機號碼）已經報名過這個活動囉！");
+            // 若想讓使用者檢查輸入是否正確，這行可以註解掉：
+            document.getElementById('regOptionsModal').style.display = 'none';
+        } 
+        else {
+            // 處理後端拋出的自訂錯誤訊息 (例如：ERROR: ...)
+            alert("系統提示：" + res);
+        }
+
+        // 2. 無論結果如何，都恢復按鈕狀態
+        if (btn) { 
+            btn.disabled = false; 
+            btn.innerText = "確認報名"; 
+        }
+    })
+    .withFailureHandler(function(err) {
+        // 這是處理「連線失敗」或「GAS 程式崩潰」的情況
+        alert("網路連線或系統執行出錯，請洽管理員：" + err);
+        if (btn) { 
+            btn.disabled = false; 
+            btn.innerText = "確認報名"; 
+        }
+    })
+    .submitRegistration(payload);
 }
     
 // 2. 修正 toggleCarDetails 防止報錯

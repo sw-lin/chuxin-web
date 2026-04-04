@@ -663,66 +663,62 @@ function closeRegModal() {
  * 築心報名系統 - 核心寫入 (精簡乾淨版)
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註
  */
-function submitRegistration(payload) {
-  if (!payload || !payload.phone) return "ERROR: 無效的報名資料";
-  
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000); // 防重複寫入鎖定
-
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("registrations") || 
-                  SpreadsheetApp.getActiveSpreadsheet().insertSheet("registrations");
-    
-    const data = sheet.getDataRange().getValues();
-    const userPhone = normalizePhone(String(payload.phone));
-    const activityName = payload.title;
-
-    // --- 1. 重複報名檢查 (核心功能，不可刪) ---
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === activityName && normalizePhone(String(data[i][2])) === userPhone) {
-        return "DUPLICATE";
-      }
+function submitRegistration() {
+    // 1. 取得按鈕並禁用，防止重複點擊
+    const btn = event ? event.target : null;
+    if (btn && btn.tagName === 'BUTTON') {
+        btn.disabled = true;
+        btn.innerText = "提交中...";
     }
 
-    const rows = [];
-    
-    // --- 2. 主報名者資料 ---
-    rows.push([
-      activityName,
-      payload.name,
-      "'" + userPhone,      // 加單引號確保 Excel/Sheets 不會把電話變數字
-      payload.id || "",
-      payload.meal || "葷",
-      payload.transport || "自往",
-      payload.carSeats || 0,
-      "會員",               // 預設為會員
-      "",                  // 代理人 (本人報名為空)
-      0,                   // J 欄：金額 (目前無用，預留)
-      "已報名",             // K 欄：狀態 (目前無用，預留給幹部將來勾選)
-      payload.note || ""   // L 欄
-    ]);
+    try {
+        // 2. 重新抓取必要的欄位值，確保不發生 ReferenceError
+        const nameValue = document.getElementById('regName').value;
+        const phoneValue = document.getElementById('regPhone').value;
+        const activityTitle = document.getElementById('regActivityTitle').innerText;
 
-    // --- 3. 同行者資料 (保持資料結構乾淨) ---
-    if (payload.partners) {
-      const partners = typeof payload.partners === 'string' ? JSON.parse(payload.partners) : payload.partners;
-      partners.forEach(p => {
-        rows.push([
-          activityName, p.name, "", p.id || "", p.meal || "葷", 
-          "隨同", 0, "非會員", payload.name, 0, "已報名", "同行人"
-        ]);
-      });
+        // 3. 封裝 Payload (對齊 GAS A-L 欄位)
+        const payload = {
+            title: activityTitle,
+            name: nameValue,
+            phone: phoneValue,
+            id: document.getElementById('regID').value,
+            meal: document.getElementById('regMeal').value,
+            transport: document.getElementById('regTransport').value,
+            carSeats: document.getElementById('regCarSeats') ? document.getElementById('regCarSeats').value : 0,
+            note: document.getElementById('regNote').value,
+            partners: typeof getPartnerData === 'function' ? JSON.stringify(getPartnerData()) : "[]"
+        };
+
+        console.log("偵錯：準備送出的資料內容 ->", payload);
+
+        // 4. 呼叫 GAS 後端
+        google.script.run
+            .withSuccessHandler(function(res) {
+                if (res === "SUCCESS") {
+                    alert("🎉 報名成功！");
+                    document.getElementById('regOptionsModal').style.display = 'none';
+                    if (typeof syncData === 'function') syncData(); 
+                } else if (res === "DUPLICATE") {
+                    alert("⚠️ 提示：此手機號碼已報名過本活動，請勿重複提交。");
+                } else {
+                    alert("ℹ️ 系統訊息：" + res);
+                }
+                
+                // 恢復按鈕
+                if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
+            })
+            .withFailureHandler(function(err) {
+                alert("❌ 提交失敗，請檢查網路或聯絡管理員：" + err);
+                if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
+            })
+            .submitRegistration(payload);
+
+    } catch (error) {
+        console.error("前端執行出錯:", error);
+        alert("程式執行錯誤，請開啟 F12 檢查 Console");
+        if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
     }
-
-    // --- 4. 一次性寫入 (最乾淨的作法) ---
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 12).setValues(rows);
-    
-    return "SUCCESS";
-
-  } catch (e) {
-    return "系統錯誤: " + e.toString();
-  } finally {
-    lock.releaseLock();
-  }
 }    
     
 // 2. 修正 toggleCarDetails 防止報錯

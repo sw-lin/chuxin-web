@@ -658,13 +658,30 @@ function closeRegModal() {
     }
 }
 
+// 新增這個函式來解決 ReferenceError
+function getPartnerData() {
+    const partners = [];
+    const container = document.getElementById('partnerContainer');
+    if (!container) return partners;
+
+    const partnerBlocks = container.querySelectorAll('.partner-block');
+    partnerBlocks.forEach(block => {
+        partners.push({
+            name: block.querySelector('[name="partnerName"]')?.value || "",
+            meal: block.querySelector('[name="partnerMeal"]')?.value || "葷",
+            id: block.querySelector('[name="partnerID"]')?.value || ""
+        });
+    });
+    return partners;
+}
+    
+
 // 提交報名邏輯
 /**
  * 築心報名系統 - 核心寫入 (精簡乾淨版)
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註
  */
 function submitRegistration() {
-    // 1. 取得按鈕並禁用，防止重複點擊
     const btn = event ? event.target : null;
     if (btn && btn.tagName === 'BUTTON') {
         btn.disabled = true;
@@ -672,54 +689,54 @@ function submitRegistration() {
     }
 
     try {
-        // 2. 重新抓取必要的欄位值，確保不發生 ReferenceError
-        const nameValue = document.getElementById('regName').value;
-        const phoneValue = document.getElementById('regPhone').value;
-        const activityTitle = document.getElementById('regActivityTitle').innerText;
+        // 抓取欄位（加入安全檢查）
+        const nameEl = document.getElementById('regName');
+        const phoneEl = document.getElementById('regPhone');
+        const titleEl = document.getElementById('regActivityTitle');
+        const carSeatsEl = document.getElementById('regCarSeats');
 
-        // 3. 封裝 Payload (對齊 GAS A-L 欄位)
+        if (!nameEl || !phoneEl) throw new Error("找不到姓名或電話欄位");
+
         const payload = {
-            title: activityTitle,
-            name: nameValue,
-            phone: phoneValue,
-            id: document.getElementById('regID').value,
-            meal: document.getElementById('regMeal').value,
-            transport: document.getElementById('regTransport').value,
-            carSeats: document.getElementById('regCarSeats') ? document.getElementById('regCarSeats').value : 0,
-            note: document.getElementById('regNote').value,
-            partners: typeof getPartnerData === 'function' ? JSON.stringify(getPartnerData()) : "[]"
+            title: titleEl ? titleEl.innerText : "未知名活動",
+            name: nameEl.value,
+            phone: phoneEl.value,
+            id: document.getElementById('regID')?.value || "",
+            meal: document.getElementById('regMeal')?.value || "葷",
+            transport: document.getElementById('regTransport')?.value || "自往",
+            carSeats: carSeatsEl ? carSeatsEl.value : 0,
+            note: document.getElementById('regNote')?.value || "",
+            // 修改重點：如果函式不存在就回傳空陣列字串
+            partners: JSON.stringify(typeof getPartnerData === 'function' ? getPartnerData() : [])
         };
 
-        console.log("偵錯：準備送出的資料內容 ->", payload);
+        console.log("Debug - Payload:", payload);
 
-        // 4. 呼叫 GAS 後端
         google.script.run
             .withSuccessHandler(function(res) {
                 if (res === "SUCCESS") {
-                    alert("🎉 報名成功！");
+                    alert("報名成功！");
                     document.getElementById('regOptionsModal').style.display = 'none';
-                    if (typeof syncData === 'function') syncData(); 
+                    if (typeof syncData === 'function') syncData();
                 } else if (res === "DUPLICATE") {
-                    alert("⚠️ 提示：此手機號碼已報名過本活動，請勿重複提交。");
+                    alert("您已經報名過囉！");
                 } else {
-                    alert("ℹ️ 系統訊息：" + res);
+                    alert("系統訊息：" + res);
                 }
-                
-                // 恢復按鈕
                 if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
             })
             .withFailureHandler(function(err) {
-                alert("❌ 提交失敗，請檢查網路或聯絡管理員：" + err);
+                alert("提交失敗：" + err);
                 if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
             })
             .submitRegistration(payload);
 
-    } catch (error) {
-        console.error("前端執行出錯:", error);
-        alert("程式執行錯誤，請開啟 F12 檢查 Console");
+    } catch (e) {
+        console.error("前端邏輯崩潰:", e);
+        alert("請檢查： " + e.message);
         if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
     }
-}    
+}
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {

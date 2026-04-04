@@ -659,121 +659,71 @@ function closeRegModal() {
 }
 
 // 提交報名邏輯
-function submitRegistration() {
-    // 1. 安全抓取主報名者資訊
-    const nameElem = document.getElementById('userNameDisplay');
-    const phoneElem = document.getElementById('userPhoneDisplay');
+/**
+ * 築心報名系統 - 核心寫入 (精簡乾淨版)
+ * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註
+ */
+function submitRegistration(payload) {
+  if (!payload || !payload.phone) return "ERROR: 無效的報名資料";
+  
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000); // 防重複寫入鎖定
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("registrations") || 
+                  SpreadsheetApp.getActiveSpreadsheet().insertSheet("registrations");
     
-    // 防呆：如果會員資料還沒載入完畢，不准送出
-    if (!nameElem || nameElem.innerText.includes("載入中")) {
-        alert("會員資料載入中，請稍候再試。");
-        return;
+    const data = sheet.getDataRange().getValues();
+    const userPhone = normalizePhone(String(payload.phone));
+    const activityName = payload.title;
+
+    // --- 1. 重複報名檢查 (核心功能，不可刪) ---
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === activityName && normalizePhone(String(data[i][2])) === userPhone) {
+        return "DUPLICATE";
+      }
     }
 
-    const mainName = nameElem.innerText.trim();
-    const mainPhone = phoneElem ? phoneElem.innerText.trim() : "";
-
-    // 2. 身分證字號 (只有在欄位顯示時才校驗)
-    let mainIdVal = "";
-    const idInput = document.getElementById('reg_id');
-    const idGroup = document.getElementById('group_id');
-    if (idGroup && !idGroup.classList.contains('hidden')) {
-        mainIdVal = idInput ? idInput.value.trim() : "";
-        if (!mainIdVal) {
-            alert("請填寫身分證字號（保險作業使用）");
-            idInput.focus();
-            return;
-        }
-    }
-
-    // 3. 交通方式處理 (原則：二選一、聯動調查)
-    const transSelect = document.getElementById('regTransport');
-    const carSelect = document.getElementById('regCarCapacity');
-    let finalTransport = transSelect ? transSelect.value : "未選擇";
-
-    // 只有「自行開車」時，才合併「可載人數」
-    if (finalTransport === "自行開車" && carSelect) {
-        finalTransport += ` (可載 ${carSelect.value} 人)`;
-    }
-
-    // 4. 同行人資料收集 (原則：簡化，不含交通)
-    const partners = [];
-    const pCountSelect = document.getElementById('partnerCount');
-    const pCount = pCountSelect ? parseInt(pCountSelect.value) : 0;
+    const rows = [];
     
-    const pNames = document.getElementsByClassName('p-name');
-    const pIds = document.getElementsByClassName('p-id');
-    const pMeals = document.getElementsByClassName('p-meal');
+    // --- 2. 主報名者資料 ---
+    rows.push([
+      activityName,
+      payload.name,
+      "'" + userPhone,      // 加單引號確保 Excel/Sheets 不會把電話變數字
+      payload.id || "",
+      payload.meal || "葷",
+      payload.transport || "自往",
+      payload.carSeats || 0,
+      "會員",               // 預設為會員
+      "",                  // 代理人 (本人報名為空)
+      0,                   // J 欄：金額 (目前無用，預留)
+      "已報名",             // K 欄：狀態 (目前無用，預留給幹部將來勾選)
+      payload.note || ""   // L 欄
+    ]);
 
-    for (let i = 0; i < pCount; i++) {
-        const pName = pNames[i] ? pNames[i].value.trim() : "";
-        if (!pName) {
-            alert(`請填寫第 ${i + 1} 位同行人的姓名`);
-            pNames[i]?.focus();
-            return;
-        }
-        partners.push({
-            name: pName,
-            id: pIds[i] ? pIds[i].value.trim() : "",
-            meal: pMeals[i] ? pMeals[i].value : "葷"
-        });
+    // --- 3. 同行者資料 (保持資料結構乾淨) ---
+    if (payload.partners) {
+      const partners = typeof payload.partners === 'string' ? JSON.parse(payload.partners) : payload.partners;
+      partners.forEach(p => {
+        rows.push([
+          activityName, p.name, "", p.id || "", p.meal || "葷", 
+          "隨同", 0, "非會員", payload.name, 0, "已報名", "同行人"
+        ]);
+      });
     }
 
-    // 5. 防止重複點擊
-    const btn = document.querySelector('button[onclick="submitRegistration()"]');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerText = "提交中...";
-    }
-
-    // 6. 封裝並送出 (確保所有屬性都不是 undefined)
-    const payload = {
-        title: tempRegTitle || "未知活動",
-        name: mainName,
-        id: mainIdVal,
-        phone: mainPhone,
-        transport: finalTransport,
-        note: document.getElementById('regNote')?.value || "",
-        partners: JSON.stringify(partners)
-    };
-    // 在 member_zone.html 的 submitRegistration 函式內
-console.log("準備送出的資料:", payload); // <-- 加這行在 F12 檢查
+    // --- 4. 一次性寫入 (最乾淨的作法) ---
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 12).setValues(rows);
     
-google.script.run
-    .withSuccessHandler(function(res) {
-        // 1. 根據後端回傳的狀態字串進行判斷
-        if (res === "SUCCESS") {
-            alert("報名成功！");
-            document.getElementById('regOptionsModal').style.display = 'none';
-            syncData(); // 重新整理列表
-        } 
-        else if (res === "DUPLICATE") {
-            // 處理重複報名的情況，不關閉 Modal 讓使用者確認，或直接關閉皆可
-            alert("提示：您（或該手機號碼）已經報名過這個活動囉！");
-            // 若想讓使用者檢查輸入是否正確，這行可以註解掉：
-            document.getElementById('regOptionsModal').style.display = 'none';
-        } 
-        else {
-            // 處理後端拋出的自訂錯誤訊息 (例如：ERROR: ...)
-            alert("系統提示：" + res);
-        }
+    return "SUCCESS";
 
-        // 2. 無論結果如何，都恢復按鈕狀態
-        if (btn) { 
-            btn.disabled = false; 
-            btn.innerText = "確認報名"; 
-        }
-    })
-    .withFailureHandler(function(err) {
-        // 這是處理「連線失敗」或「GAS 程式崩潰」的情況
-        alert("網路連線或系統執行出錯，請洽管理員：" + err);
-        if (btn) { 
-            btn.disabled = false; 
-            btn.innerText = "確認報名"; 
-        }
-    })
-    .submitRegistration(payload);
-}
+  } catch (e) {
+    return "系統錯誤: " + e.toString();
+  } finally {
+    lock.releaseLock();
+  }
+}    
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {

@@ -566,40 +566,45 @@ document.addEventListener('input', function (e) {
  * 整合了：身分證(H欄)、交通隱藏(I欄)、表單重置、同行人連動
  */
 // 1. 打開報名表並判斷欄位隱藏邏輯
-// 修正後的 handleReg
 function handleReg(title, date, needID, isBus) {
-    tempRegTitle = title;
+    // 1. 設定彈窗標題與隱藏欄位
     document.getElementById('regEventTitle').innerText = title;
-    document.getElementById('regEventDate').innerText = date || "未定";
-
-    // A. 身分證控制 (保險需求)
-    const nid = String(needID || "").trim().toUpperCase();
-    const hasID = (nid === 'Y' || nid === '是');
-    document.getElementById('group_id')?.classList.toggle('hidden', !hasID);
-
-    // B. 專車過濾原則 (核心邏輯)
-    const bus = String(isBus || "").trim().toUpperCase();
-    const isBusEvent = (bus === 'Y' || bus === '是');
     
-    const transGroup = document.getElementById('group_transport');
-    const carGroup = document.getElementById('group_car_capacity');
-    const transSelect = document.getElementById('regTransport');
-
-    if (isBusEvent) {
-        // 專車活動：完全隱藏交通選項，強制寫入值
-        transGroup?.classList.add('hidden');
-        carGroup?.classList.add('hidden');
-        if (transSelect) transSelect.value = "搭乘專車";
+    // 2. 處理身分證欄位顯示 (根據傳入的 needID)
+    const idContainer = document.getElementById('regID').parentElement;
+    if (needID === "是" || needID === true) {
+        idContainer.classList.remove('hidden');
     } else {
-        // 非專車活動：顯示選單，預設「共乘」，隱藏「人數」
-        transGroup?.classList.remove('hidden');
-        if (transSelect) transSelect.value = "共乘不開車";
-        carGroup?.classList.add('hidden');
+        idContainer.classList.add('hidden');
+    }
+    
+    // 3. 處理交通與載人數顯示 (根據傳入的 isBus)
+    const transSelect = document.getElementById('regTransport');
+    const carCapacityContainer = document.getElementById('carCapacityContainer');
+    
+    if (isBus === "是" || isBus === true) {
+        // 如果是遊覽車，固定選項並隱藏載人數
+        transSelect.innerHTML = '<option value="遊覽車">遊覽車 (統一搭乘)</option>';
+        carCapacityContainer.classList.add('hidden');
+    } else {
+        // 如果非遊覽車，提供自行開車選項
+        transSelect.innerHTML = `
+            <option value="自行開車">自行開車</option>
+            <option value="共乘不開車">共乘不開車</option>
+        `;
+        // 監聽自行開車時才顯示載人數
+        transSelect.onchange = function() {
+            carCapacityContainer.classList.toggle('hidden', this.value !== '自行開車');
+        };
+        // 初始化狀態
+        carCapacityContainer.classList.toggle('hidden', transSelect.value !== '自行開車');
     }
 
-    // C. 重置同行人
+    // 4. 重置同行人狀態
     document.getElementById('partnerCount').value = "0";
-    renderPartnerFields(); 
+    document.getElementById('partnerContainer').innerHTML = '';
+    
+    // 5. 顯示彈窗
     document.getElementById('regOptionsModal').style.display = 'flex';
 }
     
@@ -618,14 +623,16 @@ function updateTransportUI() {
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
+    // 關鍵：檢查主報名者的身分證容器是否隱藏
     const idNeeded = !document.getElementById('regID').parentElement.classList.contains('hidden'); 
+    
     container.innerHTML = '';
 
     for (let i = 1; i <= count; i++) {
         const div = document.createElement('div');
-        div.className = 'p-4 bg-white/40 rounded-xl border border-emerald-100 space-y-2';
+        div.className = 'p-4 bg-white/40 rounded-xl border border-emerald-100 space-y-3 mt-2';
         div.innerHTML = `
-            <p class="text-[10px] font-bold text-emerald-700">同行人 #${i}</p>
+            <p class="text-[10px] font-bold text-emerald-700 underline">同行人 #${i}</p>
             <div class="grid grid-cols-2 gap-2">
                 <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg text-sm border-0">
                 <input type="tel" placeholder="手機" class="p-phone w-full px-3 py-2 rounded-lg text-sm border-0">
@@ -683,7 +690,7 @@ function getPartnerData() {
 // 提交報名邏輯
 /**
  * 築心報名系統 - 核心寫入 (精簡乾淨版)
- * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註
+ * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註 | M.報名日期
  */
 async function submitRegistration() {
     const btn = event.target.closest('button');

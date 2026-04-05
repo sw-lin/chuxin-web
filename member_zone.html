@@ -19,19 +19,22 @@
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
 
-        /* 強制統一報名彈窗內的輸入框高度 */
-        #regOptionsModal input, 
-        #regOptionsModal select, 
-        #regOptionsModal textarea {
-        border: 2px solid transparent !important;
-        min-height: 42px !important;
-        }
+        /* 統一所有彈窗內輸入框與選單的高度 */
+#regOptionsModal input, 
+#regOptionsModal select, 
+#regOptionsModal textarea {
+    height: 46px !important; /* 強制固定高度 */
+    line-height: 1.5 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    box-sizing: border-box !important;
+}
 
-        #regOptionsModal select {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        line-height: 42px !important;
-        }        
+/* 備註欄位除外，因為它是多行 */
+#regNote {
+    height: auto !important;
+    min-height: 90px !important;
+}
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -585,8 +588,8 @@ function handleReg(title, date, needID, isBus) {
     
     // 強化判斷邏輯：相容 "是"、"Y" 或 true
     const idNeeded = (needID === "是" || needID === "Y" || needID === true);
-    const busEvent = (isBus === "是" || busEvent === "Y" || isBus === true);
-
+    const busEvent = (isBus === "是" || isBus === "Y" || isBus === true);
+    
     // --- 身分證顯示控制 ---
     const idContainer = document.getElementById('regID').parentElement;
     if (idNeeded) {
@@ -651,8 +654,10 @@ function renderPartnerFields() {
             <p class="text-[10px] font-bold text-emerald-700 underline">同行人 #${i}</p>
             <div class="grid grid-cols-2 gap-2">
                 <input type="text" placeholder="姓名" class="p-name w-full px-3 h-[42px] rounded-lg text-sm border-0 bg-white">
-                <input type="tel" value="${defaultPhone}" placeholder="電話" class="p-phone w-full px-3 h-[42px] rounded-lg text-sm border-0 bg-white">
-            </div>
+                // 在 renderPartnerFields 裡面產生的 HTML
+                
+                <input type="tel" value="${currentUser.phone}" placeholder="電話" class="p-phone w-full px-3 rounded-lg text-sm border-0 bg-white shadow-sm">
+       
             ${idNeeded ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 h-[42px] rounded-lg text-sm border-0 uppercase bg-white">` : ''}
             <select class="p-meal w-full px-3 h-[42px] rounded-lg text-sm border-0 bg-white appearance-none">
                 <option value="葷食">葷食</option>

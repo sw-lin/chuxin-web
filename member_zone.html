@@ -947,9 +947,9 @@ document.addEventListener('input', function(e) {
 <div id="regOptionsModal" class="modal-overlay" style="display:none;" onclick="closeRegModal(event)">
     <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
         
-        <button onclick="closeRegModal()" class="text-gray-400 hover:text-gray-600 p-2">
+        button onclick="closeRegModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 p-2 z-10 transition-colors">
             <i class="fas fa-times text-xl"></i>
-        </button>   
+        </button> 
         
         <h3 id="regEventTitle" class="text-xl font-black text-emerald-900 mb-1 text-center">活動報名</h3>
         <p id="regEventDate" class="text-[10px] text-emerald-600 font-bold text-center mb-6"></p>

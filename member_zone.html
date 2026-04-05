@@ -18,20 +18,36 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-        /* 強制所有輸入框與下拉選單高度一致 */
+/* --- 終極對齊設定：強制所有輸入框與下拉選單長得一模一樣 --- */
 #regOptionsModal select, 
 #regOptionsModal input[type="text"], 
 #regOptionsModal input[type="tel"] {
-    height: 48px !important;    /* 設定一個固定高度 */
+    height: 48px !important;
     line-height: 48px !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    vertical-align: middle !important;
+    padding: 0 16px !important; /* 統一左右內距 */
+    box-sizing: border-box !important; /* 確保邊框與內距不影響總高度 */
+    margin: 0 !important;
+    
+    /* 關鍵：消滅瀏覽器原生的頑固樣式 */
+    appearance: none !important; 
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-color: #ffffff !important;
 }
 
-/* 針對 Select 的內距微調，避免文字頂到邊框 */
+/* 替 Select 手動加回我們自己設計的統一箭頭，這樣跨平台都會一樣高 */
 #regOptionsModal select {
-    padding-left: 12px !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+    padding-right: 40px !important; /* 留出空間給箭頭，避免文字壓到 */
+}
+
+/* 確保備註欄位不受影響，維持多行高度 */
+#regNote {
+    height: auto !important;
+    min-height: 80px !important;
 }        
     </style>
 </head>

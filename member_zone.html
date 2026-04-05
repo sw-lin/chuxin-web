@@ -618,37 +618,29 @@ function updateTransportUI() {
 function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
-    container.innerHTML = ''; 
-    
-    let userPhone = (typeof currentUser !== 'undefined' && currentUser.phone) ? String(currentUser.phone).trim() : "";
-    if (userPhone.length === 9 && userPhone.startsWith('9')) {
-        userPhone = '0' + userPhone;
-    }
+    const idNeeded = !document.getElementById('regID').parentElement.classList.contains('hidden'); 
+    container.innerHTML = '';
 
     for (let i = 1; i <= count; i++) {
-        container.innerHTML += `
-            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-sm">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">同行人 ${i}</span>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" placeholder="姓名(必填)" 
-                        class="p-name w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm">
-                    <input type="tel" placeholder="電話" maxlength="10" value="${userPhone}" 
-                        class="p-phone w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm">
-                </div>
-                ${currentNeedID === 'Y' ? `
-                <input type="text" placeholder="身分證字號(保險必填)" 
-                    class="p-id w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm font-mono uppercase shadow-sm">` : ''}
-                <select class="p-meal w-full px-3 h-12 rounded-xl border-2 border-transparent bg-white focus:border-emerald-500 outline-none text-sm shadow-sm">
-                    <option value="葷食">餐食：葷食</option>
-                    <option value="素食">餐食：素食</option>
-                    <option value="不拘">餐食：不拘</option>
-                </select>
+        const div = document.createElement('div');
+        div.className = 'p-4 bg-white/40 rounded-xl border border-emerald-100 space-y-2';
+        div.innerHTML = `
+            <p class="text-[10px] font-bold text-emerald-700">同行人 #${i}</p>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg text-sm border-0">
+                <input type="tel" placeholder="手機" class="p-phone w-full px-3 py-2 rounded-lg text-sm border-0">
             </div>
+            ${idNeeded ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg text-sm border-0 uppercase">` : ''}
+            <select class="p-meal w-full px-3 py-2 rounded-lg text-sm border-0">
+                <option value="葷">葷食</option>
+                <option value="全素">全素</option>
+                <option value="奶蛋素">奶蛋素</option>
+            </select>
         `;
+        container.appendChild(div);
     }
 }    
+    
 // 關閉選單的輔助函數
 // 確保函式名稱完全一致，且 Modal ID 與 HTML 對應
 function closeRegModal() {
@@ -694,72 +686,44 @@ function getPartnerData() {
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註
  */
 async function submitRegistration() {
-    // 防止重複點擊
-    const btn = event ? (event.target.tagName === 'BUTTON' ? event.target : event.target.closest('button')) : null;
-    if (btn) {
-        btn.disabled = true;
-        btn.innerText = "提交中...";
-    }
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerText = "提交中...";
 
     try {
-        const eventTitle = document.getElementById('regEventTitle').innerText;
-        const transport = document.getElementById('regTransport').value;
-        const canDrive = document.getElementById('carCapacity')?.value || 0;
-        const note = document.getElementById('regNote').value;
-
-        // 1. 建立「本人」資料
-        const mainRegistrant = {
+        const payload = {
+            type: "complex_register",
+            eventTitle: document.getElementById('regEventTitle').innerText,
             name: currentUser.name,
             phone: currentUser.phone,
-            idNo: document.getElementById('regID')?.value || "",
-            diet: document.getElementById('regMeal').value,
-            transport: transport,
-            canDrive: parseInt(canDrive),
-            amount: 0 // 若有費用邏輯可在此計算
+            note: document.getElementById('regNote').value,
+            registrants: [
+                {
+                    name: currentUser.name,
+                    phone: currentUser.phone,
+                    idNo: document.getElementById('regID')?.value || "",
+                    diet: document.getElementById('regMeal').value,
+                    transport: document.getElementById('regTransport').value,
+                    canDrive: document.getElementById('carCapacity')?.value || 0
+                },
+                ...getPartnerData() // 這裡會抓到同行人的姓名、電話、身分證、餐食
+            ]
         };
 
-        // 2. 獲取「同行人」資料
-        const partners = getPartnerData();
-
-        // 3. 打包成後端 complex_register 格式
-        const payload = {
-            type: "complex_register", // 務必與後端 switch case 一致
-            eventTitle: eventTitle,
-            name: currentUser.name,   // 主報名者姓名 (對應後端 I 欄代理人)
-            phone: currentUser.phone, // 主報名者電話 (對應後端比對重複)
-            note: note,
-            registrants: [mainRegistrant, ...partners] // 合併本人與同行人
-        };
-
-        console.log("送出的報名資料：", payload);
-
-        // 使用 fetch 送往 GAS (因為你的 doPost 已經寫好了分流)
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
 
         if (result.result === "SUCCESS") {
-            showToast("報名成功！");
-            confetti({ particleCount: 150, spread: 70 });
-            closeRegModal();
-            syncData(); // 重新整理狀態
-        } else if (result.result === "ALREADY_DONE") {
-            showToast(result.message, "error");
+            alert("報名成功！");
+            location.reload();
         } else {
-            showToast("錯誤：" + result.message, "error");
+            alert("失敗：" + result.message);
         }
-
     } catch (e) {
-        console.error("報名流程崩潰:", e);
-        showToast("系統連線失敗", "error");
+        alert("網路錯誤");
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerText = "確認提交報名";
-        }
+        btn.disabled = false;
+        btn.innerText = "確認提交報名";
     }
 }
     

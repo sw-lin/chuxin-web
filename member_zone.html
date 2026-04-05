@@ -18,23 +18,6 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-
-        /* 統一所有彈窗內輸入框與選單的高度 */
-#regOptionsModal input, 
-#regOptionsModal select, 
-#regOptionsModal textarea {
-    height: 46px !important; /* 強制固定高度 */
-    line-height: 1.5 !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-    box-sizing: border-box !important;
-}
-
-/* 備註欄位除外，因為它是多行 */
-#regNote {
-    height: auto !important;
-    min-height: 90px !important;
-}
     </style>
 </head>
 <body class="min-h-screen pb-20">

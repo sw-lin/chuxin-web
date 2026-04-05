@@ -582,24 +582,33 @@ function handleReg(title, date, needID, isBus) {
     const transSelect = document.getElementById('regTransport');
     const carCapacityContainer = document.getElementById('carCapacityContainer');
     
+if (!carCapacityContainer) {
+        console.error("找不到 carCapacityContainer 元素！請檢查 HTML 是否有 id='carCapacityContainer'");
+        return;
+    }
+
     if (isBus === "是" || isBus === true) {
-        // 如果是遊覽車，固定選項並隱藏載人數
         transSelect.innerHTML = '<option value="遊覽車">遊覽車 (統一搭乘)</option>';
-        carCapacityContainer.classList.add('hidden');
+        carCapacityContainer.classList.add('hidden'); // 強制隱藏
     } else {
-        // 如果非遊覽車，提供自行開車選項
         transSelect.innerHTML = `
             <option value="自行開車">自行開車</option>
             <option value="共乘不開車">共乘不開車</option>
         `;
-        // 監聽自行開車時才顯示載人數
+        
+        // 設定選單改變時的連動
         transSelect.onchange = function() {
-            carCapacityContainer.classList.toggle('hidden', this.value !== '自行開車');
+            // 只有「自行開車」才顯示載人數容器
+            if (this.value === '自行開車') {
+                carCapacityContainer.classList.remove('hidden');
+            } else {
+                carCapacityContainer.classList.add('hidden');
+            }
         };
-        // 初始化狀態
+        
+        // 初始狀態檢查：如果預設是自行開車就顯示，否則隱藏
         carCapacityContainer.classList.toggle('hidden', transSelect.value !== '自行開車');
     }
-
     // 4. 重置同行人狀態
     document.getElementById('partnerCount').value = "0";
     document.getElementById('partnerContainer').innerHTML = '';
@@ -897,13 +906,14 @@ document.addEventListener('input', function(e) {
     </select>
     </div>
 </div>                
-<div id="group_car_details" class="mt-3 hidden">
-    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">若您開車，含您本人最多可載幾人？</label>
+<div id="carCapacityContainer" class="mt-3 hidden">
+    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">若您開車，不含您本人最多可載幾人？</label>
     <select id="carCapacity" class="w-full px-4 py-3 bg-white rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-emerald-500 shadow-sm">
-        <option value="1">1 人 (僅本人)</option>
+        <option value="0">0 人</option>
+        <option value="1">1 人</option>
         <option value="2">2 人</option>
         <option value="3">3 人</option>
-        <option value="4">4 人以上</option>
+        <option value="4">4 人</option>
     </select>
 </div>
 

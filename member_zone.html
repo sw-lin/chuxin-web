@@ -665,80 +665,101 @@ function getPartnerData() {
     const container = document.getElementById('partnerContainer');
     if (!container) return partners;
 
-    // 抓取所有同行人的輸入區塊
-    const partnerBlocks = container.querySelectorAll('.partner-block');
-    partnerBlocks.forEach(block => {
-        const name = block.querySelector('[name="partnerName"]')?.value;
-        if (name) { // 只有填了名字的才抓
+    // 抓取每一個同行人的包裝區塊
+    const blocks = container.children;
+    for (let block of blocks) {
+        const name = block.querySelector('.p-name')?.value.trim();
+        const phone = block.querySelector('.p-phone')?.value.trim();
+        const idNo = block.querySelector('.p-id')?.value.trim() || "";
+        const diet = block.querySelector('.p-meal')?.value || "葷食";
+
+        if (name) { // 至少要有姓名才抓取
             partners.push({
                 name: name,
-                meal: block.querySelector('[name="partnerMeal"]')?.value || "葷",
-                id: block.querySelector('[name="partnerID"]')?.value || ""
+                phone: phone,
+                idNo: idNo,
+                diet: diet,
+                transport: document.getElementById('regTransport').value, // 同本人
+                canDrive: 0, // 同行人預設不開車
+                amount: 0    // 金額邏輯可依需求調整
             });
         }
-    });
+    }
     return partners;
-}    
+}
 
 // 提交報名邏輯
 /**
  * 築心報名系統 - 核心寫入 (精簡乾淨版)
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註
  */
-function submitRegistration() {
-    const btn = event ? event.target : null;
-    if (btn && btn.tagName === 'BUTTON') {
+async function submitRegistration() {
+    // 防止重複點擊
+    const btn = event ? (event.target.tagName === 'BUTTON' ? event.target : event.target.closest('button')) : null;
+    if (btn) {
         btn.disabled = true;
         btn.innerText = "提交中...";
     }
 
     try {
-        // 抓取欄位（加入安全檢查）
-        const nameEl = document.getElementById('regName');
-        const phoneEl = document.getElementById('regPhone');
-        const titleEl = document.getElementById('regActivityTitle');
-        const carSeatsEl = document.getElementById('regCarSeats');
+        const eventTitle = document.getElementById('regEventTitle').innerText;
+        const transport = document.getElementById('regTransport').value;
+        const canDrive = document.getElementById('carCapacity')?.value || 0;
+        const note = document.getElementById('regNote').value;
 
-        if (!nameEl || !phoneEl) throw new Error("找不到姓名或電話欄位");
-
-        const payload = {
-            title: titleEl ? titleEl.innerText : "未知名活動",
-            name: nameEl.value,
-            phone: phoneEl.value,
-            id: document.getElementById('regID')?.value || "",
-            meal: document.getElementById('regMeal')?.value || "葷",
-            transport: document.getElementById('regTransport')?.value || "自往",
-            carSeats: carSeatsEl ? carSeatsEl.value : 0,
-            note: document.getElementById('regNote')?.value || "",
-            // 修改重點：如果函式不存在就回傳空陣列字串
-            partners: JSON.stringify(typeof getPartnerData === 'function' ? getPartnerData() : []),
+        // 1. 建立「本人」資料
+        const mainRegistrant = {
+            name: currentUser.name,
+            phone: currentUser.phone,
+            idNo: document.getElementById('regID')?.value || "",
+            diet: document.getElementById('regMeal').value,
+            transport: transport,
+            canDrive: parseInt(canDrive),
+            amount: 0 // 若有費用邏輯可在此計算
         };
 
-        console.log("Debug - Payload:", payload);
+        // 2. 獲取「同行人」資料
+        const partners = getPartnerData();
 
-        google.script.run
-            .withSuccessHandler(function(res) {
-                if (res === "SUCCESS") {
-                    alert("報名成功！");
-                    document.getElementById('regOptionsModal').style.display = 'none';
-                    if (typeof syncData === 'function') syncData();
-                } else if (res === "DUPLICATE") {
-                    alert("您已經報名過囉！");
-                } else {
-                    alert("系統訊息：" + res);
-                }
-                if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
-            })
-            .withFailureHandler(function(err) {
-                alert("提交失敗：" + err);
-                if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
-            })
-            .submitRegistration(payload);
+        // 3. 打包成後端 complex_register 格式
+        const payload = {
+            type: "complex_register", // 務必與後端 switch case 一致
+            eventTitle: eventTitle,
+            name: currentUser.name,   // 主報名者姓名 (對應後端 I 欄代理人)
+            phone: currentUser.phone, // 主報名者電話 (對應後端比對重複)
+            note: note,
+            registrants: [mainRegistrant, ...partners] // 合併本人與同行人
+        };
+
+        console.log("送出的報名資料：", payload);
+
+        // 使用 fetch 送往 GAS (因為你的 doPost 已經寫好了分流)
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.result === "SUCCESS") {
+            showToast("報名成功！");
+            confetti({ particleCount: 150, spread: 70 });
+            closeRegModal();
+            syncData(); // 重新整理狀態
+        } else if (result.result === "ALREADY_DONE") {
+            showToast(result.message, "error");
+        } else {
+            showToast("錯誤：" + result.message, "error");
+        }
 
     } catch (e) {
-        console.error("前端邏輯崩潰:", e);
-        alert("請檢查： " + e.message);
-        if (btn) { btn.disabled = false; btn.innerText = "確認報名"; }
+        console.error("報名流程崩潰:", e);
+        showToast("系統連線失敗", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "確認提交報名";
+        }
     }
 }
     

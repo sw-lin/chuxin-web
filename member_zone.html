@@ -18,6 +18,21 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
+        /* 強制所有輸入框與下拉選單高度一致 */
+#regOptionsModal select, 
+#regOptionsModal input[type="text"], 
+#regOptionsModal input[type="tel"] {
+    height: 48px !important;    /* 設定一個固定高度 */
+    line-height: 48px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    vertical-align: middle !important;
+}
+
+/* 針對 Select 的內距微調，避免文字頂到邊框 */
+#regOptionsModal select {
+    padding-left: 12px !important;
+}        
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -640,7 +655,7 @@ function renderPartnerFields() {
                             
                 <input type="tel" value="${currentUser.phone}" placeholder="電話" class="p-phone w-full px-3 rounded-lg text-sm border-0 bg-white shadow-sm">
        
-            ${idNeeded ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 h-[42px] rounded-lg text-sm border-0 uppercase bg-white">` : ''}
+            ${idNeeded ? `<input type="text" placeholder="身分證字號(保險使用)" class="p-id w-full px-3 h-[42px] rounded-lg text-sm border-0 uppercase bg-white">` : ''}
             
             <select class="p-meal w-full px-3 h-[42px] rounded-lg text-sm border-0 bg-white appearance-none">
                 <option value="葷食">葷食</option>
@@ -691,6 +706,48 @@ function getPartnerData() {
 async function submitRegistration() {
     // 防止重複點擊
     const btn = event ? (event.target.tagName === 'BUTTON' ? event.target : event.target.closest('button')) : null;
+    
+    // --- 【新增：欄位驗證邏輯】 ---
+    const isIDVisible = !document.getElementById('regID').parentElement.classList.contains('hidden');
+    const partnerCount = parseInt(document.getElementById('partnerCount').value) || 0;
+    const currentPartners = getPartnerData(); // 取得目前的同行人資料
+
+    // 1. 驗證本人身分證 (若欄位有顯示則必填)
+    if (isIDVisible) {
+        const myID = document.getElementById('regID').value.trim();
+        if (!myID) {
+            alert("請輸入您的身分證字號（保險使用）");
+            return; // 中斷，不繼續執行
+        }
+    }
+
+    // 2. 驗證攜伴者姓名與身分證
+    if (partnerCount > 0) {
+        // 檢查填寫的數量是否與下拉選單相符
+        if (currentPartners.length < partnerCount) {
+            alert("請完整填寫所有同行人的姓名");
+            return;
+        }
+
+        // 檢查是否有任一同行人姓名空白
+        const hasEmptyName = currentPartners.some(p => !p.name.trim());
+        if (hasEmptyName) {
+            alert("同行人姓名不可為空白");
+            return;
+        }
+
+        // 若活動需要身分證，檢查同行人身分證是否空白
+        if (isIDVisible) {
+            const hasEmptyID = currentPartners.some(p => !p.idNo || !p.idNo.trim());
+            if (hasEmptyID) {
+                alert("請完整填寫所有同行人的身分證字號（保險使用）");
+                return;
+            }
+        }
+    }
+    // --- 【驗證結束】 ---
+
+    // 通過驗證後，才開始顯示「提交中」狀態
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
@@ -713,12 +770,12 @@ async function submitRegistration() {
                   diet: document.getElementById('regMeal').value,
                   transport: document.getElementById('regTransport').value,
                   canDrive: document.getElementById('regTransport').value === '自行開車' ? 
-                            parseInt(document.getElementById('carCapacity')?.value || 0) : 0
+                             parseInt(document.getElementById('carCapacity')?.value || 0) : 0
                 },
-                ...getPartnerData().map(p => ({
+                ...currentPartners.map(p => ({
                    ...p,
-                   transport: "隨同代理人", // 同行人交通屬性
-                   canDrive: 0             // 攜伴者強制設為 0，避免重複計算載量
+                   transport: "隨同代理人", 
+                   canDrive: 0              
                 }))
             ]
         };
@@ -749,7 +806,8 @@ async function submitRegistration() {
             btn.innerText = "確認提交報名";
         }
     }
-}    
+}
+    
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {
     const transVal = document.getElementById('regTransport').value;
@@ -882,10 +940,10 @@ document.addEventListener('input', function(e) {
         
         <div class="space-y-4">
             <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                <p class="text-[10px] font-black text-emerald-700 mb-3 tracking-widest">本人資料 (會員)</p>
+                <p class="text-[10px] font-black text-emerald-700 mb-3 tracking-widest">請輸入相關資料</p>
                 
                 <div id="group_id" class="hidden mb-3">
-                    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號</label>
+                    <label class="block text-[10px] font-bold text-emerald-800 mb-1 ml-1">身分證字號(保險使用)</label>
                     <input type="text" id="regID" class="w-full px-4 py-3 bg-white rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 font-mono" placeholder="請輸入身分證字號">
                 </div>
 

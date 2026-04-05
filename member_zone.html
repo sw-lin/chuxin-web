@@ -654,11 +654,11 @@ function renderPartnerFields() {
             <p class="text-[10px] font-bold text-emerald-700 underline">同行人 #${i}</p>
             <div class="grid grid-cols-2 gap-2">
                 <input type="text" placeholder="姓名" class="p-name w-full px-3 h-[42px] rounded-lg text-sm border-0 bg-white">
-                // 在 renderPartnerFields 裡面產生的 HTML
-                
+                            
                 <input type="tel" value="${currentUser.phone}" placeholder="電話" class="p-phone w-full px-3 rounded-lg text-sm border-0 bg-white shadow-sm">
        
             ${idNeeded ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 h-[42px] rounded-lg text-sm border-0 uppercase bg-white">` : ''}
+            
             <select class="p-meal w-full px-3 h-[42px] rounded-lg text-sm border-0 bg-white appearance-none">
                 <option value="葷食">葷食</option>
                 <option value="素食">素食</option>

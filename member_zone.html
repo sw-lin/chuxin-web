@@ -569,30 +569,32 @@ document.addEventListener('input', function (e) {
 function handleReg(title, date, needID, isBus) {
     document.getElementById('regEventTitle').innerText = title;
     
-    // 修正點：統一轉為字串比較，確保 "是" 或 "Y" 都能通過
+    // 加強判斷邏輯
     const idNeeded = (needID === "是" || needID === "Y" || needID === true);
     const busEvent = (isBus === "是" || isBus === "Y" || isBus === true);
 
-    // 1. 身分證顯示邏輯
+    // 處理身分證顯示
     const idContainer = document.getElementById('regID').parentElement;
     idContainer.classList.toggle('hidden', !idNeeded);
     
-    // 2. 交通工具顯示邏輯
+    // 處理交通選項 (關鍵修正)
     const transSelect = document.getElementById('regTransport');
     const carCapacityContainer = document.getElementById('carCapacityContainer');
     
     if (busEvent) {
+        // 如果是遊覽車，強制清空並只留一個選項
         transSelect.innerHTML = '<option value="遊覽車">遊覽車 (統一搭乘)</option>';
         carCapacityContainer.classList.add('hidden');
     } else {
+        // 如果不是，恢復原本選項
         transSelect.innerHTML = `
             <option value="自行開車">自行開車</option>
             <option value="共乘不開車">共乘不開車</option>
         `;
+        // 只有自行開車才顯示載人數
         transSelect.onchange = function() {
             carCapacityContainer.classList.toggle('hidden', this.value !== '自行開車');
         };
-        // 初始狀態
         carCapacityContainer.classList.toggle('hidden', transSelect.value !== '自行開車');
     }
 
@@ -617,8 +619,10 @@ function renderPartnerFields() {
     const count = parseInt(document.getElementById('partnerCount').value);
     const container = document.getElementById('partnerContainer');
     const idNeeded = !document.getElementById('regID').parentElement.classList.contains('hidden'); 
+    const mainPhone = currentUser.phone; // 取得主報名者電話
     
     container.innerHTML = '';
+
     for (let i = 1; i <= count; i++) {
         const div = document.createElement('div');
         div.className = 'p-4 bg-white/40 rounded-xl border border-emerald-100 space-y-3 mt-2';
@@ -626,19 +630,18 @@ function renderPartnerFields() {
             <p class="text-[10px] font-bold text-emerald-700 underline">同行人 #${i}</p>
             <div class="grid grid-cols-2 gap-2">
                 <input type="text" placeholder="姓名" class="p-name w-full px-3 py-2 rounded-lg text-sm border-0 bg-white">
-                <input type="tel" placeholder="電話" class="p-phone w-full px-3 py-2 rounded-lg text-sm border-0 bg-white">
+                <input type="tel" value="${mainPhone}" readonly class="p-phone w-full px-3 py-2 rounded-lg text-sm border-0 bg-gray-50 text-gray-400 cursor-not-allowed">
             </div>
             ${idNeeded ? `<input type="text" placeholder="身分證字號" class="p-id w-full px-3 py-2 rounded-lg text-sm border-0 uppercase bg-white">` : ''}
-            <select class="p-meal w-full px-3 py-2 rounded-lg text-sm border-0 bg-white">
-                <option value="葷">葷食</option>
-                <option value="全素">全素</option>
-                <option value="奶蛋素">奶蛋素</option>
+            <select class="p-meal w-full px-3 py-3 rounded-lg text-sm border-0 bg-white leading-tight">
+                <option value="葷食">葷食</option>
+                <option value="素食">素食</option>
+                <option value="不拘">不拘</option>
             </select>
         `;
         container.appendChild(div);
     }
-}
-    
+}    
 // 關閉選單的輔助函數
 // 確保函式名稱完全一致，且 Modal ID 與 HTML 對應
 function closeRegModal() {
@@ -694,14 +697,20 @@ async function submitRegistration() {
             note: document.getElementById('regNote')?.value || "",
             registrants: [
                 {
-                    name: currentUser.name,
-                    phone: currentUser.phone,
-                    idNo: document.getElementById('regID')?.value || "",
-                    diet: document.getElementById('regMeal')?.value || "葷",
-                    transport: document.getElementById('regTransport')?.value || "自行開車",
-                    canDrive: document.getElementById('carCapacity')?.value || 0
+                  name: currentUser.name,
+                  phone: currentUser.phone,
+                  idNo: document.getElementById('regID')?.value || "",
+                  diet: document.getElementById('regMeal').value,
+                  transport: document.getElementById('regTransport').value,
+                  // 只有本人開車才紀錄載人數
+                  canDrive: document.getElementById('regTransport').value === '自行開車' ? 
+                  parseInt(document.getElementById('carCapacity').value) : 0
                 },
-                ...getPartnerData() // 這裡現在能正確抓到函式了
+                ...getPartnerData().map(p => ({
+                   ...p,
+                   transport: "隨同代理人", // 同行人交通屬性
+                   canDrive: 0             // 攜伴者強制設為 0，避免重複計算載量
+                }))
             ]
         };
 

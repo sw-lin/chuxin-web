@@ -4,8 +4,7 @@
     <meta。charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>    
-    
-    
+        
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -303,50 +302,49 @@ function closeHistoryModal() {
 } 
 // 掃碼成功處理
 async function onScanSuccess(decodedText) {
-    // 1. 立即暫停掃描，避免連續觸發
-    if (window.html5QrCode) {
-        await window.html5QrCode.stop().catch(err => console.error("停止掃描失敗", err));
-        document.getElementById('reader').classList.add('hidden');
+    // 預防重複報到
+    const eventTitle = decodedText.trim();
+    const alreadyAttended = (currentUser.attendLog || []).some(log => String(log).includes(eventTitle));
+
+    if (alreadyAttended) {
+        showToast("您已完成過此報到", "info");
+        closeScanner();
+        return;
     }
 
+    // 關閉掃描並發送請求
+    closeScanner();
+    showToast("報到處理中...", "info");
+
     try {
-        // 在 onScanSuccess 內的判斷建議改寫如下，更為精準
-  const eventTitle = decodedText.trim();
-  const alreadyAttended = (currentUser.attendLog || []).some(log => 
-    String(log).toLowerCase().includes(eventTitle.toLowerCase())
-  );
-
-  if (alreadyAttended) {
-    showToast(`「${eventTitle}」已完成報到，無需重複掃碼`, "info");
-    return;
-  }
-
-        // 3. 發送報到請求
         const res = await fetch(`${GAS_URL}?action=checkIn&event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`);
         const result = await res.json();
-
         if (result.success) {
             showToast("報到成功！", "success");
-            // 觸發小煙火慶祝報到成功
             confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 } });
-            // 重新同步資料以更新出席次數
-            syncData(); 
+            syncData(); // 重新整理出席次數
         } else {
             showToast(result.message || "報到失敗", "error");
         }
     } catch (e) {
-        console.error("報到程序錯誤:", e);
-        showToast("系統錯誤，請聯繫工作人員", "error");
+        showToast("連線錯誤", "error");
     }
-} 
+}    
 function startScanner() {
     const readerDiv = document.getElementById('reader');
+    const modal = document.getElementById('scanModal'); // 確保 HTML 中有這個彈窗 ID
+    
     if (!readerDiv) return;
     
+    // 顯示彈窗介面
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
     readerDiv.classList.remove('hidden');
     
     window.html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
     window.html5QrCode.start(
         { facingMode: "environment" }, 
@@ -354,10 +352,17 @@ function startScanner() {
         onScanSuccess
     ).catch(err => {
         console.error("相機啟動失敗", err);
-        showToast("無法開啟相機", "error");
+        showToast("無法開啟相機，請檢查權限", "error");
+        closeScanner();
     });
-} 
-
+}
+function closeScanner() {
+    const modal = document.getElementById('scanModal');
+    if (modal) modal.classList.add('hidden');
+    if (window.html5QrCode && window.html5QrCode.isScanning) {
+        window.html5QrCode.stop();
+    }
+}    
     
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」
@@ -444,61 +449,62 @@ function enterStaffMode() {
 }
 
 // ==========================================
-// 6. 補齊缺失的輔助函式 (修正報錯關鍵)
+// 修正：近期活動預告 (僅顯示一則，優先海報)
 // ==========================================
-
-// 修正 renderCalendarActivity 報錯
 function renderCalendarActivity(calendar) {
     const container = document.getElementById('calendarActivitySection');
     if (!container) return;
     
-    if (!calendar || calendar.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">目前暫無活動預告</p>';
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 篩選：日期大於等於今日，且僅取第一筆
+    const nextEvent = (calendar || []).find(ev => ev.dateText >= today);
+
+    if (!nextEvent) {
+        container.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs font-bold">目前暫無近期活動</p>';
         return;
     }
 
-    // 渲染邏輯 (這部分通常對應您 UI 上的行事曆卡片)
-    container.innerHTML = calendar.slice(0, 3).map(ev => `
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="bg-emerald-100 text-emerald-700 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs flex-col">
-                    <span>${ev.dateText ? ev.dateText.split('-')[1] : ''}/${ev.dateText ? ev.dateText.split('-')[2] : ''}</span>
-                </div>
-                <div>
-                    <h4 class="font-bold text-emerald-900 text-sm">${ev.title}</h4>
-                    <p class="text-[10px] text-gray-400">${ev.location || '築心會館'}</p>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
-        </div>
-    `).join('');
-}
+    // 判斷是否有海報 (D欄位對應 ev.poster，簡介E欄位對應 ev.desc)
+    const posterUrl = getDirectImageUrl(nextEvent.poster); // D 欄
+    const eventDesc = nextEvent.desc || "暫無簡介"; // E 欄
 
-// 修正 showToast 報錯 (漂亮的翡翠綠提示)
-function showToast(message, type = 'info') {
+    if (posterUrl && posterUrl !== "NONE") {
+        // 模式 A：顯示海報
+        container.innerHTML = `
+            <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-emerald-50 mb-4">
+                <img src="${posterUrl}" class="w-full h-auto object-cover" alt="${nextEvent.title}">
+                <div class="p-4 bg-white/90 backdrop-blur-sm text-center">
+                    <h4 class="font-black text-emerald-900">${nextEvent.title}</h4>
+                    <p class="text-[10px] text-emerald-600 font-bold">${nextEvent.dateText}</p>
+                </div>
+            </div>`;
+    } else {
+        // 模式 B：顯示文字簡介
+        container.innerHTML = `
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-3 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-emerald-700 text-white px-3 py-1 rounded-lg text-[10px] font-bold">
+                        ${nextEvent.dateText}
+                    </div>
+                    <h4 class="font-black text-emerald-900 text-lg">${nextEvent.title}</h4>
+                </div>
+                <p class="text-xs text-gray-600 leading-relaxed italic pr-4 border-l-2 border-emerald-100 pl-3">
+                    ${eventDesc}
+                </p>
+            </div>`;
+    }
+}
+function showToast(msg, type) {
     const container = document.getElementById('toastContainer');
-    if (!container) return;
-
+    if(!container) return;
     const toast = document.createElement('div');
-    const colors = {
-        success: 'bg-emerald-600',
-        error: 'bg-red-600',
-        info: 'bg-orange-500'
-    };
-    
-    toast.className = `${colors[type] || 'bg-gray-800'} text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-bold animate-bounce flex items-center gap-2`;
-    toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-        ${message}
-    `;
-    
+    const bgColor = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-500' : 'bg-amber-500');
+    toast.className = `${bgColor} text-white px-6 py-3 rounded-2xl shadow-xl mb-3 animate-bounce font-bold text-sm`;
+    toast.innerText = msg;
     container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
+    setTimeout(() => { toast.remove(); }, 3000);
 }
-
 // 修正 logout 報錯
 function logout() {
     if(confirm('確定要登出嗎？')) {

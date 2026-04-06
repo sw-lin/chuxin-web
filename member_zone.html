@@ -452,20 +452,18 @@ window.addEventListener('load', () => {
 function getDirectImageUrl(url) {
     if (!url || url === "NONE" || url === "" || typeof url !== 'string') return null;
     
-    // 如果已經是普通圖片網址或 base64，直接回傳
+    // 如果是直接圖片連結，直接回傳
     if (url.startsWith('http') && !url.includes('drive.google.com')) return url;
-    if (url.startsWith('data:image')) return url;
 
-    // 針對 Google Drive 連結進行精準解析
-    const match = url.match(/[-\w]{25,}/); // 匹配檔案 ID
+    // 針對 Google Drive ID 進行更寬鬆且精準的捕捉
+    const match = url.match(/[-\w]{25,}/);
     if (match && match[0]) {
-        // 使用目前最穩定的直接顯示網址格式
-        return `https://lh3.googleusercontent.com/d/${match[0]}`;
+        // 使用 Google Drive 的縮圖預覽 API (sz=s1000 代表最大寬度 1000px，能解決大多數顯示問題)
+        return `https://drive.google.com/thumbnail?id=${match[0]}&sz=w1000`;
     }
     
-    return null;
+    return url;
 }
-
 // 保留進入工作人員模式功能
 function enterStaffMode() {
     sessionStorage.setItem('staffInfo', JSON.stringify(currentUser));
@@ -487,18 +485,19 @@ function renderCalendarActivity(calendar) {
         return;
     }
 
-    // --- 除錯用：請在瀏覽器 F12 觀察這行輸出 ---
-    console.log("正在處理活動海報，原始網址為:", nextEvent.poster);
-
+    // 取得轉換後的網址
     const posterUrl = getDirectImageUrl(nextEvent.poster);
-    
+    console.log("海報解析網址:", posterUrl); // 您可以在控制台確認網址是否正確
+
     if (posterUrl) {
         container.innerHTML = `
             <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
-                <img src="${posterUrl}" 
-                     class="w-full h-auto block" 
-                     onload="console.log('海報載入成功')"
-                     onerror="handleImageError(this, '${nextEvent.title}', '${nextEvent.dateText}', '${nextEvent.desc}')">
+                <div class="w-full bg-gray-50 flex items-center justify-center min-h-[200px]">
+                    <img src="${posterUrl}" 
+                         class="w-full h-auto block" 
+                         alt="${nextEvent.title}"
+                         onerror="this.parentElement.innerHTML='<div class=\'p-10 text-gray-400 text-xs text-center font-bold\'>海報載入失敗<br>請確認雲端共用權限</div>'">
+                </div>
                 <div class="p-6">
                     <div class="flex items-center gap-2">
                         <span class="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">${nextEvent.dateText}</span>
@@ -507,6 +506,7 @@ function renderCalendarActivity(calendar) {
                 </div>
             </div>`;
     } else {
+        // 沒有網址則顯示文字模式
         renderTextActivity(container, nextEvent);
     }
 }

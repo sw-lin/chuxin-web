@@ -715,42 +715,28 @@ function getPartnerData() {
 }
     
 // 提交報名邏輯
-/**
- * 築心報名系統 - 核心寫入 (精簡乾淨版)
- * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註 | M.報名日期
- */
-/**
  * 築心讀書會 - 核心報名寫入邏輯 (2026 完整版)
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G可載客 | H會員 | I代理人 | J應繳金額 | K繳費狀態 | L備註 | M報名時間
  */
 function submitRegistration(payload) {
-  // 1. 取得文件鎖 (針對此試算表檔案)
-  const lock = LockService.getDocumentLock();
-  
   try {
-    // 嘗試等待鎖定 20 秒
-    const hasLock = lock.tryLock(20000);
-    if (!hasLock) {
-      return { result: "ERROR", message: "系統繁忙，請稍後再試一次" };
-    }
-
-    // 2. 【重要修正】必須先定義 ss
+    // 1. 定義基礎變數
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName("registrations");
+    
+    // 如果沒有報名表，自動建立
     if (!sheet) {
       sheet = ss.insertSheet("registrations");
-      // 可以在這裡順便寫入標題列 (A-M)
       sheet.appendRow(["活動名稱", "姓名", "電話", "身分證", "餐食", "交通", "可載人", "會員", "報名代理人", "應繳金額", "狀態", "備註", "時間"]);
     }
+    
     const eventSheet = ss.getSheetByName("events");
-
-    // 3. 定義基礎變數
     const eventTitle = String(payload.eventTitle || "").trim();
     const mainName = String(payload.name || "未知").trim();
     const mainPhone = normalizePhone(payload.phone);
     const timestamp = new Date();
 
-    // 4. 避免重複報名檢查
+    // 2. 避免重複報名檢查 (讀取現有資料)
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       const existingData = sheet.getRange(1, 1, lastRow, 3).getValues(); 
@@ -758,13 +744,12 @@ function submitRegistration(payload) {
         const sheetEvent = String(existingData[i][0]).trim(); 
         const sheetPhone = normalizePhone(existingData[i][2]); 
         if (sheetEvent === eventTitle && sheetPhone === mainPhone) {
-          lock.releaseLock();
-          return { result: "ALREADY_DONE", message: "您已報名過此活動。" };
+          return { result: "ALREADY_DONE", message: "您已報名過此活動，請勿重複提交。" };
         }
       }
     }
 
-    // 5. 取得活動設定
+    // 3. 取得活動設定 (金額、是否需身分證)
     let eventConfig = { idNeeded: false, isBus: false, memberFee: 0, guestFee: 0 };
     if (eventSheet) {
       const eventData = eventSheet.getDataRange().getValues();
@@ -779,7 +764,7 @@ function submitRegistration(payload) {
       }
     }
 
-    // 6. 整理寫入資料
+    // 4. 解析參與者陣列
     const rowsToAppend = [];
     if (payload.registrants && Array.isArray(payload.registrants)) {
       payload.registrants.forEach((reg, index) => {
@@ -802,22 +787,18 @@ function submitRegistration(payload) {
       });
     }
 
-    // 7. 執行寫入
+    // 5. 批次寫入
     if (rowsToAppend.length > 0) {
       sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAppend.length, 13).setValues(rowsToAppend);
     }
 
-    // 8. 解鎖並回傳
-    lock.releaseLock();
     return { result: "SUCCESS", message: "報名成功！" };
 
   } catch (e) {
-    // 發生任何錯誤確保解鎖
-    try { if (lock && lock.hasLock()) lock.releaseLock(); } catch(err) {}
     console.error("GAS 報名失敗：" + e.toString());
     return { result: "ERROR", message: "後端錯誤：" + e.toString() };
   }
-}    
+}
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {

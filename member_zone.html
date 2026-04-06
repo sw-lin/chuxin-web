@@ -88,8 +88,15 @@
     </div>
 
     <!-- 5. 報名區 -->
-    <div id="eventSection" class="space-y-4 pt-4"></div>
-
+    <div id="registrationWrapper" class="px-6 mb-8">
+    <div class="flex items-center justify-between mb-4 px-2">
+        <h3 class="font-black text-emerald-900 flex items-center gap-2 text-lg">
+            <i class="fas fa-edit text-emerald-600"></i> 活動預約報名
+        </h3>
+    </div>
+    
+    <div id="eventSection" class="space-y-4"></div>
+    </div>
     <!-- 6. 底部功能區 -->
     <div class="space-y-4 pt-6 border-t border-emerald-50">
         <div class="flex items-center gap-3 px-2">
@@ -385,24 +392,21 @@ function closeScanner() {
 // ==========================================
 // --- 完善：活動報名區塊渲染 (若無活動則全區塊隱藏) ---
 function renderEventSection(events) {
-    // 注意：這裡要抓的是包含「活動報名」標題的那個外層容器 ID
-    // 假設您的 HTML 結構標題與內容都在一個 id="registrationWrapper" 裡面
-    const wrapper = document.getElementById('registrationWrapper'); 
+    const wrapper = document.getElementById('registrationWrapper');
     const container = document.getElementById('eventSection');
     
     if (!container) return;
 
-    // 如果沒有活動，直接把整個區域隱藏，不留痕跡
+    // 1. 如果沒有活動，徹底隱藏整個區塊（含標題）
     if (!events || events.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
-        else container.classList.add('hidden');
         return;
     }
 
-    // 如果有活動，確保它是顯示的
+    // 2. 如果有活動，確保區塊是顯示的
     if (wrapper) wrapper.classList.remove('hidden');
-    container.classList.remove('hidden');
 
+    // 3. 開始渲染活動卡片
     container.innerHTML = events.map(ev => {
         const isClosed = ev.status === "已截止";
         const isFull = ev.status === "已額滿";
@@ -421,20 +425,20 @@ function renderEventSection(events) {
         }
 
         return `
-            <div class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-emerald-50 mb-4">
+            <div class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-emerald-50">
                 <div class="flex justify-between items-start mb-2">
                     <span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-lg">
-                        ${ev.category || '專屬活動'}
+                        ${ev.category || '會員專屬'}
                     </span>
-                    <span class="text-[10px] text-gray-400 font-medium">${ev.deadline ? '截止日：' + ev.deadline : ''}</span>
+                    ${ev.deadline ? `<span class="text-[10px] text-gray-400 font-medium">截止日：${ev.deadline}</span>` : ''}
                 </div>
                 <h4 class="font-black text-emerald-900 text-base mb-1">${ev.title}</h4>
-                <p class="text-[11px] text-gray-500 leading-relaxed line-clamp-2">${ev.shortDesc || '點擊下方按鈕開始預約報名流程。'}</p>
+                <p class="text-[11px] text-gray-500 leading-relaxed line-clamp-2">${ev.shortDesc || '點擊下方按鈕即可開始預約報名。'}</p>
                 ${actionBtn}
             </div>
         `;
     }).join('');
-}
+}    
 function goToRegistration(eventTitle) {
     // 這裡我們不使用 window.location.href 換頁，而是先 console 確認邏輯
     // 未來我們會在這裡處理轉頁，並帶上電話與活動名稱

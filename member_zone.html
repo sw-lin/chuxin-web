@@ -719,110 +719,97 @@ function getPartnerData() {
  * 築心報名系統 - 核心寫入 (精簡乾淨版)
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G載人 | H會員 | I代理 | J金額 | K狀態 | L備註 | M.報名日期
  */
-async function submitRegistration() {
-    // 防止重複點擊
-    const btn = event ? (event.target.tagName === 'BUTTON' ? event.target : event.target.closest('button')) : null;
-    
-    // --- 【新增：欄位驗證邏輯】 ---
-    const isIDVisible = !document.getElementById('regID').parentElement.classList.contains('hidden');
-    const partnerCount = parseInt(document.getElementById('partnerCount').value) || 0;
-    const currentPartners = getPartnerData(); // 取得目前的同行人資料
+/**
+ * 築心讀書會 - 核心報名寫入邏輯 (2026 完整版)
+ * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G可載客 | H會員 | I代理人 | J應繳金額 | K繳費狀態 | L備註 | M報名時間
+ */
+function submitRegistration(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    // 取得 10 秒鎖，防止多人同時報名發生寫入衝突
+    lock.waitLock(10000);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("registrations") || ss.insertSheet("registrations");
+    const eventSheet = ss.getSheetByName("events");
 
-    // 1. 驗證本人身分證 (若欄位有顯示則必填)
-    if (isIDVisible) {
-        const myID = document.getElementById('regID').value.trim();
-        if (!myID) {
-            alert("請輸入您的身分證字號（保險使用）");
-            return; // 中斷，不繼續執行
-        }
-    }
+    // 1. 定義基礎變數
+    const eventTitle = String(payload.eventTitle || "").trim();
+    const mainName = String(payload.name || "未知").trim();
+    const mainPhone = normalizePhone(payload.phone);
+    const timestamp = new Date();
 
-    // 2. 驗證攜伴者姓名與身分證
-    if (partnerCount > 0) {
-        // 檢查填寫的數量是否與下拉選單相符
-        if (currentPartners.length < partnerCount) {
-            alert("請完整填寫所有同行人的姓名");
-            return;
-        }
-
-        // 檢查是否有任一同行人姓名空白
-        const hasEmptyName = currentPartners.some(p => !p.name.trim());
-        if (hasEmptyName) {
-            alert("同行人姓名不可為空白");
-            return;
-        }
-
-        // 若活動需要身分證，檢查同行人身分證是否空白
-        if (isIDVisible) {
-            const hasEmptyID = currentPartners.some(p => !p.idNo || !p.idNo.trim());
-            if (hasEmptyID) {
-                alert("請完整填寫所有同行人的身分證字號（保險使用）");
-                return;
-            }
-        }
-    }
-    // --- 【驗證結束】 ---
-
-    // 通過驗證後，才開始顯示「提交中」狀態
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
-    }
-
-    try {
-        const eventTitle = document.getElementById('regEventTitle').innerText;
+    // 2. 避免重複報名檢查 (以 A欄:活動名稱 與 C欄:電話 判斷)
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const existingData = sheet.getRange(1, 1, lastRow, 3).getValues(); 
+      for (let i = 1; i < existingData.length; i++) {
+        const sheetEvent = String(existingData[i][0]).trim(); 
+        const sheetPhone = normalizePhone(existingData[i][2]); 
         
-        const payload = {
-            type: "complex_register",
-            eventTitle: eventTitle,
-            name: currentUser.name,
-            phone: currentUser.phone,
-            note: document.getElementById('regNote')?.value || "",
-            registrants: [
-                {
-                  name: currentUser.name,
-                  phone: currentUser.phone,
-                  idNo: document.getElementById('regID')?.value || "",
-                  diet: document.getElementById('regMeal').value,
-                  transport: document.getElementById('regTransport').value,
-                  canDrive: document.getElementById('regTransport').value === '自行開車' ? 
-                             parseInt(document.getElementById('carCapacity')?.value || 0) : 0
-                },
-                ...currentPartners.map(p => ({
-                   ...p,
-                   transport: "隨同代理人", 
-                   canDrive: 0              
-                }))
-            ]
-        };
-
-        console.log("送出的 Payload:", payload);
-
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-
-        if (result.result === "SUCCESS") {
-            alert("報名成功！");
-            document.getElementById('regOptionsModal').style.display = 'none';
-            if (typeof syncData === 'function') syncData();
-        } else {
-            alert("報名失敗：" + result.message);
+        if (sheetEvent === eventTitle && sheetPhone === mainPhone) {
+          lock.releaseLock();
+          return { result: "ALREADY_DONE", message: "您已報名過此活動，請勿重複提交。" };
         }
-
-    } catch (e) {
-        console.error("提交出錯:", e);
-        alert("系統連線失敗，請稍後再試");
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerText = "確認提交報名";
-        }
+      }
     }
-}
+
+    // 3. 取得活動設定 (從 events 工作表抓取該活動的設定)
+    let eventConfig = { idNeeded: false, isBus: false, memberFee: 0, guestFee: 0 };
+    if (eventSheet) {
+      const eventData = eventSheet.getDataRange().getValues();
+      for (let i = 1; i < eventData.length; i++) {
+        if (String(eventData[i][0]).trim() === eventTitle) { 
+          // H欄(索引7): 身分證, I欄(索引8): 遊覽車, J欄(索引9): 會員費, K欄(索引10): 非會員費
+          eventConfig.idNeeded = (eventData[i][7] === "是" || String(eventData[i][7]).toUpperCase() === "Y"); 
+          eventConfig.isBus = (eventData[i][8] === "是" || String(eventData[i][8]).toUpperCase() === "Y");    
+          eventConfig.memberFee = Number(eventData[i][9]) || 0; 
+          eventConfig.guestFee = Number(eventData[i][10]) || 0; 
+          break;
+        }
+      }
+    }
+
+    const rowsToAppend = [];
+    
+    // 4. 解析前端傳來的參與者陣列 (包含本人與攜伴)
+    if (payload.registrants && Array.isArray(payload.registrants)) {
+      payload.registrants.forEach((reg, index) => {
+        const isMain = (index === 0); // 陣列第一筆永遠是主報名者(本人)
+        
+        let row = [
+          eventTitle,                                             // A: 活動名稱
+          String(reg.name || "").trim(),                          // B: 報名者姓名
+          "'" + normalizePhone(reg.phone || payload.phone),       // C: 手機號碼 (加單引號防止轉科學記號)
+          eventConfig.idNeeded ? String(reg.idNo || "").trim() : "", // D: 身分證 (看活動設定決定是否寫入)
+          reg.diet || "葷食",                                     // E: 餐食 (預設葷食)
+          isMain ? (reg.transport || "自行開車") : "隨同代理人",      // F: 交通方式
+          isMain ? Number(reg.canDrive || 0) : 0,                 // G: 可載人數 (僅本人紀錄)
+          isMain ? "是" : "否",                                    // H: 是否為會員
+          isMain ? "本人" : mainName,                              // I: 報名代理人 (攜伴者寫主報名人名字)
+          isMain ? eventConfig.memberFee : eventConfig.guestFee,  // J: 應繳金額 (系統自動判斷身分計價)
+          "未繳費",                                                // K: 繳費狀態
+          isMain ? String(payload.note || "").trim() : "",        // L: 備註 (只寫在本人那行)
+          timestamp                                               // M: 報名時間
+        ];
+        rowsToAppend.push(row);
+      });
+    }
+
+    // 5. 批次寫入資料庫
+    if (rowsToAppend.length > 0) {
+      // 從最後一列的下一列開始，寫入 N 列，總共 13 欄 (A 到 M)
+      sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAppend.length, 13).setValues(rowsToAppend);
+    }
+
+    lock.releaseLock();
+    return { result: "SUCCESS", message: "報名成功！" };
+
+  } catch (e) {
+    if (lock.hasLock()) lock.releaseLock();
+    console.error("GAS 報名寫入失敗：" + e.toString());
+    return { result: "ERROR", message: "後端錯誤：" + e.toString() };
+  }
+}    
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {

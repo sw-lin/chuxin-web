@@ -450,14 +450,13 @@ window.addEventListener('load', () => {
 
 // 保留原本的圖片網址處理工具
 function getDirectImageUrl(url) {
-    if (!url || url === "NONE" || url === "") return null;
-    // 處理 Google Drive 網址轉為直接顯示網址
-    if (url.includes('drive.google.com')) {
-        const id = url.match(/[-\w]{25,}/);
-        return id ? `https://lh3.googleusercontent.com/d/${id[0]}` : url;
+        if (!url) return "";
+        if (!url.includes('drive.google.com')) return url;
+        let id = "";
+        if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
+        else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
+        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
     }
-    return url;
-}
 
 // 保留進入工作人員模式功能
 function enterStaffMode() {
@@ -473,7 +472,6 @@ function renderCalendarActivity(calendar) {
     if (!container) return;
     
     const today = new Date().toISOString().split('T')[0];
-    // 篩選出今天或之後的第一筆活動
     const nextEvent = (calendar || []).find(ev => ev.dateText >= today);
 
     if (!nextEvent) {
@@ -481,32 +479,47 @@ function renderCalendarActivity(calendar) {
         return;
     }
 
-    const posterUrl = getDirectImageUrl(nextEvent.poster); // D 欄位
-    const eventDesc = nextEvent.desc || "邀請您一同參與精彩活動"; // E 欄位
+    // --- 除錯用：請在瀏覽器 F12 觀察這行輸出 ---
+    console.log("正在處理活動海報，原始網址為:", nextEvent.poster);
 
+    const posterUrl = getDirectImageUrl(nextEvent.poster);
+    
     if (posterUrl) {
-        // 模式：海報優先
         container.innerHTML = `
             <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
-                <img src="${posterUrl}" class="w-full h-auto block" onerror="this.parentElement.style.display='none'">
+                <img src="${posterUrl}" 
+                     class="w-full h-auto block" 
+                     onload="console.log('海報載入成功')"
+                     onerror="handleImageError(this, '${nextEvent.title}', '${nextEvent.dateText}', '${nextEvent.desc}')">
                 <div class="p-6">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md">${nextEvent.dateText}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">${nextEvent.dateText}</span>
                         <h4 class="font-black text-emerald-900">${nextEvent.title}</h4>
                     </div>
                 </div>
             </div>`;
     } else {
-        // 模式：純文字
-        container.innerHTML = `
-            <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-3">
-                <div class="flex items-center gap-3">
-                    <div class="bg-emerald-700 text-white px-3 py-1 rounded-xl text-[10px] font-bold">${nextEvent.dateText}</div>
-                    <h4 class="font-black text-emerald-900 text-lg">${nextEvent.title}</h4>
-                </div>
-                <p class="text-xs text-gray-500 leading-relaxed pl-3 border-l-2 border-emerald-100">${eventDesc}</p>
-            </div>`;
+        renderTextActivity(container, nextEvent);
     }
+}
+
+// 圖片載入失敗時的備案函式
+function handleImageError(img, title, date, desc) {
+    console.error("海報圖片載入失敗，網址可能無效或權限未開啟");
+    const container = img.closest('#calendarActivitySection');
+    renderTextActivity(container, { title, dateText: date, desc });
+}
+
+// 純文字顯示模式
+function renderTextActivity(container, ev) {
+    container.innerHTML = `
+        <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-700 text-white px-3 py-1 rounded-xl text-[10px] font-bold">${ev.dateText}</div>
+                <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed pl-3 border-l-2 border-emerald-100">${ev.desc || "精彩活動，敬請期待"}</p>
+        </div>`;
 }    
 function showToast(msg, type) {
     const container = document.getElementById('toastContainer');

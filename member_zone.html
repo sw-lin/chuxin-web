@@ -22,13 +22,13 @@
 </head>
 <body class="min-h-screen pb-20">
 
-<div id="loadingOverlay" class="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
+<div id="loadingOverlay" class="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center" style="display: none;">
     <div class="flex flex-col items-center">
-        <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-        <p class="mt-4 text-emerald-900 font-bold">核心資料同步中...</p>
+        <i class="fas fa-circle-notch fa-spin text-white text-4xl mb-4"></i>
+        <p class="text-white font-bold text-sm">正在同步資料，請稍候...</p>
     </div>
 </div>
-
+    
 <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
 
 <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
@@ -569,6 +569,15 @@ function enterStaffMode() {
     sessionStorage.setItem('staffInfo', JSON.stringify(currentUser));
     location.href = 'staff_zone.html';
 }
+// 核心：控制載入中遮罩
+function showLoading(show) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        console.warn("找不到 loadingOverlay 元素");
+        return;
+    }
+    overlay.style.display = show ? 'flex' : 'none';
+}
 
 // ==========================================
 // 修正：近期活動預告 (僅顯示一則，優先海報)
@@ -671,59 +680,50 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate() {
-    console.log("開始執行修改程序..."); // 除錯點 1
+    // 1. 抓取欄位值
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPwd = document.getElementById('newPassword').value.trim();
     const oldPwd = document.getElementById('oldPassword').value.trim();
 
     if (!oldPwd) {
-        showToast("請輸入舊密碼驗證", "error");
+        showToast("請輸入舊密碼進行驗證", "error");
         return;
     }
 
+    // 2. 顯示轉圈圈 (現在不會報錯了)
     showLoading(true);
+
     try {
-        const params = new URLSearchParams({
-            type: 'updateProfile', // 必須對應 GAS 的 case 名稱
+        const queryParams = new URLSearchParams({
+            type: 'updateProfile', // ⚠️ 請確認 GAS 是判斷 type 還是 action
             phone: currentUser.phone,
             oldPassword: oldPwd,
             newEmail: newEmail,
             newPassword: newPwd
         });
 
-        const response = await fetch(`${GAS_URL}?${params.toString()}`);
-        console.log("發送請求至:", response); // 除錯點 2
-        
+        const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
         const result = await response.json();
-        console.log("收到後端回應:", result); // 除錯點 3
-        
-        if (result.success) { // 這裡要對應 GAS 回傳的鍵值
-            showToast("修改成功！", "success");
-            currentUser.email = newEmail; // 更新本地緩存
+
+        if (result.success) {
+            showToast("個人資料更新成功！", "success");
+            currentUser.email = newEmail;
             sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
             closeProfileModal();
+            renderProfile(currentUser); // 即時更新畫面上顯示的 Email
         } else {
-            console.error("Fetch 發生錯誤:", e); // 除錯點 4
-            showToast(result.message || "修改失敗", "error");
+            showToast(result.message || "更新失敗", "error");
         }
     } catch (e) {
-        showToast("連線異常", "error");
+        console.error("更新發生錯誤:", e);
+        showToast("系統連線異常", "error");
     } finally {
+        // 3. 關閉轉圈圈
         showLoading(false);
     }
-}    
-// 控制載入中遮罩的顯示與隱藏
-function showLoading(show) {
-    // 尋找 HTML 裡面的 loadingOverlay 元素
-    const overlay = document.getElementById('loadingOverlay');
-    if (!overlay) return;
-    
-    if (show) {
-        overlay.style.display = 'flex'; // 顯示 (通常設為 flex 是為了讓轉圈圈居中)
-    } else {
-        overlay.style.display = 'none'; // 隱藏
-    }
 }
+    
+// 控制載入中遮罩的顯示與隱藏
     
 </script>   
 </body>

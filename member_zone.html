@@ -450,13 +450,21 @@ window.addEventListener('load', () => {
 
 // 保留原本的圖片網址處理工具
 function getDirectImageUrl(url) {
-        if (!url) return "";
-        if (!url.includes('drive.google.com')) return url;
-        let id = "";
-        if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
-        else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
-        return id ? `https://lh3.googleusercontent.com/u/0/d/${id}=w800` : url;
+    if (!url || url === "NONE" || url === "" || typeof url !== 'string') return null;
+    
+    // 如果已經是普通圖片網址或 base64，直接回傳
+    if (url.startsWith('http') && !url.includes('drive.google.com')) return url;
+    if (url.startsWith('data:image')) return url;
+
+    // 針對 Google Drive 連結進行精準解析
+    const match = url.match(/[-\w]{25,}/); // 匹配檔案 ID
+    if (match && match[0]) {
+        // 使用目前最穩定的直接顯示網址格式
+        return `https://lh3.googleusercontent.com/d/${match[0]}`;
     }
+    
+    return null;
+}
 
 // 保留進入工作人員模式功能
 function enterStaffMode() {

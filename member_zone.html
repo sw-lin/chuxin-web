@@ -399,14 +399,16 @@ function renderEventSection(data) {
 function goToRegistrationPage(eventTitle) {
     const userPhone = document.getElementById('userPhone')?.innerText;
     const userName = document.getElementById('userName')?.innerText;
+
+    // 取得當前 Web App 的 URL (自動抓取，不需寫死)
+    const scriptUrl = window.location.href.split('?')[0]; 
     
-    // 使用 GAS 的 URL 模式跳轉
-    // 注意：部署後需將此 URL 換成你獨立報名頁的 Web App 連結
-    const baseUrl = ScriptAppServiceUrl; // 這通常由後端傳入，或手動貼上
-    const url = `${baseUrl}?page=registration&event=${encodeURIComponent(eventTitle)}&phone=${encodeURIComponent(userPhone)}&name=${encodeURIComponent(userName)}`;
+    // 透過參數告訴 doGet(e) 我們要看 registration 頁面
+    const url = `${scriptUrl}?page=registration&event=${encodeURIComponent(eventTitle)}&phone=${encodeURIComponent(userPhone)}&name=${encodeURIComponent(userName)}`;
     
+    // 使用 top 跳轉，避免被 iframe 限制
     window.top.location.href = url;
-}
+}    
     
     // 其餘邏輯 (handleUpdateProfile, processCheckin, openHistoryModal, etc.) 略...
     // 確保 openHistoryModal 也調用 getDirectImageUrl

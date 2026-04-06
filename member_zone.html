@@ -300,6 +300,65 @@ function closeHistoryModal() {
         modal.classList.add('hidden');
         modal.style.display = 'none';
     }
+} 
+// 掃碼成功處理
+async function onScanSuccess(decodedText) {
+    // 1. 立即暫停掃描，避免連續觸發
+    if (window.html5QrCode) {
+        await window.html5QrCode.stop().catch(err => console.error("停止掃描失敗", err));
+        document.getElementById('reader').classList.add('hidden');
+    }
+
+    try {
+        // 假設 QR Code 內容就是活動名稱，例如 "2026春季研討會"
+        const eventTitle = decodedText.trim();
+        
+        // 2. 預防重複報到：檢查目前的 attendLog
+        // 假設 currentUser.attendLog 是一個包含活動名稱的陣列
+        const alreadyAttended = (currentUser.attendLog || []).some(log => 
+            String(log).includes(eventTitle)
+        );
+
+        if (alreadyAttended) {
+            showToast("您今日已完成此活動報到", "info");
+            return; // 結束，不發送 API
+        }
+
+        // 3. 發送報到請求
+        const res = await fetch(`${GAS_URL}?action=checkIn&event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`);
+        const result = await res.json();
+
+        if (result.success) {
+            showToast("報到成功！", "success");
+            // 觸發小煙火慶祝報到成功
+            confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 } });
+            // 重新同步資料以更新出席次數
+            syncData(); 
+        } else {
+            showToast(result.message || "報到失敗", "error");
+        }
+    } catch (e) {
+        console.error("報到程序錯誤:", e);
+        showToast("系統錯誤，請聯繫工作人員", "error");
+    }
+} 
+function startScanner() {
+    const readerDiv = document.getElementById('reader');
+    if (!readerDiv) return;
+    
+    readerDiv.classList.remove('hidden');
+    
+    window.html5QrCode = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    window.html5QrCode.start(
+        { facingMode: "environment" }, 
+        config, 
+        onScanSuccess
+    ).catch(err => {
+        console.error("相機啟動失敗", err);
+        showToast("無法開啟相機", "error");
+    });
 }    
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」

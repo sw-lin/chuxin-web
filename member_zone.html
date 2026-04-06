@@ -685,42 +685,64 @@ async function submitProfileUpdate() {
     const newPwd = document.getElementById('newPassword').value.trim();
     const oldPwd = document.getElementById('oldPassword').value.trim();
 
+    // --- 【修正重點 1：確保手機號碼不是 undefined】 ---
+    // 從 currentUser 抓取，如果沒有，則從 sessionStorage 重新解析一次
+    let user = currentUser;
+    if (!user) {
+        const sessionData = sessionStorage.getItem('userInfo');
+        user = sessionData ? JSON.parse(sessionData) : {};
+    }
+    
+    // 同時檢查 phone 或 phoneNumber (相容舊有邏輯)
+    const phone = user.phone || user.phoneNumber || "";
+
     if (!oldPwd) {
         showToast("請輸入舊密碼進行驗證", "error");
         return;
     }
 
-    // 2. 顯示轉圈圈 (現在不會報錯了)
+    if (!phone) {
+        alert("錯誤：無法取得您的手機資訊，請重新登入系統");
+        return;
+    }
+
+    // 2. 顯示轉圈圈
     showLoading(true);
 
     try {
         const queryParams = new URLSearchParams({
-            type: 'updateProfile', // ⚠️ 請確認 GAS 是判斷 type 還是 action
-            phone: currentUser.phone,
+            type: 'updateProfile', 
+            phone: phone, // 確保這裡現在是有值的
             oldPassword: oldPwd,
             newEmail: newEmail,
             newPassword: newPwd
         });
+
+        // 除錯用：在瀏覽器控制台印出實際發送的 URL
+        console.log("發送請求:", `${GAS_URL}?${queryParams.toString()}`);
 
         const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
         const result = await response.json();
 
         if (result.success) {
             showToast("個人資料更新成功！", "success");
-            currentUser.email = newEmail;
-            sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
+            
+            // 同步更新本地端資料
+            user.email = newEmail;
+            currentUser = user; // 回寫到全域變數
+            sessionStorage.setItem('userInfo', JSON.stringify(user));
+            
             closeProfileModal();
-            renderProfile(currentUser); // 即時更新畫面上顯示的 Email
+            renderProfile(user); 
         } else {
-            // 這裡非常重要！如果後端回傳「找不到會員」或「密碼錯誤」，這裡一定要顯示出來
-            alert("後端回傳錯誤: " + result.message);
+            // 這裡會顯示 GAS 傳回來的具體原因（例如：找不到手機末9碼...）
+            alert("更新失敗: " + result.message);
             showToast(result.message || "更新失敗", "error");
         }
     } catch (e) {
         console.error("更新發生錯誤:", e);
         showToast("系統連線異常", "error");
     } finally {
-        // 3. 關閉轉圈圈
         showLoading(false);
     }
 }

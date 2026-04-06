@@ -174,31 +174,28 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzuf7v9-LhWnkT2jM5RV-K-
 // ==========================================
 async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.style.display = 'flex';
-    
+    overlay.style.display = 'flex';
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
         
-        // --- 大項功能 A：行事曆資料 ---
         window.latestCalendarData = data.calendar || []; 
         
-        // --- 大項功能 B：公告欄判斷 (完整保留原本邏輯) ---
+        // --- 公告欄邏輯 (保留) ---
         const newsContent = data.news ? data.news.trim() : "";
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const isDateValid = (data.startDate === "" || todayStr >= data.startDate) && (data.endDate === "" || todayStr <= data.endDate);
         
         const newsContainer = document.getElementById('newsContainer');
-        const newsText = document.getElementById('news');
         if (newsContent && newsContent !== "NONE" && isDateValid) {
             if (newsContainer) newsContainer.classList.remove('hidden');
-            if (newsText) newsText.innerText = newsContent;
+            document.getElementById('news').innerText = newsContent;
         } else {
             if (newsContainer) newsContainer.classList.add('hidden');
         }
 
-        // --- 大項功能 C：使用者身分識別 ---
+        // --- 找出登入者並更新 UI ---
         const liveUser = data.users.find(u => {
             const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
             const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
@@ -207,52 +204,50 @@ async function syncData() {
         
         if (liveUser) {
             currentUser = liveUser;
-            // 工作人員按鈕權限 (完整保留)
-            const staffBtn = document.getElementById('staffBtn');
-            if (staffBtn && liveUser.role && liveUser.role !== "學員") {
-                staffBtn.classList.remove('hidden');
-                staffBtn.onclick = enterStaffMode;
+            // 更新幹部權限
+            if (liveUser.role && liveUser.role !== "學員") {
+                const staffBtn = document.getElementById('staffBtn');
+                if (staffBtn) {
+                    staffBtn.classList.remove('hidden');
+                    staffBtn.onclick = enterStaffMode;
+                }
             }
-            // 執行 UI 更新，傳入包含 myRegistrations 的完整資料
-            updateUI(liveUser, data.calendar, data); 
+            // 執行更新 UI：傳入完整 data 以便計算
+            updateUI(liveUser, data.calendar, data.events);
         }
-    } catch (e) {
+    } catch (e) { 
         console.error("同步失敗:", e);
-        if(typeof showToast === "function") showToast("資料同步異常", "error");
-    } finally {
-        if (overlay) overlay.style.display = 'none';
+        showToast("同步失敗", "error"); 
+    } finally { 
+        overlay.style.display = 'none'; 
     }
 }
 
-// ==========================================
-// 3. UI 渲染：負責分配資料到各個大項
-// ==========================================
-function updateUI(user, calendar, dashboardData) {
-    // 1. 基本資料更新 (這部分應該沒問題)
-    const nameElem = document.getElementById('userName');
-    const phoneElem = document.getElementById('userPhone');
-    if(nameElem) nameElem.innerText = user.name;
-    if(phoneElem) phoneElem.innerText = user.phone;
+// 修正 updateUI 以確保 ID 完全對齊您的 HTML
+function updateUI(user, calendar, events) {
+    const today = new Date().toISOString().split('T')[0];
 
-    // 2. 補回：更新「出席次數」與「參與率」 (這是原本對應課程簽到的資料)
-    // 根據您原本的邏輯，這些資料可能存在 user 物件或 dashboardData 的某處
-    // 請確認後端原本傳回來的欄位名稱 (例如 user.attend_count 或 user.rate)
-    if (document.getElementById('attendCount')) {
-        document.getElementById('attendCount').innerText = user.attend_count || "0";
-    }
-    if (document.getElementById('attendRate')) {
-        document.getElementById('attendRate').innerText = (user.attend_rate || "0") + "%";
-    }
+    // 1. 計算出席數據 (依照原本邏輯)
+    const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
+    const totalEvents = requiredPastEvents.length;
+    const attendCount = (user.attendLog || []).length;
+    const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 3. 補回：渲染學習歷程清單 (點擊 Profile 後看到的那個清單)
-    // 這裡通常是呼叫您原本定義好的 renderHistory(user.history)
-    if (typeof renderHistory === "function" && user.learning_history) {
-        renderHistory(user.learning_history);
-    }
+    // 2. 填入 HTML (對應您的 id="attPercent" 與 id="attCountDisplay")
+    const percentElem = document.getElementById('attPercent');
+    const countDisplayElem = document.getElementById('attCountDisplay');
+    
+    if (percentElem) percentElem.innerText = attendanceRate + '%';
+    if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
 
-    // 4. 原有功能：行事曆與報名區 (保持現狀)
-    renderCalendar(calendar);
-    renderEventSection(dashboardData); 
+    // 3. 儲存數據供學習歷程 Modal 使用
+    window.currentAttendedData = (calendar || []).filter(ev => 
+        (user.attendLog || []).some(log => String(log).includes(ev.title))
+    );
+
+    // 4. 渲染其他區塊
+    renderCalendarActivity(calendar);
+    renderEventSection(events);
 }    
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」

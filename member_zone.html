@@ -104,11 +104,11 @@
             <h3 class="text-lg font-black text-emerald-950 tracking-wide">專屬服務</h3>
         </div>
         <div class="grid grid-cols-2 gap-4">
-            <button onclick="openRemoteLink('reading_folder_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
+            <button onclick="openService('reading_folder_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
                 <div class="bg-emerald-50 text-emerald-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-book-open text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">課程資料庫</span>
             </button>
-            <button onclick="openRemoteLink('photo_gallery_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
+            <button onclick="openService('photo_gallery_url')" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
                 <div class="bg-emerald-50 text-emerald-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-images text-xl"></i></div>
                 <span class="font-black text-emerald-900 text-sm tracking-wide">活動剪影</span>
             </button>
@@ -198,7 +198,7 @@ async function syncData() {
     try {
         const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
         const data = await res.json();
-        
+        globalConfig = data.config || {};
         window.latestCalendarData = data.calendar || []; 
         
         // --- 公告欄邏輯 (保留) ---
@@ -385,7 +385,32 @@ function closeScanner() {
             window.html5QrCode.clear();
         }).catch(err => console.warn("停止掃描失敗", err));
     }
-}    
+} 
+
+// 全域變數預期在 syncData 之後會被填充
+let globalConfig = {}; 
+
+// 在您的 syncData 成功回傳處，請記得賦值：
+// .then(data => {
+//    globalConfig = data.config; 
+//    ... 其他渲染
+// })
+
+function openService(key) {
+    // 檢查 globalConfig 是否有對應的網址
+    const url = globalConfig[key];
+    
+    if (url && url.startsWith('http')) {
+        showToast("正在前往專屬連結...", "success");
+        // 使用延遲跳轉，讓使用者看得到 Toast 提示
+        setTimeout(() => {
+            window.open(url, '_blank'); // 在新分頁打開雲端連結
+        }, 800);
+    } else {
+        console.error(`找不到 Key: ${key} 的有效網址`, url);
+        showToast("此服務連結尚未設定，請洽管理員", "info");
+    }
+}
     
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」

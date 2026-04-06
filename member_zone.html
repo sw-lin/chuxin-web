@@ -679,65 +679,35 @@ function closeProfileModal() {
 }
 
 // 送出修改
-async function submitProfileUpdate() {
-    // 1. 抓取欄位值
-    const newEmail = document.getElementById('editEmail').value.trim();
-    const newPwd = document.getElementById('newPassword').value.trim();
-    const oldPwd = document.getElementById('oldPassword').value.trim();
+async function submitProfileUpdate(oldPassword, newPassword, newEmail) {
+    const phone = sessionStorage.getItem('userPhone');
+    
+    // 1. 這裡只留純網址，絕對不能有問號或 type=...
+    const CLEAN_GAS_URL = 'https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec';
 
-    if (!oldPwd) {
-        showToast("請輸入舊密碼進行驗證", "error");
-        return;
-    }
-
-    // 2. 【核心修正】直接從 sessionStorage 抓取 index.html 存入的 phone
-    // 這是最保險的來源，因為 index.html 登入成功時一定會存入這個欄位
-    const sessionInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-    const safePhone = sessionInfo.phone || ""; 
-
-    if (!safePhone) {
-        console.error("錯誤：Session 中找不到手機號碼", sessionInfo);
-        alert("系統資訊遺失，請嘗試重新登入");
-        return;
-    }
-
-    // 3. 顯示轉圈圈
-    showLoading(true);
+    const payload = {
+        type: 'updateProfile', // 讓 doPost 的 switch case 識別
+        phone: phone,
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+        newEmail: newEmail
+    };
 
     try {
-        const queryParams = new URLSearchParams({
-            type: 'updateProfile',
-            phone: safePhone, // 使用我們剛才抓到的 safePhone，確保不是 undefined
-            oldPassword: oldPwd,
-            newEmail: newEmail,
-            newPassword: newPwd
+        console.log("正在發送 POST 請求...");
+        const response = await fetch(CLEAN_GAS_URL, {
+            method: 'POST', // 指定為 POST
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload) // 資料放在 Body 裡
         });
 
-        // 除錯檢查：您可以按 F12 在 Console 看到這一行，確認 phone 是否正確
-        console.log("修改請求發送中，號碼為:", safePhone);
+        // 由於 no-cors 限制，我們無法讀取 response
+        alert("修改指令已透過 POST 送出！請觀察 GAS 執行紀錄是否變為 doPost。");
+        location.reload();
 
-        const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
-        const result = await response.json();
-
-        if (result.success) {
-            showToast("個人資料更新成功！", "success");
-            
-            // 4. 同步更新本地緩存 (重要：這會影響到 syncData 之後的顯示)
-            sessionInfo.email = newEmail;
-            sessionStorage.setItem('userInfo', JSON.stringify(sessionInfo));
-            currentUser = sessionInfo; // 更新全域變數
-            
-            closeProfileModal();
-            renderProfile(currentUser); // 立即更新畫面上的個資顯示
-        } else {
-            alert("修改失敗：" + result.message);
-            showToast(result.message, "error");
-        }
-    } catch (e) {
-        console.error("更新發生錯誤:", e);
-        showToast("系統連線異常", "error");
-    } finally {
-        showLoading(false);
+    } catch (error) {
+        console.error("發送失敗:", error);
     }
 }    
 // 控制載入中遮罩的顯示與隱藏

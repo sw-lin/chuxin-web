@@ -341,7 +341,7 @@ function renderTextOnlyCard(title, date) {
 } 
 
 /**
- * 修改後的渲染函式：與 initializeDashboard 對接
+ * 修改後的渲染函式：
  * data 包含: { events: [...], myRegistrations: ["活動A", "活動B"] }
  */
 function renderEventSection(data) {
@@ -724,9 +724,6 @@ async function syncData() {
             // --- 修改處：將完整的 data 傳給 updateUI ---
             // 這樣 updateUI 才能拿到 data.myRegistrations
             updateUI(liveUser, data.calendar, data); 
-            }
-            
-            updateUI(liveUser, data.calendar, data.events);
         }
     } catch (e) { 
         console.error("同步失敗:", e);

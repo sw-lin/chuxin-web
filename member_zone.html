@@ -717,88 +717,33 @@ function getPartnerData() {
 // 提交報名邏輯
 //  築心讀書會 - 核心報名寫入邏輯 (2026 完整版)
 //  欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G可載客 | H會員 | I代理人 | J應繳金額 | K繳費狀態 | L備註 | M報名時間
-    
-function submitRegistration(payload) {
-  try {
-    // 1. 定義基礎變數
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName("registrations");
-    
-    // 如果沒有報名表，自動建立
-    if (!sheet) {
-      sheet = ss.insertSheet("registrations");
-      sheet.appendRow(["活動名稱", "姓名", "電話", "身分證", "餐食", "交通", "可載人", "會員", "報名代理人", "應繳金額", "狀態", "備註", "時間"]);
-    }
-    
-    const eventSheet = ss.getSheetByName("events");
-    const eventTitle = String(payload.eventTitle || "").trim();
-    const mainName = String(payload.name || "未知").trim();
-    const mainPhone = normalizePhone(payload.phone);
-    const timestamp = new Date();
+// 在 member_zone.html 裡面，負責「送出」資料
+function submitRegistrationToGAS() {
+    // 1. 收集 HTML 表單上的資料
+    const payload = {
+        type: "complex_register", // 這是指令名稱，必須跟後端 switch 裡的一樣
+        eventTitle: document.getElementById('eventTitle').value,
+        name: document.getElementById('userName').value, // 假設你的欄位 ID 是這個
+        phone: document.getElementById('userPhone').value,
+        note: document.getElementById('regNote').value,
+        registrants: [ /* 這裡放你整理好的參與者陣列 */ ]
+    };
 
-    // 2. 避免重複報名檢查 (讀取現有資料)
-    const lastRow = sheet.getLastRow();
-    if (lastRow > 1) {
-      const existingData = sheet.getRange(1, 1, lastRow, 3).getValues(); 
-      for (let i = 1; i < existingData.length; i++) {
-        const sheetEvent = String(existingData[i][0]).trim(); 
-        const sheetPhone = normalizePhone(existingData[i][2]); 
-        if (sheetEvent === eventTitle && sheetPhone === mainPhone) {
-          return { result: "ALREADY_DONE", message: "您已報名過此活動，請勿重複提交。" };
-        }
-      }
-    }
-
-    // 3. 取得活動設定 (金額、是否需身分證)
-    let eventConfig = { idNeeded: false, isBus: false, memberFee: 0, guestFee: 0 };
-    if (eventSheet) {
-      const eventData = eventSheet.getDataRange().getValues();
-      for (let i = 1; i < eventData.length; i++) {
-        if (String(eventData[i][0]).trim() === eventTitle) { 
-          eventConfig.idNeeded = (String(eventData[i][7]) === "是" || String(eventData[i][7]).toUpperCase() === "Y");
-          eventConfig.isBus = (String(eventData[i][8]) === "是" || String(eventData[i][8]).toUpperCase() === "Y");
-          eventConfig.memberFee = Number(eventData[i][9]) || 0;
-          eventConfig.guestFee = Number(eventData[i][10]) || 0;
-          break;
-        }
-      }
-    }
-
-    // 4. 解析參與者陣列
-    const rowsToAppend = [];
-    if (payload.registrants && Array.isArray(payload.registrants)) {
-      payload.registrants.forEach((reg, index) => {
-        const isMain = (index === 0); 
-        rowsToAppend.push([
-          eventTitle,
-          String(reg.name || "").trim(),
-          "'" + normalizePhone(reg.phone || payload.phone),
-          eventConfig.idNeeded ? String(reg.idNo || "").trim() : "",
-          reg.diet || "葷食",
-          isMain ? (reg.transport || "自行開車") : "隨同代理人",
-          isMain ? Number(reg.canDrive || 0) : 0,
-          isMain ? "是" : "否",
-          isMain ? "本人" : mainName,
-          isMain ? eventConfig.memberFee : eventConfig.guestFee,
-          "未繳費",
-          isMain ? String(payload.note || "").trim() : "",
-          timestamp
-        ]);
-      });
-    }
-
-    // 5. 批次寫入
-    if (rowsToAppend.length > 0) {
-      sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAppend.length, 13).setValues(rowsToAppend);
-    }
-
-    return { result: "SUCCESS", message: "報名成功！" };
-
-  } catch (e) {
-    console.error("GAS 報名失敗：" + e.toString());
-    return { result: "ERROR", message: "後端錯誤：" + e.toString() };
-  }
+    // 2. 透過 Google 提供的橋樑送到後端 GS
+    google.script.run
+        .withSuccessHandler(function(res) {
+            if(res.result === "SUCCESS") {
+                alert("報名成功！");
+            } else {
+                alert("錯誤：" + res.message);
+            }
+        })
+        .withFailureHandler(function(err) {
+            alert("網路或系統錯誤：" + err);
+        })
+        .submitRegistration(payload); // 這行呼叫的是 .gs 裡的函數
 }
+
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {
@@ -983,7 +928,7 @@ document.addEventListener('input', function(e) {
                 <div id="partnerContainer" class="space-y-4 mt-4"></div>
             </div>
 
-            <button onclick="submitRegistration()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認提交報名</button>
+            <button onclick="submitRegistrationToGAS()" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認提交報名</button>
         </div>
     </div>
 </div>    

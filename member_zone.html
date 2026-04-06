@@ -404,7 +404,7 @@ function openService(key) {
     // 當 key 傳入 'reading_folder_url' 時，
     // 它會去 globalConfig 裡找對應的網址
     const url = globalConfig[key];
-    
+    console.log("嘗試開啟服務:", key, "取得網址:", url);
     if (url && url.startsWith('http')) {
         showToast("正在前往專屬連結...", "success");
         setTimeout(() => {
@@ -413,7 +413,7 @@ function openService(key) {
     } else {
         console.error(`找不到 Key: ${key} 的有效網址`);
         showToast("服務連結尚未設定", "info");
-    }
+        console.error(`請檢查 Config 試算表 A 欄是否為: ${key}`);    }
 }
     
 // ==========================================

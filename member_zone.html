@@ -310,19 +310,16 @@ async function onScanSuccess(decodedText) {
     }
 
     try {
-        // 假設 QR Code 內容就是活動名稱，例如 "2026春季研討會"
-        const eventTitle = decodedText.trim();
-        
-        // 2. 預防重複報到：檢查目前的 attendLog
-        // 假設 currentUser.attendLog 是一個包含活動名稱的陣列
-        const alreadyAttended = (currentUser.attendLog || []).some(log => 
-            String(log).includes(eventTitle)
-        );
+        // 在 onScanSuccess 內的判斷建議改寫如下，更為精準
+  const eventTitle = decodedText.trim();
+  const alreadyAttended = (currentUser.attendLog || []).some(log => 
+    String(log).toLowerCase().includes(eventTitle.toLowerCase())
+  );
 
-        if (alreadyAttended) {
-            showToast("您今日已完成此活動報到", "info");
-            return; // 結束，不發送 API
-        }
+  if (alreadyAttended) {
+    showToast(`「${eventTitle}」已完成報到，無需重複掃碼`, "info");
+    return;
+  }
 
         // 3. 發送報到請求
         const res = await fetch(`${GAS_URL}?action=checkIn&event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`);
@@ -359,7 +356,9 @@ function startScanner() {
         console.error("相機啟動失敗", err);
         showToast("無法開啟相機", "error");
     });
-}    
+} 
+
+    
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」
 // ==========================================
@@ -444,7 +443,75 @@ function enterStaffMode() {
     location.href = 'staff_zone.html';
 }
 
-// (註：其餘像 renderCalendar, showToast 等輔助函式若在檔案後方請繼續保留)    
+// ==========================================
+// 6. 補齊缺失的輔助函式 (修正報錯關鍵)
+// ==========================================
+
+// 修正 renderCalendarActivity 報錯
+function renderCalendarActivity(calendar) {
+    const container = document.getElementById('calendarActivitySection');
+    if (!container) return;
+    
+    if (!calendar || calendar.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">目前暫無活動預告</p>';
+        return;
+    }
+
+    // 渲染邏輯 (這部分通常對應您 UI 上的行事曆卡片)
+    container.innerHTML = calendar.slice(0, 3).map(ev => `
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-100 text-emerald-700 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs flex-col">
+                    <span>${ev.dateText ? ev.dateText.split('-')[1] : ''}/${ev.dateText ? ev.dateText.split('-')[2] : ''}</span>
+                </div>
+                <div>
+                    <h4 class="font-bold text-emerald-900 text-sm">${ev.title}</h4>
+                    <p class="text-[10px] text-gray-400">${ev.location || '築心會館'}</p>
+                </div>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+        </div>
+    `).join('');
+}
+
+// 修正 showToast 報錯 (漂亮的翡翠綠提示)
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    const colors = {
+        success: 'bg-emerald-600',
+        error: 'bg-red-600',
+        info: 'bg-orange-500'
+    };
+    
+    toast.className = `${colors[type] || 'bg-gray-800'} text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-bold animate-bounce flex items-center gap-2`;
+    toast.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+        ${message}
+    `;
+    
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// 修正 logout 報錯
+function logout() {
+    if(confirm('確定要登出嗎？')) {
+        sessionStorage.clear();
+        location.href = 'index.html';
+    }
+}
+
+// 修正 openRemoteLink 報錯
+function openRemoteLink(type) {
+    // 這裡通常會對應到您 data.settings 裡面的網址，我們先暫代為 alert 或跳轉
+    showToast("功能開發中，即將開啟...", "info");
+}    
 </script>   
 </body>
 </html>

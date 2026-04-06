@@ -724,11 +724,16 @@ function getPartnerData() {
  * 欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G可載客 | H會員 | I代理人 | J應繳金額 | K繳費狀態 | L備註 | M報名時間
  */
 function submitRegistration(payload) {
-  const lock = LockService.getScriptLock();
+  // 改用 DocumentLock 並加上錯誤處理
+  const lock = LockService.getDocumentLock(); 
+  
   try {
-    // 取得 10 秒鎖，防止多人同時報名發生寫入衝突
-    lock.waitLock(10000);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // 嘗試取得鎖，如果失敗不直接噴錯，而是等待
+    const hasLock = lock.tryLock(10000); 
+    if (!hasLock) {
+      console.error("無法取得鎖定，系統繁忙");
+      return { result: "ERROR", message: "系統繁忙，請稍後再試一次" };
+    }
     const sheet = ss.getSheetByName("registrations") || ss.insertSheet("registrations");
     const eventSheet = ss.getSheetByName("events");
 
@@ -805,9 +810,10 @@ function submitRegistration(payload) {
     return { result: "SUCCESS", message: "報名成功！" };
 
   } catch (e) {
-    if (lock.hasLock()) lock.releaseLock();
-    console.error("GAS 報名寫入失敗：" + e.toString());
-    return { result: "ERROR", message: "後端錯誤：" + e.toString() };
+    // 確保發生異常時也會開鎖
+    if (lock && lock.hasLock()) lock.releaseLock();
+    console.error("GAS 報名失敗：" + e.toString());
+    return { result: "ERROR", message: "後端服務暫時不可用，請重試" };
   }
 }    
     

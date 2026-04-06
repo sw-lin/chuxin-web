@@ -680,23 +680,26 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate() {
-    // 1. 抓取輸入框的值
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPwd = document.getElementById('newPassword').value.trim();
     const oldPwd = document.getElementById('oldPassword').value.trim();
 
-    // 2. 【核心修正】精確抓取手機號碼
-    // 先從全域變數抓，如果沒有，直接從 sessionStorage 抓取 index.html 存入的 'phone'
-    const savedInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-    const phone = savedInfo.phone || ""; 
+    // --- 複用您在 syncData 驗證成功的邏輯 ---
+    // 確保從 sessionStorage 抓到最新、最準確的手機號碼
+    const sessionInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    
+    // 這裡我們不再只依賴 currentUser，直接抓當初 index.html 存入的 phone
+    const phone = sessionInfo.phone || ""; 
 
     if (!oldPwd) {
         showToast("請輸入舊密碼進行驗證", "error");
         return;
     }
 
+    // 診斷：如果這裡還是空的，代表登入時就沒存好
     if (!phone) {
-        alert("系統無法辨識您的會員身份，請嘗試重新登入。");
+        console.error("Critical: Phone is missing in session!");
+        alert("無法讀取會員手機資訊，請嘗試重新登入");
         return;
     }
 
@@ -705,32 +708,29 @@ async function submitProfileUpdate() {
     try {
         const queryParams = new URLSearchParams({
             type: 'updateProfile',
-            phone: phone,      // 確保這裡是精確的字串，不再是 undefined
+            phone: phone, // 這裡現在絕對是跟 syncData 同源的號碼
             oldPassword: oldPwd,
             newEmail: newEmail,
             newPassword: newPwd
         });
 
-        // 這裡發送精確請求
         const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
         const result = await response.json();
 
         if (result.success) {
             showToast("個人資料更新成功！", "success");
             
-            // 同步更新本地資料，確保後續操作也正確
-            savedInfo.email = newEmail;
-            sessionStorage.setItem('userInfo', JSON.stringify(savedInfo));
-            currentUser = savedInfo; 
+            // 重要：更新本地緩存，這樣 syncData 下次跑的時候才會抓到新 Email
+            sessionInfo.email = newEmail;
+            sessionStorage.setItem('userInfo', JSON.stringify(sessionInfo));
+            currentUser = sessionInfo; // 同步全域變數
             
             closeProfileModal();
             renderProfile(currentUser); 
         } else {
             alert("修改失敗：" + result.message);
-            showToast(result.message, "error");
         }
     } catch (e) {
-        console.error("更新發生錯誤:", e);
         showToast("系統連線異常", "error");
     } finally {
         showLoading(false);

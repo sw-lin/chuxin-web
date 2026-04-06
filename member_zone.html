@@ -707,6 +707,18 @@ async function submitProfileUpdate() {
         showLoading(false);
     }
 }    
+// 控制載入中遮罩的顯示與隱藏
+function showLoading(show) {
+    // 尋找 HTML 裡面的 loadingOverlay 元素
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) return;
+    
+    if (show) {
+        overlay.style.display = 'flex'; // 顯示 (通常設為 flex 是為了讓轉圈圈居中)
+    } else {
+        overlay.style.display = 'none'; // 隱藏
+    }
+}
     
 </script>   
 </body>

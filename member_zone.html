@@ -680,39 +680,41 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate() {
+    // 1. 抓取欄位值
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPwd = document.getElementById('newPassword').value.trim();
     const oldPwd = document.getElementById('oldPassword').value.trim();
-
-    // --- 複用您在 syncData 驗證成功的邏輯 ---
-    // 確保從 sessionStorage 抓到最新、最準確的手機號碼
-    const sessionInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-    
-    // 這裡我們不再只依賴 currentUser，直接抓當初 index.html 存入的 phone
-    const phone = sessionInfo.phone || ""; 
 
     if (!oldPwd) {
         showToast("請輸入舊密碼進行驗證", "error");
         return;
     }
 
-    // 診斷：如果這裡還是空的，代表登入時就沒存好
-    if (!phone) {
-        console.error("Critical: Phone is missing in session!");
-        alert("無法讀取會員手機資訊，請嘗試重新登入");
+    // 2. 【核心修正】直接從 sessionStorage 抓取 index.html 存入的 phone
+    // 這是最保險的來源，因為 index.html 登入成功時一定會存入這個欄位
+    const sessionInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    const safePhone = sessionInfo.phone || ""; 
+
+    if (!safePhone) {
+        console.error("錯誤：Session 中找不到手機號碼", sessionInfo);
+        alert("系統資訊遺失，請嘗試重新登入");
         return;
     }
 
+    // 3. 顯示轉圈圈
     showLoading(true);
 
     try {
         const queryParams = new URLSearchParams({
             type: 'updateProfile',
-            phone: phone, // 這裡現在絕對是跟 syncData 同源的號碼
+            phone: safePhone, // 使用我們剛才抓到的 safePhone，確保不是 undefined
             oldPassword: oldPwd,
             newEmail: newEmail,
             newPassword: newPwd
         });
+
+        // 除錯檢查：您可以按 F12 在 Console 看到這一行，確認 phone 是否正確
+        console.log("修改請求發送中，號碼為:", safePhone);
 
         const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
         const result = await response.json();
@@ -720,17 +722,19 @@ async function submitProfileUpdate() {
         if (result.success) {
             showToast("個人資料更新成功！", "success");
             
-            // 重要：更新本地緩存，這樣 syncData 下次跑的時候才會抓到新 Email
+            // 4. 同步更新本地緩存 (重要：這會影響到 syncData 之後的顯示)
             sessionInfo.email = newEmail;
             sessionStorage.setItem('userInfo', JSON.stringify(sessionInfo));
-            currentUser = sessionInfo; // 同步全域變數
+            currentUser = sessionInfo; // 更新全域變數
             
             closeProfileModal();
-            renderProfile(currentUser); 
+            renderProfile(currentUser); // 立即更新畫面上的個資顯示
         } else {
             alert("修改失敗：" + result.message);
+            showToast(result.message, "error");
         }
     } catch (e) {
+        console.error("更新發生錯誤:", e);
         showToast("系統連線異常", "error");
     } finally {
         showLoading(false);

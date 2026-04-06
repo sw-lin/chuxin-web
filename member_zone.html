@@ -171,20 +171,35 @@
     </div>
 </div>
 
-<div id="editProfileModal" class="modal-overlay" onclick="closeEditModal(event)">
-    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative" onclick="event.stopPropagation()">
-        <button onclick="closeEditModal(event, true)" class="absolute top-5 right-6 text-gray-400 hover:text-gray-600 text-2xl transition-colors">&times;</button>
-        <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">修改個人資料</h3>
-        <p class="text-center text-gray-400 text-xs mb-6">僅供更新 Email 與登入密碼</p>
-        <div class="space-y-4">
-            <div><label class="block text-xs font-bold text-emerald-800 mb-1.5 ml-1">電子郵件 (Email)</label><input type="email" id="editEmail" class="w-full px-5 py-3.5 bg-gray-50 rounded-xl outline-none text-sm font-bold border-2 border-transparent focus:border-emerald-500 transition-all"></div>
-            <div class="pt-2 border-t border-gray-100"><label class="block text-xs font-bold text-red-800 mb-1.5 ml-1">驗證舊密碼 (必填)</label><input type="password" id="oldPass" placeholder="請輸入目前密碼" class="w-full px-5 py-3.5 bg-red-50/50 rounded-xl outline-none text-sm font-bold border-2 border-transparent focus:border-red-300 transition-all"></div>
-            <div><label class="block text-xs font-bold text-emerald-800 mb-1.5 ml-1">設定新密碼 (選填)</label><input type="password" id="newPass" placeholder="若不修改請留空" class="w-full px-5 py-3.5 bg-gray-50 rounded-xl outline-none text-sm font-bold border-2 border-transparent focus:border-emerald-500 transition-all"></div>
-            <button onclick="handleUpdateProfile()" id="updateBtn" class="w-full mt-4 bg-emerald-800 text-white py-4 rounded-xl font-black tracking-widest active:scale-95 transition-all shadow-md">確認更新</button>
+<div id="profileModal" class="modal-overlay">
+    <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div class="p-6 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
+            <h3 class="font-black text-emerald-900">修改個人資料</h3>
+            <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-8 space-y-5">
+            <div>
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">電子郵件 EMAIL</label>
+                <input type="email" id="editEmail" class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm font-medium" placeholder="請輸入 Email">
+            </div>
+            <hr class="border-gray-100">
+            <div>
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">新密碼 (若不修改請留空)</label>
+                <input type="password" id="newPassword" class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm" placeholder="請輸入新密碼">
+            </div>
+            <div class="bg-amber-50 p-4 rounded-2xl">
+                <label class="block text-[10px] font-bold text-amber-800 mb-2 ml-1">請輸入「舊密碼」進行確認</label>
+                <input type="password" id="oldPassword" class="w-full px-5 py-3 bg-white rounded-xl border-2 border-transparent focus:border-amber-500 outline-none text-sm" placeholder="安全性驗證">
+            </div>
+            
+            <button onclick="submitProfileUpdate()" class="w-full py-4 bg-emerald-700 text-white rounded-[1.5rem] font-black text-sm shadow-lg shadow-emerald-100 active:scale-95 transition-all">
+                確認儲存修改
+            </button>
         </div>
     </div>
 </div>
-
 <script>
 // ==========================================
 // 1. 全域變數與基礎設定 (保留核心)
@@ -636,6 +651,67 @@ function logout() {
 function openRemoteLink(type) {
     // 這裡通常會對應到您 data.settings 裡面的網址，我們先暫代為 alert 或跳轉
     showToast("功能開發中，即將開啟...", "info");
+} 
+// 開啟彈窗並填入舊資料
+function openProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    
+    // 從當前登入資訊讀取 Email
+    document.getElementById('editEmail').value = currentUser.email || "";
+    document.getElementById('newPassword').value = ""; // 清空新密碼框
+    document.getElementById('oldPassword').value = ""; // 清空驗證框
+    
+    modal.style.display = 'flex';
+}
+
+function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
+
+// 送出修改
+async function submitProfileUpdate() {
+    const newEmail = document.getElementById('editEmail').value.trim();
+    const newPwd = document.getElementById('newPassword').value.trim();
+    const oldPwd = document.getElementById('oldPassword').value.trim();
+
+    if (!oldPwd) {
+        showToast("請輸入舊密碼進行驗證", "error");
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        // 使用 URLSearchParams 組合參數
+        const params = new URLSearchParams({
+            type: 'updateProfile', // 確保與 GAS 判斷字串一致
+            phone: currentUser.phone,
+            oldPassword: oldPwd,
+            newEmail: newEmail,
+            newPassword: newPwd
+        });
+
+        const response = await fetch(`${GAS_URL}?${params.toString()}`);
+        const result = await response.json();
+
+        // 根據 GAS 回傳的 success 欄位判斷
+        if (result.success) {
+            showToast("修改成功！", "success");
+            
+            // 重要：同步更新本地的 currentUser 資訊
+            currentUser.email = newEmail;
+            sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
+            
+            closeProfileModal();
+        } else {
+            showToast(result.message || "驗證失敗", "error");
+        }
+    } catch (e) {
+        showToast("連線失敗，請稍後再試", "error");
+    } finally {
+        showLoading(false);
+    }
 }    
 </script>   
 </body>

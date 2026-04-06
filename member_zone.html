@@ -227,27 +227,79 @@ async function syncData() {
 function updateUI(user, calendar, events) {
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. 計算出席數據 (依照原本邏輯)
+    // 1. 計算數據 (維持原邏輯)
     const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
     const totalEvents = requiredPastEvents.length;
     const attendCount = (user.attendLog || []).length;
     const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 2. 填入 HTML (對應您的 id="attPercent" 與 id="attCountDisplay")
+    // 2. 填入 HTML
     const percentElem = document.getElementById('attPercent');
     const countDisplayElem = document.getElementById('attCountDisplay');
     
     if (percentElem) percentElem.innerText = attendanceRate + '%';
     if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
 
-    // 3. 儲存數據供學習歷程 Modal 使用
+    // --- 新增：參與率超過 50% 放煙火 ---
+    if (attendanceRate >= 50 && typeof confetti === 'function') {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#064E3B', '#059669', '#10B981'] // 使用翡翠綠系列色調
+        });
+    }
+
+    // 3. 儲存數據供學習歷程 Modal 使用 (確保這裡邏輯正確)
     window.currentAttendedData = (calendar || []).filter(ev => 
         (user.attendLog || []).some(log => String(log).includes(ev.title))
     );
 
-    // 4. 渲染其他區塊
     renderCalendarActivity(calendar);
     renderEventSection(events);
+}
+// 點擊卡片觸發的函式
+function showLearningHistory() {
+    const modal = document.getElementById('historyModal'); // 確保您的 HTML 有這個 Modal ID
+    const container = document.getElementById('historyList');
+    if (!modal || !container) return;
+
+    const logs = window.currentAttendedData || [];
+
+    if (logs.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-10">
+                <i class="fas fa-calendar-check text-gray-200 text-5xl mb-3"></i>
+                <p class="text-gray-400">目前尚無出席紀錄</p>
+            </div>`;
+    } else {
+        container.innerHTML = logs.map(log => `
+            <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-emerald-900 text-sm">${log.title}</h4>
+                        <p class="text-[10px] text-emerald-600/70">${log.dateText || '已簽到'}</p>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg">已出席</span>
+            </div>
+        `).join('');
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
+
+// 關閉彈窗
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
 }    
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」

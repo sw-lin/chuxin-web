@@ -228,21 +228,53 @@ async function syncData() {
 // 3. UI 渲染：負責分配資料到各個大項
 // ==========================================
 function updateUI(user, calendar, dashboardData) {
-    // 個人卡片 (不動)
+    // --- 原有功能：更新基本資料 (保留) ---
     const nameElem = document.getElementById('userName');
     const phoneElem = document.getElementById('userPhone');
     if(nameElem) nameElem.innerText = user.name;
     if(phoneElem) phoneElem.innerText = user.phone;
 
-    // 行事曆 (不動)
-    if (typeof renderCalendar === "function") {
-        renderCalendar(calendar);
-    }
+    // --- 補回功能：學習歷程與統計數據 (關鍵修正) ---
+    // 假設 dashboardData.myRegistrations 是所有報名紀錄
+    // 假設 dashboardData.attendance 是實際有簽到的紀錄
+    const myRegs = dashboardData.myRegistrations || [];
+    const attendance = dashboardData.attendance || []; // 這需要後端配合回傳
+
+    // 更新參與率與次數 (對應您 UI 上的 id)
+    const attendCountElem = document.getElementById('attendCount');
+    const attendRateElem = document.getElementById('attendRate');
     
-    // 報名區 (只改按鈕狀態判斷)
-    renderEventSection(dashboardData); 
+    if (attendCountElem) attendCountElem.innerText = attendance.length;
+    if (attendRateElem) {
+        const rate = myRegs.length > 0 ? Math.round((attendance.length / myRegs.length) * 100) : 0;
+        attendRateElem.innerText = rate + '%';
+    }
+
+    // 渲染學習歷程清單 (如果您的 UI 有歷程容器)
+    function renderHistory(attendance) {
+    const container = document.getElementById('historyContainer'); // 請確保 HTML 有此 ID
+    if (!container) return;
+
+    if (attendance.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-400 py-4">尚無參與紀錄</p>';
+        return;
+    }
+
+    container.innerHTML = attendance.map(item => `
+        <div class="flex justify-between items-center p-3 border-b border-gray-50">
+            <div>
+                <div class="font-bold text-emerald-900">${item.title}</div>
+                <div class="text-[10px] text-gray-400">${item.date}</div>
+            </div>
+            <div class="text-emerald-600 font-bold text-sm">已出席</div>
+        </div>
+    `).join('');
 }
 
+    // --- 原有功能：行事曆與報名區 (保留) ---
+    renderCalendar(calendar);
+    renderEventSection(dashboardData); 
+}
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」
 // ==========================================

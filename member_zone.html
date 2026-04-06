@@ -397,18 +397,18 @@ let globalConfig = {};
 // })
 
 function openService(key) {
-    // 檢查 globalConfig 是否有對應的網址
+    // 當 key 傳入 'reading_folder_url' 時，
+    // 它會去 globalConfig 裡找對應的網址
     const url = globalConfig[key];
     
     if (url && url.startsWith('http')) {
         showToast("正在前往專屬連結...", "success");
-        // 使用延遲跳轉，讓使用者看得到 Toast 提示
         setTimeout(() => {
-            window.open(url, '_blank'); // 在新分頁打開雲端連結
+            window.open(url, '_blank');
         }, 800);
     } else {
-        console.error(`找不到 Key: ${key} 的有效網址`, url);
-        showToast("此服務連結尚未設定，請洽管理員", "info");
+        console.error(`找不到 Key: ${key} 的有效網址`);
+        showToast("服務連結尚未設定", "info");
     }
 }
     

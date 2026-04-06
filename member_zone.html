@@ -671,6 +671,7 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate() {
+    console.log("開始執行修改程序..."); // 除錯點 1
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPwd = document.getElementById('newPassword').value.trim();
     const oldPwd = document.getElementById('oldPassword').value.trim();
@@ -691,14 +692,18 @@ async function submitProfileUpdate() {
         });
 
         const response = await fetch(`${GAS_URL}?${params.toString()}`);
+        console.log("發送請求至:", response); // 除錯點 2
+        
         const result = await response.json();
-
+        console.log("收到後端回應:", result); // 除錯點 3
+        
         if (result.success) { // 這裡要對應 GAS 回傳的鍵值
             showToast("修改成功！", "success");
             currentUser.email = newEmail; // 更新本地緩存
             sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
             closeProfileModal();
         } else {
+            console.error("Fetch 發生錯誤:", e); // 除錯點 4
             showToast(result.message || "修改失敗", "error");
         }
     } catch (e) {

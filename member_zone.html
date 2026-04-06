@@ -680,21 +680,15 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate() {
-    // 1. 抓取欄位值
+    // 1. 抓取輸入框的值
     const newEmail = document.getElementById('editEmail').value.trim();
     const newPwd = document.getElementById('newPassword').value.trim();
     const oldPwd = document.getElementById('oldPassword').value.trim();
 
-    // --- 【修正重點 1：確保手機號碼不是 undefined】 ---
-    // 從 currentUser 抓取，如果沒有，則從 sessionStorage 重新解析一次
-    let user = currentUser;
-    if (!user) {
-        const sessionData = sessionStorage.getItem('userInfo');
-        user = sessionData ? JSON.parse(sessionData) : {};
-    }
-    
-    // 同時檢查 phone 或 phoneNumber (相容舊有邏輯)
-    const phone = user.phone || user.phoneNumber || "";
+    // 2. 【核心修正】精確抓取手機號碼
+    // 先從全域變數抓，如果沒有，直接從 sessionStorage 抓取 index.html 存入的 'phone'
+    const savedInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    const phone = savedInfo.phone || ""; 
 
     if (!oldPwd) {
         showToast("請輸入舊密碼進行驗證", "error");
@@ -702,42 +696,38 @@ async function submitProfileUpdate() {
     }
 
     if (!phone) {
-        alert("錯誤：無法取得您的手機資訊，請重新登入系統");
+        alert("系統無法辨識您的會員身份，請嘗試重新登入。");
         return;
     }
 
-    // 2. 顯示轉圈圈
     showLoading(true);
 
     try {
         const queryParams = new URLSearchParams({
-            type: 'updateProfile', 
-            phone: phone, // 確保這裡現在是有值的
+            type: 'updateProfile',
+            phone: phone,      // 確保這裡是精確的字串，不再是 undefined
             oldPassword: oldPwd,
             newEmail: newEmail,
             newPassword: newPwd
         });
 
-        // 除錯用：在瀏覽器控制台印出實際發送的 URL
-        console.log("發送請求:", `${GAS_URL}?${queryParams.toString()}`);
-
+        // 這裡發送精確請求
         const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
         const result = await response.json();
 
         if (result.success) {
             showToast("個人資料更新成功！", "success");
             
-            // 同步更新本地端資料
-            user.email = newEmail;
-            currentUser = user; // 回寫到全域變數
-            sessionStorage.setItem('userInfo', JSON.stringify(user));
+            // 同步更新本地資料，確保後續操作也正確
+            savedInfo.email = newEmail;
+            sessionStorage.setItem('userInfo', JSON.stringify(savedInfo));
+            currentUser = savedInfo; 
             
             closeProfileModal();
-            renderProfile(user); 
+            renderProfile(currentUser); 
         } else {
-            // 這裡會顯示 GAS 傳回來的具體原因（例如：找不到手機末9碼...）
-            alert("更新失敗: " + result.message);
-            showToast(result.message || "更新失敗", "error");
+            alert("修改失敗：" + result.message);
+            showToast(result.message, "error");
         }
     } catch (e) {
         console.error("更新發生錯誤:", e);
@@ -745,8 +735,7 @@ async function submitProfileUpdate() {
     } finally {
         showLoading(false);
     }
-}
-    
+}    
 // 控制載入中遮罩的顯示與隱藏
     
 </script>   

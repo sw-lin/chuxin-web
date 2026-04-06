@@ -268,7 +268,7 @@ function updateUI(user, calendar, events) {
 
     // 6. 渲染下方區塊
     try { renderCalendarActivity(calendar); } catch(e) { console.error("渲染活動預告出錯", e); }
-    try { renderEventSection(events); } catch(e) { console.error("渲染報名區出錯", e); }
+    try { renderEventSection(dashboardData); } catch(e) { console.error("渲染報名區出錯", e); }
 }
     
 function renderCalendarActivity(calendar) {
@@ -712,6 +712,20 @@ async function syncData() {
                 staffBtn.classList.remove('hidden');
                 staffBtn.onclick = enterStaffMode;
             }
+            if (liveUser) {
+            currentUser = liveUser;
+            if (liveUser.role && liveUser.role !== "學員") {
+                const staffBtn = document.getElementById('staffBtn');
+                if (staffBtn) {
+                    staffBtn.classList.remove('hidden');
+                    staffBtn.onclick = enterStaffMode;
+                }
+            }           
+            // --- 修改處：將完整的 data 傳給 updateUI ---
+            // 這樣 updateUI 才能拿到 data.myRegistrations
+            updateUI(liveUser, data.calendar, data); 
+            }
+            
             updateUI(liveUser, data.calendar, data.events);
         }
     } catch (e) { 

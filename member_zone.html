@@ -228,53 +228,32 @@ async function syncData() {
 // 3. UI 渲染：負責分配資料到各個大項
 // ==========================================
 function updateUI(user, calendar, dashboardData) {
-    // --- 原有功能：更新基本資料 (保留) ---
+    // 1. 基本資料更新 (這部分應該沒問題)
     const nameElem = document.getElementById('userName');
     const phoneElem = document.getElementById('userPhone');
     if(nameElem) nameElem.innerText = user.name;
     if(phoneElem) phoneElem.innerText = user.phone;
 
-    // --- 補回功能：學習歷程與統計數據 (關鍵修正) ---
-    // 假設 dashboardData.myRegistrations 是所有報名紀錄
-    // 假設 dashboardData.attendance 是實際有簽到的紀錄
-    const myRegs = dashboardData.myRegistrations || [];
-    const attendance = dashboardData.attendance || []; // 這需要後端配合回傳
-
-    // 更新參與率與次數 (對應您 UI 上的 id)
-    const attendCountElem = document.getElementById('attendCount');
-    const attendRateElem = document.getElementById('attendRate');
-    
-    if (attendCountElem) attendCountElem.innerText = attendance.length;
-    if (attendRateElem) {
-        const rate = myRegs.length > 0 ? Math.round((attendance.length / myRegs.length) * 100) : 0;
-        attendRateElem.innerText = rate + '%';
+    // 2. 補回：更新「出席次數」與「參與率」 (這是原本對應課程簽到的資料)
+    // 根據您原本的邏輯，這些資料可能存在 user 物件或 dashboardData 的某處
+    // 請確認後端原本傳回來的欄位名稱 (例如 user.attend_count 或 user.rate)
+    if (document.getElementById('attendCount')) {
+        document.getElementById('attendCount').innerText = user.attend_count || "0";
+    }
+    if (document.getElementById('attendRate')) {
+        document.getElementById('attendRate').innerText = (user.attend_rate || "0") + "%";
     }
 
-    // 渲染學習歷程清單 (如果您的 UI 有歷程容器)
-    function renderHistory(attendance) {
-    const container = document.getElementById('historyContainer'); // 請確保 HTML 有此 ID
-    if (!container) return;
-
-    if (attendance.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-400 py-4">尚無參與紀錄</p>';
-        return;
+    // 3. 補回：渲染學習歷程清單 (點擊 Profile 後看到的那個清單)
+    // 這裡通常是呼叫您原本定義好的 renderHistory(user.history)
+    if (typeof renderHistory === "function" && user.learning_history) {
+        renderHistory(user.learning_history);
     }
 
-    container.innerHTML = attendance.map(item => `
-        <div class="flex justify-between items-center p-3 border-b border-gray-50">
-            <div>
-                <div class="font-bold text-emerald-900">${item.title}</div>
-                <div class="text-[10px] text-gray-400">${item.date}</div>
-            </div>
-            <div class="text-emerald-600 font-bold text-sm">已出席</div>
-        </div>
-    `).join('');
-}
-
-    // --- 原有功能：行事曆與報名區 (保留) ---
+    // 4. 原有功能：行事曆與報名區 (保持現狀)
     renderCalendar(calendar);
     renderEventSection(dashboardData); 
-}
+}    
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」
 // ==========================================

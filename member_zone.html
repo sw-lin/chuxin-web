@@ -676,16 +676,14 @@ async function submitProfileUpdate() {
     const oldPwd = document.getElementById('oldPassword').value.trim();
 
     if (!oldPwd) {
-        showToast("請輸入舊密碼進行驗證", "error");
+        showToast("請輸入舊密碼驗證", "error");
         return;
     }
 
     showLoading(true);
-
     try {
-        // 使用 URLSearchParams 組合參數
         const params = new URLSearchParams({
-            type: 'updateProfile', // 確保與 GAS 判斷字串一致
+            type: 'updateProfile', // 必須對應 GAS 的 case 名稱
             phone: currentUser.phone,
             oldPassword: oldPwd,
             newEmail: newEmail,
@@ -695,24 +693,21 @@ async function submitProfileUpdate() {
         const response = await fetch(`${GAS_URL}?${params.toString()}`);
         const result = await response.json();
 
-        // 根據 GAS 回傳的 success 欄位判斷
-        if (result.success) {
+        if (result.success) { // 這裡要對應 GAS 回傳的鍵值
             showToast("修改成功！", "success");
-            
-            // 重要：同步更新本地的 currentUser 資訊
-            currentUser.email = newEmail;
+            currentUser.email = newEmail; // 更新本地緩存
             sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
-            
             closeProfileModal();
         } else {
-            showToast(result.message || "驗證失敗", "error");
+            showToast(result.message || "修改失敗", "error");
         }
     } catch (e) {
-        showToast("連線失敗，請稍後再試", "error");
+        showToast("連線異常", "error");
     } finally {
         showLoading(false);
     }
 }    
+    
 </script>   
 </body>
 </html>

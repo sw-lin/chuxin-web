@@ -452,18 +452,35 @@ window.addEventListener('load', () => {
 function getDirectImageUrl(url) {
     if (!url || url === "NONE" || url === "" || typeof url !== 'string') return null;
     
-    // 如果是直接圖片連結，直接回傳
+    // 如果是普通圖片連結，直接回傳
     if (url.startsWith('http') && !url.includes('drive.google.com')) return url;
 
-    // 針對 Google Drive ID 進行更寬鬆且精準的捕捉
-    const match = url.match(/[-\w]{25,}/);
-    if (match && match[0]) {
-        // 使用 Google Drive 的縮圖預覽 API (sz=s1000 代表最大寬度 1000px，能解決大多數顯示問題)
-        return `https://drive.google.com/thumbnail?id=${match[0]}&sz=w1000`;
+    // 1. 嘗試從各種 Google Drive 連結格式中提取 ID
+    // 支援 /file/d/ID/view, id=ID, 以及您提供的 drive_link 格式
+    let fileId = "";
+    const segments = url.split('/');
+    const dIndex = segments.indexOf('d');
+    if (dIndex !== -1 && segments[dIndex + 1]) {
+        fileId = segments[dIndex + 1].split('?')[0].split('&')[0];
+    } else {
+        const match = url.match(/id=([^&]+)/);
+        if (match) fileId = match[1];
+    }
+
+    // 2. 如果上述方法失敗，使用最後的保險：正則比對長度 25-45 的 ID 字串
+    if (!fileId) {
+        const fallbackMatch = url.match(/[-\w]{25,45}/);
+        if (fallbackMatch) fileId = fallbackMatch[0];
+    }
+
+    if (fileId) {
+        // 使用最穩定且支援度最高的縮圖 API
+        // sz=w1000 確保 Demo 用的大圖也能清晰顯示
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
     }
     
-    return url;
-}
+    return url; // 若都失敗則回傳原始網址嘗試直接載入
+}    
 // 保留進入工作人員模式功能
 function enterStaffMode() {
     sessionStorage.setItem('staffInfo', JSON.stringify(currentUser));

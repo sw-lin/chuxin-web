@@ -383,47 +383,68 @@ function closeScanner() {
 // ==========================================
 // 4. 報名區渲染：將按鈕指向「新頁面」
 // ==========================================
-function renderEventSection(data) {
+// --- 完善：活動報名區塊渲染 (若無活動則全區塊隱藏) ---
+function renderEventSection(events) {
+    // 注意：這裡要抓的是包含「活動報名」標題的那個外層容器 ID
+    // 假設您的 HTML 結構標題與內容都在一個 id="registrationWrapper" 裡面
+    const wrapper = document.getElementById('registrationWrapper'); 
     const container = document.getElementById('eventSection');
+    
     if (!container) return;
 
-    const events = data.events || [];
-    const myRegs = data.myRegistrations || []; 
-    const today = new Date().toISOString().split('T')[0];
+    // 如果沒有活動，直接把整個區域隱藏，不留痕跡
+    if (!events || events.length === 0) {
+        if (wrapper) wrapper.classList.add('hidden');
+        else container.classList.add('hidden');
+        return;
+    }
 
-    // 過濾有效活動
-    const activeEvents = events.filter(ev => today >= ev.start_date && today <= ev.display_until);
+    // 如果有活動，確保它是顯示的
+    if (wrapper) wrapper.classList.remove('hidden');
+    container.classList.remove('hidden');
 
-    if (activeEvents.length === 0) { container.innerHTML = ""; return; }
-
-    container.innerHTML = `<div class="flex items-center gap-3 px-2 mb-4"><div class="h-5 w-1 bg-emerald-600 rounded-full"></div><h3 class="text-lg font-black text-emerald-950 tracking-wide">活動報名區</h3></div>` + 
-    activeEvents.map(ev => {
-        const isRegistered = myRegs.includes(ev.title);
-        const btnText = isRegistered ? "您已報名 (按此修改)" : "立即報名";
-        const btnClass = isRegistered ? "bg-gray-400" : "emerald-gradient";
-
-        // 核心改變：點擊後跳轉，不再開啟 Modal
-        const actionBtn = `<button onclick="handleJumpToReg('${ev.title.replace(/'/g, "\\'")}')" 
-                            class="w-full py-4 ${btnClass} text-white rounded-2xl font-black tracking-widest active:scale-95 transition-all shadow-md">
-                            ${btnText}
-                           </button>`;
-
-        const displayUrl = getDirectImageUrl(ev.poster_url);
+    container.innerHTML = events.map(ev => {
+        const isClosed = ev.status === "已截止";
+        const isFull = ev.status === "已額滿";
         
-        // 這裡維持您原本的 UI 樣式邏輯 (海報圖 vs 列表文字)
-        if (displayUrl && displayUrl.includes('http')) {
-            return `<div class="bg-white rounded-[2.5rem] overflow-hidden shadow-lg border border-emerald-50 mb-6">
-                        <img src="${displayUrl}" class="w-full object-cover">
-                        <div class="p-5 bg-white">${actionBtn}</div>
-                    </div>`;
+        let actionBtn = '';
+        if (isClosed) {
+            actionBtn = `<button disabled class="w-full py-3 bg-gray-100 text-gray-400 rounded-xl text-xs font-bold mt-4 cursor-not-allowed">報名已截止</button>`;
+        } else if (isFull) {
+            actionBtn = `<button disabled class="w-full py-3 bg-orange-50 text-orange-400 rounded-xl text-xs font-bold mt-4 cursor-not-allowed">活動已額滿</button>`;
         } else {
-            return `<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-2.5 mb-4">
-                        <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
-                        <p class="text-xs text-gray-500">日期：${ev.date || '未定'}</p>
-                        ${actionBtn}
-                    </div>`;
+            actionBtn = `
+                <button onclick="goToRegistration('${ev.title}')" 
+                        class="w-full py-3 bg-emerald-700 text-white rounded-xl text-xs font-bold mt-4 hover:bg-emerald-800 active:scale-95 transition-all shadow-sm shadow-emerald-200">
+                    立即預約報名
+                </button>`;
         }
+
+        return `
+            <div class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-emerald-50 mb-4">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-lg">
+                        ${ev.category || '專屬活動'}
+                    </span>
+                    <span class="text-[10px] text-gray-400 font-medium">${ev.deadline ? '截止日：' + ev.deadline : ''}</span>
+                </div>
+                <h4 class="font-black text-emerald-900 text-base mb-1">${ev.title}</h4>
+                <p class="text-[11px] text-gray-500 leading-relaxed line-clamp-2">${ev.shortDesc || '點擊下方按鈕開始預約報名流程。'}</p>
+                ${actionBtn}
+            </div>
+        `;
     }).join('');
+}
+function goToRegistration(eventTitle) {
+    // 這裡我們不使用 window.location.href 換頁，而是先 console 確認邏輯
+    // 未來我們會在這裡處理轉頁，並帶上電話與活動名稱
+    console.log("準備報名活動:", eventTitle);
+    console.log("當前使用者:", currentUser.name, currentUser.phone);
+    
+    // 預留跳轉代碼
+    // location.href = `registration.html?event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`;
+    
+    showToast(`正在進入「${eventTitle}」報名系統...`, "success");
 }
 
 // 跳轉處理

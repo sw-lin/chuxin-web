@@ -680,8 +680,13 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate(oldPassword, newPassword, newEmail) {
-    const phone = sessionStorage.getItem('userPhone');
-    
+    const phone = sessionStorage.getItem('user_phone');
+
+    if (!phone) {
+    console.error("找不到 user_phone，請檢查登入狀態");
+    alert("請重新登入後再進行修改");
+    return;
+}    
     // 1. 這裡只留純網址，絕對不能有問號或 type=...
     const CLEAN_GAS_URL = 'https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec';
 

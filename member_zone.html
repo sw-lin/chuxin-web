@@ -718,32 +718,61 @@ function getPartnerData() {
 //  築心讀書會 - 核心報名寫入邏輯 (2026 完整版)
 //  欄位：A活動 | B姓名 | C電話 | D身分證 | E餐食 | F交通 | G可載客 | H會員 | I代理人 | J應繳金額 | K繳費狀態 | L備註 | M報名時間
 // 在 member_zone.html 裡面，負責「送出」資料
+// 修正後的前端傳送函式
 function submitRegistrationToGAS() {
-    // 1. 收集 HTML 表單上的資料
-    const payload = {
-        type: "complex_register", // 這是指令名稱，必須跟後端 switch 裡的一樣
-        eventTitle: document.getElementById('eventTitle').value,
-        name: document.getElementById('userName').value, // 假設你的欄位 ID 是這個
-        phone: document.getElementById('userPhone').value,
-        note: document.getElementById('regNote').value,
-        registrants: [ /* 這裡放你整理好的參與者陣列 */ ]
-    };
+    // 1. 直接從畫面抓取已經登入帶入的資訊 (根據你的 HTML ID)
+    const mainName = document.getElementById('userName')?.innerText || "未知";
+    const mainPhone = document.getElementById('userPhone')?.innerText || ""; 
+    const eventTitle = document.getElementById('eventTitle')?.value || "未指定活動";
+    const note = document.getElementById('regNote')?.value || "";
 
-    // 2. 透過 Google 提供的橋樑送到後端 GS
+    if (!mainPhone) {
+        alert("無法取得電話資訊，請重新整理頁面。");
+        return;
+    }
+
+    // 2. 整理參與者資料 (包含本人)
+    const registrants = [{
+        name: mainName,
+        phone: mainPhone, // 使用自動帶入的電話
+        diet: document.getElementById('diet')?.value || "葷食",
+        transport: document.getElementById('transport')?.value || "自行開車",
+        canDrive: document.getElementById('canDrive')?.value || 0
+    }];
+
+    // 3. 處理攜伴資料 (如果有)
+    const partnerCount = parseInt(document.getElementById('partnerCount')?.value || 0);
+    for (let i = 1; i <= partnerCount; i++) {
+        const pName = document.getElementById(`partnerName${i}`)?.value;
+        const pDiet = document.getElementById(`partnerDiet${i}`)?.value;
+        if (pName) {
+            registrants.push({
+                name: pName,
+                phone: mainPhone, // 攜伴預設帶入主報名人電話
+                diet: pDiet || "葷食"
+            });
+        }
+    }
+
+    // 4. 只負責「送出」，不寫 SpreadsheetApp
     google.script.run
         .withSuccessHandler(function(res) {
             if(res.result === "SUCCESS") {
                 alert("報名成功！");
+                closeRegisterModal(); // 關閉你的彈窗
             } else {
-                alert("錯誤：" + res.message);
+                alert("報名失敗：" + res.message);
             }
         })
-        .withFailureHandler(function(err) {
-            alert("網路或系統錯誤：" + err);
-        })
-        .submitRegistration(payload); // 這行呼叫的是 .gs 裡的函數
+        .withFailureHandler(err => alert("系統錯誤：" + err))
+        .submitRegistration({
+            eventTitle: eventTitle,
+            name: mainName,
+            phone: mainPhone,
+            note: note,
+            registrants: registrants
+        });
 }
-
     
 // 2. 修正 toggleCarDetails 防止報錯
 function toggleCarDetails() {

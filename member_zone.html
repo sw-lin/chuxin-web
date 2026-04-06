@@ -712,6 +712,8 @@ async function submitProfileUpdate() {
             closeProfileModal();
             renderProfile(currentUser); // 即時更新畫面上顯示的 Email
         } else {
+            // 這裡非常重要！如果後端回傳「找不到會員」或「密碼錯誤」，這裡一定要顯示出來
+            alert("後端回傳錯誤: " + result.message);
             showToast(result.message || "更新失敗", "error");
         }
     } catch (e) {

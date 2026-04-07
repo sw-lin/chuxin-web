@@ -572,18 +572,18 @@ async function enterStaffMode() {
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            // 不要用 no-cors，否則拿不到回傳結果
             body: JSON.stringify({
                 type: 'verify_staff_key',
-                staffKey: staffKey.trim() // 傳送前先去空格
+                staffKey: staffKey.trim()
             })
         });
 
+        // 確保這裡使用的是半形 ()
         const result = await response.json();
 
+        // 檢查這一行的括號
         if (result.result === "SUCCESS") {
             sessionStorage.setItem('adminKey', staffKey.trim());
-            // 檔名請務必確認是 staff_menu.html 還是 staff_zone.html
             location.href = 'staff_menu.html'; 
         } else {
             alert("金鑰不正確，請重新輸入");

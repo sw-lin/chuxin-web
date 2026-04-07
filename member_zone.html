@@ -591,20 +591,14 @@ async function enterStaffMode() {
         
         alert("第五步：伺服器回傳結果為 " + JSON.stringify(result));
 
-        if (result.result === "SUCCESS") {
-            alert("第六步：比對成功！準備存入 session 並跳轉");
-            sessionStorage.setItem('adminKey', staffKey.trim());
-            
-            // 存入幹部資訊 (解決 currentUser 未定義問題)
-            const infoStr = sessionStorage.getItem('userInfo');
-            sessionStorage.setItem('staffInfo', infoStr);
-            
-            alert("最後一步：執行跳轉至 staff_menu.html");
-            window.location.href = 'staff_menu.html'; 
+        if (result.result === "SUCCESS") { // 注意：這裡絕不能有分號！
+           alert("驗證成功，正在進入管理區...");
+           sessionStorage.setItem('staff_key', staffKey.trim()); // 改成 staff_key
+           window.location.href = 'staff_menu.html'; 
         } else {
             alert("失敗：金鑰不正確 (ERROR)");
         }
-    } catch (e) {
+        catch (e) {
         console.error(e);
         alert("發生嚴重錯誤！錯誤訊息：" + e.message);
     }

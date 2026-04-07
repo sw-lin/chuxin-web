@@ -679,55 +679,58 @@ function closeProfileModal() {
 }
 
 // 送出修改
-async function submitProfileUpdate(oldPassword, newPassword, newEmail) {
-    const infoStr = sessionStorage.getItem('userInfo');
-    if (!infoStr) {
-        alert("讀取登入資訊失敗，請重新登入");
+// 請在 member_zone.html 中找到並更新此函式
+async function submitProfileUpdate() {
+    // 1. 現場抓取輸入框的值 (請確認 ID 與您 HTML 中的一致)
+    const oldPasswordInput = document.getElementById('oldPassword'); // 假設 ID 是這個
+    const newPasswordInput = document.getElementById('newPassword');
+    const newEmailInput = document.getElementById('newEmail');
+
+    const oldPassword = oldPasswordInput ? oldPasswordInput.value.trim() : "";
+    const newPassword = newPasswordInput ? newPasswordInput.value.trim() : "";
+    const newEmail = newEmailInput ? newEmailInput.value.trim() : "";
+
+    // 2. 基本檢查
+    if (!oldPassword) {
+        alert("請輸入舊密碼以進行驗證");
         return;
     }
-    
-    const userInfo = JSON.parse(infoStr);
-    const phone = userInfo.phone; 
+
+    // 3. 從 Session 拿手機號碼
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    const phone = userInfo ? userInfo.phone : null;
 
     if (!phone) {
-        alert("無法讀取帳號資訊，請重新登入");
+        alert("登入逾時，請重新登入");
         return;
     }
 
     const payload = {
         type: 'updateProfile',
-        phone: phone, 
-        oldPassword: oldPassword,
+        phone: phone,
+        oldPassword: oldPassword, // 這次絕對不會是空的了
         newPassword: newPassword,
         newEmail: newEmail
     };
 
     try {
-        console.log("正在發送 POST 請求...");
-        
-        // 1. 直接發送 POST，不使用 no-cors
-        const response = await fetch(GAS_URL, { 
+        const response = await fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify(payload) 
+            body: JSON.stringify(payload)
         });
-
-        // 2. 拿掉 no-cors 後，現在可以正確讀取 JSON 回傳值了
         const result = await response.json();
-
-        if (result.success || result.result === "SUCCESS") {
-            alert("資料修改成功！");
+        
+        if (result.result === "SUCCESS") {
+            alert("修改成功！");
             location.reload();
         } else {
-            alert("修改失敗：" + (result.message || "請檢查舊密碼是否正確"));
+            alert(result.message);
         }
-
-    } catch (error) {
-        console.error("發送失敗:", error);
-        // 如果還是噴 CORS 錯誤，通常是 GAS 那邊沒有「重新部署為新版本」
-        alert("發送失敗，請確認網路連線或 GAS 權限設定");
+    } catch (e) {
+        alert("系統繁忙，請稍後再試");
     }
-}
-    
+}    
 // 控制載入中遮罩的顯示與隱藏
     
 </script>   

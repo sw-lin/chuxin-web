@@ -341,10 +341,20 @@ function closeHistoryModal() {
     }
 } 
 // 掃碼成功處理
+// 掃碼成功處理 (2026 修復版)
 async function onScanSuccess(decodedText) {
-    const eventTitle = decodedText.trim();
+    let eventTitle = decodedText.trim();
     
-    // 檢查是否已報到 (從 currentUser.attendLog 檢查)
+    // 1. 解析 QR Code 格式 (去除 "CHECKIN:日期:" 前綴)
+    if (eventTitle.startsWith("CHECKIN:")) {
+        const parts = eventTitle.split(':');
+        if (parts.length >= 3) {
+            // 精準提取最後面的「活動標題」部分
+            eventTitle = eventTitle.substring(eventTitle.indexOf(':', 8) + 1).trim();
+        }
+    }
+
+    // 2. 檢查前端快取是否已報到
     const alreadyAttended = (currentUser.attendLog || []).some(log => String(log).includes(eventTitle));
     if (alreadyAttended) {
         showToast("此活動已完成報到", "info");
@@ -356,17 +366,33 @@ async function onScanSuccess(decodedText) {
     showToast("報到傳送中...", "info");
 
     try {
-        const res = await fetch(`${GAS_URL}?action=checkIn&event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`);
-        const result = await res.json();
-        if (result.success) {
+        // 3. 【關鍵修正】改用 POST 方法，對齊 GAS 的 params 變數
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'checkin',
+                phone: currentUser.phone,
+                name: currentUser.name,
+                eventTitle: eventTitle // 送出乾淨的活動標題
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.result === "SUCCESS") {
             showToast("報到成功！", "success");
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            syncData(); // 重新整理出席次數
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            }
+            syncData(); // 重新整理出席次數與畫面
+        } else if (result.result === "ALREADY_DONE") {
+            showToast("您已經簽到過囉", "info");
         } else {
             showToast(result.message || "報到失敗", "error");
         }
     } catch (e) {
-        showToast("連線異常，請稍後再試", "error");
+        console.error("Fetch Error:", e);
+        showToast("連線異常，請檢查網路", "error");
     }
 }    
 function startScanner() {

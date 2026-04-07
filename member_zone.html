@@ -566,11 +566,18 @@ function getDirectImageUrl(url) {
 }    
 // 保留進入工作人員模式功能
 async function enterStaffMode() {
+    // 【保險】確保函式內一定抓得到 URL，請換成您的正確 GAS 網址
+    const CURRENT_GAS_URL = "https://script.google.com/macros/s/AKfycbyVn6B_h_U-H7o7_jZ5pD6qC3f7e8k9.../exec"; 
+    
     const staffKey = prompt("請輸入幹部管理金鑰：");
     if (!staffKey) return;
 
+    // 顯示轉圈圈 (如果您有 loadingOverlay)
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'flex';
+
     try {
-        const response = await fetch(GAS_URL, {
+        const response = await fetch(CURRENT_GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'verify_staff_key',
@@ -578,19 +585,22 @@ async function enterStaffMode() {
             })
         });
 
-        // 確保這裡使用的是半形 ()
+        // 這裡一定要用半形括號
         const result = await response.json();
 
-        // 檢查這一行的括號
         if (result.result === "SUCCESS") {
             sessionStorage.setItem('adminKey', staffKey.trim());
-            location.href = 'staff_menu.html'; 
+            // 跳轉前先 alert 確認有進入此區塊
+            console.log("驗證成功，準備跳轉");
+            window.location.href = 'staff_menu.html'; 
         } else {
             alert("金鑰不正確，請重新輸入");
         }
     } catch (e) {
-        console.error(e);
-        alert("驗證發生錯誤，請檢查網路或 GAS 部署狀態");
+        console.error("Fetch 錯誤詳情:", e);
+        alert("驗證發生錯誤，請檢查網址是否正確或 GAS 是否已發布。");
+    } finally {
+        if (loading) loading.style.display = 'none';
     }
 }    
     // 核心：控制載入中遮罩

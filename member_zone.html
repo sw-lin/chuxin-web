@@ -680,7 +680,6 @@ function closeProfileModal() {
 
 // 送出修改
 async function submitProfileUpdate(oldPassword, newPassword, newEmail) {
-    // --- 修正開始：改從 userInfo 物件撈資料 ---
     const infoStr = sessionStorage.getItem('userInfo');
     if (!infoStr) {
         alert("讀取登入資訊失敗，請重新登入");
@@ -688,39 +687,47 @@ async function submitProfileUpdate(oldPassword, newPassword, newEmail) {
     }
     
     const userInfo = JSON.parse(infoStr);
-    const phone = userInfo.phone; // 從 index.html 存好的物件裡拿電話
-    // --- 修正結束 ---
+    const phone = userInfo.phone; 
 
     if (!phone) {
-        console.error("找不到 phone，請檢查登入狀態");
         alert("無法讀取帳號資訊，請重新登入");
         return;
     }
 
     const payload = {
         type: 'updateProfile',
-        phone: phone, // 這是您的 Account，作為後端找人的 Key
+        phone: phone, 
         oldPassword: oldPassword,
         newPassword: newPassword,
         newEmail: newEmail
     };
+
     try {
         console.log("正在發送 POST 請求...");
-        const response = await fetch(CLEAN_GAS_URL, {
-            method: 'POST', // 指定為 POST
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload) // 資料放在 Body 裡
+        
+        // 1. 直接發送 POST，不使用 no-cors
+        const response = await fetch(GAS_URL, { 
+            method: 'POST',
+            body: JSON.stringify(payload) 
         });
 
-        // 由於 no-cors 限制，我們無法讀取 response
-        alert("修改指令已透過 POST 送出！請觀察 GAS 執行紀錄是否變為 doPost。");
-        location.reload();
+        // 2. 拿掉 no-cors 後，現在可以正確讀取 JSON 回傳值了
+        const result = await response.json();
+
+        if (result.success || result.result === "SUCCESS") {
+            alert("資料修改成功！");
+            location.reload();
+        } else {
+            alert("修改失敗：" + (result.message || "請檢查舊密碼是否正確"));
+        }
 
     } catch (error) {
         console.error("發送失敗:", error);
+        // 如果還是噴 CORS 錯誤，通常是 GAS 那邊沒有「重新部署為新版本」
+        alert("發送失敗，請確認網路連線或 GAS 權限設定");
     }
-}    
+}
+    
 // 控制載入中遮罩的顯示與隱藏
     
 </script>   

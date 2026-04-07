@@ -569,13 +569,15 @@ async function enterStaffMode() {
     const staffKey = prompt("請輸入幹部管理金鑰：");
     if (!staffKey) return;
 
-   const response = await fetch(GAS_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-        type: 'verify_staff_key',
-        staffKey: staffKey.trim()  // 確保 K 是大寫
-        })
-    });
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            // 不要用 no-cors，否則拿不到回傳結果
+            body: JSON.stringify({
+                type: 'verify_staff_key',
+                staffKey: staffKey.trim() // 傳送前先去空格
+            })
+        });
 
         const result = await response.json();
 

@@ -565,11 +565,36 @@ function getDirectImageUrl(url) {
     return url; // 若都失敗則回傳原始網址嘗試直接載入
 }    
 // 保留進入工作人員模式功能
-function enterStaffMode() {
-    sessionStorage.setItem('staffInfo', JSON.stringify(currentUser));
-    location.href = 'staff_zone.html';
+async function enterStaffMode() {
+    const staffKey = prompt("請輸入管理金鑰：");
+    if (!staffKey) return;
+
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.classList.remove('hidden');
+
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'verify_staff_key',
+                staffKey: staffKey
+            })
+        });
+        const result = await response.json();
+
+        if (result.result === "SUCCESS") {
+            sessionStorage.setItem('adminKey', staffKey); // 存入金鑰供後台 API 使用
+            location.href = 'staff_menu.html'; // 確保檔案名稱正確
+        } else {
+            alert("金鑰錯誤，無法進入管理區。");
+        }
+    } catch (e) {
+        alert("驗證系統連線失敗");
+    } finally {
+        if (loading) loading.classList.add('hidden');
+    }
 }
-// 核心：控制載入中遮罩
+    // 核心：控制載入中遮罩
 function showLoading(show) {
     const overlay = document.getElementById('loadingOverlay');
     if (!overlay) {
@@ -578,7 +603,45 @@ function showLoading(show) {
     }
     overlay.style.display = show ? 'flex' : 'none';
 }
+    async function verifyStaffAccess() {
+    // 1. 彈出輸入框要求金鑰
+    const staffKey = prompt("請輸入幹部管理金鑰：");
+    
+    // 如果使用者按取消或沒輸入，直接結束
+    if (!staffKey) return;
 
+    // 2. 顯示讀取中 (如果有 loadingOverlay 元件)
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.classList.remove('hidden');
+
+    try {
+        // 3. 向 GAS 發送驗證請求
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'verify_staff_key',
+                staffKey: staffKey  // 對應您 GAS doPost 裡的 params.staffKey
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.result === "SUCCESS") {
+            // 4. 驗證成功：將金鑰暫存在 sessionStorage，供 staff_menu.html 後續使用
+            sessionStorage.setItem('adminKey', staffKey);
+            alert("驗證成功，歡迎進入管理專區");
+            window.location.href = 'staff_menu.html';
+        } else {
+            alert("金鑰錯誤，請重新輸入或聯繫管理員。");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("網路連線異常，請稍後再試");
+    } finally {
+        // 5. 關閉讀取中
+        if (loading) loading.classList.add('hidden');
+    }
+}
 // ==========================================
 // 修正：近期活動預告 (僅顯示一則，優先海報)
 // ==========================================

@@ -566,7 +566,8 @@ function goToRegistration(eventTitle) {
                         class="w-full py-4 rounded-2xl text-sm font-black transition-all ${btnClass}">${btnText}</button>`;
 
     
-    // location.href = `registration.html?event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`;
+    location.href = `event_registration.html
+?event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`;
     
     showToast(`正在進入「${eventTitle}」報名系統...`, "success");
 }

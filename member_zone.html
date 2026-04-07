@@ -566,34 +566,33 @@ function getDirectImageUrl(url) {
 }    
 // 保留進入工作人員模式功能
 async function enterStaffMode() {
-    const staffKey = prompt("請輸入管理金鑰：");
+    const staffKey = prompt("請輸入幹部管理金鑰：");
     if (!staffKey) return;
-
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) loading.classList.remove('hidden');
 
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
+            // 不要用 no-cors，否則拿不到回傳結果
             body: JSON.stringify({
                 type: 'verify_staff_key',
-                staffKey: staffKey
+                staffKey: staffKey.trim() // 傳送前先去空格
             })
         });
+
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            sessionStorage.setItem('adminKey', staffKey); // 存入金鑰供後台 API 使用
-            location.href = 'staff_menu.html'; // 確保檔案名稱正確
+            sessionStorage.setItem('adminKey', staffKey.trim());
+            // 檔名請務必確認是 staff_menu.html 還是 staff_zone.html
+            location.href = 'staff_menu.html'; 
         } else {
-            alert("金鑰錯誤，無法進入管理區。");
+            alert("金鑰不正確，請重新輸入");
         }
     } catch (e) {
-        alert("驗證系統連線失敗");
-    } finally {
-        if (loading) loading.classList.add('hidden');
+        console.error(e);
+        alert("驗證發生錯誤，請檢查網路或 GAS 部署狀態");
     }
-}
+}    
     // 核心：控制載入中遮罩
 function showLoading(show) {
     const overlay = document.getElementById('loadingOverlay');

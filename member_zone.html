@@ -705,7 +705,10 @@ async function submitProfileUpdate() {
         alert("登入逾時，請重新登入");
         return;
     }
-
+    // --- 【開始處理轉圈圈】 ---
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.classList.remove('hidden'); // 顯示轉圈圈
+    
     const payload = {
         type: 'updateProfile',
         phone: phone,
@@ -729,6 +732,10 @@ async function submitProfileUpdate() {
         }
     } catch (e) {
         alert("系統繁忙，請稍後再試");
+    } finally {
+        // --- 【關閉轉圈圈】 ---
+        // 無論成功或失敗，最後一定要隱藏轉圈圈，否則頁面會被鎖死
+        if (loading) loading.classList.add('hidden');
     }
 }    
 // 控制載入中遮罩的顯示與隱藏

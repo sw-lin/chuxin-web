@@ -560,24 +560,18 @@ function getDirectImageUrl(url) {
         // 使用最穩定且支援度最高的縮圖 API
         // sz=w1000 確保 Demo 用的大圖也能清晰顯示
         return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
-    }
-    
+    }    
     return url; // 若都失敗則回傳原始網址嘗試直接載入
 }    
 // 保留進入工作人員模式功能
-async function enterStaffMode() {
-    alert("第一步：成功啟動 enterStaffMode 函式");
-    
+async function enterStaffMode() {    
     const staffKey = prompt("請輸入幹部管理金鑰：");
     if (!staffKey) {
         alert("使用者取消輸入或未填寫");
         return;
     }
-    alert("第二步：您輸入的金鑰是 " + staffKey);
 
     try {
-        alert("第三步：準備連線到 GAS，請確認 URL 是否正確...");
-        
         const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -585,14 +579,9 @@ async function enterStaffMode() {
                 staffKey: staffKey.trim()
             })
         });
-
-        alert("第四步：已收到伺服器回應，準備解析內容...");
         const result = await response.json();
-        
-        alert("第五步：伺服器回傳結果為 " + JSON.stringify(result));
 
         if (result.result === "SUCCESS") { // 注意：這裡絕不能有分號！
-           alert("驗證成功，正在進入管理區...");
            sessionStorage.setItem('staff_key', staffKey.trim()); // 改成 staff_key
            window.location.href = 'staff_menu.html'; 
         } else {

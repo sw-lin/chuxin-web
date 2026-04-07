@@ -18,20 +18,23 @@
 </head>
 <body class="pb-32">
 
-    <nav class="emerald-gradient p-6 rounded-b-[2.5rem] shadow-lg mb-6">
-        <div class="flex items-center justify-between text-white mb-4">
-            <button onclick="history.back()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                <i class="fas fa-chevron-left text-white"></i>
-            </button>
-            <div class="flex flex-col items-center">
-                <div class="flex items-center gap-3">
-                    <span class="text-[10px] font-bold opacity-80 mt-1">你正在報名</span>
-                    <h1 id="displayEventTitle" class="text-xl font-black tracking-tight">載入中...</h1>
-                    <span id="priceBadge" class="text-[10px] font-bold bg-yellow-400 text-emerald-900 px-2 py-0.5 rounded-full">加載費用...</span>
-                </div>
-            </div>
-            <div class="w-10"></div> </div>
-    </nav>
+<nav class="emerald-gradient p-6 rounded-b-[2.5rem] shadow-lg mb-6">
+    <div class="flex items-center justify-between text-white mb-2">
+        <button onclick="history.back()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="text-center flex-1">
+            <span class="text-[10px] font-bold opacity-70 block mb-1">你正在報名</span>
+            <h1 id="displayEventTitle" class="text-xl font-black tracking-tight leading-none">載入活動中...</h1>
+        </div>
+        <div class="w-10"></div>
+    </div>
+    <div class="flex justify-center mt-2">
+        <div id="priceBadge" class="text-[10px] font-bold bg-yellow-400 text-emerald-900 px-4 py-1 rounded-full shadow-inner">
+            讀取費用中...
+        </div>
+    </div>
+</nav>
 
     <main class="px-6">
         <form id="regForm">
@@ -84,10 +87,16 @@
                 <div id="partnerContainer" class="space-y-4"></div>
             </section>
 
-            <div class="input-group">
-                <label class="label-text">備註說明</label>
-                <textarea id="regNote" rows="2" class="input-field bg-white" placeholder="若有特殊需求請告知"></textarea>
+            <div class="px-6 mb-8">
+            <div class="flex items-center gap-2 mb-3 px-2">
+            <div class="w-1.5 h-5 bg-gray-400 rounded-full"></div>
+            <h3 class="font-black text-emerald-900 text-base">其他說明</h3>
             </div>
+            <div class="bg-white p-4 rounded-2xl border border-emerald-50 shadow-sm">
+            <label class="label-text">特別需求備註</label>
+            <textarea id="regNote" rows="3" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 transition-all" placeholder="例如：過敏原、共乘需求說明..."></textarea>
+            </div>
+            </div>            
         </form>
     </main>
 
@@ -108,48 +117,58 @@
         let partners = [];
 
         window.onload = function() {
-            const params = new URLSearchParams(window.location.search);
-            const title = params.get('event');
-            
-            // 模擬從儲存的 Events 中尋找配置 (實際應從 localStorage 抓取完整的 events 清單)
-            // 這裡假設已經有活動資料：
-            const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-            const target = allEvents.find(e => e.title === title) || {};
+        const params = new URLSearchParams(window.location.search);
+        const title = params.get('event');
+    
+        // 從 localStorage 抓取所有活動並匹配（確保 member_zone 有執行過同步）
+        const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+        const target = allEvents.find(e => e.title === title);
 
-            eventConfig = {
-                title: title,
-                memberFee: parseInt(target.memberFee) || 0,
-                guestFee: parseInt(target.guestFee) || 0,
-                needID: target.needID === "是", // 邏輯 3：H欄
-                isTourBus: target.isTourBus === "是" // 邏輯 4：I欄
-            };
-
-            document.getElementById('displayEventTitle').innerText = eventConfig.title;
-            document.getElementById('priceBadge').innerText = `$${eventConfig.memberFee} / $${eventConfig.guestFee}`;
-            document.getElementById('mainName').value = currentUser.name;
-
-            initDynamicUI();
-            updateTotal();
+        if (target) {
+        eventConfig = {
+            title: title,
+            memberFee: parseInt(target.memberFee) || 0,
+            guestFee: parseInt(target.guestFee) || 0,
+            needID: target.needID === "是" || target.needID === "Y", // 邏輯 3：H欄
+            isTourBus: target.isTourBus === "是" || target.isTourBus === "Y" // 邏輯 4：I欄
         };
-
-        function initDynamicUI() {
-            // 身分證控制
-            if(eventConfig.needID) document.getElementById('mainIDSection').classList.remove('hidden');
-
-            // 交通方式控制 (邏輯 4)
-            const transportSelect = document.getElementById('mainTransport');
-            if(eventConfig.isTourBus) {
-                transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一由本會安排)</option>`;
-                transportSelect.disabled = true;
-            } else {
-                transportSelect.innerHTML = `
-                    <option value="自行開車">自行開車</option>
-                    <option value="共乘不開車">共乘不開車</option>
-                `;
-            }
-            checkTransportLogic();
+        } else {
+        // 如果找不到資料，回傳上一頁或顯示錯誤
+        console.error("找不到該活動配置");
         }
 
+    document.getElementById('displayEventTitle').innerText = eventConfig.title;
+    document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 非會員 $${eventConfig.guestFee}`;
+    document.getElementById('mainName').value = currentUser.name || "未登入";
+
+    initDynamicUI();
+    updateTotal();
+    };        
+
+    function initDynamicUI() {
+    // 1. 身分證欄位顯示 (邏輯 3)
+    const idSection = document.getElementById('mainIDSection');
+    if(eventConfig.needID) {
+        idSection.classList.remove('hidden');
+    } else {
+        idSection.classList.add('hidden');
+    }
+
+    // 2. 交通方式控制 (邏輯 4)
+    const transportSelect = document.getElementById('mainTransport');
+    if(eventConfig.isTourBus) {
+        transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一由本會安排)</option>`;
+        transportSelect.disabled = true; // 強制固定
+    } else {
+        transportSelect.innerHTML = `
+            <option value="自行開車">自行開車</option>
+            <option value="共乘不開車">共乘不開車</option>
+        `;
+        transportSelect.disabled = false;
+    }
+    checkTransportLogic();
+    }
+        
         function checkTransportLogic() {
             // 邏輯 5：非遊覽車且自行開車才出現載人數
             const val = document.getElementById('mainTransport').value;
@@ -198,32 +217,69 @@
             document.getElementById('totalAmount').innerText = total;
         }
 
-        async function submitForm() {
-            // 檢查必填 (略...)
-            const payload = {
-                type: 'submit_complex_reg',
-                eventTitle: eventConfig.title,
-                mainPhone: currentUser.phone,
-                registrations: []
-            };
+        // 3. 資料送出邏輯 (修復寫入問題)
+    async function submitForm() {
+    const mainID = document.getElementById('mainID').value;
+    if (eventConfig.needID && !mainID) return alert("請輸入身分證字號");
 
-            // 本人資料
-            payload.registrations.push({
-                name: currentUser.name,
-                phone: currentUser.phone,
-                idNumber: document.getElementById('mainID').value,
-                diet: document.getElementById('mainDiet').value,
-                transport: document.getElementById('mainTransport').value,
-                seats: document.getElementById('mainSeats').value,
-                isMember: true,
-                proxy: "本人",
-                fee: eventConfig.memberFee,
-                note: document.getElementById('regNote').value
-            });
+    const payload = {
+        type: 'submit_complex_reg',
+        eventTitle: eventConfig.title,
+        mainPhone: currentUser.phone,
+        registrations: []
+    };
 
-            // 攜伴資料 (同上邏輯...)
-            // ... (與前次回答邏輯相同，但需抓取 .partner-id 內容)
+    // 本人資料包裝
+    payload.registrations.push({
+        name: currentUser.name,
+        phone: currentUser.phone,
+        idNumber: mainID,
+        diet: document.getElementById('mainDiet').value,
+        transport: document.getElementById('mainTransport').value,
+        seats: document.getElementById('mainSeats').value || 0,
+        isMember: true,
+        proxy: "本人",
+        fee: eventConfig.memberFee,
+        note: document.getElementById('regNote').value
+    });
+
+    // 攜伴資料包裝
+    const pNames = document.querySelectorAll('.partner-name');
+    const pPhones = document.querySelectorAll('.partner-phone');
+    const pIDs = document.querySelectorAll('.partner-id'); // 若有身分證欄位
+    const pDiets = document.querySelectorAll('.partner-diet');
+
+    pNames.forEach((el, i) => {
+        payload.registrations.push({
+            name: el.value,
+            phone: pPhones[i].value,
+            idNumber: pIDs[i] ? pIDs[i].value : "",
+            diet: pDiets[i].value,
+            transport: "", // 攜伴固定不帶交通屬性
+            seats: 0,
+            isMember: false,
+            proxy: currentUser.name,
+            fee: eventConfig.guestFee
+        });
+    });
+
+    // 呼叫 GAS
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (result.result === "SUCCESS") {
+            alert("報名成功！");
+            location.href = "member_zone.html";
+        } else {
+            alert("錯誤：" + result.message);
         }
+    } catch (e) {
+        alert("網路連線異常，請檢查網路狀態");
+    }
+    }        
     </script>
 </body>
 </html>

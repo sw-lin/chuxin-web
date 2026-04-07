@@ -243,6 +243,15 @@ async function syncData() {
         
         if (liveUser) {
             currentUser = liveUser;
+
+            // --- 關鍵新增：將活動完整資訊存入 localStorage ---
+            if (data.events) {
+                // 這裡將資料庫 events 頁面的整表存起來，供報名頁面讀取 H, I, J, K 欄位
+                localStorage.setItem('allEvents', JSON.stringify(data.events));
+                console.log("已同步活動設定到本地快取");
+            }
+            // ------------------------------------------
+            
             // 更新幹部權限
             if (liveUser.role && liveUser.role !== "學員") {
                 const staffBtn = document.getElementById('staffBtn');
@@ -331,6 +340,38 @@ function showLearningHistory() {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }
+    
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('event');
+    
+    // 1. 從 localStorage 抓取剛才存入的資料
+    const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+    
+    // 2. 尋找匹配的活動
+    const target = allEvents.find(e => e.title === title);
+
+    if (target) {
+        // 請確保您的後端 GAS 回傳的屬性名稱正確
+        eventConfig = {
+            title: title,
+            memberFee: parseInt(target.memberFee || target.會員費用) || 0,
+            guestFee: parseInt(target.guestFee || target.非會員費用) || 0,
+            // 邏輯：只要是 '是' 或 'Y' 就開啟
+            needID: (target.needID === "是" || target.needID === "Y"), 
+            isTourBus: (target.isTourBus === "是" || target.isTourBus === "Y")
+        };
+        console.log("讀取到的配置:", eventConfig);
+    }
+
+    // 3. 更新 UI
+    document.getElementById('displayEventTitle').innerText = eventConfig.title;
+    document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 非會員 $${eventConfig.guestFee}`;
+    document.getElementById('mainName').value = currentUser.name || "未登入";
+
+    initDynamicUI(); // 這裡會根據 eventConfig 的內容去隱藏/顯示身分證與遊覽車
+    updateTotal();
+};    
 
 // 關閉彈窗
 function closeHistoryModal() {

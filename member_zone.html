@@ -584,9 +584,8 @@ async function enterStaffMode() {
         if (result.result === "SUCCESS") { // 注意：這裡絕不能有分號！
            sessionStorage.setItem('staff_key', staffKey.trim()); // 改成 staff_key
            window.location.href = 'staff_menu.html'; 
-        } else {
+        } else 
             alert("失敗：金鑰不正確 (ERROR)");
-        }
         catch (e) {
         console.error(e);
         alert("發生嚴重錯誤！錯誤訊息：" + e.message);

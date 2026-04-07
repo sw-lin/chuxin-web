@@ -564,7 +564,7 @@ function getDirectImageUrl(url) {
     return url; // 若都失敗則回傳原始網址嘗試直接載入
 }    
 // 保留進入工作人員模式功能
-async function enterStaffMode() {    
+async function enterStaffMode() {   
     const staffKey = prompt("請輸入幹部管理金鑰：");
     if (!staffKey) {
         alert("使用者取消輸入或未填寫");
@@ -579,14 +579,18 @@ async function enterStaffMode() {
                 staffKey: staffKey.trim()
             })
         });
+
         const result = await response.json();
 
-        if (result.result === "SUCCESS") { // 注意：這裡絕不能有分號！
-           sessionStorage.setItem('staff_key', staffKey.trim()); // 改成 staff_key
-           window.location.href = 'staff_menu.html'; 
-        } else 
+        if (result.result === "SUCCESS") {
+            // 存入金鑰，名稱必須與 staff_menu.html 一致
+            sessionStorage.setItem('staff_key', staffKey.trim()); 
+            window.location.href = 'staff_menu.html'; 
+        } else {
             alert("失敗：金鑰不正確 (ERROR)");
-        catch (e) {
+        }
+    } // <--- 之前您漏掉了這個結束 try 的右大括號
+    catch (e) {
         console.error(e);
         alert("發生嚴重錯誤！錯誤訊息：" + e.message);
     }

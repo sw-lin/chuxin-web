@@ -535,12 +535,37 @@ function renderEventSection(events) {
     }).join('');
 }    
 function goToRegistration(eventTitle) {
-    // 這裡我們不使用 window.location.href 換頁，而是先 console 確認邏輯
-    // 未來我們會在這裡處理轉頁，並帶上電話與活動名稱
-    console.log("準備報名活動:", eventTitle);
-    console.log("當前使用者:", currentUser.name, currentUser.phone);
+  container.innerHTML = events.map(ev => {
+    const isClosed = ev.status === "已截止";
+    const isFull = ev.status === "已額滿";
     
-    // 預留跳轉代碼
+    // 【關鍵新增】檢查當前使用者是否已報名此活動
+    // 假設 currentUser.regLog 是一個陣列，儲存已報名的活動標題
+    const isRegistered = (currentUser.regLog || []).some(title => title === ev.title);
+
+    let btnClass, btnText, clickAction;
+
+    if (isRegistered) {
+        // 已報名狀態
+        btnClass = "bg-gray-100 text-emerald-600 cursor-default border border-emerald-100";
+        btnText = `<i class="fas fa-check-circle mr-2"></i>您已報名完成`;
+        clickAction = ""; // 已報名則不觸發任何動作
+    } else if (isClosed || isFull) {
+        // 截止或額滿狀態
+        btnClass = "bg-gray-100 text-gray-400 cursor-not-allowed";
+        btnText = isClosed ? "報名已截止" : "活動已額滿";
+        clickAction = "";
+    } else {
+        // 正常可報名狀態
+        btnClass = "bg-emerald-700 text-white hover:bg-emerald-800 shadow-sm shadow-emerald-200 active:scale-95";
+        btnText = "立即預約報名";
+        clickAction = `goToRegistration('${ev.title}')`;
+    }
+
+    const actionBtn = `<button onclick="${clickAction}" 
+                        class="w-full py-4 rounded-2xl text-sm font-black transition-all ${btnClass}">${btnText}</button>`;
+
+    
     // location.href = `registration.html?event=${encodeURIComponent(eventTitle)}&phone=${currentUser.phone}`;
     
     showToast(`正在進入「${eventTitle}」報名系統...`, "success");

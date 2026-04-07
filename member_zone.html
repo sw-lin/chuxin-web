@@ -566,18 +566,19 @@ function getDirectImageUrl(url) {
 }    
 // 保留進入工作人員模式功能
 async function enterStaffMode() {
-    // 【保險】確保函式內一定抓得到 URL，請換成您的正確 GAS 網址
-    const CURRENT_GAS_URL = "https://script.google.com/macros/s/AKfycbyVn6B_h_U-H7o7_jZ5pD6qC3f7e8k9.../exec"; 
+    alert("第一步：成功啟動 enterStaffMode 函式");
     
     const staffKey = prompt("請輸入幹部管理金鑰：");
-    if (!staffKey) return;
-
-    // 顯示轉圈圈 (如果您有 loadingOverlay)
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) loading.style.display = 'flex';
+    if (!staffKey) {
+        alert("使用者取消輸入或未填寫");
+        return;
+    }
+    alert("第二步：您輸入的金鑰是 " + staffKey);
 
     try {
-        const response = await fetch(CURRENT_GAS_URL, {
+        alert("第三步：準備連線到 GAS，請確認 URL 是否正確...");
+        
+        const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'verify_staff_key',
@@ -585,22 +586,27 @@ async function enterStaffMode() {
             })
         });
 
-        // 這裡一定要用半形括號
+        alert("第四步：已收到伺服器回應，準備解析內容...");
         const result = await response.json();
+        
+        alert("第五步：伺服器回傳結果為 " + JSON.stringify(result));
 
         if (result.result === "SUCCESS") {
+            alert("第六步：比對成功！準備存入 session 並跳轉");
             sessionStorage.setItem('adminKey', staffKey.trim());
-            // 跳轉前先 alert 確認有進入此區塊
-            console.log("驗證成功，準備跳轉");
+            
+            // 存入幹部資訊 (解決 currentUser 未定義問題)
+            const infoStr = sessionStorage.getItem('userInfo');
+            sessionStorage.setItem('staffInfo', infoStr);
+            
+            alert("最後一步：執行跳轉至 staff_menu.html");
             window.location.href = 'staff_menu.html'; 
         } else {
-            alert("金鑰不正確，請重新輸入");
+            alert("失敗：金鑰不正確 (ERROR)");
         }
     } catch (e) {
-        console.error("Fetch 錯誤詳情:", e);
-        alert("驗證發生錯誤，請檢查網址是否正確或 GAS 是否已發布。");
-    } finally {
-        if (loading) loading.style.display = 'none';
+        console.error(e);
+        alert("發生嚴重錯誤！錯誤訊息：" + e.message);
     }
 }    
     // 核心：控制載入中遮罩

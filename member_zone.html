@@ -707,7 +707,7 @@ async function submitProfileUpdate() {
     }
     // --- 【開始處理轉圈圈】 ---
     const loading = document.getElementById('loadingOverlay');
-    if (loading) loading.classList.remove('hidden'); // 顯示轉圈圈
+    if (loading) loading.style.display = 'flex'; // 強制顯示為 flex 居中 顯示轉圈圈
     
     const payload = {
         type: 'updateProfile',
@@ -735,11 +735,9 @@ async function submitProfileUpdate() {
     } finally {
         // --- 【關閉轉圈圈】 ---
         // 無論成功或失敗，最後一定要隱藏轉圈圈，否則頁面會被鎖死
-        if (loading) loading.classList.add('hidden');
+        if (loading) loading.style.display = 'none'; // 隱藏
     }
-}    
-// 控制載入中遮罩的顯示與隱藏
-    
+}        
 </script>   
 </body>
 </html>

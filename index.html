@@ -205,6 +205,8 @@ async function handleLogin() {
 
     if (u === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
+        // 訪客模式建議也清空一下 events 避免吃到舊資料
+        sessionStorage.removeItem('allEvents');
         window.location.href = 'member_zone.html';
         return;
     }
@@ -214,14 +216,44 @@ async function handleLogin() {
     btn.disabled = true; btn.innerText = "驗證中...";
     
     try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'login', phone: u, password: p }) });
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ type: 'login', phone: u, password: p }) 
+        });
         const result = await res.json();
+        
         if (result.result === "SUCCESS") {
+            // 1. 儲存用戶資訊
             sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
+            
+            // 2. 【核心修正】儲存活動清單到 sessionStorage
+            if (result.events && Array.isArray(result.events)) {
+                // 這裡做一次規範化，確保欄位名稱與報名頁 (needId) 一致
+                const sanitizedEvents = result.events.map(e => ({
+                    title: e.title,
+                    needId: e.needId || e.needID, // 雙重保險，不管後端給哪個都吃
+                    isTourBus: e.isTourBus,
+                    memberFee: e.memberFee,
+                    guestFee: e.guestFee
+                }));
+                sessionStorage.setItem('allEvents', JSON.stringify(sanitizedEvents));
+                console.log("活動清單已同步到緩存:", sanitizedEvents);
+            } else {
+                console.warn("後端未回傳活動清單");
+                sessionStorage.setItem('allEvents', JSON.stringify([]));
+            }
+
             window.location.href = 'member_zone.html';
-        } else { alert("登入失敗：帳號或密碼錯誤"); }
-    } catch (e) { alert("網路異常"); }
-    finally { btn.disabled = false; btn.innerText = "確認進入"; }
+        } else { 
+            alert("登入失敗：帳號或密碼錯誤"); 
+        }
+    } catch (e) { 
+        console.error("登入錯誤:", e);
+        alert("網路異常"); 
+    } finally { 
+        btn.disabled = false; 
+        btn.innerText = "確認進入"; 
+    }
 }
 
 function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }

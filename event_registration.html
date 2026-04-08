@@ -273,15 +273,16 @@
 
         pNames.forEach((el, i) => {
             payload.registrations.push({
-                name: el.value,
-                phone: pPhones[i].value,
-                idNumber: pIDs[i] ? pIDs[i].value : "",
-                diet: pDiets[i].value,
-                transport: "", 
-                seats: 0,
-                isMember: false,
-                proxy: currentUser.name,
-                fee: eventConfig.guestFee
+                name: document.getElementById('mainName').value,
+                phone: document.getElementById('mainPhone').value,
+                idNumber: mainIdValue, // 使用修正後的變數名稱
+                diet: document.getElementById('mainDiet').value,
+                transport: document.getElementById('mainTransport').value,
+                seats: document.getElementById('mainSeats').value || 0,
+                isMember: true,
+                proxy: "本人",
+                fee: eventConfig.memberFee,
+                note: document.getElementById('regNote').value
             });
         });
 

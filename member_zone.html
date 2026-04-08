@@ -508,7 +508,6 @@ function renderEventSection(events, registrations) {
     const container = document.getElementById('eventSection');
     if (!container) return;
     
-    // 清空舊內容
     container.innerHTML = '';
 
     if (!events || events.length === 0) {
@@ -518,21 +517,19 @@ function renderEventSection(events, registrations) {
     if (wrapper) wrapper.classList.remove('hidden');
 
     events.forEach(ev => {
-        // --- 【核心修正】：只比對活動名稱，不比對電話 (因為資料裡沒電話) ---
+        // --- 容錯比對：確保標題與已報名清單一致 ---
         const regInfo = (registrations || []).find(reg => {
-            const rTitle = reg.title || reg.eventTitle || ""; // 容錯多種標籤名
+            const rTitle = reg.title || reg.eventTitle || "";
             return rTitle.toString().trim() === ev.title.toString().trim();
         });
 
         const isRegistered = !!regInfo;
-        const isCheckedIn = regInfo && regInfo.status === "已報到"; 
-        // 費用顯示優化：如果活動資訊裡沒錢，嘗試從 ev 物件的不同屬性抓
-        const mFee = ev.memberFee || ev.memberPrice || 0;
-        const gFee = ev.guestFee || ev.guestPrice || 0;
+        const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是"); 
         
+        const mFee = ev.memberFee || 0;
+        const gFee = ev.guestFee || 0;
         const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
 
-        // 建立按鈕 HTML
         let actionBtn = '';
         if (isRegistered) {
             const btnText = isCheckedIn ? '已完成報到' : '已報名成功';
@@ -549,7 +546,6 @@ function renderEventSection(events, registrations) {
                 </button>`;
         }
 
-        // 組合卡片
         let cardHtml = '';
         if (posterUrl) {
             cardHtml = `
@@ -575,13 +571,14 @@ function renderEventSection(events, registrations) {
                         </div>
                         <div class="flex items-center gap-3 text-xs">
                             <i class="fas fa-tag text-emerald-600"></i>
-                            <span class="font-bold">費用：</span>會員 $${ev.memberFee || 0} / 非會員 $${ev.guestFee || 0}
+                            <span class="font-bold">費用：</span>會員 $${mFee} / 非會員 $${gFee}
                         </div>
                     </div>
                     ${actionBtn}
                 </div>`;
         }
-        container.insertAdjacentHTML('beforeend', cardHtml); // 使用 insertAdjacentHTML 效能較好
+        container.insertAdjacentHTML('beforeend', cardHtml);
+    }); // <-- 就是這裡漏掉了閉合括號！
 }    
 // 獨立的跳轉函式 (保持單純)
 function goToRegistration(title) {

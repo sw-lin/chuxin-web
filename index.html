@@ -217,10 +217,12 @@ async function handleLogin() {
     
     try {
         console.log("正在發送請求到:", GAS_URL); // 加這行，看看印出來的網址對不對
+        console.log("【發送測試】內容：", { type: 'login', phone: u, password: p });
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 
         });
+        console.log("【發送測試】HTTP 狀態碼:", res.status);
         const result = await res.json();
         console.log("【1. GAS 回傳原始資料】:", result);
         
@@ -253,7 +255,7 @@ async function handleLogin() {
             alert("登入失敗：帳號或密碼錯誤"); 
         }
     } catch (e) { 
-        console.error("登入錯誤:", e);
+        console.error("【發送測試】連線發生致命錯誤:", e);
         alert("網路異常"); 
     } finally { 
         btn.disabled = false; 

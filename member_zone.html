@@ -507,49 +507,52 @@ function renderEventSection(events, registrations) {
     const wrapper = document.getElementById('registrationWrapper');
     const container = document.getElementById('eventSection');
     if (!container) return;
-    container.innerHTML = '';
-    
+
+    // 1. 檢查有無資料
     if (!events || events.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
+        container.innerHTML = '';
         return;
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
-        events.forEach(ev => {
-            // --- 【關鍵修正 1】：改為只比對標題，並取得該筆報名資訊 ---
-            const regInfo = (registrations || []).find(reg => 
+    // 2. 產出卡片 HTML
+    const cardsHtml = events.map(ev => {
+        // 比對報名狀態
+        const regInfo = (registrations || []).find(reg => 
             String(reg.title).trim() === String(ev.title).trim()
         );
         const isRegistered = !!regInfo;
-        const isCheckedIn = regInfo && regInfo.status === "已報到"; // 判斷 GAS 傳回的狀態
+        const isCheckedIn = regInfo && regInfo.status === "已報到";
+        
+        // 轉換圖片網址
         const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
 
-let btnHtml = '';
+        // 決定按鈕樣式 (修正變數名為 btnHtml)
+        let btnHtml = '';
         if (isRegistered) {
-            // --- 【關鍵修正 2】：根據狀態顯示「已報名」或「已完成報到」 ---
             const btnText = isCheckedIn ? '已完成報到' : '已報名成功';
             const btnIcon = isCheckedIn ? 'fa-user-check' : 'fa-check-circle';
-            
             btnHtml = `
                 <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
                     <i class="fas ${btnIcon} mr-2"></i>${btnText}
                 </button>`;
         } else {
-            // 未報名，顯示報名按鈕
             btnHtml = `
                 <button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
                         class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
                     立即報名
                 </button>`;
         }
-                
+
+        // 回傳單張卡片的 HTML
         if (posterUrl) {
             return `
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
                     <img src="${posterUrl}" class="w-full h-auto block" onerror="this.style.display='none'">
                     <div class="p-6">
                         <h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>
-                        ${actionBtn}
+                        ${btnHtml}
                     </div>
                 </div>`;
         } else {
@@ -570,10 +573,13 @@ let btnHtml = '';
                             <span class="font-bold">費用：</span>會員 $${ev.memberFee || 0} / 非會員 $${ev.guestFee || 0}
                         </div>
                     </div>
-                    ${actionBtn}
+                    ${btnHtml}
                 </div>`;
         }
-    }).join(''); // <--- 就是這個 .join('')！沒有它的話，卡片之間會產生逗號並擠壓版面
+    }).join(''); // 將陣列結合成一個長字串
+
+    // 3. 最後一次填入容器
+    container.innerHTML = cardsHtml;
 }    
 // 獨立的跳轉函式 (保持單純)
 function goToRegistration(title) {

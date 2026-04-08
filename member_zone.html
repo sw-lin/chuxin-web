@@ -507,58 +507,42 @@ function renderEventSection(events, registrations) {
     const wrapper = document.getElementById('registrationWrapper');
     const container = document.getElementById('eventSection');
     if (!container) return;
-
+    container.innerHTML = '';
+    
     if (!events || events.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
         return;
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
-    // 安全獲取當前使用者手機 (加上防錯處理)
-    let userPhone = "";
-    if (typeof currentUser !== 'undefined' && currentUser && currentUser.phone) {
-        userPhone = String(currentUser.phone).replace(/\D/g, "").slice(-9);
-    }
-
-    // ⬇️ 注意最後面的 .join('') 絕對不能漏掉 ⬇️
-    container.innerHTML = events.map(ev => {
-        const isClosed = ev.status === "已截止";
-        const isFull = ev.status === "已額滿";
-        
-        // 核心邏輯：比對 registrations 陣列
-        const isRegistered = (registrations || []).some(reg => {
-            const regPhone = String(reg.手機號碼 || "").replace(/\D/g, "").slice(-9);
-            return String(reg.活動標題).trim() === String(ev.title).trim() && 
-                   regPhone === userPhone && 
-                   userPhone !== ""; 
-        });
-
-        let btnClass, btnText, clickAction, isDisabled;
-
-        if (isRegistered) {
-            btnClass = "bg-gray-200 text-gray-500 cursor-not-allowed";
-            btnText = `<i class="fas fa-check-circle mr-2"></i>您已完成報名`;
-            clickAction = "event.preventDefault();";
-            isDisabled = "disabled";
-        } else if (isClosed || isFull) {
-            btnClass = "bg-gray-200 text-gray-400 cursor-not-allowed";
-            btnText = isClosed ? "報名已截止" : "活動已額滿";
-            clickAction = "event.preventDefault();";
-            isDisabled = "disabled";
-        } else {
-            btnClass = "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md active:scale-95";
-            btnText = "立即預約報名";
-            clickAction = `location.href='event_registration.html?event=${encodeURIComponent(ev.title)}'`;
-            isDisabled = "";
-        }
-
-        const actionBtn = `
-            <button onclick="${clickAction}" ${isDisabled}
-                    class="w-full py-4 rounded-xl text-sm font-black transition-all ${btnClass}">
-                ${btnText}
-            </button>`;
-        // 尋找這行並替換
+        events.forEach(ev => {
+            // --- 【關鍵修正 1】：改為只比對標題，並取得該筆報名資訊 ---
+            const regInfo = (registrations || []).find(reg => 
+            String(reg.title).trim() === String(ev.title).trim()
+        );
+        const isRegistered = !!regInfo;
+        const isCheckedIn = regInfo && regInfo.status === "已報到"; // 判斷 GAS 傳回的狀態
         const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
+
+let btnHtml = '';
+        if (isRegistered) {
+            // --- 【關鍵修正 2】：根據狀態顯示「已報名」或「已完成報到」 ---
+            const btnText = isCheckedIn ? '已完成報到' : '已報名成功';
+            const btnIcon = isCheckedIn ? 'fa-user-check' : 'fa-check-circle';
+            
+            btnHtml = `
+                <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
+                    <i class="fas ${btnIcon} mr-2"></i>${btnText}
+                </button>`;
+        } else {
+            // 未報名，顯示報名按鈕
+            btnHtml = `
+                <button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
+                        class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
+                    立即報名
+                </button>`;
+        }
+                
         if (posterUrl) {
             return `
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">

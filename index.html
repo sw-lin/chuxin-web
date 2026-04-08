@@ -222,6 +222,15 @@ async function handleLogin() {
             method: 'POST', 
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 
         });
+        const rawText = await res.text(); // 先拿原始文字
+console.log("【發送測試】GAS 回傳的原始內容:", rawText);
+
+if (rawText.includes("<!DOCTYPE html>")) {
+    console.error("【嚴重錯誤】GAS 回傳的是網頁而不是資料！請檢查後端代碼語法。");
+    alert("後端系統異常，回傳了 HTML 錯誤頁面");
+    return;
+}  
+        
         console.log("【發送測試】HTTP 狀態碼:", res.status);
         const result = await res.json();
         console.log("【1. GAS 回傳原始資料】:", result);

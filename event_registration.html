@@ -235,95 +235,97 @@
         document.getElementById('totalAmount').innerText = total;
     }
 async function submitForm(event) {
-        // 阻止預設行為 (如果有)
-        if (event) event.preventDefault();
+    // 1. 防止頁面重新整理
+    if (event && event.preventDefault) event.preventDefault();
 
-        try {
-            // 1. 抓取主要元素 (請確認 HTML 裡的 ID 確實是 mainID)
-            const mainIDEl = document.getElementById('mainID');
-            const mainID = mainIDEl ? mainIDEl.value.trim() : "";
-            const regNote = document.getElementById('regNote') ? document.getElementById('regNote').value : "";
+    console.log("--- 開始執行報名程序 ---");
 
-            if (eventConfig.needId && !mainID) {
-                alert("請輸入身分證字號");
+    try {
+        // 2. 獲取主要報名者身分證與備註 (請確保 HTML ID 為 mainID 與 regNote)
+        const mainIDEl = document.getElementById('mainID');
+        const mainID = mainIDEl ? mainIDEl.value.trim() : "";
+        const regNoteEl = document.getElementById('regNote');
+        const regNote = regNoteEl ? regNoteEl.value : "";
+
+        if (eventConfig.needId && !mainID) {
+            alert("請輸入身分證字號");
+            return;
+        }
+
+        // 3. 檢查攜伴姓名是否填寫
+        const pNames = document.querySelectorAll('.partner-name');
+        for (let el of pNames) {
+            if (!el.value.trim()) {
+                alert("請填寫所有攜伴訪客的姓名");
                 return;
             }
-
-            // 2. 檢查攜伴資料完整性
-            const pNames = document.querySelectorAll('.partner-name');
-            for (let el of pNames) {
-                if (!el.value.trim()) {
-                    alert("請填寫所有訪客姓名");
-                    return;
-                }
-            }
-
-            // 3. 包裝資料
-            const payload = {
-                type: 'register', 
-                eventTitle: eventConfig.title,
-                mainPhone: currentUser.phone,
-                registrations: []
-            };
-
-            // 本人
-            payload.registrations.push({
-                name: currentUser.name,
-                phone: currentUser.phone,
-                idNumber: mainID,
-                diet: document.getElementById('mainDiet').value,
-                transport: document.getElementById('mainTransport').value,
-                seats: document.getElementById('mainSeats').value || 0,
-                isMember: true,
-                proxy: "本人",
-                fee: eventConfig.memberFee,
-                note: regNote
-            });
-
-            // 攜伴
-            const pPhones = document.querySelectorAll('.partner-phone');
-            const pIDs = document.querySelectorAll('.partner-id');
-            const pDiets = document.querySelectorAll('.partner-diet');
-
-            pNames.forEach((el, i) => {
-                payload.registrations.push({
-                    name: el.value.trim(),
-                    phone: pPhones[i].value.trim(),
-                    idNumber: pIDs[i] ? pIDs[i].value.trim() : "",
-                    diet: pDiets[i].value,
-                    transport: "",
-                    seats: 0,
-                    isMember: false,
-                    proxy: currentUser.name,
-                    fee: eventConfig.guestFee,
-                    note: ""
-                });
-            });
-
-            // 【偵錯關鍵】在送出前，先在瀏覽器 F12 顯示檢查
-            console.log("準備送出的資料內容:", payload);
-
-            // 4. 執行傳送
-            const response = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-            
-            const result = await response.json();
-            console.log("後端回傳結果:", result);
-
-            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
-                alert(result.message || "報名成功！");
-                location.href = "member_zone.html";
-            } else {
-                alert("後端回傳錯誤：" + result.message);
-            }
-
-        } catch (e) {
-            console.error("前端執行出錯:", e);
-            alert("腳本執行錯誤，請開啟 F12 查看 Console");
         }
-    }    
+
+        // 4. 包裝資料
+        const payload = {
+            type: 'register',
+            eventTitle: eventConfig.title,
+            mainPhone: currentUser.phone,
+            registrations: []
+        };
+
+        // 加入本人
+        payload.registrations.push({
+            name: currentUser.name,
+            phone: currentUser.phone,
+            idNumber: mainID,
+            diet: document.getElementById('mainDiet').value,
+            transport: document.getElementById('mainTransport').value,
+            seats: document.getElementById('mainSeats').value || 0,
+            isMember: true,
+            proxy: "本人",
+            fee: eventConfig.memberFee,
+            note: regNote
+        });
+
+        // 加入攜伴
+        const pPhones = document.querySelectorAll('.partner-phone');
+        const pIDs = document.querySelectorAll('.partner-id');
+        const pDiets = document.querySelectorAll('.partner-diet');
+
+        pNames.forEach((el, i) => {
+            payload.registrations.push({
+                name: el.value.trim(),
+                phone: pPhones[i] ? pPhones[i].value.trim() : "",
+                idNumber: pIDs[i] ? pIDs[i].value.trim() : "",
+                diet: pDiets[i] ? pDiets[i].value : "不拘",
+                transport: "",
+                seats: 0,
+                isMember: false,
+                proxy: currentUser.name, // 代理人就是報名本人
+                fee: eventConfig.guestFee,
+                note: ""
+            });
+        });
+
+        console.log("準備送出的 Payload:", payload);
+
+        // 5. 正式發送給 GAS
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        console.log("GAS 回傳結果:", result);
+
+        if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
+            alert(result.message || "報名成功！");
+            location.href = "member_zone.html";
+        } else {
+            alert("系統回報錯誤：" + result.message);
+        }
+
+    } catch (e) {
+        console.error("JavaScript 執行錯誤細節:", e);
+        alert("程式執行出錯：" + e.message + "\n請再次檢查 Console。");
+    }
+}    
 </script>
 </body>
 </html>

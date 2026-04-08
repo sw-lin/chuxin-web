@@ -221,8 +221,10 @@ async function handleLogin() {
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 
         });
         const result = await res.json();
+        console.log("【1. GAS 回傳原始資料】:", result);
         
         if (result.result === "SUCCESS") {
+            
             // 1. 儲存用戶資訊
             sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
             
@@ -238,11 +240,13 @@ async function handleLogin() {
                 }));
                 sessionStorage.setItem('allEvents', JSON.stringify(sanitizedEvents));
                 console.log("活動清單已同步到緩存:", sanitizedEvents);
+                console.log("【2. 檢查活動清單長度】:", result.events.length);
             } else {
                 console.warn("後端未回傳活動清單");
+                console.warn("【警告】GAS 回傳的資料中沒有 events 欄位！");
                 sessionStorage.setItem('allEvents', JSON.stringify([]));
             }
-
+            console.log("已報名紀錄已同步:", result.registrations);
             window.location.href = 'member_zone.html';
         } else { 
             alert("登入失敗：帳號或密碼錯誤"); 

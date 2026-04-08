@@ -118,7 +118,7 @@
     let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false };
     let partners = [];
 
-    window.onload = function() {
+window.onload = function() {
         const params = new URLSearchParams(window.location.search);
         const title = params.get('event');
         
@@ -128,7 +128,6 @@
             return;
         }
 
-        // 1. 重複報名檢查邏輯
         const userEvents = JSON.parse(sessionStorage.getItem('userEvents')) || [];
         if (userEvents.some(ev => ev.title === title)) {
             alert("您已經報名過此活動囉！");
@@ -136,25 +135,24 @@
             return;
         }
 
-        // 2. 從 sessionStorage 抓取活動清單 (統一來源)
-       const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
-       const target = allEvents.find(e => e.title === title);
+        const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
+        // 增加 .trim() 確保比對時不會被空格干擾
+        const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
 
-       const isTrue = (val) => {
-        if (!val) return false;
-        const s = String(val).trim().toUpperCase();
-        return s === 'Y' || s === '是' || s === 'TRUE';
-       };
+        const isTrue = (val) => {
+            if (!val) return false;
+            const s = String(val).trim().toUpperCase();
+            return s === 'Y' || s === '是' || s === 'TRUE';
+        };
         
-            // 注意：這裡將 needID 改為 needId，isTourBus 保持小寫
-            eventConfig = {
-                title: title || "未知活動", // 強制確保這是有值的
-                memberFee: parseInt(target.memberFee || target.memberPrice) || 0,
-                guestFee: parseInt(target.guestFee || target.guestPrice) || 0,
-                needId: isTrue(target.needId || target.needID),
-                isTourBus: isTrue(target.isTourBus)
-            };
-        
+        // --- 核心安全修正：確保 target 存在才讀取屬性 ---
+        eventConfig = {
+            title: title || "未知活動",
+            memberFee: target ? (parseInt(target.memberFee || target.memberPrice) || 0) : 0,
+            guestFee: target ? (parseInt(target.guestFee || target.guestPrice) || 0) : 0,
+            needId: target ? isTrue(target.needId || target.needID) : false,
+            isTourBus: target ? isTrue(target.isTourBus) : false
+        };
 
         // 更新 UI
         document.getElementById('mainName').value = currentUser.name || "";
@@ -163,7 +161,7 @@
         
         initDynamicUI();
         updateTotal();
-    };        
+    };
 
     function initDynamicUI() {
         const idSection = document.getElementById('mainIDSection');

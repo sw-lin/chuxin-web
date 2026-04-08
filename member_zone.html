@@ -304,7 +304,7 @@ function updateUI(user, calendar, events) {
     );
 
     renderCalendarActivity(calendar);
-    renderEventSection(data.events, data.registrations);
+    renderEventSection(data.events || [], data.registrations || []);
 }
 // 點擊卡片觸發的函式
 function showLearningHistory() {
@@ -512,7 +512,6 @@ function renderEventSection(events, registrations) {
     const container = document.getElementById('eventSection');
     if (!container) return;
 
-    // 如果沒有活動，隱藏區塊
     if (!events || events.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
         return;
@@ -520,20 +519,23 @@ function renderEventSection(events, registrations) {
     if (wrapper) wrapper.classList.remove('hidden');
 
     // 取得當前使用者手機 (用於比對報名紀錄)
-    const userPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, "").slice(-9) : "";
+    // 增加防錯處理，確保 currentUser 存在
+    const userPhone = (window.currentUser && currentUser.phone) 
+        ? String(currentUser.phone).replace(/\D/g, "").slice(-9) 
+        : "";
 
     container.innerHTML = events.map(ev => {
-        // 1. 狀態判斷
         const isClosed = ev.status === "已截止";
         const isFull = ev.status === "已額滿";
         
-        // 2. 核心邏輯：比對 registrations 陣列中是否有此使用者的報名紀錄
+        // 核心邏輯：比對 registrations 陣列
         const isRegistered = (registrations || []).some(reg => {
             const regPhone = String(reg.手機號碼 || "").replace(/\D/g, "").slice(-9);
-            return String(reg.活動標題).trim() === String(ev.title).trim() && regPhone === userPhone;
+            return String(reg.活動標題).trim() === String(ev.title).trim() && 
+                   regPhone === userPhone && 
+                   userPhone !== ""; // 確保手機號碼不為空才算匹配
         });
 
-        // 3. 定義按鈕樣式與行為
         let btnClass, btnText, clickAction, isDisabled;
 
         if (isRegistered) {
@@ -559,13 +561,13 @@ function renderEventSection(events, registrations) {
                 ${btnText}
             </button>`;
 
-        // 4. 渲染卡片 (優先檢查是否有海報 URL)
-        const posterUrl = ev.poster && ev.poster.includes('http') ? getDirectImageUrl(ev.poster) : null;
+        // 判斷是否使用海報模式
+        const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
 
         if (posterUrl) {
             return `
                 <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
-                    <img src="${posterUrl}" class="w-full h-auto block" onerror="this.parentElement.style.display='none'">
+                    <img src="${posterUrl}" class="w-full h-auto block" onerror="this.style.display='none'">
                     <div class="p-6">
                         <h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>
                         ${actionBtn}
@@ -586,15 +588,14 @@ function renderEventSection(events, registrations) {
                         </div>
                         <div class="flex items-center gap-3 text-xs">
                             <i class="fas fa-tag text-emerald-600"></i>
-                            <span class="font-bold">費用：</span>會員 $${ev.memberFee} / 非會員 $${ev.guestFee}
+                            <span class="font-bold">費用：</span>會員 $${ev.memberFee || 0} / 非會員 $${ev.guestFee || 0}
                         </div>
-                        <p class="text-[11px] leading-relaxed text-gray-400 pt-3 border-t border-gray-50">${ev.desc || ''}</p>
                     </div>
                     ${actionBtn}
                 </div>`;
         }
     }).join('');
-}
+}    
 // 獨立的跳轉函式 (保持單純)
 function goToRegistration(title) {
     location.href = `event_registration.html?event=${title}&phone=${currentUser.phone}`;

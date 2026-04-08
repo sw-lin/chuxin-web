@@ -136,7 +136,7 @@ window.onload = function() {
         }
 
         const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
-        // 增加 .trim() 確保比對時不會被空格干擾
+        console.log("目前緩存的活動清單:", allEvents); // 這行能幫你確認 H, I, J, K 有沒有被抓進來        // 增加 .trim() 確保比對時不會被空格干擾
         const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
 
         const isTrue = (val) => {

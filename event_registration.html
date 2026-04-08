@@ -125,19 +125,21 @@
         const target = allEvents.find(e => e.title === title);
 
     if (target) {
-        eventConfig = {
+        const checkValue = (val) => {
+        if (!val) return false;
+        const s = String(val).trim().toUpperCase();
+        return s === 'Y' || s === '是'; // 同時支援 Y 和 是
+    };
+
+    eventConfig = {
         title: title,
         memberFee: parseInt(target.memberFee) || 0,
         guestFee: parseInt(target.guestFee) || 0,
-        // 修正判斷：包含 "是" 或 "Y" (不分大小寫) 
-        needID: (String(target.needID).toUpperCase().includes('Y') || String(target.needID).includes('是')),
-        isTourBus: (String(target.isTourBus).toUpperCase().includes('Y') || String(target.isTourBus).includes('是'))
-        };
-         console.log("解析後的活動配置:", eventConfig);
-    }else {
-        // 如果找不到資料，回傳上一頁或顯示錯誤
-        console.error("找不到該活動配置");
-    }
+        needID: checkValue(target.needID),
+        isTourBus: checkValue(target.isTourBus)
+    };
+    console.log("最終解析配置:", eventConfig);
+    } 
 
     document.getElementById('displayEventTitle').innerText = eventConfig.title;
     document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 非會員 $${eventConfig.guestFee}`;

@@ -111,7 +111,7 @@
     </div>
 
     <script>
-        const GAS_URL = "您的GAS_URL";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
         let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
         let eventConfig = { title: "", memberFee: 0, guestFee: 0, needID: false, isTourBus: false };
         let partners = [];
@@ -124,18 +124,20 @@
         const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
         const target = allEvents.find(e => e.title === title);
 
-        if (target) {
+    if (target) {
         eventConfig = {
-            title: title,
-            memberFee: parseInt(target.memberFee) || 0,
-            guestFee: parseInt(target.guestFee) || 0,
-            needID: target.needID === "是" || target.needID === "Y", // 邏輯 3：H欄
-            isTourBus: target.isTourBus === "是" || target.isTourBus === "Y" // 邏輯 4：I欄
+        title: title,
+        memberFee: parseInt(target.memberFee) || 0,
+        guestFee: parseInt(target.guestFee) || 0,
+        // 修正判斷：包含 "是" 或 "Y" (不分大小寫) 
+        needID: (String(target.needID).toUpperCase().includes('Y') || String(target.needID).includes('是')),
+        isTourBus: (String(target.isTourBus).toUpperCase().includes('Y') || String(target.isTourBus).includes('是'))
         };
-        } else {
+         console.log("解析後的活動配置:", eventConfig);
+    }else {
         // 如果找不到資料，回傳上一頁或顯示錯誤
         console.error("找不到該活動配置");
-        }
+    }
 
     document.getElementById('displayEventTitle').innerText = eventConfig.title;
     document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 非會員 $${eventConfig.guestFee}`;

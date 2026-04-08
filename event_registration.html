@@ -231,6 +231,34 @@ window.onload = function() {
         const total = eventConfig.memberFee + (partners.length * eventConfig.guestFee);
         document.getElementById('totalAmount').innerText = total;
     }
+    
+    function handleGetEventsPage() {
+  try {
+    var ss = SpreadsheetApp.openById("你的試算表ID");
+    var sheet = ss.getSheetByName("events"); // 確保工作表名稱是小寫的 events
+    if (!sheet) return { result: "ERROR", message: "找不到 events 工作表" };
+
+    var data = sheet.getDataRange().getValues();
+    var events = [];
+
+    // 從第二列開始 (i=1)
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      if (row[0]) { // 只要第一欄（活動標題）有值就撈取
+        events.push({
+          title: row[0],             // A 欄：活動名稱
+          needIdCard: row[7] === "Y", // H 欄：需要身分證 (索引 7)
+          isTourBus: row[8] === "Y",  // I 欄：是遊覽車行 (索引 8)
+          memberFee: row[9],          // J 欄：會員報名費 (索引 9)
+          guestFee: row[10]           // K 欄：非會員報名費 (索引 10)
+        });
+      }
+    }
+    return { result: "SUCCESS", data: events };
+  } catch (e) {
+    return { result: "ERROR", message: "活動資料撈取失敗: " + e.toString() };
+  }
+}    
 async function submitForm(event) {
     // 1. 防止頁面重新整理
     if (event && event.preventDefault) event.preventDefault();

@@ -507,56 +507,57 @@ function renderEventSection(events, registrations) {
     const wrapper = document.getElementById('registrationWrapper');
     const container = document.getElementById('eventSection');
     if (!container) return;
+    
+    // 清空舊內容
+    container.innerHTML = '';
 
-    // 1. 檢查有無資料
     if (!events || events.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
-        container.innerHTML = '';
         return;
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
-    // 2. 產出卡片 HTML
-    const cardsHtml = events.map(ev => {
-        // 比對報名狀態
+    events.forEach(ev => {
+        // --- 【核心修正】：只比對活動名稱，不比對電話 (因為資料裡沒電話) ---
         const regInfo = (registrations || []).find(reg => 
             String(reg.title).trim() === String(ev.title).trim()
         );
+
         const isRegistered = !!regInfo;
-        const isCheckedIn = regInfo && regInfo.status === "已報到";
+        const isCheckedIn = regInfo && regInfo.status === "已報到"; 
         
-        // 轉換圖片網址
         const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
 
-        // 決定按鈕樣式 (修正變數名為 btnHtml)
-        let btnHtml = '';
+        // 建立按鈕 HTML
+        let actionBtn = '';
         if (isRegistered) {
             const btnText = isCheckedIn ? '已完成報到' : '已報名成功';
             const btnIcon = isCheckedIn ? 'fa-user-check' : 'fa-check-circle';
-            btnHtml = `
+            actionBtn = `
                 <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
                     <i class="fas ${btnIcon} mr-2"></i>${btnText}
                 </button>`;
         } else {
-            btnHtml = `
+            actionBtn = `
                 <button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
                         class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
                     立即報名
                 </button>`;
         }
 
-        // 回傳單張卡片的 HTML
+        // 組合卡片
+        let cardHtml = '';
         if (posterUrl) {
-            return `
+            cardHtml = `
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
                     <img src="${posterUrl}" class="w-full h-auto block" onerror="this.style.display='none'">
                     <div class="p-6">
                         <h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>
-                        ${btnHtml}
+                        ${actionBtn}
                     </div>
                 </div>`;
         } else {
-            return `
+            cardHtml = `
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
                     <div class="flex justify-between items-start mb-4">
                         <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
@@ -573,13 +574,11 @@ function renderEventSection(events, registrations) {
                             <span class="font-bold">費用：</span>會員 $${ev.memberFee || 0} / 非會員 $${ev.guestFee || 0}
                         </div>
                     </div>
-                    ${btnHtml}
+                    ${actionBtn}
                 </div>`;
         }
-    }).join(''); // 將陣列結合成一個長字串
-
-    // 3. 最後一次填入容器
-    container.innerHTML = cardsHtml;
+        container.innerHTML += cardHtml;
+    });
 }    
 // 獨立的跳轉函式 (保持單純)
 function goToRegistration(title) {

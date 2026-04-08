@@ -361,10 +361,6 @@ window.onload = function() {
             isTourBus: (target.isTourBus === "是" || target.isTourBus === "Y")
         };
     }
-    
-    // 更新標頭與 UI...
-    initDynamicUI();
-    updateTotal();
 };   
 
 // 關閉彈窗
@@ -561,9 +557,8 @@ function renderEventSection(events, registrations) {
                     class="w-full py-4 rounded-xl text-sm font-black transition-all ${btnClass}">
                 ${btnText}
             </button>`;
-
-        const posterUrl = (ev.poster && ev.poster.includes('http')) ? ev.poster : null;
-
+        // 尋找這行並替換
+        const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
         if (posterUrl) {
             return `
                 <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">

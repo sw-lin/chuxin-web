@@ -216,6 +216,7 @@ async function handleLogin() {
     btn.disabled = true; btn.innerText = "驗證中...";
     
     try {
+        console.log("正在發送請求到:", GAS_URL); // 加這行，看看印出來的網址對不對
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 

@@ -203,10 +203,9 @@ async function handleLogin() {
     const u = toHalfWidth(rawU).toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
+    // 訪客模式保持不變
     if (u === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
-        // 訪客模式建議也清空一下 events 避免吃到舊資料
-        sessionStorage.removeItem('allEvents');
         window.location.href = 'member_zone.html';
         return;
     }
@@ -216,62 +215,43 @@ async function handleLogin() {
     btn.disabled = true; btn.innerText = "驗證中...";
     
     try {
-        console.log("正在發送請求到:", GAS_URL); // 加這行，看看印出來的網址對不對
-        console.log("【發送測試】內容：", { type: 'login', phone: u, password: p });
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 
         });
-        const rawText = await res.text(); // 先拿原始文字
-console.log("【發送測試】GAS 回傳的原始內容:", rawText);
-
-if (rawText.includes("<!DOCTYPE html>")) {
-    console.error("【嚴重錯誤】GAS 回傳的是網頁而不是資料！請檢查後端代碼語法。");
-    alert("後端系統異常，回傳了 HTML 錯誤頁面");
-    return;
-}  
         
-        console.log("【發送測試】HTTP 狀態碼:", res.status);
         const result = await res.json();
-        console.log("【1. GAS 回傳原始資料】:", result);
+        console.log("【登入結果】:", result);
         
         if (result.result === "SUCCESS") {
+            // --- 核心修正：Session 只存身分，不存活動資料 ---
+            const userStore = {
+                result: "SUCCESS",
+                name: result.name,
+                role: result.role,
+                phone: u,  // 這是後續頁面撈資料的關鍵 Key
+                staffKey: result.staffKey || "" // 如果是幹部，存入金鑰
+            };
             
-            // 1. 儲存用戶資訊
-            sessionStorage.setItem('userInfo', JSON.stringify({ ...result, phone: u }));
+            sessionStorage.setItem('userInfo', JSON.stringify(userStore));
             
-            // 2. 【核心修正】儲存活動清單到 sessionStorage
-            if (result.events && Array.isArray(result.events)) {
-                // 這裡做一次規範化，確保欄位名稱與報名頁 (needId) 一致
-                const sanitizedEvents = result.events.map(e => ({
-                    title: e.title,
-                    needId: e.needId || e.needID, // 雙重保險，不管後端給哪個都吃
-                    isTourBus: e.isTourBus,
-                    memberFee: e.memberFee,
-                    guestFee: e.guestFee
-                }));
-                sessionStorage.setItem('allEvents', JSON.stringify(sanitizedEvents));
-                console.log("活動清單已同步到緩存:", sanitizedEvents);
-                console.log("【2. 檢查活動清單長度】:", result.events.length);
-            } else {
-                console.warn("後端未回傳活動清單");
-                console.warn("【警告】GAS 回傳的資料中沒有 events 欄位！");
-                sessionStorage.setItem('allEvents', JSON.stringify([]));
-            }
-            console.log("已報名紀錄已同步:", result.registrations);
+            // 清除可能殘留的舊活動快取，確保進入下一頁是抓最新的
+            sessionStorage.removeItem('allEvents');
+            
+            console.log("身分驗證成功，準備跳轉...");
             window.location.href = 'member_zone.html';
         } else { 
-            alert("登入失敗：帳號或密碼錯誤"); 
+            alert("登入失敗：" + (result.message || "帳號或密碼錯誤")); 
         }
     } catch (e) { 
-        console.error("【發送測試】連線發生致命錯誤:", e);
-        alert("網路異常"); 
+        console.error("登入錯誤:", e);
+        alert("網路異常，請稍後再試"); 
     } finally { 
         btn.disabled = false; 
         btn.innerText = "確認進入"; 
     }
 }
-
+    
 function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
 window.onload = initData;        

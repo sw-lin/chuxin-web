@@ -137,19 +137,18 @@
         }
 
         // 2. 從 sessionStorage 抓取活動清單 (統一來源)
-        const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
-        const target = allEvents.find(e => e.title === title);
+       const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
+       const target = allEvents.find(e => e.title === title);
 
-        if (target) {
-            const isTrue = (val) => {
-                if (!val) return false;
-                const s = String(val).trim().toUpperCase();
-                return s === 'Y' || s === '是' || s === 'TRUE';
-            };
-
+       const isTrue = (val) => {
+        if (!val) return false;
+        const s = String(val).trim().toUpperCase();
+        return s === 'Y' || s === '是' || s === 'TRUE';
+       };
+        
             // 注意：這裡將 needID 改為 needId，isTourBus 保持小寫
             eventConfig = {
-                title: title,
+                title: title || "未知活動", // 強制確保這是有值的
                 memberFee: parseInt(target.memberFee || target.memberPrice) || 0,
                 guestFee: parseInt(target.guestFee || target.guestPrice) || 0,
                 needId: isTrue(target.needId || target.needID),

@@ -20,7 +20,7 @@
 
 <nav class="emerald-gradient p-6 rounded-b-[2.5rem] shadow-lg mb-6">
     <div class="flex items-center justify-between text-white mb-2">
-        <button onclick="history.back()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+        <button onclick="location.href='member_zone.html'" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
             <i class="fas fa-chevron-left"></i>
         </button>
         <div class="text-center flex-1">
@@ -36,253 +36,271 @@
     </div>
 </nav>
 
-    <main class="px-6">
-        <form id="regForm">
-            <section class="mb-8">
-                <div class="flex items-center gap-2 mb-3 px-2">
-                    <div class="w-1.5 h-5 bg-emerald-600 rounded-full"></div>
-                    <h3 class="font-black text-emerald-900 text-base">主要報名者</h3>
-                </div>
-                
-                <div class="input-group">
-                    <label class="label-text">姓名</label>
-                    <input type="text" id="mainName" class="input-field bg-gray-100" readonly>
-                </div>
-
-                <div id="mainIDSection" class="input-group hidden">
-                    <label class="label-text">身分證字號 (保險使用)</label>
-                    <input type="text" id="mainID" class="input-field" placeholder="請輸入身分證字號">
-                </div>
-
-                <div class="input-group">
-                    <label class="label-text">餐食選擇</label>
-                    <select id="mainDiet" class="input-field">
-                        <option value="不拘">不拘</option>
-                        <option value="葷食">葷食</option>
-                        <option value="素食">素食</option>
-                    </select>
-                </div>
-
-                <div class="input-group">
-                    <label class="label-text">交通方式</label>
-                    <select id="mainTransport" onchange="checkTransportLogic()" class="input-field"></select>
-                </div>
-
-                <div id="seatsWrapper" class="input-group hidden">
-                    <label class="label-text">可載人數 (不含自己)</label>
-                    <input type="number" id="mainSeats" class="input-field" value="0" min="0" max="4">
-                </div>
-            </section>
-
-            <section class="mb-8">
-                <div class="flex items-center justify-between mb-3 px-2">
-                    <div class="flex items-center gap-2">
-                        <div class="w-1.5 h-5 bg-orange-500 rounded-full"></div>
-                        <h3 class="font-black text-emerald-900 text-base">攜伴參加</h3>
-                    </div>
-                    <button type="button" onclick="addPartner()" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg active:scale-95">
-                        <i class="fas fa-plus mr-1"></i>新增攜伴
-                    </button>
-                </div>
-                <div id="partnerContainer" class="space-y-4"></div>
-            </section>
-
-            <div class="px-6 mb-8">
+<main class="px-6">
+    <form id="regForm">
+        <section class="mb-8">
             <div class="flex items-center gap-2 mb-3 px-2">
-            <div class="w-1.5 h-5 bg-gray-400 rounded-full"></div>
-            <h3 class="font-black text-emerald-900 text-base">其他說明</h3>
+                <div class="w-1.5 h-5 bg-emerald-600 rounded-full"></div>
+                <h3 class="font-black text-emerald-900 text-base">主要報名者</h3>
+            </div>
+            
+            <div class="input-group">
+                <label class="label-text">姓名</label>
+                <input type="text" id="mainName" class="input-field bg-gray-100" readonly>
+            </div>
+
+            <div id="mainIDSection" class="input-group hidden">
+                <label class="label-text">身分證字號 (保險使用)</label>
+                <input type="text" id="mainID" class="input-field" placeholder="請輸入身分證字號">
+            </div>
+
+            <div class="input-group">
+                <label class="label-text">餐食選擇</label>
+                <select id="mainDiet" class="input-field">
+                    <option value="不拘">不拘</option>
+                    <option value="葷食">葷食</option>
+                    <option value="素食">素食</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label class="label-text">交通方式</label>
+                <select id="mainTransport" onchange="checkTransportLogic()" class="input-field"></select>
+            </div>
+
+            <div id="seatsWrapper" class="input-group hidden">
+                <label class="label-text">可載人數 (不含自己)</label>
+                <input type="number" id="mainSeats" class="input-field" value="0" min="0" max="4">
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <div class="flex items-center justify-between mb-3 px-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-5 bg-orange-500 rounded-full"></div>
+                    <h3 class="font-black text-emerald-900 text-base">攜伴參加</h3>
+                </div>
+                <button type="button" onclick="addPartner()" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg active:scale-95">
+                    <i class="fas fa-plus mr-1"></i>新增攜伴
+                </button>
+            </div>
+            <div id="partnerContainer" class="space-y-4"></div>
+        </section>
+
+        <div class="px-6 mb-8">
+            <div class="flex items-center gap-2 mb-3 px-2">
+                <div class="w-1.5 h-5 bg-gray-400 rounded-full"></div>
+                <h3 class="font-black text-emerald-900 text-base">其他說明</h3>
             </div>
             <div class="bg-white p-4 rounded-2xl border border-emerald-50 shadow-sm">
-            <label class="label-text">特別需求備註</label>
-            <textarea id="regNote" rows="3" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 transition-all" placeholder="例如：過敏原、共乘需求說明..."></textarea>
+                <label class="label-text">特別需求備註</label>
+                <textarea id="regNote" rows="3" class="w-full px-4 py-3 bg-gray-50 rounded-xl outline-none text-sm border-2 border-transparent focus:border-emerald-500 transition-all" placeholder="例如：過敏原、共乘需求說明..."></textarea>
             </div>
-            </div>            
-        </form>
-    </main>
+        </div>            
+    </form>
+</main>
 
-    <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 p-6 flex items-center justify-between z-50">
-        <div>
-            <div class="text-[10px] text-gray-400 font-bold uppercase">預計總金額</div>
-            <div class="text-2xl font-black text-emerald-900">$ <span id="totalAmount">0</span></div>
-        </div>
-        <button onclick="submitForm()" class="bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-all">
-            確認送出報名
-        </button>
+<div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 p-6 flex items-center justify-between z-50">
+    <div>
+        <div class="text-[10px] text-gray-400 font-bold uppercase">預計總金額</div>
+        <div class="text-2xl font-black text-emerald-900">$ <span id="totalAmount">0</span></div>
     </div>
+    <button onclick="submitForm()" class="bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black shadow-lg active:scale-95 transition-all">
+        確認送出報名
+    </button>
+</div>
 
-    <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
-        let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
-        let eventConfig = { title: "", memberFee: 0, guestFee: 0, needID: false, isTourBus: false };
-        let partners = [];
-
-window.onload = function() {
-    const params = new URLSearchParams(window.location.search);
-    const title = params.get('event');
+<script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
     
-    // 從 localStorage 抓取活動資料
-    const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-    const target = allEvents.find(e => e.title === title);
+    // 統一從 sessionStorage 讀取資料
+    let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+    let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false };
+    let partners = [];
 
-    if (target) {
-        // 強化 Y/N 判斷邏輯
-        const isTrue = (val) => {
-            if (!val) return false;
-            const s = String(val).trim().toUpperCase();
-            return s === 'Y' || s === '是';
-        };
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        const title = params.get('event');
+        
+        if (!currentUser.phone) {
+            alert("請先登入");
+            location.href = "index.html";
+            return;
+        }
 
-        eventConfig = {
-            title: title,
-            memberFee: parseInt(target.memberFee) || 0,
-            guestFee: parseInt(target.guestFee) || 0,
-            needID: isTrue(target.needID),
-            isTourBus: isTrue(target.isTourBus)
-        };
-        console.log("解析後的活動配置:", eventConfig);
-    }
+        // 1. 重複報名檢查邏輯
+        const userEvents = JSON.parse(sessionStorage.getItem('userEvents')) || [];
+        if (userEvents.some(ev => ev.title === title)) {
+            alert("您已經報名過此活動囉！");
+            location.href = "member_zone.html";
+            return;
+        }
 
-    // 更新 UI
-    document.getElementById('displayEventTitle').innerText = eventConfig.title;
-    initDynamicUI(); // 確保這行有執行，才會顯示/隱藏欄位
-    updateTotal();
-};        
+        // 2. 從 sessionStorage 抓取活動清單 (統一來源)
+        const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
+        const target = allEvents.find(e => e.title === title);
+
+        if (target) {
+            const isTrue = (val) => {
+                if (!val) return false;
+                const s = String(val).trim().toUpperCase();
+                return s === 'Y' || s === '是' || s === 'TRUE';
+            };
+
+            // 注意：這裡將 needID 改為 needId，isTourBus 保持小寫
+            eventConfig = {
+                title: title,
+                memberFee: parseInt(target.memberFee || target.memberPrice) || 0,
+                guestFee: parseInt(target.guestFee || target.guestPrice) || 0,
+                needId: isTrue(target.needId || target.needID),
+                isTourBus: isTrue(target.isTourBus)
+            };
+        }
+
+        // 更新 UI
+        document.getElementById('mainName').value = currentUser.name || "";
+        document.getElementById('displayEventTitle').innerText = eventConfig.title;
+        document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+        
+        initDynamicUI();
+        updateTotal();
+    };        
 
     function initDynamicUI() {
-    // 1. 身分證欄位顯示 (邏輯 3)
-    const idSection = document.getElementById('mainIDSection');
-    if(eventConfig.needID) {
-        idSection.classList.remove('hidden');
-    } else {
-        idSection.classList.add('hidden');
-    }
+        const idSection = document.getElementById('mainIDSection');
+        if(eventConfig.needId) {
+            idSection.classList.remove('hidden');
+        } else {
+            idSection.classList.add('hidden');
+        }
 
-    // 2. 交通方式控制 (邏輯 4)
-    const transportSelect = document.getElementById('mainTransport');
-    if(eventConfig.isTourBus) {
-        transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一由本會安排)</option>`;
-        transportSelect.disabled = true; // 強制固定
-    } else {
-        transportSelect.innerHTML = `
-            <option value="自行開車">自行開車</option>
-            <option value="共乘不開車">共乘不開車</option>
-        `;
-        transportSelect.disabled = false;
-    }
-    checkTransportLogic();
+        const transportSelect = document.getElementById('mainTransport');
+        if(eventConfig.isTourBus) {
+            transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一由本會安排)</option>`;
+            transportSelect.disabled = true;
+        } else {
+            transportSelect.innerHTML = `
+                <option value="自行開車">自行開車</option>
+                <option value="共乘不開車">共乘不開車</option>
+            `;
+            transportSelect.disabled = false;
+        }
+        checkTransportLogic();
     }
         
-        function checkTransportLogic() {
-            // 邏輯 5：非遊覽車且自行開車才出現載人數
-            const val = document.getElementById('mainTransport').value;
-            const showSeats = (!eventConfig.isTourBus && val === '自行開車');
-            document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
-        }
-
-        function addPartner() {
-            if (partners.length >= 3) return alert("最多攜伴 3 位");
-            const id = Date.now();
-            partners.push(id);
-            renderPartners();
-            updateTotal();
-        }
-
-        function renderPartners() {
-            const container = document.getElementById('partnerContainer');
-            const idHtml = eventConfig.needID ? `
-                <input type="text" placeholder="身分證字號 (保險用)" class="partner-id input-field">
-            ` : "";
-
-            container.innerHTML = partners.map((id, index) => `
-                <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm relative">
-                    <button onclick="removePartner(${id})" class="absolute top-4 right-4 text-gray-300"><i class="fas fa-times-circle"></i></button>
-                    <div class="text-emerald-600 font-black text-[10px] mb-3">訪客 ${index + 1}</div>
-                    <div class="space-y-3">
-                        <input type="text" placeholder="姓名" class="partner-name input-field">
-                        <input type="tel" placeholder="電話" class="partner-phone input-field">
-                        ${idHtml}
-                        <select class="partner-diet input-field">
-                            <option value="不拘">不拘</option><option value="葷食">葷食</option><option value="素食">素食</option>
-                        </select>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function removePartner(id) {
-            partners = partners.filter(p => p !== id);
-            renderPartners();
-            updateTotal();
-        }
-
-        function updateTotal() {
-            const total = eventConfig.memberFee + (partners.length * eventConfig.guestFee);
-            document.getElementById('totalAmount').innerText = total;
-        }
-
-        // 3. 資料送出邏輯 (修復寫入問題)
-    async function submitForm() {
-    const mainID = document.getElementById('mainID').value;
-    if (eventConfig.needID && !mainID) return alert("請輸入身分證字號");
-
-    const payload = {
-        type: 'submit_complex_reg',
-        eventTitle: eventConfig.title,
-        mainPhone: currentUser.phone,
-        registrations: []
-    };
-
-    // 本人資料包裝
-    payload.registrations.push({
-        name: currentUser.name,
-        phone: currentUser.phone,
-        idNumber: mainID,
-        diet: document.getElementById('mainDiet').value,
-        transport: document.getElementById('mainTransport').value,
-        seats: document.getElementById('mainSeats').value || 0,
-        isMember: true,
-        proxy: "本人",
-        fee: eventConfig.memberFee,
-        note: document.getElementById('regNote').value
-    });
-
-    // 攜伴資料包裝
-    const pNames = document.querySelectorAll('.partner-name');
-    const pPhones = document.querySelectorAll('.partner-phone');
-    const pIDs = document.querySelectorAll('.partner-id'); // 若有身分證欄位
-    const pDiets = document.querySelectorAll('.partner-diet');
-
-    pNames.forEach((el, i) => {
-        payload.registrations.push({
-            name: el.value,
-            phone: pPhones[i].value,
-            idNumber: pIDs[i] ? pIDs[i].value : "",
-            diet: pDiets[i].value,
-            transport: "", // 攜伴固定不帶交通屬性
-            seats: 0,
-            isMember: false,
-            proxy: currentUser.name,
-            fee: eventConfig.guestFee
-        });
-    });
-
-    // 呼叫 GAS
-    try {
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        if (result.result === "SUCCESS") {
-            alert("報名成功！");
-            location.href = "member_zone.html";
-        } else {
-            alert("錯誤：" + result.message);
-        }
-    } catch (e) {
-        alert("網路連線異常，請檢查網路狀態");
+    function checkTransportLogic() {
+        const val = document.getElementById('mainTransport').value;
+        const showSeats = (!eventConfig.isTourBus && val === '自行開車');
+        document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
     }
+
+    function addPartner() {
+        if (partners.length >= 3) return alert("最多攜伴 3 位");
+        const id = Date.now();
+        partners.push(id);
+        renderPartners();
+        updateTotal();
+    }
+
+    function renderPartners() {
+        const container = document.getElementById('partnerContainer');
+        const idHtml = eventConfig.needId ? `
+            <input type="text" placeholder="身分證字號 (保險用)" class="partner-id input-field">
+        ` : "";
+
+        container.innerHTML = partners.map((id, index) => `
+            <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm relative">
+                <button type="button" onclick="removePartner(${id})" class="absolute top-4 right-4 text-gray-300"><i class="fas fa-times-circle"></i></button>
+                <div class="text-emerald-600 font-black text-[10px] mb-3">訪客 ${index + 1}</div>
+                <div class="space-y-3">
+                    <input type="text" placeholder="姓名" class="partner-name input-field">
+                    <input type="tel" placeholder="電話" class="partner-phone input-field">
+                    ${idHtml}
+                    <select class="partner-diet input-field">
+                        <option value="不拘">不拘</option><option value="葷食">葷食</option><option value="素食">素食</option>
+                    </select>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function removePartner(id) {
+        partners = partners.filter(p => p !== id);
+        renderPartners();
+        updateTotal();
+    }
+
+    function updateTotal() {
+        const total = eventConfig.memberFee + (partners.length * eventConfig.guestFee);
+        document.getElementById('totalAmount').innerText = total;
+    }
+
+    async function submitForm() {
+        const mainID = document.getElementById('mainID').value;
+        if (eventConfig.needId && !mainID) return alert("請輸入身分證字號");
+
+        // 檢查攜伴資料完整性
+        const pNames = document.querySelectorAll('.partner-name');
+        for (let el of pNames) {
+            if (!el.value.trim()) return alert("請填寫所有訪客姓名");
+        }
+
+        const payload = {
+            type: 'register', // 統一使用 GAS 支援的 'register' 類型
+            eventTitle: eventConfig.title,
+            mainPhone: currentUser.phone,
+            registrations: []
+        };
+
+        // 本人資料
+        payload.registrations.push({
+            name: currentUser.name,
+            phone: currentUser.phone,
+            idNumber: mainID,
+            diet: document.getElementById('mainDiet').value,
+            transport: document.getElementById('mainTransport').value,
+            seats: document.getElementById('mainSeats').value || 0,
+            isMember: true,
+            proxy: "本人",
+            fee: eventConfig.memberFee,
+            note: document.getElementById('regNote').value
+        });
+
+        // 攜伴資料
+        const pPhones = document.querySelectorAll('.partner-phone');
+        const pIDs = document.querySelectorAll('.partner-id');
+        const pDiets = document.querySelectorAll('.partner-diet');
+
+        pNames.forEach((el, i) => {
+            payload.registrations.push({
+                name: el.value,
+                phone: pPhones[i].value,
+                idNumber: pIDs[i] ? pIDs[i].value : "",
+                diet: pDiets[i].value,
+                transport: "", 
+                seats: 0,
+                isMember: false,
+                proxy: currentUser.name,
+                fee: eventConfig.guestFee
+            });
+        });
+
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
+                alert(result.message || "報名成功！");
+                location.href = "member_zone.html";
+            } else {
+                alert("錯誤：" + result.message);
+            }
+        } catch (e) {
+            alert("網路連線異常，請稍後再試");
+        }
     }        
-    </script>
+</script>
 </body>
 </html>

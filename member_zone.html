@@ -260,9 +260,8 @@ async function syncData() {
                     staffBtn.onclick = enterStaffMode;
                 }
             }
-            // 執行更新 UI：傳入完整 data 以便計算
-            updateUI(liveUser, data.calendar, data.events);
-        }
+            // 在 syncData() 內部最後面，找到呼叫 updateUI 的這行，改為：
+            updateUI(liveUser, data.calendar, data.events, data.registrations);        }
     } catch (e) { 
         console.error("同步失敗:", e);
         showToast("同步失敗", "error"); 
@@ -270,12 +269,11 @@ async function syncData() {
         overlay.style.display = 'none'; 
     }
 }
-
-// 修正 updateUI 以確保 ID 完全對齊您的 HTML
-function updateUI(user, calendar, events) {
+// 增加 registrations 作為第四個參數
+function updateUI(user, calendar, events, registrations) {
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. 計算數據 (維持原邏輯)
+    // 1. 計算數據
     const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
     const totalEvents = requiredPastEvents.length;
     const attendCount = (user.attendLog || []).length;
@@ -288,24 +286,26 @@ function updateUI(user, calendar, events) {
     if (percentElem) percentElem.innerText = attendanceRate + '%';
     if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
 
-    // --- 新增：參與率超過 50% 放煙火 ---
+    // --- 參與率超過 50% 放煙火 ---
     if (attendanceRate >= 50 && typeof confetti === 'function') {
         confetti({
             particleCount: 150,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#064E3B', '#059669', '#10B981'] // 使用翡翠綠系列色調
+            colors: ['#064E3B', '#059669', '#10B981']
         });
     }
 
-    // 3. 儲存數據供學習歷程 Modal 使用 (確保這裡邏輯正確)
+    // 3. 儲存數據供學習歷程 Modal 使用
     window.currentAttendedData = (calendar || []).filter(ev => 
         (user.attendLog || []).some(log => String(log).includes(ev.title))
     );
 
     renderCalendarActivity(calendar);
-    renderEventSection(data.events || [], data.registrations || []);
-}
+    
+    // 【關鍵修正】直接使用傳入的參數，拿掉 data. 前綴
+    renderEventSection(events || [], registrations || []);
+}    
 // 點擊卡片觸發的函式
 function showLearningHistory() {
     const modal = document.getElementById('historyModal'); // 確保您的 HTML 有這個 Modal ID
@@ -518,12 +518,13 @@ function renderEventSection(events, registrations) {
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
-    // 取得當前使用者手機 (用於比對報名紀錄)
-    // 增加防錯處理，確保 currentUser 存在
-    const userPhone = (window.currentUser && currentUser.phone) 
-        ? String(currentUser.phone).replace(/\D/g, "").slice(-9) 
-        : "";
+    // 安全獲取當前使用者手機 (加上防錯處理)
+    let userPhone = "";
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.phone) {
+        userPhone = String(currentUser.phone).replace(/\D/g, "").slice(-9);
+    }
 
+    // ⬇️ 注意最後面的 .join('') 絕對不能漏掉 ⬇️
     container.innerHTML = events.map(ev => {
         const isClosed = ev.status === "已截止";
         const isFull = ev.status === "已額滿";
@@ -533,23 +534,23 @@ function renderEventSection(events, registrations) {
             const regPhone = String(reg.手機號碼 || "").replace(/\D/g, "").slice(-9);
             return String(reg.活動標題).trim() === String(ev.title).trim() && 
                    regPhone === userPhone && 
-                   userPhone !== ""; // 確保手機號碼不為空才算匹配
+                   userPhone !== ""; 
         });
 
         let btnClass, btnText, clickAction, isDisabled;
 
         if (isRegistered) {
-            btnClass = "bg-gray-100 text-emerald-600 cursor-default border border-emerald-100";
+            btnClass = "bg-gray-200 text-gray-500 cursor-not-allowed";
             btnText = `<i class="fas fa-check-circle mr-2"></i>您已完成報名`;
-            clickAction = "";
+            clickAction = "event.preventDefault();";
             isDisabled = "disabled";
         } else if (isClosed || isFull) {
-            btnClass = "bg-gray-100 text-gray-400 cursor-not-allowed";
+            btnClass = "bg-gray-200 text-gray-400 cursor-not-allowed";
             btnText = isClosed ? "報名已截止" : "活動已額滿";
-            clickAction = "";
+            clickAction = "event.preventDefault();";
             isDisabled = "disabled";
         } else {
-            btnClass = "emerald-gradient text-white hover:opacity-90 shadow-md active:scale-95";
+            btnClass = "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md active:scale-95";
             btnText = "立即預約報名";
             clickAction = `location.href='event_registration.html?event=${encodeURIComponent(ev.title)}'`;
             isDisabled = "";
@@ -557,16 +558,15 @@ function renderEventSection(events, registrations) {
 
         const actionBtn = `
             <button onclick="${clickAction}" ${isDisabled}
-                    class="w-full py-4 rounded-2xl text-sm font-black transition-all ${btnClass}">
+                    class="w-full py-4 rounded-xl text-sm font-black transition-all ${btnClass}">
                 ${btnText}
             </button>`;
 
-        // 判斷是否使用海報模式
-        const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
+        const posterUrl = (ev.poster && ev.poster.includes('http')) ? ev.poster : null;
 
         if (posterUrl) {
             return `
-                <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
+                <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
                     <img src="${posterUrl}" class="w-full h-auto block" onerror="this.style.display='none'">
                     <div class="p-6">
                         <h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>
@@ -575,7 +575,7 @@ function renderEventSection(events, registrations) {
                 </div>`;
         } else {
             return `
-                <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 mb-6">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
                     <div class="flex justify-between items-start mb-4">
                         <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
                         <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || '額滿為止'}</span>
@@ -594,7 +594,7 @@ function renderEventSection(events, registrations) {
                     ${actionBtn}
                 </div>`;
         }
-    }).join('');
+    }).join(''); // <--- 就是這個 .join('')！沒有它的話，卡片之間會產生逗號並擠壓版面
 }    
 // 獨立的跳轉函式 (保持單純)
 function goToRegistration(title) {

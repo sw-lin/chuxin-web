@@ -116,7 +116,22 @@
                     
                     var html = '';
                     users.forEach(u => {
-                        var p = String(u.phone).startsWith('0') ? u.phone : '0' + u.phone;
+var rawP = String(u.phone).trim();
+var p;
+
+if (rawP.startsWith('886')) {
+    // 1. 如果是 886 開頭，去掉 886 並補回 0
+    p = '0' + rawP.substring(3);
+} else if (rawP.startsWith('0')) {
+    // 2. 如果已經是 0 開頭，保持原樣
+    p = rawP;
+} else if (rawP.length === 9) {
+    // 3. 如果只有 9 碼且非 0 開頭，補回 0
+    p = '0' + rawP;
+} else {
+    // 4. 其餘情況（如空值或異常）
+    p = rawP;
+}                        
                         var uName = (u.name || "").replace(/'/g, "\\'");
                         var uEmail = (u.email || "").replace(/'/g, "\\'");
                         var uRole = (u.role || "").replace(/'/g, "\\'");

@@ -121,10 +121,9 @@
         <div class="px-2 mb-10">
             <div class="flex items-center gap-2 mb-4">
                 <div class="w-2 h-6 bg-gray-400 rounded-full"></div>
-                <h3 class="font-black text-emerald-900 text-xl">其他說明</h3>
+                <h3 class="font-black text-emerald-900 text-xl">特別需求備註</h3>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-emerald-50 shadow-sm">
-                <label class="label-text">特別需求備註</label>
                 <textarea id="regNote" rows="3" class="input-field" placeholder="例如：過敏原、共乘需求說明..."></textarea>
             </div>
         </div>            
@@ -355,7 +354,7 @@ function updateTotal(manualCount = null) {
                 showToast("報名成功！即將跳轉...");
                 setTimeout(() => { location.href = "member_zone.html"; }, 1000);
             } if( result.result === "ALREADY_DONE") {
-                showToast("你已完成報名！即將跳轉...");
+                showToast("重複報名 如需修改請洽活動組！即將跳轉...");
                 setTimeout(() => { location.href = "member_zone.html"; }, 1000);          
         } else {
                 overlay.style.display = 'none';

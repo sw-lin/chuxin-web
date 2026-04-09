@@ -214,63 +214,62 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCe
 async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
-    try {
-        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-        const data = await res.json();
-        globalConfig = data.config || {};
-        window.latestCalendarData = data.calendar || []; 
-        
-        // --- 公告欄邏輯 (保留) ---
-        const newsContent = data.news ? data.news.trim() : "";
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const isDateValid = (data.startDate === "" || todayStr >= data.startDate) && (data.endDate === "" || todayStr <= data.endDate);
-        
-        const newsContainer = document.getElementById('newsContainer');
-        if (newsContent && newsContent !== "NONE" && isDateValid) {
-            if (newsContainer) newsContainer.classList.remove('hidden');
-            document.getElementById('news').innerText = newsContent;
-        } else {
-            if (newsContainer) newsContainer.classList.add('hidden');
-        }
+    
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    if (!userInfo || !userInfo.phone) {
+        window.location.href = 'index.html';
+        return;
+    }
 
-        // --- 找出登入者並更新 UI ---
-        const liveUser = data.users.find(u => {
-            const uPhone = String(u.phone || "").replace(/\D/g, "").slice(-9);
-            const currPhone = String(currentUser.phone || "").replace(/\D/g, "").slice(-9);
-            return uPhone === currPhone;
-        });
+    try {
+        const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
+        const res = await fetch(url);
+        const data = await res.json();
         
-        if (liveUser) {
-            currentUser = liveUser;
+        if (data.result === "SUCCESS") {
+            // 1. 存入保險箱 (供報名頁面使用)
+            localStorage.setItem('allEvents', JSON.stringify(data.events));
+
+            // 2. 處理公告時限邏輯
+            const newsContent = data.news ? data.news.trim() : "";
+            const now = new Date();
+            const todayStr = now.getFullYear() + '-' + 
+                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(now.getDate()).padStart(2, '0');
+            const isDateValid = (!data.startDate || todayStr >= data.startDate) && 
+                                (!data.endDate || todayStr <= data.endDate);
             
-            // --- 關鍵新增：將活動完整資訊存入 localStorage ---
-            if (data.events) {
-                // 這一行會直接把資料轉成表格印出來，一眼就能看出 H, I, J, K 有沒有值
-                console.table(data.events);
-                // 將資料庫 events 頁面的整表存起來，供報名頁面讀取
-                localStorage.setItem('allEvents', JSON.stringify(data.events));
-                console.log("活動資料已同步至 localStorage");
+            const newsContainer = document.getElementById('newsContainer');
+            if (newsContent && newsContent !== "NONE" && isDateValid) {
+                if (newsContainer) newsContainer.classList.remove('hidden');
+                document.getElementById('news').innerText = newsContent;
+            } else {
+                if (newsContainer) newsContainer.classList.add('hidden');
             }
-            // ------------------------------------------
-            
-            // 更新幹部權限
-            if (liveUser.role && liveUser.role !== "學員") {
-                const staffBtn = document.getElementById('staffBtn');
-                if (staffBtn) {
+
+            // 3. 【新增：幹部開關判斷】
+            const staffBtn = document.getElementById('staffBtn');
+            if (staffBtn) {
+                // 如果角色不是「學員」，就代表是幹部或管理員，顯示按鈕
+                if (data.user && data.user.role && data.user.role !== "學員") {
                     staffBtn.classList.remove('hidden');
-                    staffBtn.onclick = enterStaffMode;
+                    // 確保點擊事件有綁定 (進入幹部模式的函式)
+                    staffBtn.onclick = typeof enterStaffMode === 'function' ? enterStaffMode : null;
+                } else {
+                    staffBtn.classList.add('hidden');
                 }
             }
-            // 在 syncData() 內部最後面，找到呼叫 updateUI 的這行，改為：
-            updateUI(liveUser, data.calendar, data.events, data.registrations);        }
-    } catch (e) { 
+
+            // 4. 更新主 UI (姓名、參與率、活動列表)
+            updateUI(data.user, data.calendar, data.events, data.registrations);
+        }
+    } catch (e) {
         console.error("同步失敗:", e);
-        showToast("同步失敗", "error"); 
-    } finally { 
-        overlay.style.display = 'none'; 
+    } finally {
+        overlay.style.display = 'none';
     }
-}
+}    
 // 增加 registrations 作為第四個參數
 function updateUI(user, calendar, events, registrations) {
     const today = new Date().toISOString().split('T')[0];

@@ -14,7 +14,8 @@
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none; align-items: center; justify-content: center; padding: 1rem; }
-        .input-field { @apply w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:border-emerald-500 transition-all text-sm; }
+        .input-field { width: 100%; padding: 0.75rem 1rem; background-color: #F9FAFB; border-radius: 0.75rem; border: 1px solid #F3F4F6; outline: none; transition: all 0.2s; font-size: 0.875rem; }
+        .input-field:focus { border-color: #10B981; }
     </style>
 </head>
 <body class="pb-20">
@@ -40,7 +41,7 @@
     <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
         <div class="flex flex-col gap-4">
             <select id="eventSelector" onchange="renderRegistrations()" class="input-field font-bold text-emerald-900 bg-emerald-50 border-emerald-100">
-                <option value="">載入中...</option>
+                <option value="">正在載入活動...</option>
             </select>
             <div class="flex justify-between items-end">
                 <div>
@@ -54,103 +55,71 @@
         </div>
     </div>
 
-    <div id="regList" class="space-y-3">
-        </div>
+    <div id="regList" class="space-y-3"></div>
 </main>
 
 <div id="eventModal" class="modal-overlay">
     <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 max-h-[90vh] overflow-y-auto shadow-2xl">
-        <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-6">發布新活動</h3>
+        <h3 class="text-xl font-black text-emerald-900 mb-6">活動設定</h3>
         <div class="space-y-4">
             <input type="text" id="evTitle" placeholder="活動標題" class="input-field">
             <input type="text" id="evDate" placeholder="活動日期 (例如 2026-05-20)" class="input-field">
-            
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">是否需身分證</label>
-                    <select id="evNeedId" class="input-field mt-1">
-                        <option value="N">否</option><option value="Y">是</option>
-                    </select>
+                    <label class="text-[10px] font-black text-emerald-800">需身分證</label>
+                    <select id="evNeedId" class="input-field mt-1"><option value="N">否</option><option value="Y">是</option></select>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">是否搭遊覽車</label>
-                    <select id="evIsTourBus" class="input-field mt-1">
-                        <option value="N">否</option><option value="Y">是</option>
-                    </select>
+                    <label class="text-[10px] font-black text-emerald-800">搭遊覽車</label>
+                    <select id="evIsTourBus" class="input-field mt-1"><option value="N">否</option><option value="Y">是</option></select>
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">會員費用</label>
+                    <label class="text-[10px] font-black text-emerald-800">會員費用</label>
                     <input type="number" id="evMemberFee" class="input-field mt-1" value="0">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">訪客費用</label>
+                    <label class="text-[10px] font-black text-emerald-800">訪客費用</label>
                     <input type="number" id="evGuestFee" class="input-field mt-1" value="0">
                 </div>
             </div>
-
             <div class="flex gap-3 pt-4">
                 <button onclick="closeEventModal()" class="flex-1 py-4 font-bold text-gray-400">取消</button>
                 <button onclick="saveEvent()" class="flex-[2] emerald-gradient text-white py-4 rounded-2xl font-black shadow-lg">儲存設定</button>
-                <button onclick="deleteEntireEvent()" class="w-full text-red-500 font-bold text-xs py-2 bg-red-50 rounded-xl border border-red-100 mt-4"><i class="fas fa-trash-alt mr-2"></i>永久刪除此活動及所有名單</button>                
             </div>
+            <button onclick="deleteEntireEvent()" class="w-full text-red-500 font-bold text-xs py-2 bg-red-50 rounded-xl border border-red-100 mt-2">
+                <i class="fas fa-trash-alt mr-2"></i>永久刪除此活動及其名單
+            </button>
         </div>
     </div>
 </div>
 
 <div id="editRegModal" class="modal-overlay">
     <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-black text-emerald-900">維修個人資料</h3>
-            <span id="editPersonLabel" class="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-bold"></span>
-        </div>
-        <input type="hidden" id="editRowId">
+        <h3 class="text-xl font-black text-emerald-900 mb-6">維修報名資料</h3>
         <div class="space-y-4">
-            <div>
-                <label class="text-[10px] font-black text-emerald-800 ml-1">電話號碼</label>
-                <input type="text" id="editPhone" class="input-field">
-            </div>
-            <div id="editIdWrapper">
-                <label class="text-[10px] font-black text-emerald-800 ml-1">身分證字號</label>
-                <input type="text" id="editIdNumber" class="input-field">
-            </div>
-            <div id="editTransportWrapper" class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">交通工具</label>
-                    <select id="editTransport" class="input-field" onchange="toggleEditSeats()">
-                        <option value="自行開車">自行開車</option>
-                        <option value="共乘不開車">共乘不開車</option>
-                    </select>
-                </div>
-                <div id="editSeatsWrapper">
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">可載人數</label>
-                    <input type="number" id="editSeats" class="input-field">
-                </div>
+            <input type="text" id="editPhone" class="input-field" placeholder="手機號碼">
+            <input type="text" id="editIdNumber" class="input-field" placeholder="身分證字號">
+            <div class="grid grid-cols-2 gap-4">
+                <select id="editTransport" class="input-field" onchange="toggleEditSeats()">
+                    <option value="自行開車">自行開車</option><option value="共乘不開車">共乘不開車</option>
+                </select>
+                <input type="number" id="editSeats" class="input-field" placeholder="可載人數">
             </div>
             <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">飲食</label>
-                    <select id="editDiet" class="input-field">
-                        <option value="葷食">葷食</option><option value="素食">素食</option><option value="不拘">不拘</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-emerald-800 ml-1">繳費狀態</label>
-                    <select id="editIsPaid" class="input-field font-bold">
-                        <option value="N">未繳費</option><option value="Y" class="text-green-600">已繳費</option>
-                    </select>
-                </div>
+                <select id="editDiet" class="input-field">
+                    <option value="葷食">葷食</option><option value="素食">素食</option><option value="不拘">不拘</option>
+                </select>
+                <select id="editIsPaid" class="input-field font-bold">
+                    <option value="N">未繳費</option><option value="Y">已繳費</option>
+                </select>
             </div>
-
-            <div class="pt-4 space-y-3">
-                <div class="flex gap-3">
-                    <button onclick="closeEditModal()" class="flex-1 py-4 font-bold text-gray-400">取消</button>
-                    <button onclick="saveEdit()" class="flex-[2] emerald-gradient text-white py-4 rounded-2xl font-black shadow-lg">確認修改</button>
-                </div>
-                <button onclick="deleteRegistration()" class="w-full text-red-500 font-bold text-sm py-2 bg-red-50 rounded-xl border border-red-100 mt-2">直接刪除此人資料</button>
+            <div class="pt-4 flex gap-3">
+                <button onclick="closeEditModal()" class="flex-1 py-4 font-bold text-gray-400">取消</button>
+                <button onclick="saveEdit()" class="flex-[2] emerald-gradient text-white py-4 rounded-2xl font-black shadow-lg">確認修改</button>
             </div>
+            <button onclick="deleteRegistration()" class="w-full text-red-500 font-bold text-sm py-2 bg-red-50 rounded-xl mt-2">直接刪除此人資料</button>
         </div>
     </div>
 </div>
@@ -160,17 +129,27 @@
     let allData = { events: [], registrations: [] };
     let currentEditingRow = null;
 
+    window.onload = function() {
+        const key = sessionStorage.getItem('staff_key');
+        if (!key) {
+            alert("權限失效，請重新從管理後端登入");
+            window.close();
+            return;
+        }
+        loadData();
+    };
+
+    function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+
     async function loadData() {
         showLoading(true);
         try {
             const res = await fetch(`${GAS_URL}?type=admin_get_data&key=${sessionStorage.getItem('staff_key')}`);
             allData = await res.json();
-            
             const selector = document.getElementById('eventSelector');
             selector.innerHTML = allData.events.map(e => `<option value="${e.title}">${e.title}</option>`).join('');
-            
             renderRegistrations();
-        } catch (e) { alert("讀取失敗"); }
+        } catch (e) { alert("讀取失敗，請確認網路或 GAS 權限"); }
         showLoading(false);
     }
 
@@ -179,7 +158,6 @@
         const config = allData.events.find(e => e.title === title) || {};
         const filtered = allData.registrations.filter(r => r.活動標題 === title);
         
-        // 統計
         const paidCount = filtered.filter(r => r.是否繳費 === 'Y' || r.是否繳費 === '是').length;
         document.getElementById('statInfo').innerHTML = `${paidCount} / ${filtered.length} <span class="text-sm font-medium">人已繳費</span>`;
 
@@ -189,69 +167,42 @@
             return;
         }
 
-        container.innerHTML = filtered.map(r => {
-            const isMember = String(r.是否會員).includes('是') || String(r.是否會員).toLowerCase() === 'true' || String(r.是否會員) === 'Y';
-            const isPaid = r.是否繳費 === 'Y' || r.是否繳費 === '是';
-            
-            // 交通資訊處理
-            let transportText = "";
-            if (config.isTourBus === 'Y' || config.isTourBus === '是') {
-                transportText = `<span class="text-blue-500"><i class="fas fa-bus mr-1"></i>遊覽車</span>`;
-            } else {
-                transportText = r.交通方式 === '自行開車' 
-                    ? `<span class="text-orange-600"><i class="fas fa-car mr-1"></i>自駕 <b class="bg-orange-100 px-1.5 rounded-full text-[10px]">${r.可載人數 || 0}</b></span>`
-                    : `<span class="text-emerald-600"><i class="fas fa-users mr-1"></i>共乘</span>`;
-            }
-
-            return `
-                <div class="bg-white p-4 rounded-2xl border border-emerald-50 shadow-sm flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="font-black text-emerald-900">${r.會員姓名}</span>
-                            ${!isMember ? '<span class="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded-full font-black">訪客</span>' : ''}
-                            <span class="text-[10px] font-bold text-gray-400">(${r.手機號碼.slice(-4)})</span>
-                        </div>
-                        <div class="flex items-center gap-3 text-[10px] font-bold">
-                            ${transportText}
-                            <span class="text-gray-400"><i class="fas fa-utensils mr-1"></i>${r.餐食選擇}</span>
-                            <span class="${isPaid ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'} px-2 py-0.5 rounded-md">
-                                ${isPaid ? '已繳費' : '未繳費'}
-                            </span>
-                        </div>
+        container.innerHTML = filtered.map(r => `
+            <div class="bg-white p-4 rounded-2xl border border-emerald-50 shadow-sm flex items-center justify-between">
+                <div>
+                    <div class="font-black text-emerald-900">${r.會員姓名} <span class="text-gray-400 text-xs">(${r.手機號碼.slice(-4)})</span></div>
+                    <div class="text-[10px] font-bold text-gray-500">
+                        ${r.交通方式} | ${r.餐食選擇} | 
+                        <span class="${(r.是否繳費 === 'Y' || r.是否繳費 === '是') ? 'text-green-600' : 'text-red-500'}">
+                            ${(r.是否繳費 === 'Y' || r.是否繳費 === '是') ? '已繳費' : '未繳費'}
+                        </span>
                     </div>
-                    <button onclick='openEditModal(${JSON.stringify(r)}, ${JSON.stringify(config)})' class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 active:scale-95">
-                        <i class="fas fa-tools"></i>
-                    </button>
                 </div>
-            `;
-        }).join('');
+                <button onclick='openEditModal(${JSON.stringify(r)})' class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-tools"></i></button>
+            </div>
+        `).join('');
     }
 
-    // --- 編輯維修功能 ---
-    function openEditModal(reg, config) {
+    function openEditModal(reg) {
         currentEditingRow = reg;
         document.getElementById('editRegModal').style.display = 'flex';
-        document.getElementById('editPersonLabel').innerText = reg.會員姓名;
         document.getElementById('editPhone').value = reg.手機號碼;
         document.getElementById('editIdNumber').value = reg.身分證字號 || "";
         document.getElementById('editTransport').value = reg.交通方式 || "自行開車";
         document.getElementById('editSeats').value = reg.可載人數 || 0;
         document.getElementById('editDiet').value = reg.餐食選擇 || "葷食";
         document.getElementById('editIsPaid').value = (reg.是否繳費 === 'Y' || reg.是否繳費 === '是') ? 'Y' : 'N';
-
-        // 根據活動設定切換顯示
-        document.getElementById('editIdWrapper').style.display = (config.needId === 'Y' || config.needId === '是') ? 'block' : 'none';
-        document.getElementById('editTransportWrapper').style.display = (config.isTourBus === 'Y' || config.isTourBus === '是') ? 'none' : 'grid';
-        
         toggleEditSeats();
     }
 
     function toggleEditSeats() {
         const val = document.getElementById('editTransport').value;
-        document.getElementById('editSeatsWrapper').style.visibility = (val === '自行開車') ? 'visible' : 'hidden';
+        document.getElementById('editSeats').parentElement.style.visibility = (val === '自行開車') ? 'visible' : 'hidden';
     }
 
     function closeEditModal() { document.getElementById('editRegModal').style.display = 'none'; }
+    function openEventModal() { document.getElementById('eventModal').style.display = 'flex'; }
+    function closeEventModal() { document.getElementById('eventModal').style.display = 'none'; }
 
     async function saveEdit() {
         showLoading(true);
@@ -259,7 +210,7 @@
             type: 'admin_edit_registration',
             key: sessionStorage.getItem('staff_key'),
             activityTitle: currentEditingRow.活動標題,
-            memberName: currentEditingRow.會員姓名, // 作為識別之一
+            memberName: currentEditingRow.會員姓名,
             phone: document.getElementById('editPhone').value,
             idNumber: document.getElementById('editIdNumber').value,
             transport: document.getElementById('editTransport').value,
@@ -267,175 +218,79 @@
             diet: document.getElementById('editDiet').value,
             isPaid: document.getElementById('editIsPaid').value
         };
-
         try {
             const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.result === 'SUCCESS') {
-                closeEditModal();
-                await loadData();
-            } else { alert(result.message); }
+            await loadData();
+            closeEditModal();
         } catch (e) { alert("修改失敗"); }
         showLoading(false);
     }
 
     async function deleteRegistration() {
-        if (!confirm(`確定要刪除「${currentEditingRow.會員姓名}」的報名資料嗎？此操作不可復原。`)) return;
-        
+        if (!confirm("確定刪除此人報名？")) return;
         showLoading(true);
         try {
-            const res = await fetch(GAS_URL, { 
-                method: 'POST', 
-                body: JSON.stringify({ 
-                    type: 'admin_delete_registration', 
-                    key: sessionStorage.getItem('staff_key'),
-                    activityTitle: currentEditingRow.活動標題,
-                    memberName: currentEditingRow.會員姓名
-                }) 
-            });
-            const result = await res.json();
-            if (result.result === 'SUCCESS') {
-                closeEditModal();
-                await loadData();
-            }
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({
+                type: 'admin_delete_registration',
+                key: sessionStorage.getItem('staff_key'),
+                activityTitle: currentEditingRow.活動標題,
+                memberName: currentEditingRow.會員姓名
+            })});
+            await loadData();
+            closeEditModal();
         } catch (e) { alert("刪除失敗"); }
         showLoading(false);
     }
 
-    // --- 活動發布相關 ---
-    function openEventModal() { document.getElementById('eventModal').style.display = 'flex'; }
-    function closeEventModal() { document.getElementById('eventModal').style.display = 'none'; }
-    
     async function saveEvent() {
-        const payload = {
-            type: 'admin_save_event',
-            key: sessionStorage.getItem('staff_key'),
-            title: document.getElementById('evTitle').value,
-            date: document.getElementById('evDate').value,
-            needId: document.getElementById('evNeedId').value,
-            isTourBus: document.getElementById('evIsTourBus').value,
-            memberFee: document.getElementById('evMemberFee').value,
-            guestFee: document.getElementById('evGuestFee').value
-        };
-
-        if(!payload.title) return alert("標題必填");
-        
+        const title = document.getElementById('evTitle').value;
+        if(!title) return alert("請輸入標題");
         showLoading(true);
         try {
-            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const result = await res.json();
-            if(result.result === 'SUCCESS') {
-                closeEventModal();
-                await loadData();
-            }
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({
+                type: 'admin_save_event',
+                key: sessionStorage.getItem('staff_key'),
+                title: title,
+                date: document.getElementById('evDate').value,
+                needId: document.getElementById('evNeedId').value,
+                isTourBus: document.getElementById('evIsTourBus').value,
+                memberFee: document.getElementById('evMemberFee').value,
+                guestFee: document.getElementById('evGuestFee').value
+            })});
+            await loadData();
+            closeEventModal();
         } catch (e) { alert("儲存失敗"); }
         showLoading(false);
     }
 
-    // --- LINE 功能 ---
+    async function deleteEntireEvent() {
+        const title = document.getElementById('eventSelector').value;
+        if(!confirm(`⚠️ 警告：將永久刪除「${title}」及所有報名資料！`)) return;
+        showLoading(true);
+        try {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({
+                type: 'admin_delete_event_full',
+                key: sessionStorage.getItem('staff_key'),
+                title: title
+            })});
+            location.reload();
+        } catch (e) { alert("刪除失敗"); }
+        showLoading(false);
+    }
+
     async function sendToLine() {
         const title = document.getElementById('eventSelector').value;
         const paidList = allData.registrations.filter(r => r.活動標題 === title && (r.是否繳費 === 'Y' || r.是否繳費 === '是'));
-        
-        if (paidList.length === 0) return alert("目前尚無已繳費名單");
-
-        let message = `💰 【築心】已繳費名單清單\n━━━━━━\n活動：${title}\n總計：${paidList.length} 人\n\n`;
-        paidList.forEach((r, i) => {
-            const isMember = String(r.是否會員).includes('是') || String(r.是否會員).toLowerCase() === 'true' || String(r.是否會員) === 'Y';
-            message += `${i+1}. ${r.會員姓名}${isMember ? '' : '(訪客)'}\n`;
-        });
-        
+        if (paidList.length === 0) return alert("尚無繳費名單");
+        let msg = `💰 【築心】已繳費名單\n活動：${title}\n人數：${paidList.length}\n`;
+        paidList.forEach((r, i) => msg += `${i+1}. ${r.會員姓名}\n`);
         showLoading(true);
         try {
-            const res = await fetch(GAS_URL, { 
-                method: 'POST', 
-                body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message }) 
-            });
-            const result = await res.json();
-            if (result.result === 'SUCCESS') alert('已發送至 LINE 群組');
-        } catch (e) { alert('發送失敗'); }
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: msg })});
+            alert("已發送至 LINE");
+        } catch (e) { alert("發送失敗"); }
         showLoading(false);
     }
-    async function deleteEntireEvent() {
-    const title = document.getElementById('evTitle').value;
-    if (!title) return alert("請先選擇或輸入要刪除的活動名稱");
-
-    const confirmMsg = `【危險操作】\n您確定要刪除活動「${title}」嗎？\n這將會連同所有報名者的名單、交通、繳費紀錄一併永久刪除且無法恢復！`;
-    
-    if (!confirm(confirmMsg)) return;
-
-    showLoading(true);
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                type: 'admin_delete_event_full', // 對應 GAS 的新 case
-                key: sessionStorage.getItem('staff_key'),
-                title: title
-            })
-        });
-        const result = await res.json();
-        if (result.result === 'SUCCESS') {
-            alert(result.message);
-            location.reload(); // 刪除後刷洗頁面
-        } else {
-            alert(result.message);
-        }
-    } catch (e) {
-        alert("刪除請求失敗，請檢查網路");
-    }
-    showLoading(false);
-}
-    function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-
-window.onload = function() {
-    try {
-        const params = new URLSearchParams(window.location.search);
-        const title = params.get('event');
-        
-        // 檢查登入狀態
-        if (!currentUser || !currentUser.phone) {
-            alert("請先登入");
-            location.href = "index.html";
-            return;
-        }
-
-        const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-        const target = allEvents.find(e => e && e.title && String(e.title).trim() === String(title).trim());
-
-        const isTrue = (val) => {
-            if (!val) return false;
-            const s = String(val).trim().toUpperCase();
-            return s === 'Y' || s === '是' || s === 'TRUE';
-        };
-        
-        if (target) {
-            eventConfig = {
-                title: title || "未知活動",
-                memberFee: parseInt(target.memberFee) || 0,
-                guestFee: parseInt(target.guestFee) || 0,
-                needId: isTrue(target.needId),
-                isTourBus: isTrue(target.isTourBus)
-            };
-        } else {
-            console.error("找不到活動資料:", title);
-            // 如果找不到活動，給個預設值避免卡死
-            eventConfig.title = title || "活動報名";
-        }
-
-        // 確保元素存在才賦值
-        if(document.getElementById('mainName')) document.getElementById('mainName').value = currentUser.name || "";
-        if(document.getElementById('displayEventTitle')) document.getElementById('displayEventTitle').innerText = eventConfig.title;
-        if(document.getElementById('priceBadge')) document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
-        
-        initDynamicUI();
-        updateTotal();
-
-    } catch (err) {
-        console.error("初始化發生錯誤:", err);
-        alert("程式載入發生錯誤，請截圖給開發人員：\n" + err.message);
-    }
-}   
 </script>
 </body>
 </html>

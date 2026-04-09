@@ -388,13 +388,54 @@
 }
     function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
-    window.onload = () => {
-        if (!sessionStorage.getItem('staff_key')) {
-            location.href = "staff_login.html";
-        } else {
-            loadData();
+window.onload = function() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const title = params.get('event');
+        
+        // 檢查登入狀態
+        if (!currentUser || !currentUser.phone) {
+            alert("請先登入");
+            location.href = "index.html";
+            return;
         }
-    };
+
+        const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+        const target = allEvents.find(e => e && e.title && String(e.title).trim() === String(title).trim());
+
+        const isTrue = (val) => {
+            if (!val) return false;
+            const s = String(val).trim().toUpperCase();
+            return s === 'Y' || s === '是' || s === 'TRUE';
+        };
+        
+        if (target) {
+            eventConfig = {
+                title: title || "未知活動",
+                memberFee: parseInt(target.memberFee) || 0,
+                guestFee: parseInt(target.guestFee) || 0,
+                needId: isTrue(target.needId),
+                isTourBus: isTrue(target.isTourBus)
+            };
+        } else {
+            console.error("找不到活動資料:", title);
+            // 如果找不到活動，給個預設值避免卡死
+            eventConfig.title = title || "活動報名";
+        }
+
+        // 確保元素存在才賦值
+        if(document.getElementById('mainName')) document.getElementById('mainName').value = currentUser.name || "";
+        if(document.getElementById('displayEventTitle')) document.getElementById('displayEventTitle').innerText = eventConfig.title;
+        if(document.getElementById('priceBadge')) document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+        
+        initDynamicUI();
+        updateTotal();
+
+    } catch (err) {
+        console.error("初始化發生錯誤:", err);
+        alert("程式載入發生錯誤，請截圖給開發人員：\n" + err.message);
+    }
+};    
 </script>
 </body>
 </html>

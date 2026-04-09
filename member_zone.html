@@ -1,315 +1,848 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
+    <meta。charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>會員中心 | 築心會館</title>    
+        
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
-        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; }
+        .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
         
-        /* 轉圈圈樣式 */
-        #loadingOverlay {
-            position: fixed; inset: 0; z-index: 9999; background: rgba(255,255,255,0.7);
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="pb-24">
+<body class="min-h-screen pb-20">
 
-<div id="loadingOverlay">
-    <div class="spinner mb-4"></div>
-    <div class="text-emerald-900 font-bold">同步資料中...</div>
+<div id="loadingOverlay" class="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center" style="display: none;">
+    <div class="flex flex-col items-center">
+        <i class="fas fa-circle-notch fa-spin text-white text-4xl mb-4"></i>
+        <p class="text-white font-bold text-sm">正在同步資料，請稍候...</p>
+    </div>
+</div>
+    
+<div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
+
+<nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <i class="fas fa-leaf text-emerald-400"></i>
+        <h1 class="text-xl font-black tracking-widest">會員中心</h1>
+    </div>
+    <button onclick="logout()" class="px-4 py-2 bg-red-900/40 rounded-full text-[12px] font-bold">登出</button>
+</nav> 
+<main class="max-w-xl mx-auto p-6 space-y-8">
+
+    <!-- 1. 公告欄 -->
+   <div id="newsContainer" class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
+    <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+        <i class="fas fa-bullhorn text-lg"></i>
+    </div>
+    <div class="flex-1">
+        <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
+        <p id="news" class="text-gray-600 text-xs leading-relaxed">同步最新公告中...</p>
+    </div>
+   </div>    
+    <!-- 2. 出席率卡片 -->
+    <div onclick="showLearningHistory()" class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden cursor-pointer active:scale-95 transition-all">
+        <div class="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/5 rounded-full"></div>
+        <div class="relative z-10 text-center">
+            <span class="text-emerald-200 text-xs font-bold tracking-[0.3em] uppercase">Member Profile</span>
+            <h2 id="userName" class="text-3xl font-black mt-2 mb-6 tracking-widest">載入中...</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-black/20 rounded-3xl py-4 border border-white/10">
+                    <p class="text-emerald-200 text-[10px] font-bold mb-1">出席次數</p>
+                    <p id="attCountDisplay" class="text-2xl font-black">0 / 0</p>
+                </div>
+                <div class="bg-black/20 rounded-3xl py-4 border border-white/10">
+                    <p class="text-emerald-200 text-[10px] font-bold mb-1">參與率</p>
+                    <p id="attPercent" class="text-2xl font-black">0%</p>
+                </div>
+            </div>
+            <p class="mt-5 text-[10px] opacity-60 flex items-center justify-center gap-1.5">
+                <i class="fas fa-info-circle"></i>點擊卡片查看詳細學習歷程
+            </p>
+        </div>
+    </div>
+
+    <!-- 3. 掃碼按鈕 -->
+    <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all hover:bg-orange-600">
+        <i class="fas fa-qrcode text-2xl"></i>
+        <span class="text-xl font-black tracking-widest">掃碼報到</span>
+    </button>
+    
+    <!-- 4. 近期活動區 -->
+    <div class="space-y-4">
+        <div class="flex items-center gap-3 px-2">
+            <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
+            <h3 class="text-lg font-black text-emerald-950 tracking-wide">近期活動預告</h3>
+        </div>
+        <div id="calendarActivitySection" class="space-y-4"></div>
+    </div>
+
+    <!-- 5. 報名區 -->
+    <div id="registrationWrapper" class="px-6 mb-8">
+    <div class="flex items-center justify-between mb-4 px-2">
+        <h3 class="font-black text-emerald-900 flex items-center gap-2 text-lg">
+            <i class="fas fa-edit text-emerald-600"></i> 活動預約報名
+        </h3>
+    </div>
+    
+    <div id="eventSection" class="space-y-4"></div>
+    </div>
+    <!-- 6. 底部功能區 -->
+    <div class="space-y-4 pt-6 border-t border-emerald-50">
+        <div class="flex items-center gap-3 px-2">
+            <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
+            <h3 class="text-lg font-black text-emerald-950 tracking-wide">專屬服務</h3>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+             <button onclick="openService('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+                 <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                 <i class="fas fa-book-reader text-emerald-700 text-xl"></i>
+                 </div>
+                 <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
+            </button>            
+            <button onclick="openService('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-camera-retro text-amber-700 text-xl"></i>
+                </div>
+                <span class="font-black text-emerald-900 text-sm">活動剪影</span>
+             </button>            
+            <button onclick="openProfileModal()" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
+                <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
+                <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
+            </button>
+            <button onclick="goToAI()" class="bg-emerald-50 p-6 rounded-[2rem] shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+                <div class="bg-emerald-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+                    <i class="fas fa-comment-dots text-xl"></i>
+                </div>
+                <span class="font-black text-emerald-900 text-sm tracking-wide">智慧助理</span>
+            </button>            
+            <button id="calendarBtn" onclick="location.href='calendar.html'" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+                <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+                <i class="fas fa-calendar-alt text-xl"></i>
+            </div>
+            <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
+            </button>            
+            <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
+                <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
+                <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
+            </button>
+        </div>
+    </div>
+
+      <div id="scanModal" class="fixed inset-0 z-[300] bg-black/90 hidden flex-col items-center justify-center p-6 backdrop-blur-sm">
+      <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
+            <h3 class="font-black text-emerald-900">活動報到掃描</h3>
+            <button onclick="closeScanner()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-gray-400">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="reader" class="w-full bg-black"></div>
+        <div class="p-6 text-center bg-white">
+            <p class="text-xs text-gray-400 font-bold tracking-widest">請將 QR Code 對準掃描框</p>
+        </div>
+    </div>
+    </div>
+    
+</main>
+<!-- 各種 Modal 略 (保持原樣) -->
+<div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-7 shadow-2xl relative" onclick="event.stopPropagation()">
+        <button onclick="closeHistoryModal(event, true)" class="absolute top-5 right-6 text-gray-400 hover:text-gray-600 text-2xl transition-colors">&times;</button>
+        <h3 class="text-xl font-black text-emerald-900 mb-5 text-center flex items-center justify-center gap-2"><i class="fas fa-history text-emerald-600"></i>學習歷程清單</h3>
+        <div id="historyList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+    </div>
 </div>
 
-<nav class="emerald-gradient p-6 rounded-b-[3rem] shadow-xl text-white mb-8">
-    <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
-                <i class="fas fa-user-circle text-2xl"></i>
-            </div>
-            <div>
-                <h1 id="userName" class="text-2xl font-black tracking-tight">載入中...</h1>
-                <p id="userRole" class="text-xs font-bold opacity-80 bg-white/20 px-2 py-0.5 rounded-full inline-block mt-1 uppercase">MEMBER</p>
-            </div>
-        </div>
-        <button onclick="location.href='index.html'" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-            <i class="fas fa-sign-out-alt"></i>
-        </button>
+<div id="scannerModal" class="modal-overlay">
+    <div class="bg-white w-[90%] max-w-sm rounded-[3rem] overflow-hidden shadow-2xl">
+        <div id="reader" class="w-full"></div>
+        <div class="p-6 text-center"><button onclick="stopScanner()" class="w-full py-4 bg-gray-100 rounded-2xl font-black text-gray-500">取消返回</button></div>
     </div>
-
-    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/20 shadow-inner">
-        <div class="flex items-center gap-2 mb-2">
-            <i class="fas fa-bullhorn text-yellow-300 text-sm"></i>
-            <span class="text-[10px] font-black uppercase tracking-[0.2em]">重要公告</span>
-        </div>
-        <p id="newsContent" class="text-sm font-medium leading-relaxed opacity-90 italic">同步資料中...</p>
-    </div>
-</nav>
-
-<main class="px-6 space-y-8">
-    <section class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex items-center justify-between">
-        <div class="flex-1">
-            <h3 class="font-black text-emerald-900 text-lg mb-1">年度參與率</h3>
-            <p id="attendDetail" class="text-xs text-gray-400 font-bold">載入中...</p>
-        </div>
-        <div class="relative w-16 h-16">
-            <svg class="w-full h-full transform -rotate-90">
-                <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" class="text-gray-100"></circle>
-                <circle id="progressCircle" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" 
-                        stroke-dasharray="175.9" stroke-dashoffset="175.9" class="text-emerald-500 transition-all duration-1000"></circle>
-            </svg>
-            <div id="progressText" class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-emerald-800">0%</div>
-        </div>
-    </section>
-
-    <section>
-        <div class="flex items-center justify-between mb-5 px-2">
-            <div class="flex items-center gap-3">
-                <div class="w-2 h-7 emerald-gradient rounded-full"></div>
-                <h2 class="text-xl font-black text-emerald-900">近期活動</h2>
-            </div>
-        </div>
-        <div id="eventList" class="space-y-4">
-            </div>
-    </section>
-
-    <section id="calendarSection" class="hidden">
-        <div class="flex items-center gap-3 mb-5 px-2">
-            <div class="w-2 h-7 bg-orange-400 rounded-full"></div>
-            <h2 class="text-xl font-black text-emerald-900">館內行事曆</h2>
-        </div>
-        <div id="calendarList" class="space-y-3"></div>
-    </section>
-</main>
-
-<div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-emerald-50 p-4 flex justify-around items-center z-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
-    <button onclick="switchTab('events')" class="flex flex-col items-center gap-1 text-emerald-800">
-        <div class="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center shadow-inner"><i class="fas fa-home"></i></div>
-        <span class="text-[10px] font-black">首頁</span>
-    </button>
-    <button onclick="openScanner()" class="flex flex-col items-center gap-1 text-gray-400">
-        <div class="w-14 h-14 rounded-full emerald-gradient flex items-center justify-center -translate-y-6 shadow-lg border-4 border-white text-white">
-            <i class="fas fa-qrcode text-xl"></i>
-        </div>
-        <span class="text-[10px] font-black -translate-y-5">簽到</span>
-    </button>
-    <button onclick="openProfile()" class="flex flex-col items-center gap-1 text-gray-400">
-        <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center"><i class="fas fa-id-card"></i></div>
-        <span class="text-[10px] font-black">資料</span>
-    </button>
 </div>
 
 <div id="profileModal" class="modal-overlay">
-    <div class="bg-white w-[90%] rounded-[3rem] p-8 max-h-[85vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-black text-emerald-900">修改個人資料</h3>
-            <button onclick="closeProfile()" class="text-gray-300 text-xl"><i class="fas fa-times-circle"></i></button>
+    <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div class="p-6 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
+            <h3 class="font-black text-emerald-900">修改個人資料</h3>
+            <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <div class="space-y-4">
+        <div class="p-8 space-y-5">
             <div>
-                <label class="text-[10px] font-black text-emerald-800 uppercase ml-2 mb-1 block">電子郵件</label>
-                <input type="email" id="newEmail" class="w-full px-5 py-4 bg-gray-50 rounded-2xl text-sm border-2 border-transparent focus:border-emerald-500 outline-none transition-all">
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">電子郵件 EMAIL</label>
+                <input type="email" id="editEmail" class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm font-medium" placeholder="請輸入 Email">
             </div>
-            <div class="bg-emerald-50 p-5 rounded-3xl space-y-3">
-                <label class="text-[10px] font-black text-emerald-800 uppercase block">變更密碼 (若不修改請留空)</label>
-                <input type="password" id="newPassword" placeholder="新密碼" class="w-full px-5 py-4 bg-white rounded-xl text-sm border-2 border-transparent focus:border-emerald-500 outline-none">
-                <div class="h-[1px] bg-emerald-100"></div>
-                <input type="password" id="oldPassword" placeholder="輸入舊密碼驗證" class="w-full px-5 py-4 bg-white rounded-xl text-sm border-2 border-transparent focus:border-emerald-500 outline-none">
+            <hr class="border-gray-100">
+            <div>
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">新密碼 (若不修改請留空)</label>
+                <input type="password" id="newPassword" class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm" placeholder="請輸入新密碼">
             </div>
-            <button onclick="updateProfile()" class="w-full emerald-gradient text-white py-5 rounded-3xl font-black shadow-lg active:scale-95 transition-all mt-4">儲存變更</button>
+            <div class="bg-amber-50 p-4 rounded-2xl">
+                <label class="block text-[10px] font-bold text-amber-800 mb-2 ml-1">請輸入「舊密碼」進行確認</label>
+                <input type="password" id="oldPassword" class="w-full px-5 py-3 bg-white rounded-xl border-2 border-transparent focus:border-amber-500 outline-none text-sm" placeholder="安全性驗證">
+            </div>
+            
+            <button onclick="submitProfileUpdate()" class="w-full py-4 bg-emerald-700 text-white rounded-[1.5rem] font-black text-sm shadow-lg shadow-emerald-100 active:scale-95 transition-all">
+                確認儲存修改
+            </button>
         </div>
     </div>
 </div>
-
-<div id="scanModal" class="modal-overlay">
-    <div class="bg-white w-[90%] rounded-[3rem] p-6 text-center">
-        <div id="reader" class="w-full overflow-hidden rounded-2xl mb-4"></div>
-        <button onclick="closeScanner()" class="text-gray-400 font-bold text-sm">取消掃描</button>
-    </div>
-</div>
-
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
+// ==========================================
+// 1. 全域變數與基礎設定 (保留核心)
+// ==========================================
+let currentUser = {};
+
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec"; 
+
+// ==========================================
+// 2. 資料同步核心：確保公告、權限、行事曆一個不漏
+// ==========================================
+async function syncData() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
     
-    window.onload = function() {
-        const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-        if (!userInfo || !userInfo.phone) {
-            location.href = "index.html";
-            return;
-        }
-        document.getElementById('userName').innerText = userInfo.name || "會員";
-        document.getElementById('userRole').innerText = userInfo.role || "MEMBER";
+    // 取得當前手機號碼
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    if (!userInfo || !userInfo.phone) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    try {
+        // 使用輕量化的 member_init 介面
+        const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
+        const res = await fetch(url);
+        const data = await res.json();
         
-        syncData(); 
-    };
+        if (data.result === "SUCCESS") {
+            // 【關鍵修正】賦值給全域變數，這樣 openService 才能讀到網址
+            globalConfig = data.config || {}; 
+            console.log("全域設定已載入:", globalConfig);
 
-    async function syncData() {
-        const loading = document.getElementById('loadingOverlay');
-        if (loading) loading.style.display = 'flex';
-
-        const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-        try {
-            const response = await fetch(`${GAS_URL}?type=member_init&phone=${userInfo.phone}`);
-            const data = await response.json();
-            
-            if (data.result === "SUCCESS") {
-                // 儲存資料
+            // 1. 存入保險箱供報名頁面使用
+            if (data.events) {
                 localStorage.setItem('allEvents', JSON.stringify(data.events));
-                sessionStorage.setItem('userEvents', JSON.stringify(data.registrations));
-                
-                // 更新公告與出席率
-                document.getElementById('newsContent').innerText = data.news || "歡迎來到築心會館";
-                updateAttendance(data.user.attendLog);
-                updateEventList(data.events);
-                
-                // 更新行事曆
-                if(data.calendar && data.calendar.length > 0) {
-                    renderCalendar(data.calendar);
-                }
             }
-        } catch (e) {
-            console.error("同步失敗:", e);
-        } finally {
-            if (loading) loading.style.display = 'none';
-        }
-    }
 
-    function updateAttendance(logs) {
-        const total = 10; // 假設年度基準為 10 次
-        const count = logs ? logs.length : 0;
-        const percent = Math.min(Math.round((count / total) * 100), 100);
-        
-        document.getElementById('attendDetail').innerText = `今年已參加 ${count} 場活動`;
-        document.getElementById('progressText').innerText = percent + "%";
-        
-        const circle = document.getElementById('progressCircle');
-        const offset = 175.9 - (175.9 * percent) / 100;
-        circle.style.strokeDashoffset = offset;
-    }
-
-    function updateEventList(events) {
-        const container = document.getElementById('eventList');
-        const userEvents = JSON.parse(sessionStorage.getItem('userEvents')) || [];
-        
-        if (!events || events.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center text-gray-400 font-bold italic">目前暫無開放報名的活動</div>`;
-            return;
-        }
-
-        container.innerHTML = events.map(event => {
-            const isRegistered = userEvents.some(reg => String(reg.title).trim() === String(event.title).trim());
+            // 2. 公告時限處理
+            const newsContent = data.news ? data.news.trim() : "";
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const isDateValid = (!data.startDate || todayStr >= data.startDate) && (!data.endDate || todayStr <= data.endDate);
             
-            return `
-                <div class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-emerald-50 relative overflow-hidden">
-                    <div class="flex items-start gap-4">
-                        <div class="w-16 h-16 rounded-3xl emerald-gradient flex items-center justify-center text-white shrink-0 shadow-lg">
-                            <i class="fas fa-calendar-star text-2xl"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">${event.status || '進行中'}</span>
-                                ${isRegistered ? '<span class="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full tracking-wider">已報名過</span>' : ''}
-                            </div>
-                            <h3 class="font-black text-emerald-900 text-lg leading-tight mb-2">${event.title}</h3>
-                            <div class="space-y-1">
-                                <div class="flex items-center text-gray-400 text-xs font-bold">
-                                    <i class="far fa-calendar-alt w-4 text-center"></i> ${event.eventDate || '未定'}
-                                </div>
-                                <div class="flex items-center text-gray-400 text-xs font-bold">
-                                    <i class="fas fa-dollar-sign w-4 text-center"></i> 會員 $${event.memberFee} / 訪客 $${event.guestFee}
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                ${isRegistered ? 
-                                    `<button class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black text-sm cursor-not-allowed" disabled>
-                                        <i class="fas fa-check-circle mr-1"></i> 您已完成報名
-                                     </button>` :
-                                    `<button onclick="location.href='event_registration.html?event=${encodeURIComponent(event.title)}'" 
-                                             class="w-full emerald-gradient text-white py-3 rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all">
-                                        立即報名參加
-                                     </button>`
-                                }
-                            </div>
-                        </div>
+            const newsContainer = document.getElementById('newsContainer');
+            if (newsContent && newsContent !== "NONE" && isDateValid) {
+                if (newsContainer) newsContainer.classList.remove('hidden');
+                document.getElementById('news').innerText = newsContent;
+            } else {
+                if (newsContainer) newsContainer.classList.add('hidden');
+            }
+
+            // 3. 更新當前使用者狀態與幹部開關
+            currentUser = data.user; 
+            currentUser.phone = userInfo.phone; // 確保手機號碼存在
+            
+            const staffBtn = document.getElementById('staffBtn');
+            if (staffBtn && data.user.role !== "學員") {
+                staffBtn.classList.remove('hidden');
+                staffBtn.onclick = enterStaffMode;
+            }
+
+            // 4. 更新 UI 畫面
+            updateUI(data.user, data.calendar, data.events, data.registrations);
+        }
+    } catch (e) {
+        console.error("同步失敗:", e);
+        showToast("同步失敗: " + e.message, "error");
+    } finally {
+        overlay.style.display = 'none';
+    }
+}    
+// 增加 registrations 作為第四個參數
+function updateUI(user, calendar, events, registrations) {
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1. 計算數據
+    const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
+    const totalEvents = requiredPastEvents.length;
+    const attendCount = (user.attendLog || []).length;
+    const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
+
+    // 2. 填入 HTML
+    const percentElem = document.getElementById('attPercent');
+    const countDisplayElem = document.getElementById('attCountDisplay');
+    
+    if (percentElem) percentElem.innerText = attendanceRate + '%';
+    if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
+
+    // --- 參與率超過 50% 放煙火 ---
+    if (attendanceRate >= 50 && typeof confetti === 'function') {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#064E3B', '#059669', '#10B981']
+        });
+    }
+
+    // 3. 儲存數據供學習歷程 Modal 使用
+    window.currentAttendedData = (calendar || []).filter(ev => 
+        (user.attendLog || []).some(log => String(log).includes(ev.title))
+    );
+
+    renderCalendarActivity(calendar);
+    
+    // 【關鍵修正】直接使用傳入的參數，拿掉 data. 前綴
+    renderEventSection(events || [], registrations || []);
+}    
+// 點擊卡片觸發的函式
+function showLearningHistory() {
+    const modal = document.getElementById('historyModal'); // 確保您的 HTML 有這個 Modal ID
+    const container = document.getElementById('historyList');
+    if (!modal || !container) return;
+
+    const logs = window.currentAttendedData || [];
+
+    if (logs.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-10">
+                <i class="fas fa-calendar-check text-gray-200 text-5xl mb-3"></i>
+                <p class="text-gray-400">目前尚無出席紀錄</p>
+            </div>`;
+    } else {
+        container.innerHTML = logs.map(log => `
+            <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-emerald-900 text-sm">${log.title}</h4>
+                        <p class="text-[10px] text-emerald-600/70">${log.dateText || '已簽到'}</p>
                     </div>
                 </div>
-            `;
-        }).join('');
-    }
-
-    function renderCalendar(items) {
-        document.getElementById('calendarSection').classList.remove('hidden');
-        const list = document.getElementById('calendarList');
-        list.innerHTML = items.map(item => `
-            <div class="bg-white p-4 rounded-3xl border border-orange-50 flex items-center gap-4">
-                <div class="text-center shrink-0">
-                    <div class="text-[10px] font-black text-orange-400 uppercase leading-none">${item.dateText.split('-')[1]}月</div>
-                    <div class="text-xl font-black text-emerald-900">${item.dateText.split('-')[2]}</div>
-                </div>
-                <div class="h-8 w-[1px] bg-gray-100"></div>
-                <div class="font-bold text-sm text-emerald-800">${item.title}</div>
+                <span class="text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg">已出席</span>
             </div>
         `).join('');
     }
 
-    // --- 彈窗功能 ---
-    function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
-    function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
     
-    async function updateProfile() {
-        const oldPassword = document.getElementById('oldPassword').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const newEmail = document.getElementById('newEmail').value;
-        
-        if (!oldPassword) return alert("請輸入舊密碼驗證");
-        
-        const loading = document.getElementById('loadingOverlay');
-        loading.style.display = 'flex';
-        
-        const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-        try {
-            const response = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    type: 'updateProfile',
-                    phone: userInfo.phone,
-                    oldPassword, newPassword, newEmail
-                })
-            });
-            const res = await response.json();
-            alert(res.message);
-            if (res.result === "SUCCESS") location.reload();
-        } catch (e) { alert("更新失敗"); }
-        finally { loading.style.display = 'none'; }
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('event');
+    
+    // 1. 抓取剛剛存入的 allEvents
+    const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+    
+    // 2. 尋找匹配標題的活動
+    const target = allEvents.find(e => e.title === title);
+
+    if (target) {
+        eventConfig = {
+            title: title,
+            // 注意：這裡的屬性名必須對應你 GAS 回傳的 Json Key
+            memberFee: parseInt(target.memberFee) || 0,
+            guestFee: parseInt(target.guestFee) || 0,
+            needID: (target.needID === "是" || target.needID === "Y"), 
+            isTourBus: (target.isTourBus === "是" || target.isTourBus === "Y")
+        };
+    }
+};   
+
+// 關閉彈窗
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+} 
+// 掃碼成功處理
+// 掃碼成功處理 (2026 修復版)
+// 掃碼成功處理 - 格式對齊補登系統版本 (2026-04-07 修復)
+async function onScanSuccess(decodedText) {
+    let rawText = decodedText.trim();
+    let finalEventString = ""; // 準備寫入資料庫的最終字串
+
+    // 1. 解析與重組格式 (將 CHECKIN:YYYY-MM-DD:Title 轉為 EVENT:YYYY-MM-DD|Title)
+    if (rawText.startsWith("CHECKIN:")) {
+        const parts = rawText.split(':');
+        if (parts.length >= 3) {
+            const datePart = parts[1]; // 2026-03-13
+            // 取得第二個冒號之後的所有內容，避免活動名稱內有冒號被切斷
+            const titlePart = rawText.substring(rawText.indexOf(':', 8) + 1).trim(); 
+            
+            // 組合為您要求的格式：EVENT:日期|名稱
+            finalEventString = `EVENT:${datePart}|${titlePart}`;
+        } else {
+            finalEventString = rawText; // 格式異常時退回原文字
+        }
+    } else {
+        // 如果 QR Code 本身就已經是 EVENT: 開頭，直接使用
+        finalEventString = rawText;
     }
 
-    // --- 掃描功能 (保留) ---
-    let html5QrCode;
-    function openScanner() {
-        document.getElementById('scanModal').style.display = 'flex';
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
-    }
-    function closeScanner() {
-        if(html5QrCode) html5QrCode.stop();
-        document.getElementById('scanModal').style.display = 'none';
-    }
-    function onScanSuccess(decodedText) {
+    // 2. 檢查前端快取是否已報到 (比對轉換後的完整字串)
+    const alreadyAttended = (currentUser.attendLog || []).some(log => String(log) === finalEventString);
+    if (alreadyAttended) {
+        showToast("此活動已完成報到", "info");
         closeScanner();
-        alert("簽到掃描成功：" + decodedText);
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        return;
     }
-</script>
+
+    closeScanner();
+    showToast("報到傳送中...", "info");
+
+    try {
+        // 3. 發送至 GAS 進行寫入
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'checkin',
+                phone: currentUser.phone,
+                name: currentUser.name,
+                eventTitle: finalEventString // 傳送對齊後的格式：EVENT:2026-03-13|築心演講...
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.result === "SUCCESS") {
+            showToast("報到成功！", "success");
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            }
+            syncData(); // 刷新畫面與出席紀錄
+        } else if (result.result === "ALREADY_DONE") {
+            showToast("您已經簽到過囉", "info");
+        } else {
+            showToast(result.message || "報到失敗", "error");
+        }
+    } catch (e) {
+        console.error("Fetch Error:", e);
+        showToast("連線異常，請檢查網路", "error");
+    }
+}    
+function startScanner() {
+    const modal = document.getElementById('scanModal');
+    if (!modal) {
+        alert("找不到掃描視窗結構");
+        return;
+    }
+    
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+
+    // 啟動 Html5Qrcode
+    window.html5QrCode = new Html5Qrcode("reader");
+    const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+    window.html5QrCode.start(
+        { facingMode: "environment" }, 
+        config, 
+        onScanSuccess
+    ).catch(err => {
+        console.error("相機錯誤:", err);
+        showToast("無法開啟相機，請檢查權限", "error");
+        closeScanner();
+    });
+}    
+function closeScanner() {
+    const modal = document.getElementById('scanModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+    if (window.html5QrCode) {
+        window.html5QrCode.stop().then(() => {
+            window.html5QrCode.clear();
+        }).catch(err => console.warn("停止掃描失敗", err));
+    }
+} 
+
+// 全域變數預期在 syncData 之後會被填充
+let globalConfig = {}; 
+
+// 在您的 syncData 成功回傳處，請記得賦值：
+// .then(data => {
+//    globalConfig = data.config; 
+//    ... 其他渲染
+// })
+
+function openService(key) {
+    // 當 key 傳入 'reading_folder_url' 時，
+    // 它會去 globalConfig 裡找對應的網址
+    const url = globalConfig[key];
+    console.log("嘗試開啟服務:", key, "取得網址:", url);
+    if (url && url.startsWith('http')) {
+        showToast("正在前往專屬連結...", "success");
+        setTimeout(() => {
+            window.open(url, '_blank');
+        }, 800);
+    } else {
+        console.error(`找不到 Key: ${key} 的有效網址`);
+        showToast("服務連結尚未設定", "info");
+        console.error(`請檢查 Config 試算表 A 欄是否為: ${key}`);    }
+}
+    
+// ==========================================
+// 4. 報名區渲染：將按鈕指向「新頁面」
+// ==========================================
+// --- 完善：活動報名區塊渲染 (若無活動則全區塊隱藏) ---
+function renderEventSection(events, registrations) {
+    const wrapper = document.getElementById('registrationWrapper');
+    const container = document.getElementById('eventSection');
+    if (!container) return;
+    
+    container.innerHTML = '';
+
+    if (!events || events.length === 0) {
+        if (wrapper) wrapper.classList.add('hidden');
+        return;
+    }
+    if (wrapper) wrapper.classList.remove('hidden');
+
+    events.forEach(ev => {
+        // --- 容錯比對：確保標題與已報名清單一致 ---
+        const regInfo = (registrations || []).find(reg => {
+            const rTitle = reg.title || reg.eventTitle || "";
+            return rTitle.toString().trim() === ev.title.toString().trim();
+        });
+
+        const isRegistered = !!regInfo;
+        const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是"); 
+        
+        const mFee = ev.memberFee || 0;
+        const gFee = ev.guestFee || 0;
+        const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
+
+        let actionBtn = '';
+        if (isRegistered) {
+            const btnText = isCheckedIn ? '已完成報到' : '已報名成功';
+            const btnIcon = isCheckedIn ? 'fa-user-check' : 'fa-check-circle';
+            actionBtn = `
+                <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
+                    <i class="fas ${btnIcon} mr-2"></i>${btnText}
+                </button>`;
+        } else {
+            actionBtn = `
+                <button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
+                        class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
+                    立即報名
+                </button>`;
+        }
+
+        let cardHtml = '';
+        if (posterUrl) {
+            cardHtml = `
+                <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
+                    <img src="${posterUrl}" class="w-full h-auto block" onerror="this.style.display='none'">
+                    <div class="p-6">
+                        <h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>
+                        ${actionBtn}
+                    </div>
+                </div>`;
+        } else {
+            cardHtml = `
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
+                        <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || '額滿為止'}</span>
+                    </div>
+                    <h4 class="font-black text-emerald-900 text-xl mb-3">${ev.title}</h4>
+                    <div class="space-y-3 mb-5 text-gray-600">
+                        <div class="flex items-center gap-3 text-xs">
+                            <i class="far fa-calendar-alt text-emerald-600"></i>
+                            <span class="font-bold">日期：</span>${ev.eventDate || '另行通知'}
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <i class="fas fa-tag text-emerald-600"></i>
+                            <span class="font-bold">費用：</span>會員 $${mFee} / 非會員 $${gFee}
+                        </div>
+                    </div>
+                    ${actionBtn}
+                </div>`;
+        }
+        container.insertAdjacentHTML('beforeend', cardHtml);
+    }); // <-- 就是這裡漏掉了閉合括號！
+}    
+// 獨立的跳轉函式 (保持單純)
+function goToRegistration(title) {
+    location.href = `event_registration.html?event=${title}&phone=${currentUser.phone}`;
+}
+   
+// 跳轉處理
+function handleJumpToReg(title) {
+    // 帶著參數跳轉，讓新頁面知道是誰要報名哪個活動
+    const url = `${GAS_URL}?page=registration&event=${encodeURIComponent(title)}&phone=${currentUser.phone}&name=${encodeURIComponent(currentUser.name)}`;
+    window.top.location.href = url;
+}
+
+// ==========================================
+// 5. 頁面初始化與原本功能保留
+// ==========================================
+window.addEventListener('load', () => {
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) { location.href = 'index.html'; return; }
+    currentUser = JSON.parse(userStr);
+    
+    // 初始化顯示姓名
+    const nameElem = document.getElementById('userName');
+    if(nameElem) nameElem.innerText = currentUser.name;
+    
+    syncData();
+});
+
+// 保留原本的圖片網址處理工具
+function getDirectImageUrl(url) {
+    if (!url || url === "NONE" || url === "" || typeof url !== 'string') return null;
+    
+    // 如果是普通圖片連結，直接回傳
+    if (url.startsWith('http') && !url.includes('drive.google.com')) return url;
+
+    // 1. 嘗試從各種 Google Drive 連結格式中提取 ID
+    // 支援 /file/d/ID/view, id=ID, 以及您提供的 drive_link 格式
+    let fileId = "";
+    const segments = url.split('/');
+    const dIndex = segments.indexOf('d');
+    if (dIndex !== -1 && segments[dIndex + 1]) {
+        fileId = segments[dIndex + 1].split('?')[0].split('&')[0];
+    } else {
+        const match = url.match(/id=([^&]+)/);
+        if (match) fileId = match[1];
+    }
+
+    // 2. 如果上述方法失敗，使用最後的保險：正則比對長度 25-45 的 ID 字串
+    if (!fileId) {
+        const fallbackMatch = url.match(/[-\w]{25,45}/);
+        if (fallbackMatch) fileId = fallbackMatch[0];
+    }
+
+    if (fileId) {
+        // 使用最穩定且支援度最高的縮圖 API
+        // sz=w1000 確保 Demo 用的大圖也能清晰顯示
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    }    
+    return url; // 若都失敗則回傳原始網址嘗試直接載入
+}    
+// 保留進入工作人員模式功能
+async function enterStaffMode() {   
+    const staffKey = prompt("請輸入幹部管理金鑰：");
+    if (!staffKey) {
+        alert("使用者取消輸入或未填寫");
+        return;
+    }
+
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'verify_staff_key',
+                staffKey: staffKey.trim()
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.result === "SUCCESS") {
+            // 存入金鑰，名稱必須與 staff_menu.html 一致
+            sessionStorage.setItem('staff_key', staffKey.trim()); 
+            window.location.href = 'staff_menu.html'; 
+        } else {
+            alert("失敗：金鑰不正確 (ERROR)");
+        }
+    } // <--- 之前您漏掉了這個結束 try 的右大括號
+    catch (e) {
+        console.error(e);
+        alert("發生嚴重錯誤！錯誤訊息：" + e.message);
+    }
+}    
+    // 核心：控制載入中遮罩
+function showLoading(show) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        console.warn("找不到 loadingOverlay 元素");
+        return;
+    }
+    overlay.style.display = show ? 'flex' : 'none';
+}
+// ==========================================
+// 修正：近期活動預告 (僅顯示一則，優先海報)
+// ==========================================
+function renderCalendarActivity(calendar) {
+    const container = document.getElementById('calendarActivitySection');
+    if (!container) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const nextEvent = (calendar || []).find(ev => ev.dateText >= today);
+
+    if (!nextEvent) {
+        container.innerHTML = '<p class="text-center text-gray-400 py-10 text-xs font-bold">目前暫無近期活動預告</p>';
+        return;
+    }
+
+    // 取得轉換後的網址
+    const posterUrl = getDirectImageUrl(nextEvent.poster);
+    console.log("海報解析網址:", posterUrl); // 您可以在控制台確認網址是否正確
+
+    if (posterUrl) {
+        container.innerHTML = `
+            <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
+                <div class="w-full bg-gray-50 flex items-center justify-center min-h-[200px]">
+                    <img src="${posterUrl}" 
+                         class="w-full h-auto block" 
+                         alt="${nextEvent.title}"
+                         onerror="this.parentElement.innerHTML='<div class=\'p-10 text-gray-400 text-xs text-center font-bold\'>海報載入失敗<br>請確認雲端共用權限</div>'">
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">${nextEvent.dateText}</span>
+                        <h4 class="font-black text-emerald-900">${nextEvent.title}</h4>
+                    </div>
+                </div>
+            </div>`;
+    } else {
+        // 沒有網址則顯示文字模式
+        renderTextActivity(container, nextEvent);
+    }
+}
+
+// 圖片載入失敗時的備案函式
+function handleImageError(img, title, date, desc) {
+    console.error("海報圖片載入失敗，網址可能無效或權限未開啟");
+    const container = img.closest('#calendarActivitySection');
+    renderTextActivity(container, { title, dateText: date, desc });
+}
+
+// 純文字顯示模式
+function renderTextActivity(container, ev) {
+    container.innerHTML = `
+        <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-700 text-white px-3 py-1 rounded-xl text-[10px] font-bold">${ev.dateText}</div>
+                <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed pl-3 border-l-2 border-emerald-100">${ev.desc || "精彩活動，敬請期待"}</p>
+        </div>`;
+}    
+function showToast(msg, type) {
+    const container = document.getElementById('toastContainer');
+    if(!container) return;
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-500' : 'bg-amber-500');
+    toast.className = `${bgColor} text-white px-6 py-3 rounded-2xl shadow-xl mb-3 animate-bounce font-bold text-sm`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 3000);
+}
+// 修正 logout 報錯
+function logout() {
+    if(confirm('確定要登出嗎？')) {
+        sessionStorage.clear();
+        location.href = 'index.html';
+    }
+}
+
+// 修正 openRemoteLink 報錯
+function openRemoteLink(type) {
+    // 這裡通常會對應到您 data.settings 裡面的網址，我們先暫代為 alert 或跳轉
+    showToast("功能開發中，即將開啟...", "info");
+} 
+// 開啟彈窗並填入舊資料
+function openProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    
+    // 從當前登入資訊讀取 Email
+    document.getElementById('editEmail').value = currentUser.email || "";
+    document.getElementById('newPassword').value = ""; // 清空新密碼框
+    document.getElementById('oldPassword').value = ""; // 清空驗證框
+    
+    modal.style.display = 'flex';
+}
+
+function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
+
+// 送出修改
+// 請在 member_zone.html 中找到並更新此函式
+async function submitProfileUpdate() {
+    // 1. 現場抓取輸入框的值 (請確認 ID 與您 HTML 中的一致)
+    const oldPasswordInput = document.getElementById('oldPassword'); // 假設 ID 是這個
+    const newPasswordInput = document.getElementById('newPassword');
+    const newEmailInput = document.getElementById('editEmail');
+
+    const oldPassword = oldPasswordInput ? oldPasswordInput.value.trim() : "";
+    const newPassword = newPasswordInput ? newPasswordInput.value.trim() : "";
+    const newEmail = newEmailInput ? newEmailInput.value.trim() : "";
+
+    // 2. 基本檢查
+    if (!oldPassword) {
+        alert("請輸入舊密碼以進行驗證");
+        return;
+    }
+
+    // 3. 從 Session 拿手機號碼
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    const phone = userInfo ? userInfo.phone : null;
+
+    if (!phone) {
+        alert("登入逾時，請重新登入");
+        return;
+    }
+    // --- 【開始處理轉圈圈】 ---
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'flex'; // 強制顯示為 flex 居中 顯示轉圈圈
+    
+    const payload = {
+        type: 'updateProfile',
+        phone: phone,
+        oldPassword: oldPassword, // 這次絕對不會是空的了
+        newPassword: newPassword,
+        email: newEmail
+    };
+
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        
+        if (result.result === "SUCCESS") {
+            alert("修改成功！");
+            location.reload();
+        } else {
+            alert(result.message);
+        }
+    } catch (e) {
+        alert("系統繁忙，請稍後再試");
+    } finally {
+        // --- 【關閉轉圈圈】 ---
+        // 無論成功或失敗，最後一定要隱藏轉圈圈，否則頁面會被鎖死
+        if (loading) loading.style.display = 'none'; // 隱藏
+    }
+}        
+</script>   
 </body>
 </html>

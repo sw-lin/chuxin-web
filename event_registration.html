@@ -119,50 +119,51 @@
     let partners = [];
 
 window.onload = function() {
-        const params = new URLSearchParams(window.location.search);
-        const title = params.get('event');
-        
-        if (!currentUser.phone) {
-            alert("請先登入");
-            location.href = "index.html";
-            return;
-        }
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('event');
+    
+    if (!currentUser.phone) {
+        alert("請先登入");
+        location.href = "index.html";
+        return;
+    }
 
-        const userEvents = JSON.parse(sessionStorage.getItem('userEvents')) || [];
-        if (userEvents.some(ev => ev.title === title)) {
-            alert("您已經報名過此活動囉！");
-            location.href = "member_zone.html";
-            return;
-        }
+    // --- 關鍵修正：改用 localStorage 且與 member_zone 保持一致 ---
+    const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+    console.log("從 localStorage 讀取的活動清單:", allEvents); 
 
-        const allEvents = JSON.parse(sessionStorage.getItem('allEvents')) || [];
-        console.log("目前緩存的活動清單:", allEvents); // 這行能幫你確認 H, I, J, K 有沒有被抓進來        // 增加 .trim() 確保比對時不會被空格干擾
-        const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
+    const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
 
-        const isTrue = (val) => {
-            if (!val) return false;
-            const s = String(val).trim().toUpperCase();
-            return s === 'Y' || s === '是' || s === 'TRUE';
-        };
-        
-        // --- 核心安全修正：確保 target 存在才讀取屬性 ---
-        eventConfig = {
-            title: title || "未知活動",
-            memberFee: target ? (parseInt(target.memberFee || target.memberPrice) || 0) : 0,
-            guestFee: target ? (parseInt(target.guestFee || target.guestPrice) || 0) : 0,
-            needId: target ? isTrue(target.needId || target.needID) : false,
-            isTourBus: target ? isTrue(target.isTourBus) : false
-        };
+    if (!target) {
+        console.error("找不到該活動資料，請重新從會員中心進入");
+    }
 
-        // 更新 UI
-        document.getElementById('mainName').value = currentUser.name || "";
-        document.getElementById('displayEventTitle').innerText = eventConfig.title;
-        document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
-        
-        initDynamicUI();
-        updateTotal();
+    const isTrue = (val) => {
+        if (!val) return false;
+        const s = String(val).trim().toUpperCase();
+        return s === 'Y' || s === '是' || s === 'TRUE' || s === 'CHECKED';
+    };
+    
+    // 確保對應 GAS 傳回的正確 Key 名稱 (H, I, J, K)
+    eventConfig = {
+        title: title || "未知活動",
+        memberFee: target ? (parseInt(target.memberFee) || 0) : 0,
+        guestFee: target ? (parseInt(target.guestFee) || 0) : 0,
+        needId: target ? isTrue(target.needId) : false,
+        isTourBus: target ? isTrue(target.isTourBus) : false
     };
 
+    console.log("當前解析後的 eventConfig:", eventConfig);
+
+    // 更新 UI
+    document.getElementById('mainName').value = currentUser.name || "";
+    document.getElementById('displayEventTitle').innerText = eventConfig.title;
+    document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+    
+    initDynamicUI();
+    updateTotal();
+};
+    
     function initDynamicUI() {
         const idSection = document.getElementById('mainIDSection');
         if(eventConfig.needId) {
@@ -232,33 +233,6 @@ window.onload = function() {
         document.getElementById('totalAmount').innerText = total;
     }
     
-    function handleGetEventsPage() {
-  try {
-    var ss = SpreadsheetApp.openById("你的試算表ID");
-    var sheet = ss.getSheetByName("events"); // 確保工作表名稱是小寫的 events
-    if (!sheet) return { result: "ERROR", message: "找不到 events 工作表" };
-
-    var data = sheet.getDataRange().getValues();
-    var events = [];
-
-    // 從第二列開始 (i=1)
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      if (row[0]) { // 只要第一欄（活動標題）有值就撈取
-        events.push({
-          title: row[0],             // A 欄：活動名稱
-          needIdCard: row[7] === "Y", // H 欄：需要身分證 (索引 7)
-          isTourBus: row[8] === "Y",  // I 欄：是遊覽車行 (索引 8)
-          memberFee: row[9],          // J 欄：會員報名費 (索引 9)
-          guestFee: row[10]           // K 欄：非會員報名費 (索引 10)
-        });
-      }
-    }
-    return { result: "SUCCESS", data: events };
-  } catch (e) {
-    return { result: "ERROR", message: "活動資料撈取失敗: " + e.toString() };
-  }
-}    
 async function submitForm(event) {
     // 1. 防止頁面重新整理
     if (event && event.preventDefault) event.preventDefault();

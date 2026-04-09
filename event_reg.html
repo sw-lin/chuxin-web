@@ -129,15 +129,21 @@
     let allData = { events: [], registrations: [] };
     let currentEditingRow = null;
 
-    window.onload = function() {
-        const key = sessionStorage.getItem('staff_key');
-        if (!key) {
-            alert("權限失效，請重新從管理後端登入");
-            window.close();
-            return;
-        }
-        loadData();
-    };
+window.onload = function() {
+    // 1. 檢查管理員權限 (從 sessionStorage 抓取 staff_key)
+    const key = sessionStorage.getItem('staff_key');
+    
+    if (!key) {
+        alert("管理權限已失效，請重新從主後端登入。");
+        // 視情況決定是否跳回登入頁
+        // window.location.href = "admin_login.html"; 
+        return;
+    }
+
+    // 2. 直接執行載入資料流程
+    // 這裡不再需要檢查 currentUser 或 initDynamicUI()
+    loadData();
+};
 
     function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 

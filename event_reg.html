@@ -20,7 +20,6 @@
     <div id="loadingOverlay"><div class="spinner"></div></div>
     <div id="toast"></div>
 
-    <!-- 導覽列 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
             <i class="fas fa-chevron-left mr-1"></i> 返回
@@ -30,7 +29,6 @@
     </nav>
 
     <main class="p-4 max-w-2xl mx-auto space-y-4">
-        <!-- 1. 活動選擇區 -->
         <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
             <label class="text-[10px] text-gray-400 font-black block mb-2 px-1 uppercase tracking-widest">Select Event</label>
             <div class="flex gap-2">
@@ -48,7 +46,6 @@
             </div>
         </div>
 
-        <!-- 2. 統計與發送區 -->
         <div id="statsSection" class="hidden bg-white p-6 rounded-[2.5rem] shadow-md border border-emerald-100 flex items-center justify-between">
             <div class="space-y-1">
                 <span class="text-xs font-bold text-gray-400 block ml-1">報名進度</span>
@@ -63,15 +60,13 @@
             </button>
         </div>
 
-        <!-- 3. 新增按鈕 (僅編輯模式) -->
-<div id="adminActions" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
-    <button onclick="openAddModal()" class="bg-[#064E3B] text-white px-8 py-4 rounded-2xl font-black shadow-[0_10px_25px_rgba(6,78,59,0.3)] flex items-center gap-3 active:scale-95 border-2 border-emerald-400/30 transition-all whitespace-nowrap">
-        <i class="fas fa-plus-circle text-xl"></i>
-        <span>發佈全新活動表單</span>
-    </button>
-</div>        
+        <div id="adminActions" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
+            <button onclick="openAddModal()" class="bg-[#064E3B] text-white px-8 py-4 rounded-2xl font-black shadow-[0_10px_25px_rgba(6,78,59,0.3)] flex items-center gap-3 active:scale-95 border-2 border-emerald-400/30 transition-all whitespace-nowrap">
+                <i class="fas fa-plus-circle text-xl"></i>
+                <span>發佈全新活動表單</span>
+            </button>
+        </div>
 
-        <!-- 4. 名單列表 -->
         <div class="space-y-3">
             <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
             <div id="regList" class="space-y-3">
@@ -80,63 +75,96 @@
         </div>
     </main>
 
-<!-- 活動彈窗 (已加入海報與簡介欄位) -->
-<div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">發布活動內容</h3>
-        <input type="hidden" id="old_title">
-        
-        <!-- 標題 -->
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
-            <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
-        </div>
+    <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">編輯活動內容</h3>
+            <input type="hidden" id="old_title">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
+                    <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">海報圖片連結</label>
+                    <input type="text" id="ev_poster" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動簡介</label>
+                    <textarea id="ev_desc" rows="2" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold"></textarea>
+                </div>
+            </div>
 
-        <!-- 海報連結 (D欄) -->
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">海報圖片連結 (網址)</label>
-            <input type="text" id="ev_poster" placeholder="https://..." class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
-        </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-orange-600 ml-2 mb-1 block">需填身分證?</label>
+                    <select id="ev_needId" class="w-full bg-orange-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                        <option value="N">不需要</option>
+                        <option value="Y">需要</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-orange-600 ml-2 mb-1 block">提供遊覽車?</label>
+                    <select id="ev_bus" class="w-full bg-orange-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                        <option value="N">無</option>
+                        <option value="Y">有</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-blue-600 ml-2 mb-1 block">會員費用</label>
+                    <input type="number" id="ev_mFee" placeholder="0" class="w-full bg-blue-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-blue-600 ml-2 mb-1 block">非會員費用</label>
+                    <input type="number" id="ev_gFee" placeholder="0" class="w-full bg-blue-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                </div>
+            </div>
 
-        <!-- 活動簡介 (G欄) -->
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動簡介 / 注意事項</label>
-            <textarea id="ev_desc" rows="3" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold" placeholder="請輸入活動說明..."></textarea>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-            <div>
-                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">開始展示日期</label>
-                <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">開始展示日期</label>
+                    <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">截止下架日期</label>
+                    <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                </div>
             </div>
             <div>
-                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">下架日期</label>
-                <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動舉辦日期</label>
+                <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs font-bold">
             </div>
-        </div>
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動舉辦日期</label>
-            <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs font-bold">
-        </div>
-        
-        <div id="deleteZone" class="hidden pt-2">
-            <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
-                <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動及所有紀錄
-            </button>
-        </div>
+            
+            <div id="deleteZone" class="hidden pt-2">
+                <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
+                    <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動
+                </button>
+            </div>
 
-        <div class="flex gap-3 pt-4">
-            <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
-            <button id="submitBtn" onclick="saveEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
+            <div class="flex gap-3 pt-4">
+                <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+                <button id="submitBtn" onclick="saveEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
+            </div>
         </div>
     </div>
-</div>
+
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
         let allData = {};
         let isEditMode = false;
 
         window.onload = loadData;
+
+        // 【修正核心】日期格式化函數，確保轉為 YYYY-MM-DD
+        function formatDateForInput(dateStr) {
+            if (!dateStr) return "";
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return ""; 
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
         async function loadData() {
             showLoading(true);
@@ -154,7 +182,7 @@
             const current = selector.value;
             if (allData.events && allData.events.length > 0) {
                 selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
-                    allData.events.map(ev => `<option value="${ev.title}">${ev.date} | ${ev.title}</option>`).join('');
+                    allData.events.map(ev => `<option value="${ev.title}">${formatDateForInput(ev.date)} | ${ev.title}</option>`).join('');
                 if (current) selector.value = current;
             }
         }
@@ -166,8 +194,7 @@
             const manageBtn = document.getElementById('manageEventBtn');
 
             if (!title) {
-                stats.classList.add('hidden');
-                manageBtn.classList.add('hidden');
+                stats.classList.add('hidden'); manageBtn.classList.add('hidden');
                 list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>';
                 return;
             }
@@ -182,119 +209,116 @@
                 list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無人報名</div>';
             } else {
                 list.innerHTML = filtered.map(r => `
-                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center">
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center mb-3">
                         <div>
                             <div class="font-black text-emerald-900">${r.會員姓名}</div>
                             <div class="text-[10px] text-gray-400 font-mono tracking-widest mt-1">${r.手機號碼}</div>
                         </div>
                         <div class="flex items-center gap-3">
-                            <div class="bg-emerald-50 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100">${r.狀態 || '已報名'}</div>
+                            <div class="bg-emerald-50 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100">${r.是否繳費 === 'Y' ? '已繳費' : '待繳費'}</div>
                             ${isEditMode ? `<button onclick="deleteSingleReg('${r.活動標題}', '${r.手機號碼}')" class="text-red-400 p-2 active:scale-90"><i class="fas fa-trash-alt"></i></button>` : ''}
                         </div>
                     </div>
                 `).join('');
             }
         }
-function toggleEditMode() {
-    isEditMode = !isEditMode;
-    const btn = document.getElementById('editToggleBtn');
-    const adminActions = document.getElementById('adminActions');
-    const manageBtn = document.getElementById('manageEventBtn');
 
-    if (isEditMode) {
-        btn.innerText = "完成編輯";
-        btn.classList.replace('bg-white/10', 'bg-red-500');
-        // 修正點：切換為 flex 讓按鈕顯示
-        adminActions.classList.remove('hidden');
-        adminActions.classList.add('flex'); 
-        if (document.getElementById('eventSelector').value) manageBtn.classList.remove('hidden');
-    } else {
-        btn.innerText = "開啟編輯";
-        btn.classList.replace('bg-red-500', 'bg-white/10');
-        // 修正點：隱藏按鈕
-        adminActions.classList.add('hidden');
-        adminActions.classList.remove('flex');
-        manageBtn.classList.add('hidden');
-    }
-    loadEventDetails();
-}
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            const adminActions = document.getElementById('adminActions');
+            const manageBtn = document.getElementById('manageEventBtn');
+            btn.innerText = isEditMode ? "完成編輯" : "開啟編輯";
+            btn.classList.toggle('bg-red-500', isEditMode);
+            adminActions.classList.toggle('hidden', !isEditMode);
+            adminActions.classList.toggle('flex', isEditMode);
+            if (isEditMode && document.getElementById('eventSelector').value) manageBtn.classList.remove('hidden');
+            else manageBtn.classList.add('hidden');
+            loadEventDetails();
+        }
 
-        // 彈窗控制
         function openAddModal() {
             document.getElementById('modalTitle').innerText = "發布新活動";
             document.getElementById('old_title').value = "";
-            document.getElementById('ev_title').value = "";
-            document.getElementById('ev_start').value = "";
-            document.getElementById('ev_until').value = "";
-            document.getElementById('ev_date').value = "";
+            document.querySelectorAll('#eventModal input, #eventModal textarea').forEach(i => i.value = "");
+            document.getElementById('ev_needId').value = "N";
+            document.getElementById('ev_bus').value = "N";
             document.getElementById('deleteZone').classList.add('hidden');
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-// 修改彈窗時帶入資料
-function openEditModal() {
-    const title = document.getElementById('eventSelector').value;
-    const ev = allData.events.find(e => e.title === title);
-    if (!ev) return;
+        function openEditModal() {
+            const title = document.getElementById('eventSelector').value;
+            const ev = allData.events.find(e => e.title === title);
+            if (!ev) return;
 
-    document.getElementById('modalTitle').innerText = "修改活動內容";
-    document.getElementById('old_title').value = ev.title;
-    document.getElementById('ev_title').value = ev.title;
-    document.getElementById('ev_poster').value = ev.poster_url || ""; // 新增
-    document.getElementById('ev_desc').value = ev.desc || ""; // 新增
-    document.getElementById('ev_start').value = ev.start_date;
-    document.getElementById('ev_until').value = ev.display_until;
-    document.getElementById('ev_date').value = ev.date;
-    document.getElementById('deleteZone').classList.remove('hidden');
-    document.getElementById('eventModal').classList.remove('hidden');
-}
-        
+            document.getElementById('modalTitle').innerText = "修改活動內容";
+            document.getElementById('old_title').value = ev.title;
+            document.getElementById('ev_title').value = ev.title;
+            document.getElementById('ev_poster').value = ev.poster_url || "";
+            document.getElementById('ev_desc').value = ev.desc || "";
+            
+            // 賦值新欄位
+            document.getElementById('ev_needId').value = ev.needId || "N";
+            document.getElementById('ev_bus').value = ev.isTourBus || "N";
+            document.getElementById('ev_mFee').value = ev.memberFee || 0;
+            document.getElementById('ev_gFee').value = ev.guestFee || 0;
+
+            // 【關鍵修正】使用 formatDateForInput 處理日期讀取
+            document.getElementById('ev_start').value = formatDateForInput(ev.start_date);
+            document.getElementById('ev_until').value = formatDateForInput(ev.display_until);
+            document.getElementById('ev_date').value = formatDateForInput(ev.date);
+
+            document.getElementById('deleteZone').classList.remove('hidden');
+            document.getElementById('eventModal').classList.remove('hidden');
+        }
+
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
 
-// 儲存資料
-async function saveEvent() {
-    const oldTitle = document.getElementById('old_title').value;
-    const payload = {
-        type: oldTitle ? 'update_calendar_event' : 'add_new_event',
-        key: sessionStorage.getItem('staff_key'),
-        title: document.getElementById('ev_title').value,
-        poster_url: document.getElementById('ev_poster').value, // 新增
-        desc: document.getElementById('ev_desc').value, // 新增
-        start_date: document.getElementById('ev_start').value,
-        display_until: document.getElementById('ev_until').value,
-        date: document.getElementById('ev_date').value,
-        oldTitle: oldTitle,
-        reg_url: "INTERNAL"
-    };
+        async function saveEvent() {
+            const oldTitle = document.getElementById('old_title').value;
+            const payload = {
+                type: oldTitle ? 'update_calendar_event' : 'add_new_event',
+                key: sessionStorage.getItem('staff_key'),
+                title: document.getElementById('ev_title').value,
+                poster_url: document.getElementById('ev_poster').value,
+                desc: document.getElementById('ev_desc').value,
+                start_date: document.getElementById('ev_start').value,
+                display_until: document.getElementById('ev_until').value,
+                date: document.getElementById('ev_date').value,
+                // 新欄位 Payload
+                needId: document.getElementById('ev_needId').value,
+                isTourBus: document.getElementById('ev_bus').value,
+                memberFee: document.getElementById('ev_mFee').value,
+                guestFee: document.getElementById('ev_gFee').value,
+                oldTitle: oldTitle,
+                reg_url: "INTERNAL"
+            };
 
-    if(!payload.title || !payload.date) return alert("請填寫活動名稱與日期");
-    
-    showLoading(true);
-    try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-            showToast("儲存成功");
-            closeModal();
-            await loadData();
-        }
-    } catch (e) { showToast("儲存失敗"); }
-    showLoading(false);
-}
-        async function deleteCurrentEvent() {
-            const title = document.getElementById('old_title').value;
-            if (!confirm(`⚠️ 嚴重警告！\n這將永久刪除「${title}」活動，並連帶清除該活動的所有「報名清單」與「簽到紀錄」，此操作不可還原。確定嗎？`)) return;
-
+            if(!payload.title || !payload.date) return alert("請填寫活動名稱與日期");
+            
             showLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'delete_event_poster', key: sessionStorage.getItem('staff_key'), eventTitle: title })
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
-                    showToast("活動已撤除");
+                    showToast("儲存成功");
                     closeModal();
+                    await loadData();
+                }
+            } catch (e) { showToast("儲存失敗"); }
+            showLoading(false);
+        }
+
+        // ...其餘 deleteCurrentEvent, deleteSingleReg, sendToLine 函數保持不變...
+        async function deleteCurrentEvent() {
+            const title = document.getElementById('old_title').value;
+            if (!confirm(`⚠️ 確定要刪除「${title}」嗎？此操作不可還原。`)) return;
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_event_poster', key: sessionStorage.getItem('staff_key'), eventTitle: title }) });
+                if ((await res.json()).result === "SUCCESS") {
+                    showToast("活動已撤除"); closeModal();
                     document.getElementById('eventSelector').value = "";
                     await loadData();
                 }
@@ -306,38 +330,26 @@ async function saveEvent() {
             if (!confirm(`確定要刪除此位報名者嗎？`)) return;
             showLoading(true);
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'delete_registration', key: sessionStorage.getItem('staff_key'), eventTitle: title, phone: phone })
-                });
-                if ((await res.json()).result === 'SUCCESS') {
-                    showToast('已移除該人員');
-                    await loadData();
-                }
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_registration', key: sessionStorage.getItem('staff_key'), eventTitle: title, phone: phone }) });
+                if ((await res.json()).result === 'SUCCESS') { showToast('已移除該人員'); await loadData(); }
             } catch (e) { showToast('操作失敗'); }
             showLoading(false);
         }
 
-async function sendToLine() {
+        async function sendToLine() {
             const title = document.getElementById('eventSelector').value;
             const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
             if (filtered.length === 0) return showToast("目前無人報名");
-
-            let message = `📊 【築心】活動報名清單\n━━━━━━\n活動：${title}\n總計：${filtered.length} 人\n\n`;
+            let message = `📊 【築心】活動報名清單\n活動：${title}\n總計：${filtered.length} 人\n\n`;
             filtered.forEach((r, i) => message += `${i+1}. ${r.會員姓名} (${r.手機號碼.slice(-4)})\n`);
-            
             showLoading(true);
             try {
-                // 這裡原本多了一個分號導致報錯，現在已修正
-                const res = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message }) 
-                });
-                const result = await res.json();
-                if (result.result === 'SUCCESS') showToast('已發送至 LINE 群組');
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message }) });
+                if ((await res.json()).result === 'SUCCESS') showToast('已發送至 LINE');
             } catch (e) { showToast('發送失敗'); }
             showLoading(false);
         }
+
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
     </script>

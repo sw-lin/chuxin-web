@@ -337,10 +337,13 @@
 
             const result = await response.json();
             
-            if (result.result === "SUCCESS" || result.result === "ALREADY_DONE") {
+            if (result.result === "SUCCESS") {
                 showToast("報名成功！即將跳轉...");
-                setTimeout(() => { location.href = "member_zone.html"; }, 2000);
-            } else {
+                setTimeout(() => { location.href = "member_zone.html"; }, 1000);
+            } if( result.result === "ALREADY_DONE") {
+                showToast("你已完成報名！即將跳轉...");
+                setTimeout(() => { location.href = "member_zone.html"; }, 1000);            }
+        } else {
                 overlay.style.display = 'none';
                 showToast("錯誤：" + result.message, "error");
             }

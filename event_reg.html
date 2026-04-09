@@ -275,9 +275,20 @@ function openEditModal() {
     document.getElementById('ev_gFee').value = ev.guestFee || ev.非會員費 || ev.非會員費用 || 0;
 
     // 【修正：三個日期欄位】
-    document.getElementById('ev_start').value = formatDateForInput(ev.start_date || ev.展示日 || ev.開始展示日期);
-    document.getElementById('ev_until').value = formatDateForInput(ev.display_until || ev.下架日 || ev.截止下架日期);
-    document.getElementById('ev_date').value = formatDateForInput(ev.date || ev.活動日 || ev.活動舉辦日期);
+    // 2. 處理日期（關鍵：欄位名稱要跟 GAS 回傳的一樣）
+    // 使用 .split('T')[0] 是為了保證只拿 YYYY-MM-DD，避開 ISO 格式問題
+    if (eventData.startDate) {
+        document.getElementById('editStartDate').value = eventData.startDate.split('T')[0];
+    }
+    
+    if (eventData.deadline) {
+        // 注意：這裡要用 deadline，因為你 GAS 回傳的是這個名字
+        document.getElementById('editDeadline').value = eventData.deadline.split('T')[0];
+    }
+    
+    if (eventData.eventDate) {
+        document.getElementById('editEventDate').value = eventData.eventDate.split('T')[0];
+    }    
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');

@@ -128,32 +128,31 @@ window.onload = function() {
         return;
     }
 
-    // --- 關鍵修正：改用 localStorage 且與 member_zone 保持一致 ---
+    // --- 關鍵修正：統一使用 localStorage ---
     const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
     console.log("從 localStorage 讀取的活動清單:", allEvents); 
 
+    // 尋找匹配標題的活動 (增加 trim 避免空白干擾)
     const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
 
-    if (!target) {
-        console.error("找不到該活動資料，請重新從會員中心進入");
-    }
-
+    // 輔助函式：判斷 Y/N 或 TRUE/FALSE
     const isTrue = (val) => {
         if (!val) return false;
         const s = String(val).trim().toUpperCase();
-        return s === 'Y' || s === '是' || s === 'TRUE' || s === 'CHECKED';
+        return s === 'Y' || s === '是' || s === 'TRUE';
     };
     
-    // 確保對應 GAS 傳回的正確 Key 名稱 (H, I, J, K)
-    eventConfig = {
-        title: title || "未知活動",
-        memberFee: target ? (parseInt(target.memberFee) || 0) : 0,
-        guestFee: target ? (parseInt(target.guestFee) || 0) : 0,
-        needId: target ? isTrue(target.needId) : false,
-        isTourBus: target ? isTrue(target.isTourBus) : false
-    };
-
-    console.log("當前解析後的 eventConfig:", eventConfig);
+    // --- 統一欄位名稱與邏輯 ---
+    if (target) {
+        eventConfig = {
+            title: title || "未知活動",
+            // 這裡的屬性名必須與 member_zone 存入的一致
+            memberFee: parseInt(target.memberFee) || 0,
+            guestFee: parseInt(target.guestFee) || 0,
+            needId: isTrue(target.needId),   // 統一使用小寫 d
+            isTourBus: isTrue(target.isTourBus)
+        };
+    }
 
     // 更新 UI
     document.getElementById('mainName').value = currentUser.name || "";
@@ -162,30 +161,31 @@ window.onload = function() {
     
     initDynamicUI();
     updateTotal();
-};
+};    
     
-    function initDynamicUI() {
-        const idSection = document.getElementById('mainIDSection');
-        if(eventConfig.needId) {
-            idSection.classList.remove('hidden');
-        } else {
-            idSection.classList.add('hidden');
-        }
-
-        const transportSelect = document.getElementById('mainTransport');
-        if(eventConfig.isTourBus) {
-            transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一由本會安排)</option>`;
-            transportSelect.disabled = true;
-        } else {
-            transportSelect.innerHTML = `
-                <option value="自行開車">自行開車</option>
-                <option value="共乘不開車">共乘不開車</option>
-            `;
-            transportSelect.disabled = false;
-        }
-        checkTransportLogic();
+function initDynamicUI() {
+    const idSection = document.getElementById('mainIDSection');
+    // 關鍵：這裡要用 eventConfig.needId (小寫 d)
+    if(eventConfig.needId) {
+        idSection.classList.remove('hidden');
+    } else {
+        idSection.classList.add('hidden');
     }
-        
+
+    const transportSelect = document.getElementById('mainTransport');
+    if(eventConfig.isTourBus) {
+        transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一由本會安排)</option>`;
+        transportSelect.disabled = true;
+    } else {
+        transportSelect.innerHTML = `
+            <option value="自行開車">自行開車</option>
+            <option value="共乘不開車">共乘不開車</option>
+        `;
+        transportSelect.disabled = false;
+    }
+    checkTransportLogic();
+}
+    
     function checkTransportLogic() {
         const val = document.getElementById('mainTransport').value;
         const showSeats = (!eventConfig.isTourBus && val === '自行開車');

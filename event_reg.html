@@ -247,32 +247,57 @@
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-        function openEditModal() {
-            const title = document.getElementById('eventSelector').value;
-            const ev = allData.events.find(e => e.title === title);
-            if (!ev) return;
+function openEditModal() {
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => e.title === title);
+    if (!ev) return;
 
-            document.getElementById('modalTitle').innerText = "修改活動內容";
-            document.getElementById('old_title').value = ev.title;
-            document.getElementById('ev_title').value = ev.title;
-            document.getElementById('ev_poster').value = ev.poster_url || "";
-            document.getElementById('ev_desc').value = ev.desc || "";
-            
-            // 賦值新欄位
-            document.getElementById('ev_needId').value = ev.needId || "N";
-            document.getElementById('ev_bus').value = ev.isTourBus || "N";
-            document.getElementById('ev_mFee').value = ev.memberFee || 0;
-            document.getElementById('ev_gFee').value = ev.guestFee || 0;
+    document.getElementById('modalTitle').innerText = "修改活動內容";
+    document.getElementById('old_title').value = ev.title;
+    document.getElementById('ev_title').value = ev.title;
+    
+    // 這裡要注意：後端回傳的欄位名稱（Key）是什麼？
+    // 如果 GAS 抓資料是用欄位索引，請確認對應關係
+    document.getElementById('ev_poster').value = ev.poster_url || ev.海報 || "";
+    document.getElementById('ev_desc').value = ev.desc || ev.簡介 || "";
+    
+    // 【修正：身分證與其他選單】
+    // 如果試算表存的是 'Y'，這裡就會選到 '需要'
+    document.getElementById('ev_needId').value = ev.needId || ev.身分證 || "N";
+    document.getElementById('ev_bus').value = ev.isTourBus || ev.遊覽車 || "N";
+    document.getElementById('ev_mFee').value = ev.memberFee || ev.會員費 || 0;
+    document.getElementById('ev_gFee').value = ev.guestFee || ev.非會員費 || 0;
 
-            // 【關鍵修正】使用 formatDateForInput 處理日期讀取
-            document.getElementById('ev_start').value = formatDateForInput(ev.start_date);
-            document.getElementById('ev_until').value = formatDateForInput(ev.display_until);
-            document.getElementById('ev_date').value = formatDateForInput(ev.date);
+    // 【修正：三個日期欄位】
+    // 使用 formatDateForInput 確保格式為 YYYY-MM-DD
+    // 根據您 GAS 的寫法，Key 可能是 start_date 或 展示日
+    document.getElementById('ev_start').value = formatDateForInput(ev.start_date || ev.展示日);
+    document.getElementById('ev_until').value = formatDateForInput(ev.display_until || ev.下架日);
+    document.getElementById('ev_date').value = formatDateForInput(ev.date || ev.活動日);
 
-            document.getElementById('deleteZone').classList.remove('hidden');
-            document.getElementById('eventModal').classList.remove('hidden');
-        }
+    document.getElementById('deleteZone').classList.remove('hidden');
+    document.getElementById('eventModal').classList.remove('hidden');
+}
+function formatDateForInput(dateVal) {
+    if (!dateVal) return "";
+    
+    let d;
+    // 如果是 GAS 傳回來的日期字串 (例如 "2026-04-09T16:00:00.000Z")
+    if (typeof dateVal === 'string') {
+        // 如果已經是 YYYY-MM-DD 格式，直接回傳
+        if (/^\d{4}-\d{2}-\d{2}/.test(dateVal)) return dateVal.substring(0, 10);
+        d = new Date(dateVal);
+    } else {
+        d = new Date(dateVal);
+    }
 
+    if (isNaN(d.getTime())) return "";
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}        
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
 
         async function saveEvent() {

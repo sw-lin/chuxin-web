@@ -243,9 +243,11 @@ async function syncData() {
         
         if (liveUser) {
             currentUser = liveUser;
-
+            
             // --- 關鍵新增：將活動完整資訊存入 localStorage ---
             if (data.events) {
+                // 這一行會直接把資料轉成表格印出來，一眼就能看出 H, I, J, K 有沒有值
+                console.table(data.events);
                 // 將資料庫 events 頁面的整表存起來，供報名頁面讀取
                 localStorage.setItem('allEvents', JSON.stringify(data.events));
                 console.log("活動資料已同步至 localStorage");

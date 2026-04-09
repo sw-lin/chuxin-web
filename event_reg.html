@@ -10,336 +10,361 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 999; display: none; align-items: center; justify-content: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none; align-items: center; justify-content: center; padding: 1rem; }
+        .input-field { @apply w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:border-emerald-500 transition-all text-sm; }
     </style>
 </head>
-<body class="pb-32">
-    <div id="loadingOverlay"><div class="spinner"></div></div>
-    <div id="toast"></div>
+<body class="pb-20">
 
-    <!-- 導覽列 -->
-    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
-        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
-            <i class="fas fa-chevron-left mr-1"></i> 返回
+<div id="loadingOverlay">
+    <div class="spinner mb-4"></div>
+    <div class="text-emerald-900 font-bold">處理中...</div>
+</div>
+
+<nav class="emerald-gradient p-6 text-white shadow-lg mb-6">
+    <div class="flex justify-between items-center max-w-4xl mx-auto">
+        <div>
+            <h1 class="text-2xl font-black tracking-tighter">活動報名管理</h1>
+            <p class="text-[10px] opacity-70 uppercase font-bold tracking-widest mt-1">Event Management</p>
+        </div>
+        <button onclick="openEventModal()" class="bg-white/20 px-4 py-2 rounded-xl text-sm font-bold border border-white/30 active:scale-95 transition-all">
+            <i class="fas fa-plus mr-2"></i>發布活動
         </button>
-        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">活動報名管理</h1>
-        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all">開啟編輯</button>
-    </nav>
+    </div>
+</nav>
 
-    <main class="p-4 max-w-2xl mx-auto space-y-4">
-        <!-- 1. 活動選擇區 -->
-        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
-            <label class="text-[10px] text-gray-400 font-black block mb-2 px-1 uppercase tracking-widest">Select Event</label>
-            <div class="flex gap-2">
-                <div class="relative flex-grow">
-                    <select id="eventSelector" onchange="loadEventDetails()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
-                        <option value="">-- 請選擇活動項目 --</option>
-                    </select>
-                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
+<main class="px-4 max-w-4xl mx-auto">
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
+        <div class="flex flex-col gap-4">
+            <select id="eventSelector" onchange="renderRegistrations()" class="input-field font-bold text-emerald-900 bg-emerald-50 border-emerald-100">
+                <option value="">載入中...</option>
+            </select>
+            <div class="flex justify-between items-end">
+                <div>
+                    <span class="text-[10px] font-black text-gray-400 uppercase">目前統計</span>
+                    <div id="statInfo" class="text-2xl font-black text-emerald-900">0 / 0 <span class="text-sm font-medium">人已繳費</span></div>
                 </div>
-                <button id="manageEventBtn" onclick="openEditModal()" class="hidden bg-emerald-100 text-emerald-700 w-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all">
-                    <i class="fas fa-edit"></i>
+                <button onclick="sendToLine()" class="bg-green-500 text-white px-5 py-2.5 rounded-2xl font-black text-sm shadow-md active:scale-95">
+                    <i class="fab fa-line mr-2"></i>送出繳費名單
                 </button>
             </div>
         </div>
+    </div>
 
-        <!-- 2. 統計與發送區 -->
-        <div id="statsSection" class="hidden bg-white p-6 rounded-[2.5rem] shadow-md border border-emerald-100 flex items-center justify-between">
-            <div class="space-y-1">
-                <span class="text-xs font-bold text-gray-400 block ml-1">報名進度</span>
-                <div class="flex items-baseline gap-2">
-                    <span id="statCount" class="text-4xl font-black text-emerald-900">0</span>
-                    <span class="text-xl font-bold text-gray-400">位成員報名</span>
+    <div id="regList" class="space-y-3">
+        </div>
+</main>
+
+<div id="eventModal" class="modal-overlay">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 max-h-[90vh] overflow-y-auto shadow-2xl">
+        <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-6">發布新活動</h3>
+        <div class="space-y-4">
+            <input type="text" id="evTitle" placeholder="活動標題" class="input-field">
+            <input type="text" id="evDate" placeholder="活動日期 (例如 2026-05-20)" class="input-field">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">是否需身分證</label>
+                    <select id="evNeedId" class="input-field mt-1">
+                        <option value="N">否</option><option value="Y">是</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">是否搭遊覽車</label>
+                    <select id="evIsTourBus" class="input-field mt-1">
+                        <option value="N">否</option><option value="Y">是</option>
+                    </select>
                 </div>
             </div>
-            <button onclick="sendToLine()" class="bg-[#06C755] text-white w-20 h-20 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
-                <i class="fab fa-line text-2xl mb-1"></i>
-                <span class="text-[10px]">發送名單</span>
-            </button>
-        </div>
 
-        <!-- 3. 新增按鈕 (僅編輯模式) -->
-<div id="adminActions" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
-    <button onclick="openAddModal()" class="bg-[#064E3B] text-white px-8 py-4 rounded-2xl font-black shadow-[0_10px_25px_rgba(6,78,59,0.3)] flex items-center gap-3 active:scale-95 border-2 border-emerald-400/30 transition-all whitespace-nowrap">
-        <i class="fas fa-plus-circle text-xl"></i>
-        <span>發佈全新活動表單</span>
-    </button>
-</div>        
-
-        <!-- 4. 名單列表 -->
-        <div class="space-y-3">
-            <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
-            <div id="regList" class="space-y-3">
-                <div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">會員費用</label>
+                    <input type="number" id="evMemberFee" class="input-field mt-1" value="0">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">訪客費用</label>
+                    <input type="number" id="evGuestFee" class="input-field mt-1" value="0">
+                </div>
             </div>
-        </div>
-    </main>
 
-<!-- 活動彈窗 (已加入海報與簡介欄位) -->
-<div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">發布活動內容</h3>
-        <input type="hidden" id="old_title">
-        
-        <!-- 標題 -->
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動標題</label>
-            <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
-        </div>
-
-        <!-- 海報連結 (D欄) -->
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">海報圖片連結 (網址)</label>
-            <input type="text" id="ev_poster" placeholder="https://..." class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold">
-        </div>
-
-        <!-- 活動簡介 (G欄) -->
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動簡介 / 注意事項</label>
-            <textarea id="ev_desc" rows="3" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold" placeholder="請輸入活動說明..."></textarea>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-            <div>
-                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">開始展示日期</label>
-                <input type="date" id="ev_start" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
+            <div class="flex gap-3 pt-4">
+                <button onclick="closeEventModal()" class="flex-1 py-4 font-bold text-gray-400">取消</button>
+                <button onclick="saveEvent()" class="flex-[2] emerald-gradient text-white py-4 rounded-2xl font-black shadow-lg">儲存設定</button>
             </div>
-            <div>
-                <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">下架日期</label>
-                <input type="date" id="ev_until" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 text-xs font-bold">
-            </div>
-        </div>
-        <div>
-            <label class="text-[10px] font-bold text-emerald-600 ml-2 mb-1 block">活動舉辦日期</label>
-            <input type="date" id="ev_date" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-xs font-bold">
-        </div>
-        
-        <div id="deleteZone" class="hidden pt-2">
-            <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
-                <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動及所有紀錄
-            </button>
-        </div>
-
-        <div class="flex gap-3 pt-4">
-            <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
-            <button id="submitBtn" onclick="saveEvent()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
         </div>
     </div>
 </div>
-    <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
-        let allData = {};
-        let isEditMode = false;
 
-        window.onload = loadData;
+<div id="editRegModal" class="modal-overlay">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-black text-emerald-900">維修個人資料</h3>
+            <span id="editPersonLabel" class="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-bold"></span>
+        </div>
+        <input type="hidden" id="editRowId">
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black text-emerald-800 ml-1">電話號碼</label>
+                <input type="text" id="editPhone" class="input-field">
+            </div>
+            <div id="editIdWrapper">
+                <label class="text-[10px] font-black text-emerald-800 ml-1">身分證字號</label>
+                <input type="text" id="editIdNumber" class="input-field">
+            </div>
+            <div id="editTransportWrapper" class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">交通工具</label>
+                    <select id="editTransport" class="input-field" onchange="toggleEditSeats()">
+                        <option value="自行開車">自行開車</option>
+                        <option value="共乘不開車">共乘不開車</option>
+                    </select>
+                </div>
+                <div id="editSeatsWrapper">
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">可載人數</label>
+                    <input type="number" id="editSeats" class="input-field">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">飲食</label>
+                    <select id="editDiet" class="input-field">
+                        <option value="葷食">葷食</option><option value="素食">素食</option><option value="不拘">不拘</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-emerald-800 ml-1">繳費狀態</label>
+                    <select id="editIsPaid" class="input-field font-bold">
+                        <option value="N">未繳費</option><option value="Y" class="text-green-600">已繳費</option>
+                    </select>
+                </div>
+            </div>
 
-        async function loadData() {
-            showLoading(true);
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                allData = await res.json();
-                renderSelector();
-                if (document.getElementById('eventSelector').value) loadEventDetails();
-            } catch (e) { showToast("連線失敗"); }
-            showLoading(false);
-        }
+            <div class="pt-4 space-y-3">
+                <div class="flex gap-3">
+                    <button onclick="closeEditModal()" class="flex-1 py-4 font-bold text-gray-400">取消</button>
+                    <button onclick="saveEdit()" class="flex-[2] emerald-gradient text-white py-4 rounded-2xl font-black shadow-lg">確認修改</button>
+                </div>
+                <button onclick="deleteRegistration()" class="w-full text-red-500 font-bold text-sm py-2 bg-red-50 rounded-xl border border-red-100 mt-2">直接刪除此人資料</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        function renderSelector() {
+<script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
+    let allData = { events: [], registrations: [] };
+    let currentEditingRow = null;
+
+    async function loadData() {
+        showLoading(true);
+        try {
+            const res = await fetch(`${GAS_URL}?type=admin_get_data&key=${sessionStorage.getItem('staff_key')}`);
+            allData = await res.json();
+            
             const selector = document.getElementById('eventSelector');
-            const current = selector.value;
-            if (allData.events && allData.events.length > 0) {
-                selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
-                    allData.events.map(ev => `<option value="${ev.title}">${ev.date} | ${ev.title}</option>`).join('');
-                if (current) selector.value = current;
-            }
+            selector.innerHTML = allData.events.map(e => `<option value="${e.title}">${e.title}</option>`).join('');
+            
+            renderRegistrations();
+        } catch (e) { alert("讀取失敗"); }
+        showLoading(false);
+    }
+
+    function renderRegistrations() {
+        const title = document.getElementById('eventSelector').value;
+        const config = allData.events.find(e => e.title === title) || {};
+        const filtered = allData.registrations.filter(r => r.活動標題 === title);
+        
+        // 統計
+        const paidCount = filtered.filter(r => r.是否繳費 === 'Y' || r.是否繳費 === '是').length;
+        document.getElementById('statInfo').innerHTML = `${paidCount} / ${filtered.length} <span class="text-sm font-medium">人已繳費</span>`;
+
+        const container = document.getElementById('regList');
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="p-10 text-center text-gray-400 font-bold">目前暫無人報名</div>`;
+            return;
         }
 
-        function loadEventDetails() {
-            const title = document.getElementById('eventSelector').value;
-            const stats = document.getElementById('statsSection');
-            const list = document.getElementById('regList');
-            const manageBtn = document.getElementById('manageEventBtn');
-
-            if (!title) {
-                stats.classList.add('hidden');
-                manageBtn.classList.add('hidden');
-                list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>';
-                return;
+        container.innerHTML = filtered.map(r => {
+            const isMember = String(r.是否會員).includes('是') || String(r.是否會員).toLowerCase() === 'true' || String(r.是否會員) === 'Y';
+            const isPaid = r.是否繳費 === 'Y' || r.是否繳費 === '是';
+            
+            // 交通資訊處理
+            let transportText = "";
+            if (config.isTourBus === 'Y' || config.isTourBus === '是') {
+                transportText = `<span class="text-blue-500"><i class="fas fa-bus mr-1"></i>遊覽車</span>`;
+            } else {
+                transportText = r.交通方式 === '自行開車' 
+                    ? `<span class="text-orange-600"><i class="fas fa-car mr-1"></i>自駕 <b class="bg-orange-100 px-1.5 rounded-full text-[10px]">${r.可載人數 || 0}</b></span>`
+                    : `<span class="text-emerald-600"><i class="fas fa-users mr-1"></i>共乘</span>`;
             }
 
-            if (isEditMode) manageBtn.classList.remove('hidden');
-            stats.classList.remove('hidden');
-
-            const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
-            document.getElementById('statCount').innerText = filtered.length;
-
-            if (filtered.length === 0) {
-                list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無人報名</div>';
-            } else {
-                list.innerHTML = filtered.map(r => `
-                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center">
-                        <div>
-                            <div class="font-black text-emerald-900">${r.會員姓名}</div>
-                            <div class="text-[10px] text-gray-400 font-mono tracking-widest mt-1">${r.手機號碼}</div>
+            return `
+                <div class="bg-white p-4 rounded-2xl border border-emerald-50 shadow-sm flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-black text-emerald-900">${r.會員姓名}</span>
+                            ${!isMember ? '<span class="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded-full font-black">訪客</span>' : ''}
+                            <span class="text-[10px] font-bold text-gray-400">(${r.手機號碼.slice(-4)})</span>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="bg-emerald-50 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100">${r.狀態 || '已報名'}</div>
-                            ${isEditMode ? `<button onclick="deleteSingleReg('${r.活動標題}', '${r.手機號碼}')" class="text-red-400 p-2 active:scale-90"><i class="fas fa-trash-alt"></i></button>` : ''}
+                        <div class="flex items-center gap-3 text-[10px] font-bold">
+                            ${transportText}
+                            <span class="text-gray-400"><i class="fas fa-utensils mr-1"></i>${r.餐食選擇}</span>
+                            <span class="${isPaid ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'} px-2 py-0.5 rounded-md">
+                                ${isPaid ? '已繳費' : '未繳費'}
+                            </span>
                         </div>
                     </div>
-                `).join('');
-            }
-        }
-function toggleEditMode() {
-    isEditMode = !isEditMode;
-    const btn = document.getElementById('editToggleBtn');
-    const adminActions = document.getElementById('adminActions');
-    const manageBtn = document.getElementById('manageEventBtn');
-
-    if (isEditMode) {
-        btn.innerText = "完成編輯";
-        btn.classList.replace('bg-white/10', 'bg-red-500');
-        // 修正點：切換為 flex 讓按鈕顯示
-        adminActions.classList.remove('hidden');
-        adminActions.classList.add('flex'); 
-        if (document.getElementById('eventSelector').value) manageBtn.classList.remove('hidden');
-    } else {
-        btn.innerText = "開啟編輯";
-        btn.classList.replace('bg-red-500', 'bg-white/10');
-        // 修正點：隱藏按鈕
-        adminActions.classList.add('hidden');
-        adminActions.classList.remove('flex');
-        manageBtn.classList.add('hidden');
+                    <button onclick='openEditModal(${JSON.stringify(r)}, ${JSON.stringify(config)})' class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 active:scale-95">
+                        <i class="fas fa-tools"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
     }
-    loadEventDetails();
-}
 
-        // 彈窗控制
-        function openAddModal() {
-            document.getElementById('modalTitle').innerText = "發布新活動";
-            document.getElementById('old_title').value = "";
-            document.getElementById('ev_title').value = "";
-            document.getElementById('ev_start').value = "";
-            document.getElementById('ev_until').value = "";
-            document.getElementById('ev_date').value = "";
-            document.getElementById('deleteZone').classList.add('hidden');
-            document.getElementById('eventModal').classList.remove('hidden');
-        }
+    // --- 編輯維修功能 ---
+    function openEditModal(reg, config) {
+        currentEditingRow = reg;
+        document.getElementById('editRegModal').style.display = 'flex';
+        document.getElementById('editPersonLabel').innerText = reg.會員姓名;
+        document.getElementById('editPhone').value = reg.手機號碼;
+        document.getElementById('editIdNumber').value = reg.身分證字號 || "";
+        document.getElementById('editTransport').value = reg.交通方式 || "自行開車";
+        document.getElementById('editSeats').value = reg.可載人數 || 0;
+        document.getElementById('editDiet').value = reg.餐食選擇 || "葷食";
+        document.getElementById('editIsPaid').value = (reg.是否繳費 === 'Y' || reg.是否繳費 === '是') ? 'Y' : 'N';
 
-// 修改彈窗時帶入資料
-function openEditModal() {
-    const title = document.getElementById('eventSelector').value;
-    const ev = allData.events.find(e => e.title === title);
-    if (!ev) return;
-
-    document.getElementById('modalTitle').innerText = "修改活動內容";
-    document.getElementById('old_title').value = ev.title;
-    document.getElementById('ev_title').value = ev.title;
-    document.getElementById('ev_poster').value = ev.poster_url || ""; // 新增
-    document.getElementById('ev_desc').value = ev.desc || ""; // 新增
-    document.getElementById('ev_start').value = ev.start_date;
-    document.getElementById('ev_until').value = ev.display_until;
-    document.getElementById('ev_date').value = ev.date;
-    document.getElementById('deleteZone').classList.remove('hidden');
-    document.getElementById('eventModal').classList.remove('hidden');
-}
+        // 根據活動設定切換顯示
+        document.getElementById('editIdWrapper').style.display = (config.needId === 'Y' || config.needId === '是') ? 'block' : 'none';
+        document.getElementById('editTransportWrapper').style.display = (config.isTourBus === 'Y' || config.isTourBus === '是') ? 'none' : 'grid';
         
-        function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
+        toggleEditSeats();
+    }
 
-// 儲存資料
-async function saveEvent() {
-    const oldTitle = document.getElementById('old_title').value;
-    const payload = {
-        type: oldTitle ? 'update_calendar_event' : 'add_new_event',
-        key: sessionStorage.getItem('staff_key'),
-        title: document.getElementById('ev_title').value,
-        poster_url: document.getElementById('ev_poster').value, // 新增
-        desc: document.getElementById('ev_desc').value, // 新增
-        start_date: document.getElementById('ev_start').value,
-        display_until: document.getElementById('ev_until').value,
-        date: document.getElementById('ev_date').value,
-        oldTitle: oldTitle,
-        reg_url: "INTERNAL"
-    };
+    function toggleEditSeats() {
+        const val = document.getElementById('editTransport').value;
+        document.getElementById('editSeatsWrapper').style.visibility = (val === '自行開車') ? 'visible' : 'hidden';
+    }
 
-    if(!payload.title || !payload.date) return alert("請填寫活動名稱與日期");
+    function closeEditModal() { document.getElementById('editRegModal').style.display = 'none'; }
+
+    async function saveEdit() {
+        showLoading(true);
+        const payload = {
+            type: 'admin_edit_registration',
+            key: sessionStorage.getItem('staff_key'),
+            activityTitle: currentEditingRow.活動標題,
+            memberName: currentEditingRow.會員姓名, // 作為識別之一
+            phone: document.getElementById('editPhone').value,
+            idNumber: document.getElementById('editIdNumber').value,
+            transport: document.getElementById('editTransport').value,
+            seats: document.getElementById('editSeats').value,
+            diet: document.getElementById('editDiet').value,
+            isPaid: document.getElementById('editIsPaid').value
+        };
+
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.result === 'SUCCESS') {
+                closeEditModal();
+                await loadData();
+            } else { alert(result.message); }
+        } catch (e) { alert("修改失敗"); }
+        showLoading(false);
+    }
+
+    async function deleteRegistration() {
+        if (!confirm(`確定要刪除「${currentEditingRow.會員姓名}」的報名資料嗎？此操作不可復原。`)) return;
+        
+        showLoading(true);
+        try {
+            const res = await fetch(GAS_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    type: 'admin_delete_registration', 
+                    key: sessionStorage.getItem('staff_key'),
+                    activityTitle: currentEditingRow.活動標題,
+                    memberName: currentEditingRow.會員姓名
+                }) 
+            });
+            const result = await res.json();
+            if (result.result === 'SUCCESS') {
+                closeEditModal();
+                await loadData();
+            }
+        } catch (e) { alert("刪除失敗"); }
+        showLoading(false);
+    }
+
+    // --- 活動發布相關 ---
+    function openEventModal() { document.getElementById('eventModal').style.display = 'flex'; }
+    function closeEventModal() { document.getElementById('eventModal').style.display = 'none'; }
     
-    showLoading(true);
-    try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-        const result = await res.json();
-        if (result.result === "SUCCESS") {
-            showToast("儲存成功");
-            closeModal();
-            await loadData();
-        }
-    } catch (e) { showToast("儲存失敗"); }
-    showLoading(false);
-}
-        async function deleteCurrentEvent() {
-            const title = document.getElementById('old_title').value;
-            if (!confirm(`⚠️ 嚴重警告！\n這將永久刪除「${title}」活動，並連帶清除該活動的所有「報名清單」與「簽到紀錄」，此操作不可還原。確定嗎？`)) return;
+    async function saveEvent() {
+        const payload = {
+            type: 'admin_save_event',
+            key: sessionStorage.getItem('staff_key'),
+            title: document.getElementById('evTitle').value,
+            date: document.getElementById('evDate').value,
+            needId: document.getElementById('evNeedId').value,
+            isTourBus: document.getElementById('evIsTourBus').value,
+            memberFee: document.getElementById('evMemberFee').value,
+            guestFee: document.getElementById('evGuestFee').value
+        };
 
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'delete_event_poster', key: sessionStorage.getItem('staff_key'), eventTitle: title })
-                });
-                const result = await res.json();
-                if (result.result === "SUCCESS") {
-                    showToast("活動已撤除");
-                    closeModal();
-                    document.getElementById('eventSelector').value = "";
-                    await loadData();
-                }
-            } catch (e) { showToast("刪除失敗"); }
-            showLoading(false);
-        }
+        if(!payload.title) return alert("標題必填");
+        
+        showLoading(true);
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if(result.result === 'SUCCESS') {
+                closeEventModal();
+                await loadData();
+            }
+        } catch (e) { alert("儲存失敗"); }
+        showLoading(false);
+    }
 
-        async function deleteSingleReg(title, phone) {
-            if (!confirm(`確定要刪除此位報名者嗎？`)) return;
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'delete_registration', key: sessionStorage.getItem('staff_key'), eventTitle: title, phone: phone })
-                });
-                if ((await res.json()).result === 'SUCCESS') {
-                    showToast('已移除該人員');
-                    await loadData();
-                }
-            } catch (e) { showToast('操作失敗'); }
-            showLoading(false);
-        }
+    // --- LINE 功能 ---
+    async function sendToLine() {
+        const title = document.getElementById('eventSelector').value;
+        const paidList = allData.registrations.filter(r => r.活動標題 === title && (r.是否繳費 === 'Y' || r.是否繳費 === '是'));
+        
+        if (paidList.length === 0) return alert("目前尚無已繳費名單");
 
-async function sendToLine() {
-            const title = document.getElementById('eventSelector').value;
-            const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
-            if (filtered.length === 0) return showToast("目前無人報名");
+        let message = `💰 【築心】已繳費名單清單\n━━━━━━\n活動：${title}\n總計：${paidList.length} 人\n\n`;
+        paidList.forEach((r, i) => {
+            const isMember = String(r.是否會員).includes('是') || String(r.是否會員).toLowerCase() === 'true' || String(r.是否會員) === 'Y';
+            message += `${i+1}. ${r.會員姓名}${isMember ? '' : '(訪客)'}\n`;
+        });
+        
+        showLoading(true);
+        try {
+            const res = await fetch(GAS_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message }) 
+            });
+            const result = await res.json();
+            if (result.result === 'SUCCESS') alert('已發送至 LINE 群組');
+        } catch (e) { alert('發送失敗'); }
+        showLoading(false);
+    }
 
-            let message = `📊 【築心】活動報名清單\n━━━━━━\n活動：${title}\n總計：${filtered.length} 人\n\n`;
-            filtered.forEach((r, i) => message += `${i+1}. ${r.會員姓名} (${r.手機號碼.slice(-4)})\n`);
-            
-            showLoading(true);
-            try {
-                // 這裡原本多了一個分號導致報錯，現在已修正
-                const res = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ type: 'send_line', key: sessionStorage.getItem('staff_key'), message: message }) 
-                });
-                const result = await res.json();
-                if (result.result === 'SUCCESS') showToast('已發送至 LINE 群組');
-            } catch (e) { showToast('發送失敗'); }
-            showLoading(false);
+    function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+
+    window.onload = () => {
+        if (!sessionStorage.getItem('staff_key')) {
+            location.href = "staff_login.html";
+        } else {
+            loadData();
         }
-        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-        function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
-    </script>
+    };
+</script>
 </body>
 </html>

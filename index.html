@@ -216,8 +216,7 @@ async function handleLogin() {
     
     try {
         const res = await fetch(GAS_URL, { 
-            method: 'POST', 
-            redirect: 'follow', // 確保跟隨 GAS 的導向
+            method: 'POST',
             body: JSON.stringify({ type: 'login', phone: u, password: p }) 
         });
         

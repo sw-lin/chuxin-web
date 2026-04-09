@@ -99,19 +99,25 @@
             </div>
         </section>
 
-        <section class="mb-8">
-            <div class="flex items-center justify-between mb-4 px-2">
-                <div class="flex items-center gap-2">
-                    <div class="w-2 h-6 bg-orange-500 rounded-full"></div>
-                    <h3 class="font-black text-emerald-900 text-xl">攜伴參加</h3>
-                </div>
-                <button type="button" onclick="addPartner()" class="text-sm font-black text-emerald-700 bg-emerald-50 px-4 py-2 rounded-xl active:scale-95 shadow-sm">
-                    <i class="fas fa-plus mr-1"></i>新增攜伴
-                </button>
-            </div>
-            <div id="partnerContainer" class="space-y-4"></div>
-        </section>
-
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-4 px-2">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-6 bg-orange-500 rounded-full"></div>
+            <h3 class="font-black text-emerald-900 text-xl">攜伴參加</h3>
+        </div>
+        <div class="flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-xl shadow-sm">
+            <span class="text-[10px] font-black text-emerald-700">攜伴人數</span>
+            <select id="partnerCountSelect" onchange="adjustPartnerFields()" class="bg-transparent font-black text-emerald-700 outline-none">
+                <option value="0">0 位</option>
+                <option value="1">1 位</option>
+                <option value="2">2 位</option>
+                <option value="3">3 位</option>
+            </select>
+        </div>
+    </div>
+    <div id="partnerContainer" class="space-y-4">
+        </div>
+</section>
         <div class="px-2 mb-10">
             <div class="flex items-center gap-2 mb-4">
                 <div class="w-2 h-6 bg-gray-400 rounded-full"></div>
@@ -219,49 +225,57 @@
         document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
     }
 
-    function addPartner() {
-        if (partners.length >= 3) {
-            showToast("最多攜伴 3 位", "error");
+// 調整攜伴欄位數量
+function adjustPartnerFields() {
+    const count = parseInt(document.getElementById('partnerCountSelect').value);
+    const container = document.getElementById('partnerContainer');
+    
+    // 這裡使用一塊簡單的邏輯：如果當前欄位數跟選擇人數不同，才重新生成
+    // 這能確保使用者如果不小心點到選單但沒改數字，資料不會消失
+    const currentFields = container.querySelectorAll('.partner-card').length;
+    if (count === currentFields) return;
+
+    // 提醒使用者：如果縮減人數，資料會遺失
+    if (currentFields > count && currentFields > 0) {
+        if (!confirm("減少人數將會清除已填寫的訪客資料，確定要繼續嗎？")) {
+            document.getElementById('partnerCountSelect').value = currentFields;
             return;
         }
-        const id = Date.now();
-        partners.push(id);
-        renderPartners();
-        updateTotal();
     }
 
-    function renderPartners() {
-        const container = document.getElementById('partnerContainer');
-        const idHtml = eventConfig.needId ? `
-            <input type="text" placeholder="身分證字號 (保險用)" class="partner-id input-field">
-        ` : "";
+    const idHtml = eventConfig.needId ? `
+        <input type="text" placeholder="身分證字號 (保險用)" class="partner-id input-field">
+    ` : "";
 
-        container.innerHTML = partners.map((id, index) => `
-            <div class="bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative">
-                <button type="button" onclick="removePartner(${id})" class="absolute top-6 right-6 text-gray-300 text-xl"><i class="fas fa-times-circle"></i></button>
-                <div class="text-emerald-700 font-black text-sm mb-4">訪客 ${index + 1}</div>
+    let newHtml = "";
+    for (let i = 0; i < count; i++) {
+        newHtml += `
+            <div class="partner-card bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative transition-all">
+                <div class="text-emerald-700 font-black text-sm mb-4">訪客 ${i + 1}</div>
                 <div class="space-y-4">
                     <input type="text" placeholder="姓名" class="partner-name input-field">
                     <input type="tel" placeholder="電話" class="partner-phone input-field">
                     ${idHtml}
                     <select class="partner-diet input-field">
-                        <option value="葷食">葷食</option><option value="素食">素食</option><option value="不拘">不拘</option>
+                        <option value="葷食">葷食</option>
+                        <option value="素食">素食</option>
+                        <option value="不拘">不拘</option>
                     </select>
                 </div>
             </div>
-        `).join('');
+        `;
     }
+    
+    container.innerHTML = newHtml;
+    updateTotal(count);
+}
 
-    function removePartner(id) {
-        partners = partners.filter(p => p !== id);
-        renderPartners();
-        updateTotal();
-    }
-
-    function updateTotal() {
-        const total = eventConfig.memberFee + (partners.length * eventConfig.guestFee);
-        document.getElementById('totalAmount').innerText = total;
-    }
+// 修改 updateTotal 以適應新的選擇方式
+function updateTotal(manualCount = null) {
+    const count = manualCount !== null ? manualCount : parseInt(document.getElementById('partnerCountSelect').value || 0);
+    const total = eventConfig.memberFee + (count * eventConfig.guestFee);
+    document.getElementById('totalAmount').innerText = total;
+}
     
     async function submitForm(event) {
         if (event && event.preventDefault) event.preventDefault();

@@ -94,6 +94,7 @@
             <div class="flex gap-3 pt-4">
                 <button onclick="closeEventModal()" class="flex-1 py-4 font-bold text-gray-400">取消</button>
                 <button onclick="saveEvent()" class="flex-[2] emerald-gradient text-white py-4 rounded-2xl font-black shadow-lg">儲存設定</button>
+                <button onclick="deleteEntireEvent()" class="w-full text-red-500 font-bold text-xs py-2 bg-red-50 rounded-xl border border-red-100 mt-4"><i class="fas fa-trash-alt mr-2"></i>永久刪除此活動及所有名單</button>                
             </div>
         </div>
     </div>
@@ -355,7 +356,36 @@
         } catch (e) { alert('發送失敗'); }
         showLoading(false);
     }
+    async function deleteEntireEvent() {
+    const title = document.getElementById('evTitle').value;
+    if (!title) return alert("請先選擇或輸入要刪除的活動名稱");
 
+    const confirmMsg = `【危險操作】\n您確定要刪除活動「${title}」嗎？\n這將會連同所有報名者的名單、交通、繳費紀錄一併永久刪除且無法恢復！`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'admin_delete_event_full', // 對應 GAS 的新 case
+                key: sessionStorage.getItem('staff_key'),
+                title: title
+            })
+        });
+        const result = await res.json();
+        if (result.result === 'SUCCESS') {
+            alert(result.message);
+            location.reload(); // 刪除後刷洗頁面
+        } else {
+            alert(result.message);
+        }
+    } catch (e) {
+        alert("刪除請求失敗，請檢查網路");
+    }
+    showLoading(false);
+}
     function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
     window.onload = () => {

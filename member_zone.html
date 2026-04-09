@@ -39,16 +39,39 @@
             </div>
             <div>
                 <h1 id="userName" class="text-2xl font-black tracking-tight">載入中...</h1>
-                <p id="userRole" class="text-xs font-bold opacity-80 bg-white/20 px-2 py-0.5 rounded-full inline-block mt-1">MEMBER</p>
+                <p id="userRole" class="text-xs font-bold opacity-80 bg-white/20 px-2 py-0.5 rounded-full inline-block mt-1 uppercase">MEMBER</p>
             </div>
         </div>
         <button onclick="location.href='index.html'" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
             <i class="fas fa-sign-out-alt"></i>
         </button>
     </div>
+
+    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/20 shadow-inner">
+        <div class="flex items-center gap-2 mb-2">
+            <i class="fas fa-bullhorn text-yellow-300 text-sm"></i>
+            <span class="text-[10px] font-black uppercase tracking-[0.2em]">重要公告</span>
+        </div>
+        <p id="newsContent" class="text-sm font-medium leading-relaxed opacity-90 italic">同步資料中...</p>
+    </div>
 </nav>
 
 <main class="px-6 space-y-8">
+    <section class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex items-center justify-between">
+        <div class="flex-1">
+            <h3 class="font-black text-emerald-900 text-lg mb-1">年度參與率</h3>
+            <p id="attendDetail" class="text-xs text-gray-400 font-bold">載入中...</p>
+        </div>
+        <div class="relative w-16 h-16">
+            <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" class="text-gray-100"></circle>
+                <circle id="progressCircle" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" 
+                        stroke-dasharray="175.9" stroke-dashoffset="175.9" class="text-emerald-500 transition-all duration-1000"></circle>
+            </svg>
+            <div id="progressText" class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-emerald-800">0%</div>
+        </div>
+    </section>
+
     <section>
         <div class="flex items-center justify-between mb-5 px-2">
             <div class="flex items-center gap-3">
@@ -59,18 +82,65 @@
         <div id="eventList" class="space-y-4">
             </div>
     </section>
+
+    <section id="calendarSection" class="hidden">
+        <div class="flex items-center gap-3 mb-5 px-2">
+            <div class="w-2 h-7 bg-orange-400 rounded-full"></div>
+            <h2 class="text-xl font-black text-emerald-900">館內行事曆</h2>
+        </div>
+        <div id="calendarList" class="space-y-3"></div>
+    </section>
 </main>
+
+<div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-emerald-50 p-4 flex justify-around items-center z-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+    <button onclick="switchTab('events')" class="flex flex-col items-center gap-1 text-emerald-800">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center shadow-inner"><i class="fas fa-home"></i></div>
+        <span class="text-[10px] font-black">首頁</span>
+    </button>
+    <button onclick="openScanner()" class="flex flex-col items-center gap-1 text-gray-400">
+        <div class="w-14 h-14 rounded-full emerald-gradient flex items-center justify-center -translate-y-6 shadow-lg border-4 border-white text-white">
+            <i class="fas fa-qrcode text-xl"></i>
+        </div>
+        <span class="text-[10px] font-black -translate-y-5">簽到</span>
+    </button>
+    <button onclick="openProfile()" class="flex flex-col items-center gap-1 text-gray-400">
+        <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center"><i class="fas fa-id-card"></i></div>
+        <span class="text-[10px] font-black">資料</span>
+    </button>
+</div>
+
+<div id="profileModal" class="modal-overlay">
+    <div class="bg-white w-[90%] rounded-[3rem] p-8 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-black text-emerald-900">修改個人資料</h3>
+            <button onclick="closeProfile()" class="text-gray-300 text-xl"><i class="fas fa-times-circle"></i></button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black text-emerald-800 uppercase ml-2 mb-1 block">電子郵件</label>
+                <input type="email" id="newEmail" class="w-full px-5 py-4 bg-gray-50 rounded-2xl text-sm border-2 border-transparent focus:border-emerald-500 outline-none transition-all">
+            </div>
+            <div class="bg-emerald-50 p-5 rounded-3xl space-y-3">
+                <label class="text-[10px] font-black text-emerald-800 uppercase block">變更密碼 (若不修改請留空)</label>
+                <input type="password" id="newPassword" placeholder="新密碼" class="w-full px-5 py-4 bg-white rounded-xl text-sm border-2 border-transparent focus:border-emerald-500 outline-none">
+                <div class="h-[1px] bg-emerald-100"></div>
+                <input type="password" id="oldPassword" placeholder="輸入舊密碼驗證" class="w-full px-5 py-4 bg-white rounded-xl text-sm border-2 border-transparent focus:border-emerald-500 outline-none">
+            </div>
+            <button onclick="updateProfile()" class="w-full emerald-gradient text-white py-5 rounded-3xl font-black shadow-lg active:scale-95 transition-all mt-4">儲存變更</button>
+        </div>
+    </div>
+</div>
+
+<div id="scanModal" class="modal-overlay">
+    <div class="bg-white w-[90%] rounded-[3rem] p-6 text-center">
+        <div id="reader" class="w-full overflow-hidden rounded-2xl mb-4"></div>
+        <button onclick="closeScanner()" class="text-gray-400 font-bold text-sm">取消掃描</button>
+    </div>
+</div>
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
     
-    // 輔助函式：判斷布林值
-    const isTrue = (val) => {
-        if (!val) return false;
-        const s = String(val).trim().toUpperCase();
-        return s === 'Y' || s === '是' || s === 'TRUE';
-    };
-
     window.onload = function() {
         const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
         if (!userInfo || !userInfo.phone) {
@@ -80,7 +150,7 @@
         document.getElementById('userName').innerText = userInfo.name || "會員";
         document.getElementById('userRole').innerText = userInfo.role || "MEMBER";
         
-        syncData(); // 初始化同步
+        syncData(); 
     };
 
     async function syncData() {
@@ -93,14 +163,19 @@
             const data = await response.json();
             
             if (data.result === "SUCCESS") {
-                // 1. 存入公用活動配置 (localStorage)
+                // 儲存資料
                 localStorage.setItem('allEvents', JSON.stringify(data.events));
-                
-                // 2. 存入個人報名紀錄 (sessionStorage)
                 sessionStorage.setItem('userEvents', JSON.stringify(data.registrations));
                 
-                // 3. 更新 UI
+                // 更新公告與出席率
+                document.getElementById('newsContent').innerText = data.news || "歡迎來到築心會館";
+                updateAttendance(data.user.attendLog);
                 updateEventList(data.events);
+                
+                // 更新行事曆
+                if(data.calendar && data.calendar.length > 0) {
+                    renderCalendar(data.calendar);
+                }
             }
         } catch (e) {
             console.error("同步失敗:", e);
@@ -109,18 +184,29 @@
         }
     }
 
+    function updateAttendance(logs) {
+        const total = 10; // 假設年度基準為 10 次
+        const count = logs ? logs.length : 0;
+        const percent = Math.min(Math.round((count / total) * 100), 100);
+        
+        document.getElementById('attendDetail').innerText = `今年已參加 ${count} 場活動`;
+        document.getElementById('progressText').innerText = percent + "%";
+        
+        const circle = document.getElementById('progressCircle');
+        const offset = 175.9 - (175.9 * percent) / 100;
+        circle.style.strokeDashoffset = offset;
+    }
+
     function updateEventList(events) {
         const container = document.getElementById('eventList');
-        // 取得該會員已報名的清單
         const userEvents = JSON.parse(sessionStorage.getItem('userEvents')) || [];
         
         if (!events || events.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center text-gray-400 font-bold">目前暫無開放活動</div>`;
+            container.innerHTML = `<div class="p-8 text-center text-gray-400 font-bold italic">目前暫無開放報名的活動</div>`;
             return;
         }
 
         container.innerHTML = events.map(event => {
-            // 檢查是否已報名
             const isRegistered = userEvents.some(reg => String(reg.title).trim() === String(event.title).trim());
             
             return `
@@ -132,21 +218,21 @@
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">${event.status || '進行中'}</span>
-                                ${isRegistered ? '<span class="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">已報名過</span>' : ''}
+                                ${isRegistered ? '<span class="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full tracking-wider">已報名過</span>' : ''}
                             </div>
                             <h3 class="font-black text-emerald-900 text-lg leading-tight mb-2">${event.title}</h3>
                             <div class="space-y-1">
                                 <div class="flex items-center text-gray-400 text-xs font-bold">
-                                    <i class="far fa-calendar-alt w-4"></i> ${event.eventDate || '未定'}
+                                    <i class="far fa-calendar-alt w-4 text-center"></i> ${event.eventDate || '未定'}
                                 </div>
                                 <div class="flex items-center text-gray-400 text-xs font-bold">
-                                    <i class="fas fa-dollar-sign w-4"></i> 會員 $${event.memberFee} / 訪客 $${event.guestFee}
+                                    <i class="fas fa-dollar-sign w-4 text-center"></i> 會員 $${event.memberFee} / 訪客 $${event.guestFee}
                                 </div>
                             </div>
                             
                             <div class="mt-4">
                                 ${isRegistered ? 
-                                    `<button class="w-full bg-gray-200 text-gray-500 py-3 rounded-2xl font-black text-sm cursor-not-allowed" disabled>
+                                    `<button class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black text-sm cursor-not-allowed" disabled>
                                         <i class="fas fa-check-circle mr-1"></i> 您已完成報名
                                      </button>` :
                                     `<button onclick="location.href='event_registration.html?event=${encodeURIComponent(event.title)}'" 
@@ -160,6 +246,69 @@
                 </div>
             `;
         }).join('');
+    }
+
+    function renderCalendar(items) {
+        document.getElementById('calendarSection').classList.remove('hidden');
+        const list = document.getElementById('calendarList');
+        list.innerHTML = items.map(item => `
+            <div class="bg-white p-4 rounded-3xl border border-orange-50 flex items-center gap-4">
+                <div class="text-center shrink-0">
+                    <div class="text-[10px] font-black text-orange-400 uppercase leading-none">${item.dateText.split('-')[1]}月</div>
+                    <div class="text-xl font-black text-emerald-900">${item.dateText.split('-')[2]}</div>
+                </div>
+                <div class="h-8 w-[1px] bg-gray-100"></div>
+                <div class="font-bold text-sm text-emerald-800">${item.title}</div>
+            </div>
+        `).join('');
+    }
+
+    // --- 彈窗功能 ---
+    function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
+    function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
+    
+    async function updateProfile() {
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const newEmail = document.getElementById('newEmail').value;
+        
+        if (!oldPassword) return alert("請輸入舊密碼驗證");
+        
+        const loading = document.getElementById('loadingOverlay');
+        loading.style.display = 'flex';
+        
+        const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    type: 'updateProfile',
+                    phone: userInfo.phone,
+                    oldPassword, newPassword, newEmail
+                })
+            });
+            const res = await response.json();
+            alert(res.message);
+            if (res.result === "SUCCESS") location.reload();
+        } catch (e) { alert("更新失敗"); }
+        finally { loading.style.display = 'none'; }
+    }
+
+    // --- 掃描功能 (保留) ---
+    let html5QrCode;
+    function openScanner() {
+        document.getElementById('scanModal').style.display = 'flex';
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+    }
+    function closeScanner() {
+        if(html5QrCode) html5QrCode.stop();
+        document.getElementById('scanModal').style.display = 'none';
+    }
+    function onScanSuccess(decodedText) {
+        closeScanner();
+        alert("簽到掃描成功：" + decodedText);
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     }
 </script>
 </body>

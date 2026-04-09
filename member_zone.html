@@ -215,6 +215,7 @@ async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = 'flex';
     
+    // 取得當前手機號碼
     const infoStr = sessionStorage.getItem('userInfo');
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
     if (!userInfo || !userInfo.phone) {
@@ -223,22 +224,26 @@ async function syncData() {
     }
 
     try {
+        // 使用輕量化的 member_init 介面
         const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.json();
         
         if (data.result === "SUCCESS") {
-            // 1. 存入保險箱 (供報名頁面使用)
-            localStorage.setItem('allEvents', JSON.stringify(data.events));
+            // 【關鍵修正】賦值給全域變數，這樣 openService 才能讀到網址
+            globalConfig = data.config || {}; 
+            console.log("全域設定已載入:", globalConfig);
 
-            // 2. 處理公告時限邏輯
+            // 1. 存入保險箱供報名頁面使用
+            if (data.events) {
+                localStorage.setItem('allEvents', JSON.stringify(data.events));
+            }
+
+            // 2. 公告時限處理
             const newsContent = data.news ? data.news.trim() : "";
             const now = new Date();
-            const todayStr = now.getFullYear() + '-' + 
-                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                           String(now.getDate()).padStart(2, '0');
-            const isDateValid = (!data.startDate || todayStr >= data.startDate) && 
-                                (!data.endDate || todayStr <= data.endDate);
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const isDateValid = (!data.startDate || todayStr >= data.startDate) && (!data.endDate || todayStr <= data.endDate);
             
             const newsContainer = document.getElementById('newsContainer');
             if (newsContent && newsContent !== "NONE" && isDateValid) {
@@ -248,24 +253,22 @@ async function syncData() {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
 
-            // 3. 【新增：幹部開關判斷】
+            // 3. 更新當前使用者狀態與幹部開關
+            currentUser = data.user; 
+            currentUser.phone = userInfo.phone; // 確保手機號碼存在
+            
             const staffBtn = document.getElementById('staffBtn');
-            if (staffBtn) {
-                // 如果角色不是「學員」，就代表是幹部或管理員，顯示按鈕
-                if (data.user && data.user.role && data.user.role !== "學員") {
-                    staffBtn.classList.remove('hidden');
-                    // 確保點擊事件有綁定 (進入幹部模式的函式)
-                    staffBtn.onclick = typeof enterStaffMode === 'function' ? enterStaffMode : null;
-                } else {
-                    staffBtn.classList.add('hidden');
-                }
+            if (staffBtn && data.user.role !== "學員") {
+                staffBtn.classList.remove('hidden');
+                staffBtn.onclick = enterStaffMode;
             }
 
-            // 4. 更新主 UI (姓名、參與率、活動列表)
+            // 4. 更新 UI 畫面
             updateUI(data.user, data.calendar, data.events, data.registrations);
         }
     } catch (e) {
         console.error("同步失敗:", e);
+        showToast("同步失敗: " + e.message, "error");
     } finally {
         overlay.style.display = 'none';
     }

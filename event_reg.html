@@ -254,8 +254,7 @@ function openEditModal() {
     const ev = allData.events.find(e => e.title === title || e.標題 === title || e.活動標題 === title);
     if (!ev) return;
 
-    // 🌟 【超級除錯利器】這行會把真正的資料印在瀏覽器後台，稍後教您怎麼看！
-    console.log("=== 當前選中的活動資料 (請檢查括號內的名稱) ===", ev);
+    console.log("=== 當前選中的活動資料 ===", ev);
 
     document.getElementById('modalTitle').innerText = "修改活動內容";
     document.getElementById('old_title').value = ev.title || ev.標題 || ev.活動標題 || "";
@@ -263,37 +262,25 @@ function openEditModal() {
     document.getElementById('ev_poster').value = ev.poster_url || ev.海報 || ev.海報圖片連結 || "";
     document.getElementById('ev_desc').value = ev.desc || ev.簡介 || ev.活動簡介 || "";
 
-    // 【修正：下拉選單的防禦邏輯】
-    // 試算表可能存 'Y', 'N', '是', '有', 甚至是布林值 true/false
-    const needIdVal = ev.needId || ev.身分證 || ev.需填身分證 || "N";
-    document.getElementById('ev_needId').value = (needIdVal === 'Y' || needIdVal === '是' || needIdVal === '需要' || needIdVal === true) ? 'Y' : 'N';
+    // 下拉選單處理
+    const needIdVal = ev.needId || ev.needIdCard || ev.身分證 || "N";
+    document.getElementById('ev_needId').value = (needIdVal === 'Y' || needIdVal === '是' || needIdVal === true) ? 'Y' : 'N';
 
-    const busVal = ev.isTourBus || ev.遊覽車 || ev.提供遊覽車 || "N";
-    document.getElementById('ev_bus').value = (busVal === 'Y' || busVal === '是' || busVal === '有' || busVal === true) ? 'Y' : 'N';
+    const busVal = ev.isTourBus || ev.遊覽車 || "N";
+    document.getElementById('ev_bus').value = (busVal === 'Y' || busVal === '是' || busVal === true) ? 'Y' : 'N';
 
-    document.getElementById('ev_mFee').value = ev.memberFee || ev.會員費 || ev.會員費用 || 0;
-    document.getElementById('ev_gFee').value = ev.guestFee || ev.非會員費 || ev.非會員費用 || 0;
+    document.getElementById('ev_mFee').value = ev.memberFee || 0;
+    document.getElementById('ev_gFee').value = ev.guestFee || 0;
 
     // 【修正：三個日期欄位】
-    // 2. 處理日期（關鍵：欄位名稱要跟 GAS 回傳的一樣）
-    // 使用 .split('T')[0] 是為了保證只拿 YYYY-MM-DD，避開 ISO 格式問題
-    if (eventData.startDate) {
-        document.getElementById('ev_start').value = eventData.startDate.split('T')[0];
-    }
-    
-    if (eventData.deadline) {
-        // 注意：這裡要用 deadline，因為你 GAS 回傳的是這個名字
-        document.getElementById('ev_until').value = eventData.deadline.split('T')[0];
-    }
-    
-    if (eventData.eventDate) {
-        document.getElementById('ev_date').value = eventData.eventDate.split('T')[0];
-    }    
+    // 使用你寫的 formatDateForInput 函式是最保險的，它會自動處理 .split('T')[0]
+    document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev.開始展示日期);
+    document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev.截止下架日期);
+    document.getElementById('ev_date').value = formatDateForInput(ev.eventDate || ev.活動舉辦日期);
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
-}
-
+}        
 // 【強化版】日期轉換函數：解決 GAS 各種奇怪日期格式 (包含帶有斜線或時區的字串)
 function formatDateForInput(dateVal) {
     if (!dateVal) return "";

@@ -147,13 +147,214 @@
             </div>
         </div>
     </div>
-
+    <div id="reg_transport_zone" class="p-4 bg-blue-50 rounded-2xl space-y-3">
+    <label class="text-[10px] font-bold text-blue-600">交通安排 (非遊覽車活動)</label>
+    <div class="flex gap-4">
+        <label class="flex items-center gap-2 text-xs font-bold">
+            <input type="radio" name="trans" value="自駕" checked> 自駕
+        </label>
+        <label class="flex items-center gap-2 text-xs font-bold">
+            <input type="radio" name="trans" value="共乘"> 共乘
+        </label>
+    </div>
+    <div id="seat_input_zone">
+        <label class="text-[10px] font-bold text-blue-400">若自駕，可載人數</label>
+        <input type="number" id="reg_seats" class="w-full bg-white border-none rounded-xl px-4 py-2 text-sm font-bold" placeholder="0">
+    </div>
+</div>
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
         let allData = {};
         let isEditMode = false;
 
         window.onload = loadData;
+
+async function loadData() {
+        showLoading(true);
+        try {
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+            const json = await res.json();
+            allData.events = json.events || [];
+            // 初始載入時不一定有 registrations，由選取活動時抓取
+            renderSelector();
+        } catch (e) { showToast("連線失敗"); }
+        showLoading(false);
+    }
+
+    function renderSelector() {
+        const selector = document.getElementById('eventSelector');
+        const current = selector.value;
+        selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
+            allData.events.map(ev => `<option value="${ev.title}">${ev.title}</option>`).join('');
+        if (current) selector.value = current;
+    }
+
+    async function loadEventDetails() {
+        const title = document.getElementById('eventSelector').value;
+        if (!title) return;
+
+        showLoading(true);
+        try {
+            const url = `${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}`;
+            const res = await fetch(url);
+            const json = await res.json();
+
+            if (Array.isArray(json)) {
+                allData.registrations = json; // 【重要】存入全域供編輯使用
+                renderRegList(json);
+                document.getElementById('statCount').innerText = json.length;
+                document.getElementById('statsSection').classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error("載入失敗:", e);
+            showToast("抓取名單失敗");
+        }
+        showLoading(false);
+    }
+
+    function renderRegList(list) {
+        const container = document.getElementById('regList');
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無報名資料</div>' + (isEditMode ? renderManualAddBtn() : '');
+            return;
+        }
+
+        let listHtml = list.map((r, index) => {
+            const name = r["姓名"] || r["會員姓名"] || '未命名';
+            const phone = r["手機號碼"] || r["電話"] || '無電話';
+            const diet = r["餐食"] || r["飲食選項"] || '未填';
+            const isPaid = r["繳費狀態"] || r["是否繳費"] || 'N'; 
+            
+            // 修正 2：利用 Console 輸出觀察後端送出的格式
+            const isMember = (r["是否會員"] === '是' || r["身份"] === '是');
+            console.log(`[Debug] 報名者: ${name}, 是否會員欄位值: "${r["是否會員"]}", 判定結果: ${isMember}`);
+
+            const idCard = r["身分證字號"] || r["身分證號碼"] || '';
+            const note = r["備註"] || '';
+
+            return `
+            <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 space-y-3">
+                <div class="flex items-center justify-between" onclick="toggleRegDetail(${index})">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xs border border-emerald-100">
+                            ${name.substring(0, 1)}
+                        </div>
+                        <div>
+                            <div class="font-black text-emerald-900">${name}</div>
+                            <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] px-2 py-1 rounded-lg ${(isPaid === 'Y' || isPaid === '已繳') ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
+                            ${(isPaid === 'Y' || isPaid === '已繳') ? '已繳費' : '未繳費'}
+                        </span>
+                        <i class="fas fa-chevron-down text-gray-300 text-xs"></i>
+                    </div>
+                </div>
+                <div id="regDetail-${index}" class="hidden pt-3 border-t border-dashed border-gray-100 space-y-3">
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="text-gray-400">飲食：<span class="text-emerald-800 font-bold">${diet}</span></div>
+                        <div class="text-gray-400">身份：<span class="text-emerald-800 font-bold">${isMember ? '正式會員' : '非會員'}</span></div>
+                        ${idCard ? `<div class="text-gray-400 col-span-2">身分證：<span class="text-emerald-800 font-bold">${idCard}</span></div>` : ''}
+                        <div class="text-gray-400 col-span-2">備註：<span class="text-emerald-800 font-bold">${note}</span></div>
+                    </div>
+                    ${isEditMode ? `
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black hover:bg-emerald-100">編輯資料</button>
+                        <button onclick="deleteSingleReg('${document.getElementById('eventSelector').value}', '${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px] hover:bg-red-100">刪除</button>
+                    </div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+        if (isEditMode) listHtml += renderManualAddBtn();
+        container.innerHTML = listHtml;
+    }
+
+    function openRegModal(phone) {
+        const title = document.getElementById('eventSelector').value;
+        const ev = allData.events.find(e => e.title === title);
+        
+        // 修正 4：交通方式顯示邏輯
+        const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是');
+        const needId = (ev?.needId === 'Y' || ev?.身分證 === '是');
+
+        document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
+        document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
+
+        if (phone) {
+            // 修正 1：從全域 registrations 找資料
+            const r = allData.registrations.find(reg => (reg.手機號碼 || reg.電話) === phone);
+            if(!r) return showToast("找不到成員資料");
+            
+            document.getElementById('reg_old_phone').value = phone;
+            document.getElementById('reg_name').value = r.姓名 || r.會員姓名 || '';
+            document.getElementById('reg_phone').value = phone;
+            document.getElementById('reg_diet').value = r.餐食 || r.飲食選項 || '葷';
+            document.getElementById('reg_id').value = r.身分證字號 || r.身分證號碼 || '';
+            document.getElementById('reg_note').value = r.備註 || '';
+            
+            const trans = r.交通方式 || '自駕';
+            const radio = document.querySelector(`input[name="trans"][value="${trans}"]`);
+            if(radio) radio.checked = true;
+            document.getElementById('reg_seats').value = r.可載人數 || 0;
+            updateSeatInput(trans);
+        } else {
+            // 新增模式
+            document.getElementById('reg_old_phone').value = "";
+            document.getElementById('reg_name').value = "";
+            document.getElementById('reg_phone').value = "";
+            document.getElementById('reg_id').value = "";
+            document.getElementById('reg_note').value = "";
+            document.getElementById('reg_seats').value = 0;
+            document.querySelector('input[name="trans"][value="自駕"]').checked = true;
+        }
+        document.getElementById('regModal').classList.remove('hidden');
+    }
+
+    // 監聽交通方式切換
+    document.querySelectorAll('input[name="trans"]').forEach(radio => {
+        radio.addEventListener('change', (e) => updateSeatInput(e.target.value));
+    });
+
+    function updateSeatInput(val) {
+        const zone = document.getElementById('seat_input_zone');
+        zone.style.display = (val === '自駕') ? 'block' : 'none';
+    }
+
+    async function saveSingleReg() {
+        const title = document.getElementById('eventSelector').value;
+        const payload = {
+            type: 'save_single_registration',
+            key: sessionStorage.getItem('staff_key'),
+            eventTitle: title,
+            oldPhone: document.getElementById('reg_old_phone').value,
+            name: document.getElementById('reg_name').value,
+            phone: document.getElementById('reg_phone').value,
+            diet: document.getElementById('reg_diet').value,
+            idCard: document.getElementById('reg_id').value,
+            note: document.getElementById('reg_note').value,
+            transport: document.querySelector('input[name="trans"]:checked')?.value || '自駕',
+            seats: document.getElementById('reg_seats').value || 0,
+            isMember: '否' // 人工報名預設非正式會員，或依需求調整
+        };
+
+        if(!payload.name || !payload.phone) return alert("姓名與電話為必填");
+
+        showLoading(true);
+        try {
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.result === 'SUCCESS') {
+                showToast('儲存成功');
+                closeRegModal();
+                await loadEventDetails(); // 重新整理名單
+            } else {
+                showToast('儲存失敗：' + result.message);
+            }
+        } catch (e) { showToast('連線錯誤'); }
+        showLoading(false);
+    }
 
         // 【修正核心】日期格式化函數，確保轉為 YYYY-MM-DD
         function formatDateForInput(isoString) {
@@ -165,168 +366,11 @@
   const day = String(date.getDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
-}
-
-        async function loadData() {
-            showLoading(true);
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                allData = await res.json();
-                renderSelector();
-                if (document.getElementById('eventSelector').value) loadEventDetails();
-            } catch (e) { showToast("連線失敗"); }
-            showLoading(false);
-        }
-
-        function renderSelector() {
-            const selector = document.getElementById('eventSelector');
-            const current = selector.value;
-            if (allData.events && allData.events.length > 0) {
-                selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
-                    allData.events.map(ev => `<option value="${ev.title}">${formatDateForInput(ev.date)} | ${ev.title}</option>`).join('');
-                if (current) selector.value = current;
-            }
-        }
-async function loadEventDetails() {
-    const title = document.getElementById('eventSelector').value;
-    if (!title) return;
-
-    showLoading(true);
-    try {
-        const url = `${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}`;
-        const res = await fetch(url);
-        const json = await res.json();
-
-        if (Array.isArray(json)) {
-            renderRegList(json);
-            document.getElementById('statCount').innerText = json.length;
-            document.getElementById('statsSection').classList.remove('hidden');
-        }
-    } catch (e) {
-        console.error("載入失敗:", e);
-        showToast("抓取名單失敗");
-    }
-    showLoading(false);
-}        
+}      
         // 切換展開
 function toggleRegDetail(index) {
     const el = document.getElementById(`regDetail-${index}`);
     el.classList.toggle('hidden');
-}
-// 開啟報名者編輯彈窗
-function openRegModal(phone) {
-    const title = document.getElementById('eventSelector').value;
-    const currentEvent = allData.events.find(e => e.title === title);
-    const isBus = currentEvent?.isTourBus === 'Y' || currentEvent?.遊覽車 === 'Y';
-    const needId = currentEvent?.needId === 'Y' || currentEvent?.身分證 === 'Y';
-
-    // 顯示/隱藏條件欄位
-    document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
-    document.getElementById('reg_transport_zone').style.display = isBus ? 'none' : 'block';
-
-    if (phone) {
-        // 修改模式：填入現有資料
-        const r = allData.registrations.find(reg => reg.手機號碼 === phone && reg.活動標題 === title);
-        document.getElementById('reg_old_phone').value = r.手機號碼;
-        document.getElementById('reg_name').value = r.會員姓名;
-        document.getElementById('reg_phone').value = r.手機號碼;
-        document.getElementById('reg_diet').value = r.飲食選項 || '葷';
-        document.getElementById('reg_id').value = r.身分證號碼 || '';
-        document.getElementById('reg_note').value = r.備註 || '';
-        document.querySelector(`input[name="trans"][value="${r.交通方式 || '自駕'}"]`).checked = true;
-        document.getElementById('reg_seats').value = r.可載人數 || 0;
-    } else {
-        // 新增模式：清空
-        document.getElementById('reg_old_phone').value = "";
-        document.querySelectorAll('#regModal input:not([type="radio"]), #regModal textarea').forEach(i => i.value = "");
-        document.getElementById('reg_diet').value = "葷";
-    }
-    document.getElementById('regModal').classList.remove('hidden');
-}
-function renderRegList(list) {
-    const container = document.getElementById('regList');
-    if (!list || list.length === 0) {
-        container.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無報名資料</div>';
-        // 即使沒資料，編輯模式下也要顯示人工報名按鈕
-        if (isEditMode) {
-            container.innerHTML += renderManualAddBtn();
-        }
-        return;
-    }
-
-    // 產生人員列表 HTML
-    let listHtml = list.map((r, index) => {
-        // --- 欄位與資料對應 ---
-        const name = r["姓名"] || r["會員姓名"] || '未命名';
-        const phone = r["手機號碼"] || r["電話"] || '無電話';
-        const diet = r["餐食"] || r["飲食選項"] || '未填';
-        const isPaid = r["繳費狀態"] || r["是否繳費"] || 'N'; 
-        
-        // 修正需求 2：身份判斷（假設對應您提到的 H 欄或物件中的特定屬性）
-        // 這裡會檢查 "是否會員" 或 "身份" 欄位
-        const isMember = (r["是否會員"] === '是' || r["身份"] === '是');
-        
-        const idCard = r["身分證字號"] || r["身分證號碼"] || '';
-        const note = r["備註"] || '';
-        
-        // 修正需求 1：處理頭像顯示邏輯
-        let avatarContent = '';
-        if (!isMember) {
-            // 非會員顯示代理人名字（去姓）
-            const agentName = r["報名代理人"] || r["代理人"] || '外';
-            const shortAgent = agentName.length > 1 ? agentName.substring(1) : agentName;
-            avatarContent = `
-                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-bold text-[10px] border border-gray-200">
-                    ${shortAgent}
-                </div>`;
-        } else {
-            // 會員不顯示圓圈，但為了排版留出間距
-            avatarContent = `<div class="w-2"></div>`;
-        }
-
-        return `
-        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 space-y-3">
-            <div class="flex items-center justify-between" onclick="toggleRegDetail(${index})">
-                <div class="flex items-center gap-3">
-                    ${avatarContent}
-                    <div>
-                        <div class="font-black text-emerald-900">${name}</div>
-                        <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] px-2 py-1 rounded-lg ${(isPaid === 'Y' || isPaid === '已繳') ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
-                        ${(isPaid === 'Y' || isPaid === '已繳') ? '已繳費' : '未繳費'}
-                    </span>
-                    <i class="fas fa-chevron-down text-gray-300 text-xs"></i>
-                </div>
-            </div>
-            
-            <div id="regDetail-${index}" class="hidden pt-3 border-t border-dashed border-gray-100 space-y-3">
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="text-gray-400">飲食：<span class="text-emerald-800 font-bold">${diet}</span></div>
-                    <div class="text-gray-400">身份：<span class="text-emerald-800 font-bold">${isMember ? '正式會員' : '非會員'}</span></div>
-                    ${idCard ? `<div class="text-gray-400 col-span-2">身分證：<span class="text-emerald-800 font-bold">${idCard}</span></div>` : ''}
-                    <div class="text-gray-400 col-span-2">備註：<span class="text-emerald-800 font-bold">${note}</span></div>
-                </div>
-                
-                ${isEditMode ? `
-                <div class="flex gap-2 pt-2">
-                    <button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black hover:bg-emerald-100">編輯資料</button>
-                    <button onclick="deleteSingleReg('${document.getElementById('eventSelector').value}', '${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px] hover:bg-red-100">刪除</button>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-        `;
-    }).join('');
-
-    // 修正需求 4：在最後加上人工報名按鈕
-    if (isEditMode) {
-        listHtml += renderManualAddBtn();
-    }
-
-    container.innerHTML = listHtml;
 }
 
 // 輔助函式：產生人工報名按鈕 HTML
@@ -446,33 +490,7 @@ function formatDateForInput(dateVal) {
         return "";
     }
 }  
-async function saveSingleReg() {
-    const payload = {
-        type: 'save_single_registration',
-        key: sessionStorage.getItem('staff_key'),
-        eventTitle: document.getElementById('eventSelector').value,
-        oldPhone: document.getElementById('reg_old_phone').value, // 判斷是修改還是新增
-        name: document.getElementById('reg_name').value,
-        phone: document.getElementById('reg_phone').value,
-        diet: document.getElementById('reg_diet').value,
-        idCard: document.getElementById('reg_id').value,
-        note: document.getElementById('reg_note').value,
-        transport: document.querySelector('input[name="trans"]:checked')?.value || '自駕',
-        seats: document.getElementById('reg_seats').value || 0,
-        isMember: 'Y' // 這裡可以根據您的 UI 需求調整
-    };
-
-    showLoading(true);
-    try {
-        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-        if ((await res.json()).result === 'SUCCESS') {
-            showToast('資料已更新');
-            closeRegModal();
-            await loadData(); // 重新整理列表
-        }
-    } catch (e) { showToast('儲存失敗'); }
-    showLoading(false);
-}        
+      
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
 
         async function saveEvent() {

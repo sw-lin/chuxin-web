@@ -205,26 +205,36 @@ async function loadEventDetails() {
         console.log("後端原始回傳內容 (Raw):", rawText);
 
         // 手動嘗試解析 JSON
-        const json = JSON.parse(rawText);
-        console.log("解析後的 JSON 物件:", json);
+const json = JSON.parse(rawText);
+console.log("解析後的 JSON 物件:", json);
 
-        if (json.result === "SUCCESS") {
-            const list = json.data || [];
-            console.log("成功拿到名單，人數:", list.length);
-            renderRegList(list); 
-            document.getElementById('statCount').innerText = list.length;
-            document.getElementById('statsSection').classList.remove('hidden');
-        } else {
-            console.error("後端邏輯回傳失敗:", json.message);
-            showToast("錯誤: " + json.message);
-        }
-        
-    } catch (e) {
-        console.error("前端解析過程發生崩潰:", e);
-        showToast("抓取名單失敗，請看 Console 報錯");
+// 修改這裡：判斷 json 是否為陣列且有資料
+if (Array.isArray(json)) { 
+    console.log("成功拿到名單，人數:", json.length);
+    
+    // 1. 執行渲染列表的函式 (請確保這個函式名稱正確)
+    renderRegList(json); 
+    
+    // 2. 更新統計數字
+    const statCountElement = document.getElementById('statCount');
+    if (statCountElement) {
+        statCountElement.innerText = json.length;
     }
-    showLoading(false);
-}        
+    
+    // 3. 顯示統計區域
+    const statsSection = document.getElementById('statsSection');
+    if (statsSection) {
+        statsSection.classList.remove('hidden');
+    }
+    
+    console.log("渲染完成！");
+} else {
+    // 如果回傳的不是陣列，才報錯
+    console.error("回傳格式不正確:", json);
+    showToast("資料格式錯誤");
+}
+}  
+}
         // 切換展開
 function toggleRegDetail(index) {
     const el = document.getElementById(`regDetail-${index}`);

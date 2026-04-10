@@ -188,42 +188,135 @@
             }
         }
 
-        function loadEventDetails() {
-            const title = document.getElementById('eventSelector').value;
-            const stats = document.getElementById('statsSection');
-            const list = document.getElementById('regList');
-            const manageBtn = document.getElementById('manageEventBtn');
+function loadEventDetails() {
+    const title = document.getElementById('eventSelector').value;
+    const stats = document.getElementById('statsSection');
+    const list = document.getElementById('regList');
+    const manageBtn = document.getElementById('manageEventBtn');
 
-            if (!title) {
-                stats.classList.add('hidden'); manageBtn.classList.add('hidden');
-                list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>';
-                return;
+    if (!title) {
+        stats.classList.add('hidden'); manageBtn.classList.add('hidden');
+        list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>';
+        return;
+    }
+
+    if (isEditMode) manageBtn.classList.remove('hidden');
+    stats.classList.remove('hidden');
+
+    const currentEvent = allData.events.find(e => e.title === title);
+    const isBus = currentEvent?.isTourBus === 'Y' || currentEvent?.遊覽車 === 'Y';
+    const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
+    document.getElementById('statCount').innerText = filtered.length;
+
+    if (filtered.length === 0) {
+        list.innerHTML = `
+            <div class="text-center py-10 text-gray-300 italic text-sm">目前尚無人報名</div>
+            ${isEditMode ? `<button onclick="openRegModal(null)" class="w-full py-4 border-2 border-dashed border-emerald-200 rounded-3xl text-emerald-600 font-bold"><i class="fas fa-plus mr-2"></i>手動新增報名</button>` : ''}
+        `;
+    } else {
+        let html = filtered.map((r, index) => {
+            const isPaid = r.是否繳費 === 'Y' || r.isPaid === 'Y';
+            // 交通資訊處理
+            let transInfo = '';
+            if (!isBus) {
+                transInfo = r.交通方式 === '自駕' ? `🚗 自駕 (可載 ${r.可載人數 || 0} 人)` : `搭共乘`;
             }
 
-            if (isEditMode) manageBtn.classList.remove('hidden');
-            stats.classList.remove('hidden');
-
-            const filtered = (allData.registrations || []).filter(r => r.活動標題 === title);
-            document.getElementById('statCount').innerText = filtered.length;
-
-            if (filtered.length === 0) {
-                list.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無人報名</div>';
-            } else {
-                list.innerHTML = filtered.map(r => `
-                    <div class="bg-white p-5 rounded-3xl border border-emerald-50 shadow-sm flex justify-between items-center mb-3">
-                        <div>
-                            <div class="font-black text-emerald-900">${r.會員姓名}</div>
-                            <div class="text-[10px] text-gray-400 font-mono tracking-widest mt-1">${r.手機號碼}</div>
+            return `
+                <div class="bg-white rounded-3xl border border-emerald-50 shadow-sm overflow-hidden mb-3">
+                    <div onclick="toggleRegDetail(${index})" class="p-5 flex justify-between items-center cursor-pointer active:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <span class="font-black text-emerald-900">${r.會員姓名}</span>
+                            ${!isEditMode && transInfo ? `<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded">${transInfo}</span>` : ''}
                         </div>
                         <div class="flex items-center gap-3">
-                            <div class="bg-emerald-50 text-emerald-700 text-[10px] px-3 py-1 rounded-full font-bold border border-emerald-100">${r.是否繳費 === 'Y' ? '已繳費' : '待繳費'}</div>
-                            ${isEditMode ? `<button onclick="deleteSingleReg('${r.活動標題}', '${r.手機號碼}')" class="text-red-400 p-2 active:scale-90"><i class="fas fa-trash-alt"></i></button>` : ''}
+                            ${isEditMode ? 
+                                `<select onchange="updatePaidStatus('${r.手機號碼}', this.value)" onclick="event.stopPropagation()" class="text-xs font-bold border rounded-lg px-2 py-1 ${isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}">
+                                    <option value="Y" ${isPaid ? 'selected' : ''}>已繳費</option>
+                                    <option value="N" ${!isPaid ? 'selected' : ''}>待繳費</option>
+                                </select>
+                                <button onclick="event.stopPropagation(); openRegModal('${r.手機號碼}')" class="text-emerald-500 p-2"><i class="fas fa-tools"></i></button>` 
+                                : 
+                                `<div class="text-[10px] px-3 py-1 rounded-full font-bold ${isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}">${isPaid ? '已繳費' : '待繳費'}</div>`
+                            }
                         </div>
                     </div>
-                `).join('');
-            }
-        }
+                    <div id="regDetail-${index}" class="hidden px-5 pb-5 bg-emerald-50/30 border-t border-dashed border-emerald-100">
+                        <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+                            <div class="text-gray-500">飲食狀況：<span class="text-emerald-800 font-bold">${r.飲食選項 || '未填寫'}</span></div>
+                            <div class="text-gray-500">身分證：<span class="text-emerald-800 font-bold">${r.身分證號碼 || '無'}</span></div>
+                            <div class="col-span-2 text-gray-500">備註訊息：<span class="text-emerald-800 font-bold">${r.備註 || '無'}</span></div>
+                            ${!isBus ? `<div class="col-span-2 text-blue-600 font-bold italic">交通安排：${transInfo}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
+        if (isEditMode) {
+            html += `<button onclick="openRegModal(null)" class="w-full py-4 bg-emerald-50 border-2 border-dashed border-emerald-200 rounded-3xl text-emerald-600 font-bold mt-2"><i class="fas fa-plus mr-2"></i>手動新增報名者</button>`;
+        }
+        list.innerHTML = html;
+    }
+}
+        // 切換展開
+function toggleRegDetail(index) {
+    const el = document.getElementById(`regDetail-${index}`);
+    el.classList.toggle('hidden');
+}
+// 開啟報名者編輯彈窗
+function openRegModal(phone) {
+    const title = document.getElementById('eventSelector').value;
+    const currentEvent = allData.events.find(e => e.title === title);
+    const isBus = currentEvent?.isTourBus === 'Y' || currentEvent?.遊覽車 === 'Y';
+    const needId = currentEvent?.needId === 'Y' || currentEvent?.身分證 === 'Y';
+
+    // 顯示/隱藏條件欄位
+    document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
+    document.getElementById('reg_transport_zone').style.display = isBus ? 'none' : 'block';
+
+    if (phone) {
+        // 修改模式：填入現有資料
+        const r = allData.registrations.find(reg => reg.手機號碼 === phone && reg.活動標題 === title);
+        document.getElementById('reg_old_phone').value = r.手機號碼;
+        document.getElementById('reg_name').value = r.會員姓名;
+        document.getElementById('reg_phone').value = r.手機號碼;
+        document.getElementById('reg_diet').value = r.飲食選項 || '葷';
+        document.getElementById('reg_id').value = r.身分證號碼 || '';
+        document.getElementById('reg_note').value = r.備註 || '';
+        document.querySelector(`input[name="trans"][value="${r.交通方式 || '自駕'}"]`).checked = true;
+        document.getElementById('reg_seats').value = r.可載人數 || 0;
+    } else {
+        // 新增模式：清空
+        document.getElementById('reg_old_phone').value = "";
+        document.querySelectorAll('#regModal input:not([type="radio"]), #regModal textarea').forEach(i => i.value = "");
+        document.getElementById('reg_diet').value = "葷";
+    }
+    document.getElementById('regModal').classList.remove('hidden');
+}
+
+function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }
+
+// 快速更新繳費狀態 (不需要開彈窗)
+async function updatePaidStatus(phone, status) {
+    const title = document.getElementById('eventSelector').value;
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'update_reg_paid', // 需在 GAS 端補上此 type
+                key: sessionStorage.getItem('staff_key'),
+                eventTitle: title,
+                phone: phone,
+                isPaid: status
+            })
+        });
+        if ((await res.json()).result === 'SUCCESS') showToast('狀態已更新');
+    } catch (e) { showToast('更新失敗'); }
+    showLoading(false);
+}        
+        
         function toggleEditMode() {
             isEditMode = !isEditMode;
             const btn = document.getElementById('editToggleBtn');
@@ -306,6 +399,33 @@ function formatDateForInput(dateVal) {
     } catch(e) {
         return "";
     }
+}  
+async function saveSingleReg() {
+    const payload = {
+        type: 'save_single_registration',
+        key: sessionStorage.getItem('staff_key'),
+        eventTitle: document.getElementById('eventSelector').value,
+        oldPhone: document.getElementById('reg_old_phone').value, // 判斷是修改還是新增
+        name: document.getElementById('reg_name').value,
+        phone: document.getElementById('reg_phone').value,
+        diet: document.getElementById('reg_diet').value,
+        idCard: document.getElementById('reg_id').value,
+        note: document.getElementById('reg_note').value,
+        transport: document.querySelector('input[name="trans"]:checked')?.value || '自駕',
+        seats: document.getElementById('reg_seats').value || 0,
+        isMember: 'Y' // 這裡可以根據您的 UI 需求調整
+    };
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        if ((await res.json()).result === 'SUCCESS') {
+            showToast('資料已更新');
+            closeRegModal();
+            await loadData(); // 重新整理列表
+        }
+    } catch (e) { showToast('儲存失敗'); }
+    showLoading(false);
 }        
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
 
@@ -387,5 +507,61 @@ function formatDateForInput(dateVal) {
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
     </script>
+<div id="regModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-black text-emerald-900 mb-2">報名者詳細資訊</h3>
+        <input type="hidden" id="reg_old_phone">
+        
+        <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">姓名</label>
+                    <input type="text" id="reg_name" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">電話</label>
+                    <input type="text" id="reg_phone" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">飲食選項</label>
+                    <select id="reg_diet" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold">
+                        <option value="葷">葷</option>
+                        <option value="蛋奶素">蛋奶素</option>
+                        <option value="全素">全素</option>
+                    </select>
+                </div>
+                <div id="reg_id_zone">
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
+                    <input type="text" id="reg_id" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold">
+                </div>
+            </div>
+
+            <div id="reg_transport_zone" class="p-4 bg-blue-50 rounded-2xl space-y-3">
+                <label class="text-[10px] font-bold text-blue-600">交通安排 (非遊覽車活動)</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="自駕"> 自駕</label>
+                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="共乘"> 共乘</label>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-blue-400">若自駕，可載人數</label>
+                    <input type="number" id="reg_seats" class="w-full bg-white border-none rounded-xl px-4 py-2 text-sm font-bold">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2">備註</label>
+                <textarea id="reg_note" rows="2" class="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold"></textarea>
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-4">
+            <button onclick="closeRegModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+            <button onclick="saveSingleReg()" class="flex-[2] emerald-gradient text-white rounded-2xl font-black shadow-lg">儲存變更</button>
+        </div>
+    </div>
+</div>    
 </body>
 </html>

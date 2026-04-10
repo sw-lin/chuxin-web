@@ -17,8 +17,12 @@
     </style>
 </head>
 <body class="pb-32">
-    <div id="loadingOverlay"><div class="spinner"></div></div>
-    <div id="toast"></div>
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-emerald-500 mb-3"></div>
+        <div class="text-white font-bold tracking-widest text-sm">載入中...</div>
+    </div>
+    
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none z-[200] font-bold shadow-xl text-sm whitespace-nowrap"></div>
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
@@ -205,14 +209,20 @@
         window.onload = loadData;
 
         // 核心載入
+// 核心載入
         async function loadData() {
             showLoading(true);
             try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                // ⚠️ 修正：原本沒有帶 type，GAS 不知道要做什麼。
+                // 這裡假設您 GAS 端抓取活動列表的 type 是 'get_events_page' (請依照您 GAS 實際寫法調整)
+                const res = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
                 const json = await res.json();
                 allData.events = json.events || [];
                 renderSelector();
-            } catch (e) { showToast("連線失敗"); }
+            } catch (e) { 
+                console.error("loadData 錯誤詳細資訊:", e); // ⚠️ 修正：把真實錯誤印在主控台
+                showToast("載入活動清單失敗"); 
+            }
             showLoading(false);
         }
 
@@ -229,7 +239,7 @@
             if (!title) return;
             showLoading(true);
             try {
-                const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}`);
+                const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}&t=${Date.now()}`);
                 const json = await res.json();
                 if (Array.isArray(json)) {
                     allData.registrations = json;
@@ -237,7 +247,10 @@
                     document.getElementById('statCount').innerText = json.length;
                     document.getElementById('statsSection').classList.remove('hidden');
                 }
-            } catch (e) { showToast("抓取失敗"); }
+            } catch (e) { 
+                console.error("loadEventDetails 錯誤詳細資訊:", e);
+                showToast("抓取報名名單失敗"); 
+            }
             showLoading(false);
         }
 

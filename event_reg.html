@@ -192,23 +192,36 @@ async function loadEventDetails() {
     if (!title) return;
 
     showLoading(true);
+    console.log("--- 開始偵錯：準備抓取活動 [" + title + "] ---");
+
     try {
         const url = `${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}`;
+        console.log("請求網址:", url);
+
         const res = await fetch(url);
-        const json = await res.json(); 
+        
+        // 先不要轉 JSON，先看原始文字內容是什麼
+        const rawText = await res.text();
+        console.log("後端原始回傳內容 (Raw):", rawText);
+
+        // 手動嘗試解析 JSON
+        const json = JSON.parse(rawText);
+        console.log("解析後的 JSON 物件:", json);
 
         if (json.result === "SUCCESS") {
-            const list = json.data || []; // 確保抓到的是 data 陣列
+            const list = json.data || [];
+            console.log("成功拿到名單，人數:", list.length);
             renderRegList(list); 
             document.getElementById('statCount').innerText = list.length;
-            document.getElementById('statsSection').classList.remove('hidden'); // 顯示統計數字
+            document.getElementById('statsSection').classList.remove('hidden');
         } else {
-            showToast("後端回傳錯誤: " + json.message);
+            console.error("後端邏輯回傳失敗:", json.message);
+            showToast("錯誤: " + json.message);
         }
         
     } catch (e) {
-        showToast("抓取名單失敗，請檢查網路");
-        console.error(e);
+        console.error("前端解析過程發生崩潰:", e);
+        showToast("抓取名單失敗，請看 Console 報錯");
     }
     showLoading(false);
 }        

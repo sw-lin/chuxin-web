@@ -461,7 +461,7 @@ async function saveSingleReg() {
         name: document.getElementById('reg_name').value,
         phone: document.getElementById('reg_phone').value,
         diet: document.getElementById('reg_diet').value,
-        idCard: document.getElementById('reg_id').value,
+        idCard: document.getElementById('reg_id').value, // 這裡不要動，維持 idCard
         note: document.getElementById('reg_note').value,
         transport: document.querySelector('input[name="trans"]:checked')?.value || "自駕",
         seats: document.getElementById('reg_seats').value || 0,

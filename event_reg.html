@@ -292,10 +292,10 @@ function renderRegList(list) {
     }
 
     let html = list.map((r, i) => {
-        // ⚠️ 這裡必須完全對齊您的試算表第一列標題
-        const name = r["會員姓名"] || r["姓名"] || "未提供"; 
+        // ⚠️ 這裡的標籤必須與 GAS getRegistrationsByEvent 回傳的 JSON 鍵值完全對齊
+        const name = r["姓名"] || "未提供"; 
         const phone = r["手機"] || "無號碼";
-        const diet = r["飲食選項"] || r["餐食"] || "未填";
+        const diet = r["飲食選項"] || "未填";
         const isPaid = r["繳費狀態"] || "未繳";
         const note = r["備註"] || "無";
 
@@ -332,8 +332,7 @@ function renderRegList(list) {
 
     if (isEditMode) html += renderManualAddBtn();
     container.innerHTML = html;
-}
-        
+}        
         // 彈窗邏輯
         function toggleEditMode() {
             isEditMode = !isEditMode;
@@ -377,7 +376,7 @@ function openRegModal(phone) {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
-    // 檢查活動設定（遊覽車與身分證）
+    // 檢查活動規則
     const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是' || ev?.提供遊覽車 === '有');
     const needId = (ev?.needId === 'Y' || ev?.身分證 === '是' || ev?.需填身分證 === '是');
 
@@ -385,16 +384,17 @@ function openRegModal(phone) {
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
 
     if (phone) {
-        // ⚠️ 關鍵修正：尋找手機號碼時對齊試算表欄位
+        // 尋找報名者：這裡的 reg["手機"] 必須與 GAS 對齊
         const r = allData.registrations.find(reg => String(reg["手機"]).trim() === String(phone).trim());
         if (r) {
             document.getElementById('reg_old_phone').value = phone;
-            document.getElementById('reg_name').value = r["會員姓名"] || r["姓名"] || "";
+            document.getElementById('reg_name').value = r["姓名"] || "";
             document.getElementById('reg_phone').value = phone;
-            document.getElementById('reg_diet').value = r["飲食選項"] || r["餐食"] || "葷";
-            document.getElementById('reg_id').value = r["身分證號"] || r["身分證字號"] || "";
+            document.getElementById('reg_diet').value = r["飲食選項"] || "葷";
+            document.getElementById('reg_id').value = r["身分證號"] || "";
             document.getElementById('reg_note').value = r["備註"] || "";
             
+            // 處理交通 Radio
             const trans = r["交通方式"] || "自駕";
             const transRadio = document.querySelector(`input[name="trans"][value="${trans}"]`);
             if (transRadio) transRadio.checked = true;
@@ -403,7 +403,7 @@ function openRegModal(phone) {
             updateSeatInput(trans);
         }
     } else {
-        // 清空表單供手動新增
+        // 人工新增清空
         document.getElementById('reg_old_phone').value = "";
         document.querySelectorAll('#regModal input:not([type="radio"]), #regModal textarea').forEach(i => i.value = "");
         document.querySelector('input[name="trans"][value="自駕"]').checked = true;
@@ -451,28 +451,44 @@ function openRegModal(phone) {
             } catch (e) { showToast("失敗"); }
             showLoading(false);
         }
+async function saveSingleReg() {
+    const title = document.getElementById('eventSelector').value;
+    const payload = {
+        type: 'save_single_registration',
+        key: sessionStorage.getItem('staff_key'),
+        eventTitle: title,
+        oldPhone: document.getElementById('reg_old_phone').value, // 用於修改定位
+        name: document.getElementById('reg_name').value,
+        phone: document.getElementById('reg_phone').value,
+        diet: document.getElementById('reg_diet').value,
+        idCard: document.getElementById('reg_id').value,
+        note: document.getElementById('reg_note').value,
+        transport: document.querySelector('input[name="trans"]:checked')?.value || "自駕",
+        seats: document.getElementById('reg_seats').value || 0,
+        isPaid: "未繳" // 預設值，若編輯模式有調整可再連動
+    };
 
-        async function saveSingleReg() {
-            const payload = {
-                type: 'save_single_registration',
-                key: sessionStorage.getItem('staff_key'),
-                eventTitle: document.getElementById('eventSelector').value,
-                oldPhone: document.getElementById('reg_old_phone').value,
-                name: document.getElementById('reg_name').value,
-                phone: document.getElementById('reg_phone').value,
-                diet: document.getElementById('reg_diet').value,
-                idCard: document.getElementById('reg_id').value,
-                note: document.getElementById('reg_note').value,
-                transport: document.querySelector('input[name="trans"]:checked').value,
-                seats: document.getElementById('reg_seats').value || 0
-            };
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                if ((await res.json()).result === "SUCCESS") { showToast("成功"); closeRegModal(); loadEventDetails(); }
-            } catch (e) { showToast("失敗"); }
-            showLoading(false);
+    if (!payload.name || !payload.phone) return showToast("姓名與電話為必填");
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            showToast("報名資訊已更新");
+            closeRegModal();
+            loadEventDetails(); // 重新整理列表
+        } else {
+            showToast("儲存失敗：" + result.message);
         }
+    } catch (e) {
+        showToast("網路連線錯誤");
+    }
+    showLoading(false);
+}
     </script>
 </body>    
 </html>

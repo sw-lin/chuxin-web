@@ -205,7 +205,8 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
         let allData = { events: [], registrations: [] };
         let isEditMode = false;
-
+        let currentEventConfig = null; // 🌟 儲存目前選中活動的詳細規格（費用、日期等）
+        let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱        
         window.onload = loadData;
 
         // 核心載入
@@ -262,27 +263,24 @@ function renderSelector() {
 async function loadEventDetails() {
     const title = document.getElementById('eventSelector').value;
     if (!title) return;
+
+    // 🌟 在渲染前，先從全域資料中找出該活動的配置
+    currentEventTitle = title;
+    currentEventConfig = allData.events.find(e => (e.title || e["標題"]) === title);
+
     showLoading(true);
     try {
         const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}&t=${Date.now()}`);
         const json = await res.json();
-        
-        // 增加除錯資訊，若沒看到資料請檢查控制台
-        console.log("報名名單資料:", json); 
-
         if (Array.isArray(json)) {
             allData.registrations = json;
-            renderRegList(json);
+            renderRegList(json); // 這裡面會用到 currentEventConfig
             document.getElementById('statCount').innerText = json.length;
             document.getElementById('statsSection').classList.remove('hidden');
         }
-    } catch (e) { 
-        console.error("載入名單失敗:", e);
-        showToast("抓取報名名單失敗"); 
-    }
+    } catch (e) { showToast("名單載入失敗"); }
     showLoading(false);
 }
-
 // --- 修正後的 renderRegList ---
 function renderRegList(list) {
     const container = document.getElementById('regList');
@@ -377,26 +375,31 @@ function renderRegList(list) {
             loadEventDetails();
         }
 
-        function openEditModal() {
-            const title = document.getElementById('eventSelector').value;
-            const ev = allData.events.find(e => e.title === title);
-            if (!ev) return;
-            document.getElementById('modalTitle').innerText = "修改活動";
-            document.getElementById('old_title').value = ev.title;
-            document.getElementById('ev_title').value = ev.title;
-            document.getElementById('ev_poster').value = ev.poster_url || "";
-            document.getElementById('ev_desc').value = ev.desc || "";
-            document.getElementById('ev_needId').value = (ev.needId === 'Y' || ev.身分證 === '是') ? 'Y' : 'N';
-            document.getElementById('ev_bus').value = (ev.isTourBus === 'Y' || ev.遊覽車 === '是') ? 'Y' : 'N';
-            document.getElementById('ev_mFee').value = ev.memberFee || 0;
-            document.getElementById('ev_gFee').value = ev.guestFee || 0;
-            document.getElementById('ev_start').value = formatDateForInput(ev.startDate);
-            document.getElementById('ev_until').value = formatDateForInput(ev.deadline);
-            document.getElementById('ev_date').value = formatDateForInput(ev.eventDate);
-            document.getElementById('deleteZone').classList.remove('hidden');
-            document.getElementById('eventModal').classList.remove('hidden');
-        }
+function openEditModal() {
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    if (!ev) return;
 
+    document.getElementById('modalTitle').innerText = "修改活動";
+    document.getElementById('old_title').value = ev.title || ev["標題"];
+    document.getElementById('ev_title').value = ev.title || ev["標題"];
+    document.getElementById('ev_poster').value = ev.poster_url || ev["海報網址"] || "";
+    document.getElementById('ev_desc').value = ev.desc || ev["活動簡介"] || "";
+    
+    // 🌟 屬性相容性檢查：同時檢查中英文 Key
+    document.getElementById('ev_needId').value = (ev.needId === 'Y' || ev["需填身分證"] === '是') ? 'Y' : 'N';
+    document.getElementById('ev_bus').value = (ev.isTourBus === 'Y' || ev["提供遊覽車"] === '有') ? 'Y' : 'N';
+    document.getElementById('ev_mFee').value = ev.memberFee || ev["會員費用"] || 0;
+    document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員費用"] || 0;
+    
+    // 日期格式化處理
+    document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["展示日期"]);
+    document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev["截止日期"]);
+    document.getElementById('ev_date').value = formatDateForInput(ev.eventDate || ev["活動日期"]);
+
+    document.getElementById('eventModal').classList.remove('hidden');
+}
+        
         function openAddModal() {
             document.getElementById('modalTitle').innerText = "發布新活動";
             document.getElementById('old_title').value = "";

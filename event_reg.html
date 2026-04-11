@@ -292,10 +292,10 @@ function renderRegList(list) {
     }
 
     let html = list.map((r, i) => {
-        // ⚠️ 這裡的標籤必須與 GAS getRegistrationsByEvent 回傳的 JSON 鍵值完全對齊
+        // ⚠️ 根據你的最新發現，將 "手機" 改為 "電話"
         const name = r["姓名"] || "未提供"; 
-        const phone = r["手機"] || "無號碼";
-        const diet = r["飲食選項"] || "未填";
+        const phone = r["電話"] || r["手機"] || "無號碼"; // 雙重保險
+        const diet = r["飲食選項"] || r["餐食"] || "未填";
         const isPaid = r["繳費狀態"] || "未繳";
         const note = r["備註"] || "無";
 
@@ -384,9 +384,6 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
     
     document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
-
-    // 取得 Modal 標題（如果是編輯就顯示姓名，新增就顯示"手動新增"）
-    document.getElementById('modal_event_title').innerText = title;
 
     if (phone && name) { // 👈 改為：必須手機跟姓名都存在才進入編輯模式
         // 尋找報名者：同時比對手機與姓名，解決家屬共用手機問題

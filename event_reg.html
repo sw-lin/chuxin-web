@@ -277,7 +277,63 @@ function renderSelector() {
     selector.innerHTML = optionsHtml;
     if (currentValue) selector.value = currentValue;
 }
-// --- 修正後的 loadEventDetails ---
+        
+// --- 核心函式：載入選中活動的詳細名單 ---
+async function loadEventDetails() {
+    const selector = document.getElementById('eventSelector');
+    const title = selector.value;
+    
+    if (!title) {
+        // 如果沒選活動，清空統計與列表
+        document.getElementById('statsSection').classList.add('hidden');
+        document.getElementById('regList').innerHTML = "";
+        return;
+    }
+
+    console.log("正在載入活動詳情:", title);
+
+    // 1. 從先前 loadData 存好的資料中找出該活動的詳細規格
+    // 這裡相容「標題」與「title」兩種 Key
+    currentEventTitle = title;
+    currentEventConfig = allData.events.find(e => (e["標題"] || e.title) === title);
+
+    if (!currentEventConfig) {
+        console.error("找不到該活動的配置資料");
+        showToast("活動配置讀取失敗");
+        return;
+    }
+
+    showLoading(true);
+    try {
+        // 2. 向 GAS 請求該活動的報名名單
+        // 建議這裡也改用你寫好的 fetchAPI 或是維持目前的 fetch
+        const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}&t=${Date.now()}`);
+        const json = await res.json();
+        
+        if (Array.isArray(json)) {
+            allData.registrations = json; // 存入全域變數
+            renderRegList(json);          // 渲染畫面
+            
+            // 更新統計數字
+            document.getElementById('statCount').innerText = json.length;
+            document.getElementById('statsSection').classList.remove('hidden');
+            
+            // 如果在編輯模式下，顯示管理按鈕
+            if(isEditMode) {
+                document.getElementById('manageEventBtn').classList.remove('hidden');
+            }
+        } else {
+            allData.registrations = [];
+            renderRegList([]);
+            showToast("尚無報名資料");
+        }
+    } catch (e) { 
+        console.error("名單載入出錯:", e);
+        showToast("名單載入失敗"); 
+    }
+    showLoading(false);
+}
+
 function renderRegList(list) {
     const container = document.getElementById('regList');
     if (!list || list.length === 0) {

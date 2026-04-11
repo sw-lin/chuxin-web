@@ -496,62 +496,74 @@ function openEditModal() {
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
+function openRegModal(phone, name) {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
-    // 檢查活動規則（保持您原有的邏輯）
-    const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是' || ev?.提供遊覽車 === '有');
-    const needId = (ev?.needId === 'Y' || ev?.身分證 === '是' || ev?.需填身分證 === '是');
-    console.log("正在編輯的人：", phone, name);
-    console.log("全部報名資料：", allData.registrations);    
+    // 判斷活動規則
+    const isTourBus = (ev?.isTourBus === 'Y' || ev?.["是遊覽車行"] === '是');
+    const needId = (ev?.needId === 'Y' || ev?.["(需要身分證)"] === '是');
     
+    // 控制 UI 顯示
     document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
 
-    if (phone && name) { // 👈 改為：必須手機跟姓名都存在才進入編輯模式
-        // 尋找報名者：同時比對手機與姓名，解決家屬共用手機問題
+    if (phone && name) {
+        // 尋找報名者 (使用 allData.registrations)
         const r = allData.registrations.find(reg => 
             String(reg["電話"] || "").trim() === String(phone).trim() && 
             String(reg["姓名"] || "").trim() === String(name).trim()
         );
 
         if (r) {
-            // 欄位回填：使用 || 確保標籤名稱不同也能抓到資料
             document.getElementById('reg_old_phone').value = phone;
             document.getElementById('reg_name').value = r["姓名"] || "";
-            document.getElementById('reg_phone').value = phone;
+            document.getElementById('reg_phone').value = r["電話"] || "";
             document.getElementById('reg_diet').value = r["餐食"] || "葷";
             
-            // ⚠️ 這裡對齊您試算表的 D1 標題「身分證」
+            // 🌟 修正1：讀回身分證 (對應試算表 D 欄)
             document.getElementById('reg_id').value = r["身分證"] || ""; 
             
             document.getElementById('reg_note').value = r["備註"] || "";
             
-            // 處理交通方式
-            const trans = r["交通(僅本人)"];
-            const transRadio = document.querySelector(`input[name="trans"][value="${trans}"]`);
-            if (transRadio) transRadio.checked = true;
+            // 🌟 修正3：讀回交通方式 (對應試算表 F 欄)
+            const transValue = r["交通(僅本人)"] || "自駕";
+            const transRadio = document.querySelector(`input[name="trans"][value="${transValue}"]`);
+            if (transRadio) {
+                transRadio.checked = true;
+                updateSeatInput(transValue); // 同步顯示/隱藏可載人數欄位
+            }
             
+            // 讀回可載人數 (對應試算表 G 欄)
             document.getElementById('reg_seats').value = r["可載人(僅本人)"] || 0;
-            updateSeatInput(trans);
         }
     } else {
-        // 新增報名：清空所有欄位
-        document.getElementById('reg_old_phone').value = "";
-        document.getElementById('reg_name').value = "";
-        document.getElementById('reg_phone').value = "";
-        document.getElementById('reg_id').value = "";
-        document.getElementById('reg_note').value = "";
-        document.getElementById('reg_diet').value = "葷食";
-        document.getElementById('reg_seats').value = 0;
-        
-        const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
-        if (defaultTrans) defaultTrans.checked = true;
-        updateSeatInput("自駕");
+        // 新增模式：清空
+        resetRegForm();
     }
-    
     document.getElementById('regModal').classList.remove('hidden');
+}
+
+// 輔助清空表單
+function resetRegForm() {
+    document.getElementById('reg_old_phone').value = "";
+    document.getElementById('reg_name').value = "";
+    document.getElementById('reg_phone').value = "";
+    document.getElementById('reg_id').value = "";
+    document.getElementById('reg_note').value = "";
+    document.getElementById('reg_diet').value = "葷";
+    document.getElementById('reg_seats').value = 0;
+    const defaultRadio = document.querySelector('input[name="trans"][value="自駕"]');
+    if (defaultRadio) defaultRadio.checked = true;
+    updateSeatInput("自駕");
+} 
+        
+// 將全形數字/字母轉換為半形
+function toHalfWidth(str) {
+    if (!str) return "";
+    return str.replace(/[\uff01-\uff5e]/g, function(ch) {
+        return String.fromCharCode(ch.charCodeAt(0) - 0xfee0);
+    }).replace(/\u3000/g, " "); // 處理全形空格
 }        
         // 輔助工具
 function formatDateForInput(dVal) {
@@ -609,19 +621,24 @@ function formatDateForInput(dVal) {
         }
 async function saveSingleReg() {
     const title = document.getElementById('eventSelector').value;
+    
+    // 🌟 修正2：存檔前自動將電話與身分證轉為半形
+    const rawPhone = document.getElementById('reg_phone').value;
+    const rawId = document.getElementById('reg_id').value;
+
     const payload = {
         type: 'save_single_registration',
         key: sessionStorage.getItem('staff_key'),
         eventTitle: title,
-        oldPhone: document.getElementById('reg_old_phone').value, // 用於修改定位
-        name: document.getElementById('reg_name').value,
-        phone: document.getElementById('reg_phone').value,
+        oldPhone: document.getElementById('reg_old_phone').value,
+        name: document.getElementById('reg_name').value.trim(),
+        phone: toHalfWidth(rawPhone).replace(/\s/g, ""), // 轉半形並去空格
         diet: document.getElementById('reg_diet').value,
-        idCard: document.getElementById('reg_id').value, // 這裡不要動，維持 idCard
+        idCard: toHalfWidth(rawId).toUpperCase().trim(), // 轉半形、大寫、去空格
         note: document.getElementById('reg_note').value,
         transport: document.querySelector('input[name="trans"]:checked')?.value || "自駕",
         seats: document.getElementById('reg_seats').value || 0,
-        isPaid: "未繳" // 預設值，若編輯模式有調整可再連動
+        isPaid: "未繳" 
     };
 
     if (!payload.name || !payload.phone) return showToast("姓名與電話為必填");
@@ -636,7 +653,7 @@ async function saveSingleReg() {
         if (result.result === "SUCCESS") {
             showToast("報名資訊已更新");
             closeRegModal();
-            loadEventDetails(); // 重新整理列表
+            loadEventDetails(); 
         } else {
             showToast("儲存失敗：" + result.message);
         }
@@ -644,7 +661,7 @@ async function saveSingleReg() {
         showToast("網路連線錯誤");
     }
     showLoading(false);
-}
+}        
 // --- 新增：刪除單筆報名 ---
 async function deleteSingleReg(phone, name) {
     if (!confirm(`確定要刪除 ${name} 的報名資料嗎？`)) return;

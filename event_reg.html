@@ -323,7 +323,7 @@ function renderRegList(list) {
                 </div>
                 ${isEditMode ? `
                 <div class="flex gap-2 pt-2">
-                    <button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black hover:bg-emerald-100">編輯資訊</button>
+                    <button onclick="openRegModal('${phone}', '${name}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black hover:bg-emerald-100">編輯資訊</button>
                     <button onclick="deleteSingleReg('${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px] hover:bg-red-100">刪除</button>
                 </div>` : ''}
             </div>
@@ -379,7 +379,9 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
     // 檢查活動規則（保持您原有的邏輯）
     const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是' || ev?.提供遊覽車 === '有');
     const needId = (ev?.needId === 'Y' || ev?.身分證 === '是' || ev?.需填身分證 === '是');
-
+    console.log("正在編輯的人：", phone, name);
+    console.log("全部報名資料：", allData.registrations);    
+    
     document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
 
@@ -389,28 +391,28 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
     if (phone && name) { // 👈 改為：必須手機跟姓名都存在才進入編輯模式
         // 尋找報名者：同時比對手機與姓名，解決家屬共用手機問題
         const r = allData.registrations.find(reg => 
-            String(reg["手機"] || "").trim() === String(phone).trim() && 
-            String(reg["會員姓名"] || reg["姓名"] || "").trim() === String(name).trim()
+            String(reg["電話"] || "").trim() === String(phone).trim() && 
+            String(reg["姓名"] || "").trim() === String(name).trim()
         );
 
         if (r) {
             // 欄位回填：使用 || 確保標籤名稱不同也能抓到資料
             document.getElementById('reg_old_phone').value = phone;
-            document.getElementById('reg_name').value = r["會員姓名"] || r["姓名"] || "";
+            document.getElementById('reg_name').value = r["姓名"] || "";
             document.getElementById('reg_phone').value = phone;
-            document.getElementById('reg_diet').value = r["飲食選項"] || r["餐食"] || "葷";
+            document.getElementById('reg_diet').value = r["餐食"] || "葷";
             
             // ⚠️ 這裡對齊您試算表的 D1 標題「身分證」
-            document.getElementById('reg_id').value = r["身分證"] || r["身分證號"] || ""; 
+            document.getElementById('reg_id').value = r["身分證"] || ""; 
             
             document.getElementById('reg_note').value = r["備註"] || "";
             
             // 處理交通方式
-            const trans = r["交通方式"] || "自駕";
+            const trans = r["交通(僅本人)"];
             const transRadio = document.querySelector(`input[name="trans"][value="${trans}"]`);
             if (transRadio) transRadio.checked = true;
             
-            document.getElementById('reg_seats').value = r["可載人數"] || 0;
+            document.getElementById('reg_seats').value = r["可載人(僅本人)"] || 0;
             updateSeatInput(trans);
         }
     } else {
@@ -420,7 +422,7 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
         document.getElementById('reg_phone').value = "";
         document.getElementById('reg_id').value = "";
         document.getElementById('reg_note').value = "";
-        document.getElementById('reg_diet').value = "葷";
+        document.getElementById('reg_diet').value = "葷食";
         document.getElementById('reg_seats').value = 0;
         
         const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
@@ -441,7 +443,7 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
         function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
-        function renderManualAddBtn() { return `<div onclick="openRegModal('')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工報名</div>`; }
+        function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工報名</div>`; }
         function updateSeatInput(val) { document.getElementById('seat_input_zone').style.display = (val === '自駕') ? 'block' : 'none'; }
         document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
 

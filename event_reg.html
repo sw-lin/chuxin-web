@@ -210,30 +210,54 @@
 
         // 核心載入
 // 核心載入
-        async function loadData() {
-            showLoading(true);
-            try {
-                // ⚠️ 修正：原本沒有帶 type，GAS 不知道要做什麼。
-                // 這裡假設您 GAS 端抓取活動列表的 type 是 'get_events_page' (請依照您 GAS 實際寫法調整)
-                const res = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
-                const json = await res.json();
-                allData.events = json.events || [];
-                renderSelector();
-            } catch (e) { 
-                console.error("loadData 錯誤詳細資訊:", e); // ⚠️ 修正：把真實錯誤印在主控台
-                showToast("載入活動清單失敗"); 
-            }
-            showLoading(false);
+// --- 修正後的 loadData ---
+async function loadData() {
+    showLoading(true);
+    console.log("開始嘗試載入活動清單...");
+    try {
+        const res = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
+        const json = await res.json();
+        
+        console.log("從 GAS 接收到的原始資料:", json);
+
+        // 容錯處理：如果 GAS 直接回傳陣列，或回傳包含 events 的物件
+        if (Array.isArray(json)) {
+            allData.events = json;
+        } else if (json.events && Array.isArray(json.events)) {
+            allData.events = json.events;
+        } else {
+            allData.events = [];
+            console.error("資料格式不正確，預期為陣列但得到:", json);
         }
 
-        function renderSelector() {
-            const selector = document.getElementById('eventSelector');
-            const current = selector.value;
-            selector.innerHTML = '<option value="">-- 請選擇活動項目 --</option>' + 
-                allData.events.map(ev => `<option value="${ev.title}">${ev.title}</option>`).join('');
-            if (current) selector.value = current;
+        if (allData.events.length === 0) {
+            showToast("清單目前是空的，請先發布活動");
+        } else {
+            console.table(allData.events); // 在控制台顯示漂亮的表格
         }
 
+        renderSelector();
+    } catch (e) { 
+        console.error("載入失敗，錯誤原因:", e);
+        showToast("伺服器連線失敗，請檢查網路或 GAS 權限"); 
+    }
+    showLoading(false);
+}
+// --- 修正後的 renderSelector (增加屬性保護) ---
+function renderSelector() {
+    const selector = document.getElementById('eventSelector');
+    const currentValue = selector.value;
+    
+    // 確保這裡抓取的屬性名稱 ev.title 與您 GAS 回傳的一致
+    let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+    optionsHtml += allData.events.map(ev => {
+        const title = ev.title || ev["標題"] || "未命名活動";
+        return `<option value="${title}">${title}</option>`;
+    }).join('');
+    
+    selector.innerHTML = optionsHtml;
+    if (currentValue) selector.value = currentValue;
+}
         async function loadEventDetails() {
             const title = document.getElementById('eventSelector').value;
             if (!title) return;
@@ -255,46 +279,55 @@
         }
 
         // 渲染列表
-        function renderRegList(list) {
-            const container = document.getElementById('regList');
-            if (!list || list.length === 0) {
-                container.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">目前尚無資料</div>' + (isEditMode ? renderManualAddBtn() : '');
-                return;
-            }
-            let html = list.map((r, i) => {
-                const name = r["姓名"] || r["會員姓名"] || '未命名';
-                const phone = r["手機號碼"] || r["電話"] || '';
-                const isPaid = r["繳費狀態"] || 'N';
-                const isMember = (r["是否會員"] === '是' || r["身份"] === '是');
-                return `
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 space-y-3">
-                    <div class="flex items-center justify-between" onclick="toggleRegDetail(${i})">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xs">${name[0]}</div>
-                            <div>
-                                <div class="font-black text-emerald-900">${name}</div>
-                                <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
-                            </div>
-                        </div>
-                        <span class="text-[10px] px-2 py-1 rounded-lg ${(isPaid === 'Y' || isPaid === '已繳') ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
-                            ${(isPaid === 'Y' || isPaid === '已繳') ? '已繳費' : '未繳費'}
-                        </span>
-                    </div>
-                    <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 space-y-3">
-                        <div class="grid grid-cols-2 gap-2 text-xs text-emerald-800 font-bold">
-                            <div>飲食：${r["餐食"] || '未填'}</div>
-                            <div>身份：${isMember ? '正式會員' : '非會員'}</div>
-                            <div class="col-span-2">備註：${r["備註"] || '無'}</div>
-                        </div>
-                        ${isEditMode ? `<div class="flex gap-2"><button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black">編輯</button>
-                        <button onclick="deleteSingleReg('${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px]">刪除</button></div>` : ''}
-                    </div>
-                </div>`;
-            }).join('');
-            if (isEditMode) html += renderManualAddBtn();
-            container.innerHTML = html;
-        }
+        // --- 修正後的渲染函式，對齊您的試算表標題 ---
+function renderRegList(list) {
+    const container = document.getElementById('regList');
+    if (!list || list.length === 0) {
+        container.innerHTML = '<div class="text-center py-20 text-gray-300 italic text-sm">此活動目前尚無報名人員</div>' + (isEditMode ? renderManualAddBtn() : '');
+        return;
+    }
 
+    let html = list.map((r, i) => {
+        // ⚠️ 關鍵修正：對齊試算表實際標題
+        const name = r["會員姓名"] || "未知"; 
+        const phone = r["手機"] || "無號碼";
+        const isPaid = r["繳費狀態"] || '未繳';
+        const diet = r["飲食選項"] || "未填";
+        const isMember = (r["是否會員"] === '是');
+        const note = r["備註"] || "無";
+
+        return `
+        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 space-y-3">
+            <div class="flex items-center justify-between" onclick="toggleRegDetail(${i})">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xs">${name[0]}</div>
+                    <div>
+                        <div class="font-black text-emerald-900">${name}</div>
+                        <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
+                    </div>
+                </div>
+                <span class="text-[10px] px-2 py-1 rounded-lg ${(isPaid === '已繳') ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
+                    ${isPaid}
+                </span>
+            </div>
+            <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 space-y-3">
+                <div class="grid grid-cols-2 gap-2 text-xs text-emerald-800 font-bold">
+                    <div>飲食：${diet}</div>
+                    <div>身份：${isMember ? '正式會員' : '非會員'}</div>
+                    <div class="col-span-2">備註：${note}</div>
+                </div>
+                ${isEditMode ? `
+                <div class="flex gap-2">
+                    <button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black">編輯</button>
+                    <button onclick="deleteSingleReg('${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px]">刪除</button>
+                </div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    if (isEditMode) html += renderManualAddBtn();
+    container.innerHTML = html;
+}
         // 彈窗邏輯
         function toggleEditMode() {
             isEditMode = !isEditMode;

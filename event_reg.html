@@ -291,7 +291,7 @@ function renderRegList(list) {
         return;
     }
 
-    // 🌟 從目前的活動配置中取得費用設定
+    // 從目前選定的活動配置中取得費用
     const mFee = currentEventConfig?.memberFee || 0;
     const gFee = currentEventConfig?.guestFee || 0;
 
@@ -306,17 +306,17 @@ function renderRegList(list) {
         const trans = r["交通"] || ""; 
         const capacity = parseInt(r["可載人數"]) || 0;
 
-        // 🌟 1. 判斷應繳金額
+        // 判斷應繳金額
         const dueAmount = isMember ? mFee : gFee;
 
-        // 🌟 2. 處理「繳費區塊」：編輯模式顯示下拉選單，一般模式顯示標籤
+        // 🌟 繳費區塊邏輯：編輯模式顯示「金額 + 下拉選單」，一般模式顯示「狀態標籤」
         let paymentActionHTML = "";
         if (isEditMode) {
             paymentActionHTML = `
                 <div class="flex items-center gap-2">
                     <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
-                    <select onchange="updatePaymentStatus('${phone}', '${name}', this.value)" 
-                            class="text-[10px] px-1 py-1 rounded-lg border-none font-black cursor-pointer ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">
+                    <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
+                            class="text-[10px] px-1 py-1 rounded-lg border-none font-black cursor-pointer transition-colors ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">
                         <option value="未繳" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
                         <option value="已繳" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
                     </select>
@@ -328,13 +328,10 @@ function renderRegList(list) {
                 </span>`;
         }
 
-        let avatarHTML = "";
-        if (!isMember) {
-            avatarHTML = `
-                <div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[40px]">
-                    ${agent || "無代理"}
-                </div>`;
-        }
+        let avatarHTML = !isMember ? `
+            <div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[40px]">
+                ${agent || "無代理"}
+            </div>` : "";
 
         let transHTML = trans ? `<div>交通：${trans}${capacity > 0 ? ` (可載 ${capacity} 人)` : ''}</div>` : "";
 

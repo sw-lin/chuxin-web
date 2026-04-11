@@ -372,29 +372,40 @@ function renderRegList(list) {
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-function openRegModal(phone) {
+function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
-    // 檢查活動規則
+    // 檢查活動規則（保持您原有的邏輯）
     const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是' || ev?.提供遊覽車 === '有');
     const needId = (ev?.needId === 'Y' || ev?.身分證 === '是' || ev?.需填身分證 === '是');
 
     document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
 
-    if (phone) {
-        // 尋找報名者：這裡的 reg["手機"] 必須與 GAS 對齊
-        const r = allData.registrations.find(reg => String(reg["手機"]).trim() === String(phone).trim());
+    // 取得 Modal 標題（如果是編輯就顯示姓名，新增就顯示"手動新增"）
+    document.getElementById('modal_event_title').innerText = title;
+
+    if (phone && name) { // 👈 改為：必須手機跟姓名都存在才進入編輯模式
+        // 尋找報名者：同時比對手機與姓名，解決家屬共用手機問題
+        const r = allData.registrations.find(reg => 
+            String(reg["手機"] || "").trim() === String(phone).trim() && 
+            String(reg["會員姓名"] || reg["姓名"] || "").trim() === String(name).trim()
+        );
+
         if (r) {
+            // 欄位回填：使用 || 確保標籤名稱不同也能抓到資料
             document.getElementById('reg_old_phone').value = phone;
-            document.getElementById('reg_name').value = r["姓名"] || "";
+            document.getElementById('reg_name').value = r["會員姓名"] || r["姓名"] || "";
             document.getElementById('reg_phone').value = phone;
-            document.getElementById('reg_diet').value = r["餐食"] || "葷";
-            document.getElementById('reg_id').value = r["身分證"] || "";
+            document.getElementById('reg_diet').value = r["飲食選項"] || r["餐食"] || "葷";
+            
+            // ⚠️ 這裡對齊您試算表的 D1 標題「身分證」
+            document.getElementById('reg_id').value = r["身分證"] || r["身分證號"] || ""; 
+            
             document.getElementById('reg_note').value = r["備註"] || "";
             
-            // 處理交通 Radio
+            // 處理交通方式
             const trans = r["交通方式"] || "自駕";
             const transRadio = document.querySelector(`input[name="trans"][value="${trans}"]`);
             if (transRadio) transRadio.checked = true;
@@ -403,14 +414,22 @@ function openRegModal(phone) {
             updateSeatInput(trans);
         }
     } else {
-        // 人工新增清空
+        // 新增報名：清空所有欄位
         document.getElementById('reg_old_phone').value = "";
-        document.querySelectorAll('#regModal input:not([type="radio"]), #regModal textarea').forEach(i => i.value = "");
-        document.querySelector('input[name="trans"][value="自駕"]').checked = true;
+        document.getElementById('reg_name').value = "";
+        document.getElementById('reg_phone').value = "";
+        document.getElementById('reg_id').value = "";
+        document.getElementById('reg_note').value = "";
+        document.getElementById('reg_diet').value = "葷";
+        document.getElementById('reg_seats').value = 0;
+        
+        const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
+        if (defaultTrans) defaultTrans.checked = true;
         updateSeatInput("自駕");
     }
+    
     document.getElementById('regModal').classList.remove('hidden');
-}
+}        
         // 輔助工具
         function formatDateForInput(dVal) {
             if (!dVal) return "";

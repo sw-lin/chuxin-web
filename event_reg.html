@@ -295,20 +295,27 @@ function renderRegList(list) {
         const name = r["姓名"] || "未提供"; 
         const phone = r["電話"] || "無號碼";
         const diet = r["餐食"] || "未填";
-        const isPaid = r["繳費狀態"] || r["狀態"] || "未繳"; // 確保抓到正確欄位
+        const isPaid = r["繳費狀態"] || r["狀態"] || "未繳";
         const note = r["備註"] || "無";
-        const isMember = String(r["會員身分"]).trim() === "是"; // 判斷是否為會員
-        const agent = r["報名代理人"] || ""; // 抓取代理人
+        const isMember = String(r["會員身分"]).trim() === "是";
+        const agent = r["報名代理人"] || "";
 
-        // 邏輯處理：
-        // 1. 會員 -> 不顯示左側圖示 (隱藏 div)
-        // 2. 非會員 -> 顯示代理人名字
+        // 🌟 新增交通資訊抓取 (對應試算表 F 欄與 G 欄)
+        const trans = r["交通"] || ""; 
+        const capacity = parseInt(r["可載人數"]) || 0;
+
         let avatarHTML = "";
         if (!isMember) {
             avatarHTML = `
                 <div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[40px]">
                     ${agent || "無代理"}
                 </div>`;
+        }
+
+        // 🌟 交通資訊 HTML 片段：有資料才印出，可載人 > 0 才顯示載人數
+        let transHTML = "";
+        if (trans) {
+            transHTML = `<div>交通：${trans}${capacity > 0 ? ` (可載 ${capacity} 人)` : ''}</div>`;
         }
 
         return `
@@ -329,7 +336,7 @@ function renderRegList(list) {
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
                     <div>飲食：${diet}</div>
-                    <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
+                    ${transHTML} <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
                 </div>
                 ${isEditMode ? `
                 <div class="flex gap-2 pt-2">

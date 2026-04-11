@@ -341,71 +341,84 @@ function renderRegList(list) {
         return;
     }
 
-    // 取得活動費用配置
-    const mFee = currentEventConfig?.["會員報名費"] || 0;
-    const gFee = currentEventConfig?.["非會員報名費"] || 0;
+    const mFee = currentEventConfig?.["會員報名費"] || currentEventConfig?.memberFee || 0;
+    const gFee = currentEventConfig?.["非會員報名費"] || currentEventConfig?.guestFee || 0;
 
     let html = list.map((r, i) => {
+        // --- 資料抓取 ---
         const name = r["姓名"] || "未提供"; 
         const phone = r["電話"] || "無號碼";
         const diet = r["餐食"] || "未填";
-        // 🌟 修正：從截圖 8.44.29 看，狀態欄位可能叫「狀態」，內容是「未繳費」
-        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
-        const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; // 統一格式
         const note = r["備註"] || "無";
         
-        // 會員身分判斷
-        const isMember = String(r["是否為會員"] || "").trim() === "是";
-        const agent = r["報名代理人"] || "";
-        const trans = r["交通(僅本人)"] || ""; 
-        const capacity = parseInt(r["可載人(僅本人)"]) || 0;
+        // 繳費狀態處理
+        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
+        const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; 
 
-        // 應繳金額
+        // 會員身分
+        const isMember = String(r["是否為會員"] || r["會員身分"]).trim() === "是";
+        
+        // 🌟 修正：過濾「本人」顯示
+        const rawAgent = String(r["報名代理人"] || "").trim();
+        const agent = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
+        
+        // 🌟 修正：精準對接 F 欄位「交通(僅本人)」與 G 欄位「可載人(僅本人)」
+        const trans = r["交通(僅本人)"] || r["交通狀況"] || ""; 
+        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"]) || 0;
+
         const dueAmount = isMember ? mFee : gFee;
 
-        // 繳費區塊控制
+        // --- 介面構造 ---
+
+        // A. 頭像區 (隱藏本人字樣)
+        let avatarHTML = "";
+        if (agent) {
+            avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">代理: ${agent}</div>`;
+        } else if (!isMember) {
+            avatarHTML = `<div class="px-2 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 font-bold text-[10px] min-w-[50px]">非會員</div>`;
+        } else {
+            avatarHTML = `<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs">${name.substring(0, 1)}</div>`;
+        }
+
+        // B. 交通資訊區
+        let transHTML = "";
+        if (trans || capacity > 0) {
+            const transText = trans || (capacity > 0 ? "自駕" : "");
+            const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : "";
+            transHTML = `<div>交通：${transText}${capText}</div>`;
+        }
+
+        // C. 繳費區 (防止點擊穿透)
         let paymentActionHTML = "";
         if (isEditMode) {
             paymentActionHTML = `
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2" onclick="event.stopPropagation()">
                     <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
-                    <select onchange="event.stopPropagation(); quickUpdatePayment('${phone}', '${name}', this.value, this)" 
-                            onclick="event.stopPropagation()"
-                            class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 focus:ring-0 font-bold">
+                    <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
+                            class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">
                         <option value="未繳費" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
                         <option value="已繳費" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
                     </select>
                 </div>`;
         } else {
-            paymentActionHTML = `
-                <span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
-                    ${isPaid}
-                </span>`;
+            paymentActionHTML = `<span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">${isPaid}</span>`;
         }
 
-        let avatarHTML = !isMember ? `
-            <div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[40px]">
-                ${agent || "外來"}
-            </div>` : `
-            <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs">
-                ${name.substring(0, 1)}
-            </div>`;
-
-        let transHTML = trans ? `<div>交通：${trans}${capacity > 0 ? ` (可載 ${capacity} 人)` : ''}</div>` : "";
-
+        // --- 組合卡片 ---
+        // 將 onclick 放在最外層 div，並使用 cursor-pointer 提示可點擊
         return `
-        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3">
+        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3 cursor-pointer transition-all active:scale-[0.98]" 
+             onclick="toggleRegDetail(${i})">
+            
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="toggleRegDetail(${i})">
+                <div class="flex items-center gap-3">
                     ${avatarHTML}
                     <div>
                         <div class="font-black text-emerald-900">${name}</div>
                         <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
                     </div>
                 </div>
-                <div>
-                    ${paymentActionHTML}
-                </div>
+                ${paymentActionHTML}
             </div>
             
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
@@ -415,9 +428,9 @@ function renderRegList(list) {
                     <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
                 </div>
                 ${isEditMode ? `
-                <div class="flex gap-2 pt-2">
-                    <button onclick="openRegModal('${phone}', '${name}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black hover:bg-emerald-100">編輯資訊</button>
-                    <button onclick="deleteSingleReg('${phone}', '${name}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px] hover:bg-red-100">刪除</button>
+                <div class="flex gap-2 pt-2" onclick="event.stopPropagation()">
+                    <button onclick="openRegModal('${phone}', '${name}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black">編輯資訊</button>
+                    <button onclick="deleteSingleReg('${phone}', '${name}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px]">刪除</button>
                 </div>` : ''}
             </div>
         </div>`;

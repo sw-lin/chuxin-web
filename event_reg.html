@@ -248,11 +248,17 @@ async function loadData() {
 async function fetchAPI(type, params = {}) {
     const url = new URL(GAS_URL);
     url.searchParams.append('type', type);
+    // 確保 staff_key 有帶入
     url.searchParams.append('key', sessionStorage.getItem('staff_key') || '');
     
-    // 將所有參數加入 URL Query String
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+    // 🌟 修正：確保每個參數都被正確編碼
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.set(key, params[key]); 
+        }
+    });
 
+    console.log("發送請求至:", url.toString()); // 除錯用
     const res = await fetch(url);
     return await res.json();
 }        
@@ -329,11 +335,13 @@ function renderRegList(list) {
             paymentActionHTML = `
                 <div class="flex items-center gap-2">
                     <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
-                    <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
-                            class="text-[10px] px-1 py-1 rounded-lg border-none font-black cursor-pointer transition-colors ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">
-                        <option value="未繳" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
-                        <option value="已繳" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
-                    </select>
+                    // 修正 renderRegList 內部的 select 部分
+<select onchange="event.stopPropagation(); quickUpdatePayment('${phone}', '${name}', this.value, this)" 
+        onclick="event.stopPropagation()"
+        class="...">
+    <option value="未繳" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
+    <option value="已繳" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
+</select>
                 </div>`;
         } else {
             paymentActionHTML = `

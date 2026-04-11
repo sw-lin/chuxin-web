@@ -510,6 +510,37 @@ async function saveSingleReg() {
     }
     showLoading(false);
 }
+// --- 新增：刪除單筆報名 ---
+async function deleteSingleReg(phone, name) {
+    if (!confirm(`確定要刪除 ${name} 的報名資料嗎？`)) return;
+
+    const title = document.getElementById('eventSelector').value;
+    const payload = {
+        type: 'delete_single_registration', // ⚠️ 需在 GAS 增加此 type
+        key: sessionStorage.getItem('staff_key'),
+        eventTitle: title,
+        phone: phone,
+        name: name
+    };
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            showToast("已成功刪除");
+            loadEventDetails(); // 重新整理列表
+        } else {
+            showToast("刪除失敗：" + result.message);
+        }
+    } catch (e) {
+        showToast("網路錯誤");
+    }
+    showLoading(false);
+}        
     </script>
 </body>    
 </html>

@@ -168,9 +168,9 @@
                     <div>
                         <label class="text-[10px] font-bold text-emerald-600 ml-2">飲食</label>
                         <select id="reg_diet" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
-                            <option value="葷">葷</option>
-                            <option value="蛋奶素">蛋奶素</option>
-                            <option value="全素">全素</option>
+                            <option value="葷食">葷食</option>
+                            <option value="素食">素食</option>
+                            <option value="不拘">不拘</option>
                         </select>
                     </div>
                     <div id="reg_id_zone">
@@ -289,9 +289,10 @@ function renderRegList(list) {
         return;
     }
 
-    // 從目前選定的活動配置中取得費用
-    const mFee = currentEventConfig?.memberFee || 0;
-    const gFee = currentEventConfig?.guestFee || 0;
+    // 🌟 修正：從目前選定的活動配置中取得費用（對接截圖中的中文 Key）
+    // 使用 optional chaining 防止 currentEventConfig 為空時報錯
+    const mFee = currentEventConfig?.["會員報名費"] || currentEventConfig?.memberFee || 0;
+    const gFee = currentEventConfig?.["非會員報名費"] || currentEventConfig?.guestFee || 0;
 
     let html = list.map((r, i) => {
         const name = r["姓名"] || "未提供"; 
@@ -299,10 +300,13 @@ function renderRegList(list) {
         const diet = r["餐食"] || "未填";
         const isPaid = (r["繳費狀態"] || r["狀態"] || "未繳").trim();
         const note = r["備註"] || "無";
-        const isMember = String(r["會員身分"]).trim() === "是";
+        
+        // 🌟 修正：會員身分的判斷，需確保對齊 Excel 裡面的「是」
+        const isMember = String(r["是否為會員"] || r["會員身分"]).trim() === "是";
+        
         const agent = r["報名代理人"] || "";
-        const trans = r["交通"] || ""; 
-        const capacity = parseInt(r["可載人數"]) || 0;
+        const trans = r["交通(僅本人)"] || r["交通"] || ""; 
+        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"]) || 0;
 
         // 判斷應繳金額
         const dueAmount = isMember ? mFee : gFee;

@@ -294,9 +294,9 @@ function renderRegList(list) {
     let html = list.map((r, i) => {
         // ⚠️ 根據你的最新發現，將 "手機" 改為 "電話"
         const name = r["姓名"] || "未提供"; 
-        const phone = r["電話"] || r["手機"] || "無號碼"; // 雙重保險
-        const diet = r["飲食選項"] || r["餐食"] || "未填";
-        const isPaid = r["繳費狀態"] || "未繳";
+        const phone = r["電話"] || "無號碼"; // 雙重保險
+        const diet = r["餐食"] || "未填";
+        const isPaid = r["狀態"] || "未繳";
         const note = r["備註"] || "無";
 
         return `

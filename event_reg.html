@@ -291,18 +291,42 @@ function renderRegList(list) {
         return;
     }
 
+    // 🌟 從目前的活動配置中取得費用設定
+    const mFee = currentEventConfig?.memberFee || 0;
+    const gFee = currentEventConfig?.guestFee || 0;
+
     let html = list.map((r, i) => {
         const name = r["姓名"] || "未提供"; 
         const phone = r["電話"] || "無號碼";
         const diet = r["餐食"] || "未填";
-        const isPaid = r["繳費狀態"] || r["狀態"] || "未繳";
+        const isPaid = (r["繳費狀態"] || r["狀態"] || "未繳").trim();
         const note = r["備註"] || "無";
         const isMember = String(r["會員身分"]).trim() === "是";
         const agent = r["報名代理人"] || "";
-
-        // 🌟 新增交通資訊抓取 (對應試算表 F 欄與 G 欄)
         const trans = r["交通"] || ""; 
         const capacity = parseInt(r["可載人數"]) || 0;
+
+        // 🌟 1. 判斷應繳金額
+        const dueAmount = isMember ? mFee : gFee;
+
+        // 🌟 2. 處理「繳費區塊」：編輯模式顯示下拉選單，一般模式顯示標籤
+        let paymentActionHTML = "";
+        if (isEditMode) {
+            paymentActionHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
+                    <select onchange="updatePaymentStatus('${phone}', '${name}', this.value)" 
+                            class="text-[10px] px-1 py-1 rounded-lg border-none font-black cursor-pointer ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">
+                        <option value="未繳" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
+                        <option value="已繳" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
+                    </select>
+                </div>`;
+        } else {
+            paymentActionHTML = `
+                <span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
+                    ${isPaid}
+                </span>`;
+        }
 
         let avatarHTML = "";
         if (!isMember) {
@@ -312,31 +336,26 @@ function renderRegList(list) {
                 </div>`;
         }
 
-        // 🌟 交通資訊 HTML 片段：有資料才印出，可載人 > 0 才顯示載人數
-        let transHTML = "";
-        if (trans) {
-            transHTML = `<div>交通：${trans}${capacity > 0 ? ` (可載 ${capacity} 人)` : ''}</div>`;
-        }
+        let transHTML = trans ? `<div>交通：${trans}${capacity > 0 ? ` (可載 ${capacity} 人)` : ''}</div>` : "";
 
         return `
         <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3">
-            <div class="flex items-center justify-between" onclick="toggleRegDetail(${i})">
-                <div class="flex items-center gap-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3" onclick="toggleRegDetail(${i})">
                     ${avatarHTML}
                     <div>
                         <div class="font-black text-emerald-900">${name}</div>
                         <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
                     </div>
                 </div>
-                <span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">
-                    ${isPaid}
-                </span>
+                ${paymentActionHTML}
             </div>
             
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
                     <div>飲食：${diet}</div>
-                    ${transHTML} <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
+                    ${transHTML}
+                    <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
                 </div>
                 ${isEditMode ? `
                 <div class="flex gap-2 pt-2">

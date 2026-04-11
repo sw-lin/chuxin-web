@@ -244,6 +244,18 @@ async function loadData() {
     }
     showLoading(false);
 }
+// 補上缺失的 API 呼叫工具
+async function fetchAPI(type, params = {}) {
+    const url = new URL(GAS_URL);
+    url.searchParams.append('type', type);
+    url.searchParams.append('key', sessionStorage.getItem('staff_key') || '');
+    
+    // 將所有參數加入 URL Query String
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+    const res = await fetch(url);
+    return await res.json();
+}        
 // --- 修正後的 renderSelector (增加屬性保護) ---
 function renderSelector() {
     const selector = document.getElementById('eventSelector');
@@ -501,6 +513,8 @@ function formatDateForInput(dVal) {
     }
 }        
         function toggleRegDetail(i) { document.getElementById(`regDetail-${i}`).classList.toggle('hidden'); }
+
+        
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
         function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }

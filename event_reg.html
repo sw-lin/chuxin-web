@@ -282,25 +282,24 @@ function renderSelector() {
         // --- 修正後的渲染函式，對齊您的試算表標題 ---
 function renderRegList(list) {
     const container = document.getElementById('regList');
-    // 如果 list 是空的或不是陣列
     if (!list || list.length === 0) {
-        container.innerHTML = '<div class="text-center py-20 text-gray-400 italic text-sm">📭 目前尚無報名人員</div>' + (isEditMode ? renderManualAddBtn() : '');
+        container.innerHTML = '<div class="text-center py-20 text-gray-400 italic text-[13px]">📭 目前尚無報名人員</div>' + (isEditMode ? renderManualAddBtn() : '');
         return;
     }
 
     let html = list.map((r, i) => {
-        // 安全取值：如果物件裡找不到該 Key，則顯示空字串或指定文字
-        const name = r["會員姓名"] || r["姓名"] || "未提供姓名"; 
+        // ⚠️ 對齊您的試算表 B、C、E、J、L 欄位名稱
+        const name = r["會員姓名"] || r["姓名"] || "未提供"; 
         const phone = r["手機"] || "無號碼";
         const diet = r["飲食選項"] || "未填";
         const isPaid = r["繳費狀態"] || "未繳";
-        const note = r["備註"] || "無備註";
+        const note = r["備註"] || "無";
 
         return `
         <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3">
             <div class="flex items-center justify-between" onclick="toggleRegDetail(${i})">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold">
+                    <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">
                         ${name[0]}
                     </div>
                     <div>
@@ -316,7 +315,7 @@ function renderRegList(list) {
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
                     <div>飲食：${diet}</div>
-                    <div class="col-span-2">備註：${note}</div>
+                    <div class="col-span-2 text-gray-400 font-normal">備註：${note}</div>
                 </div>
                 ${isEditMode ? `
                 <div class="flex gap-2 pt-2">

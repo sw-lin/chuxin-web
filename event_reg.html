@@ -677,47 +677,62 @@ async function deleteSingleReg(phone, name) {
     showLoading(false);
 }
 // 🌟 快速更新繳費狀態 (與原有的 updatePaymentStatus 區隔)
-async function quickUpdatePayment(phone, name, newValue, selectElement) {
-    // 1. 取得當前活動標題 (對應後端的 eventTitle)
-    const currentTitle = document.getElementById('eventSelector').value;
-    
-    if (!currentTitle) {
-        alert("請先選取活動再進行操作");
+async function quickUpdatePayment(phone, name, newStatus, selectElement) {
+    // 檢查是否有活動標題，這是後端搜尋紀錄的關鍵
+    if (!currentEventTitle) {
+        showToast("錯誤：未選定活動");
         return;
     }
 
-    // 2. 視覺立即回饋：變更顏色並禁用選單防止重複點擊
-    const originalClass = selectElement.className;
+    // 取得管理權限密鑰
+    const staffKey = sessionStorage.getItem('staff_key') || "";
+
+    // 顯示讀取中狀態（避免重複點擊）
     selectElement.disabled = true;
-    selectElement.style.opacity = "0.5";
+    const originalColor = selectElement.style.backgroundColor;
+    selectElement.style.backgroundColor = "#f3f4f6"; 
 
     try {
-        // 🌟 關鍵修正：對齊後端 GAS 的參數名稱
-        const resp = await fetchAPI('update_reg_status', {
-            eventTitle: currentTitle, // 後端用的是 eventTitle
-            phone: phone,             // 後端用的是 phone
-            name: name,               // 後端用的是 name
-            status: newValue          // 後端用的是 status
+        // 🌟 修正點：確保 URL 參數包含後端需要的資訊
+        // 根據截圖報錯，後端可能在找 eventTitle 或 rowEvent
+        const params = new URLSearchParams({
+            type: 'update_reg_status',
+            eventTitle: currentEventTitle, // 這是關鍵！
+            phone: phone,
+            name: name,
+            status: newStatus,
+            staff_key: staffKey
         });
 
-        if (resp.result === "SUCCESS") {
-            // 3. 更新成功：切換 UI 顏色
-            selectElement.className = `text-[10px] px-1 py-1 rounded-lg border-none font-black cursor-pointer transition-colors ${newValue === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`;
-            showToast("繳費狀態已更新");
+        console.log("正在更新繳費狀態...", currentEventTitle, name);
+
+        // 使用 fetchAPI 或原生 fetch 發送
+        const res = await fetch(`${GAS_URL}?${params.toString()}`);
+        const result = await res.json();
+
+        if (result.result === "success") {
+            showToast(`✅ ${name} 已更新為 ${newStatus}`);
+            // 更新本地資料狀態，確保 UI 一致
+            const reg = allData.registrations.find(r => r["電話"] === phone && r["姓名"] === name);
+            if (reg) reg["狀態"] = newStatus;
         } else {
-            // 4. 後端邏輯錯誤 (例如找不到人)
-            throw new Error(resp.error || "更新失敗");
+            throw new Error(result.message || "更新失敗");
         }
     } catch (e) {
-        console.error("繳費更新出錯:", e);
-        alert("更新失敗：" + e.message);
-        // 恢復原值
-        selectElement.value = (newValue === "已繳") ? "未繳" : "已繳";
+        console.error("更新出錯:", e);
+        // 🌟 處理截圖中的 ReferenceError: rowEvent is not defined
+        if (e.message.includes("rowEvent")) {
+            showToast("後端程式錯誤：請檢查 GAS 腳本中的變數定義");
+        } else {
+            showToast("更新失敗：" + e.message);
+        }
+        // 失敗時還原選單狀態
+        loadEventDetails(); 
     } finally {
         selectElement.disabled = false;
-        selectElement.style.opacity = "1";
+        selectElement.style.backgroundColor = originalColor;
     }
-}
+}        
     </script>
 </body>    
 </html>

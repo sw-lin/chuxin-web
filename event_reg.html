@@ -373,11 +373,11 @@ function renderRegList(list) {
         // A. 頭像區 (隱藏本人字樣)
         let avatarHTML = "";
         if (agent) {
-            avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">${agent.substring(1,2)}</div>`;
+            avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">${agent.substring(1,3)}</div>`;
         } else if (!isMember) {
             avatarHTML = `<div class="px-2 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 font-bold text-[10px] min-w-[50px]">非會員</div>`;
         } else {
-            avatarHTML = `<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs"></div>`;
+            avatarHTML = `<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs">會員</div>`;
         }
 
         // B. 交通資訊區

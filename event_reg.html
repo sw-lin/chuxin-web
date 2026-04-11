@@ -391,8 +391,8 @@ function openEditModal() {
     document.getElementById('modalTitle').innerText = "修改活動";
     document.getElementById('old_title').value = ev["標題"] || ev.title || "";
     document.getElementById('ev_title').value = ev["標題"] || ev.title || "";
-    document.getElementById('ev_poster').value = ev["海報網址"] || ev.poster_url || "";
-    document.getElementById('ev_desc').value = ev["活動簡介"] || ev.desc || "";
+    document.getElementById('ev_poster').value = ev["海報連結 (poster_url)"] || ev.poster_url || "";
+    document.getElementById('ev_desc').value = ev["活動簡介 (desc)"] || ev.desc || "";
     
     // 2. 費用欄位 (精準對接截圖中的「會員報名費」)
     document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || 0;
@@ -408,7 +408,7 @@ function openEditModal() {
     // 4. 日期欄位 (精準對接截圖中的中文 Key)
     document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate);
     document.getElementById('ev_until').value = formatDateForInput(ev["下架日期 (display_until)"] || ev.deadline);
-    document.getElementById('ev_date').value = formatDateForInput(ev["活動日期"] || ev.eventDate);
+    document.getElementById('ev_date').value = formatDateForInput(ev["活動日期 (date)"] || ev.eventDate);
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');

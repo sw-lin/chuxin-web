@@ -292,20 +292,30 @@ function renderRegList(list) {
     }
 
     let html = list.map((r, i) => {
-        // ⚠️ 根據你的最新發現，將 "手機" 改為 "電話"
         const name = r["姓名"] || "未提供"; 
-        const phone = r["電話"] || "無號碼"; // 雙重保險
+        const phone = r["電話"] || "無號碼";
         const diet = r["餐食"] || "未填";
-        const isPaid = r["狀態"] || "未繳";
+        const isPaid = r["繳費狀態"] || r["狀態"] || "未繳"; // 確保抓到正確欄位
         const note = r["備註"] || "無";
+        const isMember = String(r["會員身分"]).trim() === "是"; // 判斷是否為會員
+        const agent = r["報名代理人"] || ""; // 抓取代理人
+
+        // 邏輯處理：
+        // 1. 會員 -> 不顯示左側圖示 (隱藏 div)
+        // 2. 非會員 -> 顯示代理人名字
+        let avatarHTML = "";
+        if (!isMember) {
+            avatarHTML = `
+                <div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[40px]">
+                    ${agent || "無代理"}
+                </div>`;
+        }
 
         return `
         <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3">
             <div class="flex items-center justify-between" onclick="toggleRegDetail(${i})">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">
-                        ${name[0]}
-                    </div>
+                    ${avatarHTML}
                     <div>
                         <div class="font-black text-emerald-900">${name}</div>
                         <div class="text-[10px] text-gray-400 font-bold">${phone}</div>

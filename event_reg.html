@@ -266,7 +266,7 @@ async function loadEventDetails() {
 
     // 🌟 在渲染前，先從全域資料中找出該活動的配置
     currentEventTitle = title;
-    currentEventConfig = allData.events.find(e => (e.title || e["標題"]) === title);
+    currentEventConfig = allData.events.find(e => (e["標題"] || e.title) === title);
 
     showLoading(true);
     try {
@@ -377,37 +377,39 @@ function renderRegList(list) {
 
 function openEditModal() {
     const title = document.getElementById('eventSelector').value;
-    // 1. 找到對應的活動物件
-    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    // 尋找對應活動，相容「標題」與「title」
+    const ev = allData.events.find(e => (e["標題"] || e.title) === title);
+    
     if (!ev) {
-        showToast("找不到活動資料");
+        showToast("找不到活動配置，請重新選取");
         return;
     }
 
-    // 2. 基本資訊回填
-    document.getElementById('modalTitle').innerText = "修改活動";
-    document.getElementById('old_title').value = ev.title || ev["標題"] || "";
-    document.getElementById('ev_title').value = ev.title || ev["標題"] || "";
-    document.getElementById('ev_poster').value = ev.poster_url || ev["海報網址"] || "";
-    document.getElementById('ev_desc').value = ev.desc || ev["活動簡介"] || "";
-    
-    // 3. 費用回填 (處理常見的四種 Key 組合)
-    document.getElementById('ev_mFee').value = ev.memberFee || ev["會員費用"] || ev.mFee || 0;
-    document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員費用"] || ev.gFee || 0;
-    
-    // 4. 開關選項回填 (Y/N 或 是/否)
-    const needIdVal = ev.needId || ev["需填身分證"] || "N";
-    document.getElementById('ev_needId').value = (needIdVal === 'Y' || needIdVal === '是') ? 'Y' : 'N';
-    
-    const busVal = ev.isTourBus || ev["提供遊覽車"] || ev["遊覽車"] || "N";
-    document.getElementById('ev_bus').value = (busVal === 'Y' || busVal === '有' || busVal === '是') ? 'Y' : 'N';
-    
-    // 5. 日期回填 (必須經過 formatDateForInput 轉為 YYYY-MM-DD)
-    document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["展示日期"] || ev.start_date);
-    document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev["截止日期"] || ev.display_until);
-    document.getElementById('ev_date').value = formatDateForInput(ev.eventDate || ev["活動日期"] || ev.date);
+    console.log("正在編輯的原始資料:", ev); // 調試用
 
-    // 6. 顯示彈窗
+    // 1. 基本欄位
+    document.getElementById('modalTitle').innerText = "修改活動";
+    document.getElementById('old_title').value = ev["標題"] || ev.title || "";
+    document.getElementById('ev_title').value = ev["標題"] || ev.title || "";
+    document.getElementById('ev_poster').value = ev["海報網址"] || ev.poster_url || "";
+    document.getElementById('ev_desc').value = ev["活動簡介"] || ev.desc || "";
+    
+    // 2. 費用欄位 (精準對接截圖中的「會員報名費」)
+    document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || 0;
+    document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || 0;
+    
+    // 3. 選項欄位 (精準對接括號與中文值)
+    const needIdVal = ev["(需要身分證)"] || ev.needId;
+    document.getElementById('ev_needId').value = (needIdVal === '是' || needIdVal === 'Y') ? 'Y' : 'N';
+    
+    const busVal = ev["是遊覽車行"] || ev.isTourBus;
+    document.getElementById('ev_bus').value = (busVal === '是' || busVal === '有' || busVal === 'Y') ? 'Y' : 'N';
+    
+    // 4. 日期欄位 (精準對接截圖中的中文 Key)
+    document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate);
+    document.getElementById('ev_until').value = formatDateForInput(ev["下架日期 (display_until)"] || ev.deadline);
+    document.getElementById('ev_date').value = formatDateForInput(ev["活動日期"] || ev.eventDate);
+
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
 }        
@@ -479,20 +481,21 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
         // 輔助工具
 function formatDateForInput(dVal) {
     if (!dVal) return "";
-    let d = new Date(dVal);
-    // 如果是無效日期且是字串，嘗試直接截取 (處理 YYYY-MM-DDTHH... 格式)
-    if (isNaN(d.getTime()) && typeof dVal === 'string') {
-        return dVal.substring(0, 10);
+    try {
+        let d = new Date(dVal);
+        if (isNaN(d.getTime())) {
+            // 如果是字串格式 YYYY/MM/DD 或 YYYY-MM-DD... 直接截取前10碼
+            if (typeof dVal === 'string') return dVal.substring(0, 10).replace(/\//g, '-');
+            return "";
+        }
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    } catch (e) {
+        return "";
     }
-    if (isNaN(d.getTime())) return "";
-    
-    // 補 0 處理確保符合 YYYY-MM-DD
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-        
+}        
         function toggleRegDetail(i) { document.getElementById(`regDetail-${i}`).classList.toggle('hidden'); }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
         function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }

@@ -258,28 +258,32 @@ function renderSelector() {
     selector.innerHTML = optionsHtml;
     if (currentValue) selector.value = currentValue;
 }
-        async function loadEventDetails() {
-            const title = document.getElementById('eventSelector').value;
-            if (!title) return;
-            showLoading(true);
-            try {
-                const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}&t=${Date.now()}`);
-                const json = await res.json();
-                if (Array.isArray(json)) {
-                    allData.registrations = json;
-                    renderRegList(json);
-                    document.getElementById('statCount').innerText = json.length;
-                    document.getElementById('statsSection').classList.remove('hidden');
-                }
-            } catch (e) { 
-                console.error("loadEventDetails 錯誤詳細資訊:", e);
-                showToast("抓取報名名單失敗"); 
-            }
-            showLoading(false);
-        }
+// --- 修正後的 loadEventDetails ---
+async function loadEventDetails() {
+    const title = document.getElementById('eventSelector').value;
+    if (!title) return;
+    showLoading(true);
+    try {
+        const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}&t=${Date.now()}`);
+        const json = await res.json();
+        
+        // 增加除錯資訊，若沒看到資料請檢查控制台
+        console.log("報名名單資料:", json); 
 
-        // 渲染列表
-        // --- 修正後的渲染函式，對齊您的試算表標題 ---
+        if (Array.isArray(json)) {
+            allData.registrations = json;
+            renderRegList(json);
+            document.getElementById('statCount').innerText = json.length;
+            document.getElementById('statsSection').classList.remove('hidden');
+        }
+    } catch (e) { 
+        console.error("載入名單失敗:", e);
+        showToast("抓取報名名單失敗"); 
+    }
+    showLoading(false);
+}
+
+// --- 修正後的 renderRegList ---
 function renderRegList(list) {
     const container = document.getElementById('regList');
     if (!list || list.length === 0) {
@@ -288,10 +292,10 @@ function renderRegList(list) {
     }
 
     let html = list.map((r, i) => {
-        // ⚠️ 對齊您的試算表 B、C、E、J、L 欄位名稱
+        // ⚠️ 這裡必須完全對齊您的試算表第一列標題
         const name = r["會員姓名"] || r["姓名"] || "未提供"; 
         const phone = r["手機"] || "無號碼";
-        const diet = r["飲食選項"] || "未填";
+        const diet = r["飲食選項"] || r["餐食"] || "未填";
         const isPaid = r["繳費狀態"] || "未繳";
         const note = r["備註"] || "無";
 
@@ -315,12 +319,12 @@ function renderRegList(list) {
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
                     <div>飲食：${diet}</div>
-                    <div class="col-span-2 text-gray-400 font-normal">備註：${note}</div>
+                    <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
                 </div>
                 ${isEditMode ? `
                 <div class="flex gap-2 pt-2">
-                    <button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black">編輯</button>
-                    <button onclick="deleteSingleReg('${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px]">刪除</button>
+                    <button onclick="openRegModal('${phone}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black hover:bg-emerald-100">編輯資訊</button>
+                    <button onclick="deleteSingleReg('${phone}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px] hover:bg-red-100">刪除</button>
                 </div>` : ''}
             </div>
         </div>`;
@@ -328,7 +332,8 @@ function renderRegList(list) {
 
     if (isEditMode) html += renderManualAddBtn();
     container.innerHTML = html;
-}        
+}
+        
         // 彈窗邏輯
         function toggleEditMode() {
             isEditMode = !isEditMode;
@@ -368,34 +373,44 @@ function renderRegList(list) {
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-        function openRegModal(phone) {
-            const title = document.getElementById('eventSelector').value;
-            const ev = allData.events.find(e => e.title === title);
-            const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是');
-            document.getElementById('reg_id_zone').style.display = (ev?.needId === 'Y' || ev?.身分證 === '是') ? 'block' : 'none';
-            document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
+function openRegModal(phone) {
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    
+    // 檢查活動設定（遊覽車與身分證）
+    const isTourBus = (ev?.isTourBus === 'Y' || ev?.遊覽車 === '是' || ev?.提供遊覽車 === '有');
+    const needId = (ev?.needId === 'Y' || ev?.身分證 === '是' || ev?.需填身分證 === '是');
 
-            if (phone) {
-                const r = allData.registrations.find(reg => (reg.手機號碼 || reg.電話) === phone);
-                document.getElementById('reg_old_phone').value = phone;
-                document.getElementById('reg_name').value = r["姓名"] || r["會員姓名"] || "";
-                document.getElementById('reg_phone').value = phone;
-                document.getElementById('reg_diet').value = r["餐食"] || "葷";
-                document.getElementById('reg_id').value = r["身分證字號"] || "";
-                document.getElementById('reg_note').value = r["備註"] || "";
-                const trans = r["交通方式"] || "自駕";
-                document.querySelector(`input[name="trans"][value="${trans}"]`).checked = true;
-                document.getElementById('reg_seats').value = r["可載人數"] || 0;
-                updateSeatInput(trans);
-            } else {
-                document.getElementById('reg_old_phone').value = "";
-                document.querySelectorAll('#regModal input:not([type="radio"]), #regModal textarea').forEach(i => i.value = "");
-                document.querySelector('input[name="trans"][value="自駕"]').checked = true;
-                updateSeatInput("自駕");
-            }
-            document.getElementById('regModal').classList.remove('hidden');
+    document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
+    document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
+
+    if (phone) {
+        // ⚠️ 關鍵修正：尋找手機號碼時對齊試算表欄位
+        const r = allData.registrations.find(reg => String(reg["手機"]).trim() === String(phone).trim());
+        if (r) {
+            document.getElementById('reg_old_phone').value = phone;
+            document.getElementById('reg_name').value = r["會員姓名"] || r["姓名"] || "";
+            document.getElementById('reg_phone').value = phone;
+            document.getElementById('reg_diet').value = r["飲食選項"] || r["餐食"] || "葷";
+            document.getElementById('reg_id').value = r["身分證號"] || r["身分證字號"] || "";
+            document.getElementById('reg_note').value = r["備註"] || "";
+            
+            const trans = r["交通方式"] || "自駕";
+            const transRadio = document.querySelector(`input[name="trans"][value="${trans}"]`);
+            if (transRadio) transRadio.checked = true;
+            
+            document.getElementById('reg_seats').value = r["可載人數"] || 0;
+            updateSeatInput(trans);
         }
-
+    } else {
+        // 清空表單供手動新增
+        document.getElementById('reg_old_phone').value = "";
+        document.querySelectorAll('#regModal input:not([type="radio"]), #regModal textarea').forEach(i => i.value = "");
+        document.querySelector('input[name="trans"][value="自駕"]').checked = true;
+        updateSeatInput("自駕");
+    }
+    document.getElementById('regModal').classList.remove('hidden');
+}
         // 輔助工具
         function formatDateForInput(dVal) {
             if (!dVal) return "";

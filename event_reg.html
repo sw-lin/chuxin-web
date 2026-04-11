@@ -377,29 +377,40 @@ function renderRegList(list) {
 
 function openEditModal() {
     const title = document.getElementById('eventSelector').value;
+    // 1. 找到對應的活動物件
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
-    if (!ev) return;
+    if (!ev) {
+        showToast("找不到活動資料");
+        return;
+    }
 
+    // 2. 基本資訊回填
     document.getElementById('modalTitle').innerText = "修改活動";
-    document.getElementById('old_title').value = ev.title || ev["標題"];
-    document.getElementById('ev_title').value = ev.title || ev["標題"];
+    document.getElementById('old_title').value = ev.title || ev["標題"] || "";
+    document.getElementById('ev_title').value = ev.title || ev["標題"] || "";
     document.getElementById('ev_poster').value = ev.poster_url || ev["海報網址"] || "";
     document.getElementById('ev_desc').value = ev.desc || ev["活動簡介"] || "";
     
-    // 🌟 屬性相容性檢查：同時檢查中英文 Key
-    document.getElementById('ev_needId').value = (ev.needId === 'Y' || ev["需填身分證"] === '是') ? 'Y' : 'N';
-    document.getElementById('ev_bus').value = (ev.isTourBus === 'Y' || ev["提供遊覽車"] === '有') ? 'Y' : 'N';
-    document.getElementById('ev_mFee').value = ev.memberFee || ev["會員費用"] || 0;
-    document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員費用"] || 0;
+    // 3. 費用回填 (處理常見的四種 Key 組合)
+    document.getElementById('ev_mFee').value = ev.memberFee || ev["會員費用"] || ev.mFee || 0;
+    document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員費用"] || ev.gFee || 0;
     
-    // 日期格式化處理
-    document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["展示日期"]);
-    document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev["截止日期"]);
-    document.getElementById('ev_date').value = formatDateForInput(ev.eventDate || ev["活動日期"]);
+    // 4. 開關選項回填 (Y/N 或 是/否)
+    const needIdVal = ev.needId || ev["需填身分證"] || "N";
+    document.getElementById('ev_needId').value = (needIdVal === 'Y' || needIdVal === '是') ? 'Y' : 'N';
+    
+    const busVal = ev.isTourBus || ev["提供遊覽車"] || ev["遊覽車"] || "N";
+    document.getElementById('ev_bus').value = (busVal === 'Y' || busVal === '有' || busVal === '是') ? 'Y' : 'N';
+    
+    // 5. 日期回填 (必須經過 formatDateForInput 轉為 YYYY-MM-DD)
+    document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["展示日期"] || ev.start_date);
+    document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev["截止日期"] || ev.display_until);
+    document.getElementById('ev_date').value = formatDateForInput(ev.eventDate || ev["活動日期"] || ev.date);
 
+    // 6. 顯示彈窗
+    document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
-}
-        
+}        
         function openAddModal() {
             document.getElementById('modalTitle').innerText = "發布新活動";
             document.getElementById('old_title').value = "";
@@ -466,11 +477,22 @@ function openRegModal(phone, name) { // 👈 關鍵：現在接收兩個參數
     document.getElementById('regModal').classList.remove('hidden');
 }        
         // 輔助工具
-        function formatDateForInput(dVal) {
-            if (!dVal) return "";
-            const d = new Date(dVal);
-            return isNaN(d) ? "" : d.toISOString().split('T')[0];
-        }
+function formatDateForInput(dVal) {
+    if (!dVal) return "";
+    let d = new Date(dVal);
+    // 如果是無效日期且是字串，嘗試直接截取 (處理 YYYY-MM-DDTHH... 格式)
+    if (isNaN(d.getTime()) && typeof dVal === 'string') {
+        return dVal.substring(0, 10);
+    }
+    if (isNaN(d.getTime())) return "";
+    
+    // 補 0 處理確保符合 YYYY-MM-DD
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+        
         function toggleRegDetail(i) { document.getElementById(`regDetail-${i}`).classList.toggle('hidden'); }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
         function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }

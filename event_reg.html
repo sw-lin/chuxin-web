@@ -572,6 +572,7 @@ async function deleteSingleReg(phone, name) {
     showLoading(false);
 }
 // 🌟 快速更新繳費狀態 (與原有的 updatePaymentStatus 區隔)
+// 🌟 快速更新繳費狀態 (與原有的 updatePaymentStatus 區隔)
 async function quickUpdatePayment(phone, name, newStatus, selectElement) {
     // 1. 即時反應顏色 (提升使用者體驗)
     if (newStatus === '已繳') {
@@ -603,7 +604,7 @@ async function quickUpdatePayment(phone, name, newStatus, selectElement) {
         console.error("更新繳費狀態出錯", e);
         alert("網路連線異常，請稍後再試");
     }
-}        
+}
     </script>
 </body>    
 </html>

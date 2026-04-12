@@ -527,7 +527,7 @@ function openRegModal(phone, name) {
             
 // 🌟 修正交通：處理 Excel 欄位名稱帶有括號的狀況
     // 檢查 F 欄與 G 欄
-    const transValue = r["交通(僅本人)"] || r["交通"] || "自駕";
+    const transValue = r["交通"] || "自駕";
     
     // 尋找對應的 Radio Button
     const transRadio = document.querySelector(`input[name="trans"][value="${transValue}"]`);
@@ -539,7 +539,7 @@ function openRegModal(phone, name) {
     }
     
     // 🌟 修正人數：確保轉為數字且處理欄位名
-    const seatValue = parseInt(r["可載人(僅本人)"] || r["可載人數"]) || 0;
+    const seatValue = parseInt(r["可載人數"]) || 0;
     document.getElementById('reg_seats').value = seatValue;
 
     // 手動觸發一次顯示邏輯

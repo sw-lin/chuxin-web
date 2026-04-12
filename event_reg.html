@@ -677,7 +677,7 @@ function formatDateForInput(dVal) {
         function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
-        function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>''</div>`; }
+        function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工輸入</div>`; }
         function updateSeatInput(val) { 
             const seatZone = document.getElementById('seat_input_zone');
             const seatInput = document.getElementById('reg_seats');

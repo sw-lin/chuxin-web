@@ -149,69 +149,76 @@
         </div>
     </div>
 
-    <div id="regModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-black text-emerald-900 mb-2">報名者資訊</h3>
-            <input type="hidden" id="reg_old_phone">
-            <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-emerald-600 ml-2">姓名</label>
-                        <input type="text" id="reg_name" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-emerald-600 ml-2">電話</label>
-                        <input type="text" id="reg_phone" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-emerald-600 ml-2">飲食</label>
-                        <select id="reg_diet" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
-                            <option value="葷食">葷食</option>
-                            <option value="素食">素食</option>
-                            <option value="不拘">不拘</option>
-                        </select>
-                    </div>
-          
-                    <div id="reg_id_zone">
-                        <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
-                        <input type="text" id="reg_id" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
-                    </div>
-                </div>
-    <div class="grid grid-cols-2 gap-3">
-    <div>
-        <label class="text-[10px] font-bold text-emerald-600 ml-2">是否為會員</label>
-        <select id="reg_is_member" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
-            <option value="是">是</option>
-            <option value="否">否</option>
-        </select>
-    </div>
-      <div></div>
-    </div>              
-                <div id="reg_transport_zone" class="p-4 bg-blue-50 rounded-2xl space-y-3">
-                    <label class="text-[10px] font-bold text-blue-600">交通安排 (非遊覽車)</label>
-                    <div class="flex gap-4">
-                        <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="自駕"> 自駕</label>
-                        <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="共乘"> 共乘</label>
-                    </div>
-                    <div id="seat_input_zone">
-                        <label class="text-[10px] font-bold text-blue-400">可載人數</label>
-                        <input type="number" id="reg_seats" class="w-full bg-white rounded-xl px-4 py-2 text-sm font-bold border-none">
-                    </div>
+<div id="regModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-black text-emerald-900 mb-2">報名者資訊</h3>
+        <input type="hidden" id="reg_old_phone">
+        
+        <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">姓名</label>
+                    <input type="text" id="reg_name" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
                 </div>
                 <div>
-                    <label class="text-[10px] font-bold text-emerald-600 ml-2">備註</label>
-                    <textarea id="reg_note" rows="2" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none"></textarea>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">電話</label>
+                    <input type="text" id="reg_phone" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
                 </div>
             </div>
-            <div class="flex gap-3 pt-4">
-                <button onclick="closeRegModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
-                <button onclick="saveSingleReg()" class="flex-[2] bg-[#064e3b] text-white rounded-2xl font-black shadow-lg">儲存變更</button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">飲食</label>
+                    <select id="reg_diet" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                        <option value="葷食">葷食</option>
+                        <option value="素食">素食</option>
+                        <option value="不拘">不拘</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">是否為會員</label>
+                    <select id="reg_is_member" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                        <option value="是">是</option>
+                        <option value="否">否</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="reg_insurance_zone" class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
+                    <input type="text" id="reg_id" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none" placeholder="保險用">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">出生年月日</label>
+                    <input type="date" id="reg_birthday" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                </div>
+            </div>
+
+            <div id="reg_transport_zone" class="p-4 bg-blue-50 rounded-2xl space-y-3">
+                <label class="text-[10px] font-bold text-blue-600">交通安排 (非遊覽車)</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="自駕"> 自駕</label>
+                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="共乘"> 共乘</label>
+                </div>
+                <div id="seat_input_zone">
+                    <label class="text-[10px] font-bold text-blue-400">可載人數</label>
+                    <input type="number" id="reg_seats" class="w-full bg-white rounded-xl px-4 py-2 text-sm font-bold border-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2">備註</label>
+                <textarea id="reg_note" rows="2" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none"></textarea>
             </div>
         </div>
-    </div>
 
+        <div class="flex gap-3 pt-4">
+            <button onclick="closeRegModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+            <button onclick="saveSingleReg()" class="flex-[2] bg-[#064e3b] text-white rounded-2xl font-black shadow-lg">儲存變更</button>
+        </div>
+    </div>
+</div>
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
         let allData = { events: [], registrations: [] };
@@ -553,7 +560,8 @@ function openRegModal(phone, name) {
             // 🌟 修正身分證：增加欄位名容錯
             const idVal = r["身分證"] || r["身分證字號"] || r["idCard"] || r["ID"] || "";
             document.getElementById('reg_id').value = idVal;
-            
+            // 🌟 新增：讀取生日 (對應你後端回傳的 key)
+            document.getElementById('reg_birthday').value = r["生日"] || "";            
             document.getElementById('reg_note').value = r["備註"] || "";
             
 // 🌟 修正交通：處理 Excel 欄位名稱帶有括號的狀況
@@ -777,6 +785,7 @@ async function saveSingleReg() {
         diet: document.getElementById('reg_diet').value,
         isMember: document.getElementById('reg_is_member').value,
         idCard: idCard,
+        birthday: document.getElementById('reg_birthday').value, // 🌟 新增這一行
         note: document.getElementById('reg_note').value,
         transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
         seats: isTourBus ? 0 : (parseInt(document.getElementById('reg_seats').value) || 0), // 修正：原 code .length 是錯的，改為 .value

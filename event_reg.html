@@ -500,16 +500,14 @@ function openRegModal(phone, name) {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
-    // 判斷活動規則
     const isTourBus = (ev?.isTourBus === 'Y' || ev?.["是遊覽車行"] === '是');
     const needId = (ev?.needId === 'Y' || ev?.["(需要身分證)"] === '是');
     
-    // 控制 UI 顯示
     document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
 
     if (phone && name) {
-        // 尋找報名者 (使用 allData.registrations)
+        // 🌟 修正：確保 phone 轉為字串比較，避免型別錯誤
         const r = allData.registrations.find(reg => 
             String(reg["電話"] || "").trim() === String(phone).trim() && 
             String(reg["姓名"] || "").trim() === String(name).trim()
@@ -520,30 +518,36 @@ function openRegModal(phone, name) {
             document.getElementById('reg_name').value = r["姓名"] || "";
             document.getElementById('reg_phone').value = r["電話"] || "";
             document.getElementById('reg_diet').value = r["餐食"] || "葷";
-            
-            // 🌟 修正1：讀回身分證 (對應試算表 D 欄)
             document.getElementById('reg_id').value = r["身分證"] || ""; 
-            
             document.getElementById('reg_note').value = r["備註"] || "";
             
-            // 🌟 修正3：讀回交通方式 (對應試算表 F 欄)
-            const transValue = r["交通(僅本人)"] || "自駕";
+            // 🌟 核心修正：交通方式回填
+            // 優先抓取「交通(僅本人)」，若無則預設為自駕
+            const transValue = r["交通(僅本人)"] || r["交通狀況"] || "自駕";
             const transRadio = document.querySelector(`input[name="trans"][value="${transValue}"]`);
+            
             if (transRadio) {
                 transRadio.checked = true;
-                updateSeatInput(transValue); // 同步顯示/隱藏可載人數欄位
+                // 強制觸發顯示邏輯
+                updateSeatInput(transValue); 
+            } else {
+                // 如果資料庫是空的，預設勾選自駕
+                document.querySelector(`input[name="trans"][value="自駕"]`).checked = true;
+                updateSeatInput("自駕");
             }
             
-            // 讀回可載人數 (對應試算表 G 欄)
-            document.getElementById('reg_seats').value = r["可載人(僅本人)"] || 0;
+            // 🌟 核心修正：可載人數回填 (確保對應到 G 欄)
+            const seatValue = r["可載人(僅本人)"] || r["可載人數"] || 0;
+            document.getElementById('reg_seats').value = seatValue;
+            
+            console.log("回填交通資料:", transValue, "人數:", seatValue);
         }
     } else {
-        // 新增模式：清空
         resetRegForm();
     }
     document.getElementById('regModal').classList.remove('hidden');
 }
-
+        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";
@@ -749,7 +753,11 @@ async function quickUpdatePayment(phone, name, newStatus, selectElement) {
         selectElement.disabled = false;
         selectElement.style.backgroundColor = originalColor;
     }
-}        
+}  
+// 在 script 區塊加入
+document.getElementById('reg_id').addEventListener('blur', function(e) {
+    this.value = toHalfWidth(this.value).toUpperCase().trim();
+});        
     </script>
 </body>    
 </html>

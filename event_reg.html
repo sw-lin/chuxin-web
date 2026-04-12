@@ -450,9 +450,14 @@ function renderRegList(list) {
             loadEventDetails();
         }
 
+/**
+ * 修改活動彈窗 - 統一「是/否」對接版本
+ */
 function openEditModal() {
-    const title = document.getElementById('eventSelector').value;
-    // 尋找對應活動，相容「標題」與「title」
+    const selector = document.getElementById('eventSelector');
+    const title = selector.value;
+    
+    // 1. 尋找對應活動，相容多種 Key 名稱
     const ev = allData.events.find(e => (e["標題"] || e.title) === title);
     
     if (!ev) {
@@ -460,40 +465,39 @@ function openEditModal() {
         return;
     }
 
-    console.log("正在編輯的原始資料:", ev); // 🌟 檢查這裡的屬性名稱
+    console.log("正在讀取編輯資料:", ev); 
 
-    // 1. 基本欄位
+    // 2. 基本文字與隱藏欄位
     document.getElementById('modalTitle').innerText = "修改活動";
     document.getElementById('old_title').value = ev["標題"] || ev.title || "";
     document.getElementById('ev_title').value = ev["標題"] || ev.title || "";
     document.getElementById('ev_poster').value = ev["海報連結 (poster_url)"] || ev.poster_url || "";
     document.getElementById('ev_desc').value = ev["活動簡介 (desc)"] || ev.desc || "";
     
-    // 2. 費用欄位 (確保相容縮寫與中文)
+    // 3. 費用欄位
     document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || ev.member_fee || 0;
     document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
     
-    // 3. 選項欄位 (🌟 修正點：增加對 need_id 與 is_bus 的支援)
-    // 這裡我們把所有可能的屬性名稱都列出來
-    const needIdVal = String(ev["(需要身分證)"] || ev.needId || ev.need_id || "").trim();
-    const busVal = String(ev["是遊覽車行"] || ev.isTourBus || ev.is_bus || "").trim();
+    // 4. 選項欄位 (🌟 修正：統一使用「是」與「否」)
+    const rawNeedId = String(ev["(需要身分證)"] || ev.needId || ev.need_id || "").trim();
+    const rawBus = String(ev["是遊覽車行"] || ev.isTourBus || ev.is_bus || "").trim();
 
-    // 判斷邏輯：只要包含 "是"、"Y" 或 全形 "Ｙ"，就選中全形 'Ｙ' 選項
-    const isNeedId = (needIdVal === '是' || needIdVal === 'Y' || needIdVal === 'Ｙ');
-    const isBus = (busVal === '是' || busVal === 'Y' || busVal === 'Ｙ');
+    // 只要後端資料是 '是'、'Y' 或 全型 'Ｙ'，就判定為「是」，否則為「否」
+    const needIdResult = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
+    const busResult = (rawBus === '是' || rawBus.toUpperCase() === 'Y' || rawBus === 'Ｙ') ? '是' : '否';
 
-    document.getElementById('ev_needId').value = isNeedId ? 'Ｙ' : 'Ｎ';
-    document.getElementById('ev_bus').value = isBus ? 'Ｙ' : 'Ｎ';  
+    // 🌟 賦值給 HTML Select
+    document.getElementById('ev_needId').value = needIdResult;
+    document.getElementById('ev_bus').value = busResult;  
     
-    // 4. 日期欄位
+    // 5. 日期欄位
     document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate || ev.start_date);
     document.getElementById('ev_until').value = formatDateForInput(ev["下架日期 (display_until)"] || ev.deadline || ev.display_until);
     document.getElementById('ev_date').value = formatDateForInput(ev["活動日期 (date)"] || ev.eventDate || ev.date);
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
-}
-        
+}        
         function openAddModal() {
             document.getElementById('modalTitle').innerText = "發布新活動";
             document.getElementById('old_title').value = "";

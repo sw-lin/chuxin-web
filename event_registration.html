@@ -249,11 +249,12 @@ function adjustPartnerFields() {
 
     const idHtml = eventConfig.needId ? `
         <input type="text" placeholder="身分證字號 (保險用)" class="partner-id input-field">
-    ` : "";
-    <div class="mt-2">
+        <div class="mt-2">
             <label class="text-[10px] font-bold text-emerald-800 ml-1">出生年月日</label>
             <input type="date" class="partner-birthday input-field">
         </div>
+    ` : "";
+    
     let newHtml = "";
     for (let i = 0; i < count; i++) {
         newHtml += `

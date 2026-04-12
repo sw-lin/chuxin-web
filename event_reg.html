@@ -518,29 +518,34 @@ function openRegModal(phone, name) {
             document.getElementById('reg_name').value = r["姓名"] || "";
             document.getElementById('reg_phone').value = r["電話"] || "";
             document.getElementById('reg_diet').value = r["餐食"] || "葷";
-            document.getElementById('reg_id').value = r["身分證"] || ""; 
+            
+            // 🌟 修正身分證：增加欄位名容錯
+            const idVal = r["身分證"] || r["身分證字號"] || r["idCard"] || r["ID"] || "";
+            document.getElementById('reg_id').value = idVal;
+            
             document.getElementById('reg_note').value = r["備註"] || "";
             
-            // 🌟 核心修正：交通方式回填
-            // 優先抓取「交通(僅本人)」，若無則預設為自駕
-            const transValue = r["交通(僅本人)"] || r["交通狀況"] || "自駕";
-            const transRadio = document.querySelector(`input[name="trans"][value="${transValue}"]`);
-            
-            if (transRadio) {
-                transRadio.checked = true;
-                // 強制觸發顯示邏輯
-                updateSeatInput(transValue); 
-            } else {
-                // 如果資料庫是空的，預設勾選自駕
-                document.querySelector(`input[name="trans"][value="自駕"]`).checked = true;
-                updateSeatInput("自駕");
-            }
-            
-            // 🌟 核心修正：可載人數回填 (確保對應到 G 欄)
-            const seatValue = r["可載人(僅本人)"] || r["可載人數"] || 0;
-            document.getElementById('reg_seats').value = seatValue;
-            
-            console.log("回填交通資料:", transValue, "人數:", seatValue);
+// 🌟 修正交通：處理 Excel 欄位名稱帶有括號的狀況
+    // 檢查 F 欄與 G 欄
+    const transValue = r["交通(僅本人)"] || r["交通狀況"] || r["transport"] || "自駕";
+    
+    // 尋找對應的 Radio Button
+    const transRadio = document.querySelector(`input[name="trans"][value="${transValue}"]`);
+    if (transRadio) {
+        transRadio.checked = true;
+    } else {
+        // 如果資料庫存的是「自開車」等字眼，強制 fallback 到自駕
+        document.querySelector('input[name="trans"][value="自駕"]').checked = true;
+    }
+    
+    // 🌟 修正人數：確保轉為數字且處理欄位名
+    const seatValue = parseInt(r["可載人(僅本人)"] || r["可載人數"] || r["seats"]) || 0;
+    document.getElementById('reg_seats').value = seatValue;
+
+    // 手動觸發一次顯示邏輯
+    updateSeatInput(transValue);
+    
+    console.log("偵測到資料:", r); // 這行很重要，請在瀏覽器 F12 檢查輸出的物件內容
         }
     } else {
         resetRegForm();
@@ -641,7 +646,7 @@ async function saveSingleReg() {
         idCard: toHalfWidth(rawId).toUpperCase().trim(), // 轉半形、大寫、去空格
         note: document.getElementById('reg_note').value,
         transport: document.querySelector('input[name="trans"]:checked')?.value || "自駕",
-        seats: document.getElementById('reg_seats').value || 0,
+        seats: parseInt(document.getElementById('reg_seats').value) || 0, // 確保是數字
         isPaid: "未繳" 
     };
 
@@ -754,9 +759,17 @@ async function quickUpdatePayment(phone, name, newStatus, selectElement) {
         selectElement.style.backgroundColor = originalColor;
     }
 }  
-// 在 script 區塊加入
-document.getElementById('reg_id').addEventListener('blur', function(e) {
-    this.value = toHalfWidth(this.value).toUpperCase().trim();
+// 自動轉半形監聽器
+document.addEventListener('DOMContentLoaded', () => {
+    const idInput = document.getElementById('reg_id');
+    const phoneInput = document.getElementById('reg_phone');
+
+    [idInput, phoneInput].forEach(el => {
+        if(!el) return;
+        el.addEventListener('blur', function() {
+            this.value = toHalfWidth(this.value).replace(/\s/g, "").toUpperCase();
+        });
+    });
 });        
     </script>
 </body>    

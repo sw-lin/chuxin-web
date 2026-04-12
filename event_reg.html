@@ -580,6 +580,17 @@ function openRegModal(phone, name) {
         }
     } else {
         resetRegForm();
+        // 🌟 新增：如果是遊覽車，確保 Radio 沒被勾選，避免誤傳「自駕」
+        if (isTourBus) {
+            document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);
+        } else {
+            // 一般活動預設勾選自駕
+            const defaultRadio = document.querySelector('input[name="trans"][value="自駕"]');
+            if (defaultRadio) {
+                defaultRadio.checked = true;
+                updateSeatInput("自駕");
+            }
+        }        
     }
     document.getElementById('regModal').classList.remove('hidden');
 }
@@ -594,9 +605,9 @@ function resetRegForm() {
     document.getElementById('reg_diet').value = "葷";
     document.getElementById('reg_seats').value = 0;
     document.getElementById('reg_is_member').value = "否"; // 預設為非會員
-    const defaultRadio = document.querySelector('input[name="trans"][value="自駕"]');
-    if (defaultRadio) defaultRadio.checked = true;
-    updateSeatInput("自駕");
+    // 🌟 移除原本強制勾選自駕的程式碼，交給 openRegModal 處理
+    document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);
+    updateSeatInput("共乘"); // 預設先隱藏座位輸入框    
 } 
 
 /**
@@ -721,6 +732,11 @@ function formatDateForInput(dVal) {
         }
 async function saveSingleReg() {
     const title = document.getElementById('eventSelector').value;
+
+    // 取得當前活動的配置
+    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    // 🌟 判斷是否為遊覽車活動
+    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
     
     // 🌟 修正2：存檔前自動將電話與身分證轉為半形
     const rawPhone = document.getElementById('reg_phone').value;
@@ -738,8 +754,13 @@ async function saveSingleReg() {
         isMember: document.getElementById('reg_is_member').value,
         idCard: toHalfWidth(rawId).toUpperCase().trim(), // 轉半形、大寫、去空格
         note: document.getElementById('reg_note').value,
-        transport: document.querySelector('input[name="trans"]:checked')?.value || "自駕",
-        seats: parseInt(document.getElementById('reg_seats').value) || 0, // 確保是數字
+        
+        // 🌟 修正點：如果是遊覽車，強制存入「搭乘遊覽車」；否則才去抓 Radio 的值
+        transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
+        
+        // 🌟 修正點：如果是遊覽車，可載人數強制為 0
+        seats: isTourBus ? 0 : (parseInt(document.getElementById('reg_seats').value) || 0),
+        
         isPaid: "未繳" 
     };
 

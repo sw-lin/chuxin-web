@@ -291,7 +291,9 @@ async function submitForm(event) {
         const mainID = toHalfWidth(mainIDRaw);
         const mainPhone = toHalfWidth(currentUser.phone || "");
         const regNote = document.getElementById('regNote') ? document.getElementById('regNote').value : "";
-
+        // 🌟 新增：抓取主要報名者生日 (對應 HTML id="mainBirthday")
+        const mainBirthday = document.getElementById('mainBirthday') ? document.getElementById('mainBirthday').value : "";
+        
         // --- 2. 主要報名者必填驗證 ---
         if (!currentUser.name) {
             showToast("主要報名者姓名遺失，請重新登入", "error");
@@ -306,18 +308,27 @@ async function submitForm(event) {
             return;
         }
 
+        // 🌟 (可選) 驗證生日是否填寫
+        if (eventConfig.needId && !mainBirthday) {
+            showToast("請輸入主要報名者的生日", "error");
+            return;
+        }
         // --- 3. 攜伴資料抓取與必填驗證 ---
         const pNames = document.querySelectorAll('.partner-name');
         const pPhones = document.querySelectorAll('.partner-phone');
         const pIDs = document.querySelectorAll('.partner-id');
         const pDiets = document.querySelectorAll('.partner-diet');
+        // 🌟 新增：選取所有訪客的生日欄位 (需在 adjustPartnerFields 中加入 class="partner-birthday")
+        const pBirthdays = document.querySelectorAll('.partner-birthday');
         const partnerRegistrations = [];
 
         for (let i = 0; i < pNames.length; i++) {
             const name = pNames[i].value.trim();
             const phone = toHalfWidth(pPhones[i] ? pPhones[i].value : "");
             const idNumber = toHalfWidth(pIDs[i] ? pIDs[i].value : "");
-
+            // 🌟 新增：抓取訪客生日
+            const birthday = pBirthdays[i] ? pBirthdays[i].value : "";
+            
             // 驗證姓名
             if (!name) {
                 showToast(`請填寫訪客 ${i + 1} 的姓名`, "error");
@@ -333,11 +344,16 @@ async function submitForm(event) {
                 showToast(`請填寫訪客 ${i + 1} 的身分證字號`, "error");
                 return;
             }
-
+            // 🌟 (可選) 訪客生日驗證
+            if (eventConfig.needId && !birthday) {
+                showToast(`請填寫訪客 ${i + 1} 的生日`, "error");
+                return;
+            }
             partnerRegistrations.push({
                 name: name,
                 phone: phone,
                 idNumber: idNumber,
+                birthday: birthday, // 🌟 放入訪客資料物件
                 diet: pDiets[i] ? pDiets[i].value : "不拘",
                 transport: "",
                 seats: 0,
@@ -360,6 +376,7 @@ async function submitForm(event) {
                     name: currentUser.name,
                     phone: mainPhone,
                     idNumber: mainID,
+                    birthday: mainBirthday, // 🌟 放入主要報名者資料
                     diet: document.getElementById('mainDiet').value,
                     transport: document.getElementById('mainTransport').value,
                     seats: document.getElementById('mainSeats').value || 0,

@@ -449,7 +449,8 @@ function renderRegList(list) {
 
     if (isEditMode) html += renderManualAddBtn();
     container.innerHTML = html;
-}        
+}  
+        
         // 彈窗邏輯
         function toggleEditMode() {
             isEditMode = !isEditMode;
@@ -597,6 +598,53 @@ function resetRegForm() {
     if (defaultRadio) defaultRadio.checked = true;
     updateSeatInput("自駕");
 } 
+
+/**
+ * 刪除目前選中的活動及其所有報名名單
+ * 解決 ReferenceError 並執行聯集刪除
+ */
+async function deleteCurrentEvent() {
+    const title = document.getElementById('old_title').value; // 取得目前編輯中的活動名稱
+    if (!title) return;
+
+    const confirmMsg = `⚠️ 警告！\n這將永久刪除「${title}」活動，\n以及該活動下「所有的報名人員名單」。\n\n此操作無法復原，確定要執行嗎？`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    const payload = {
+        type: 'delete_event_completely',
+        key: sessionStorage.getItem('staff_key'),
+        title: title
+    };
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.result === "SUCCESS") {
+            showToast("活動及相關名單已完全刪除");
+            closeModal(); // 關閉彈窗
+            
+            // 重置選單並重新載入
+            document.getElementById('eventSelector').value = "";
+            loadData(); 
+            
+            // 清空畫面上的名單
+            document.getElementById('regList').innerHTML = "";
+            document.getElementById('statsSection').classList.add('hidden');
+        } else {
+            showToast("刪除失敗：" + (result.message || "未知原因"));
+        }
+    } catch (e) {
+        console.error("刪除請求出錯:", e);
+        showToast("網路連線異常，請稍後再試");
+    }
+    showLoading(false);
+}
         
 // 將全形數字/字母轉換為半形
 function toHalfWidth(str) {

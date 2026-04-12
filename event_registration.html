@@ -275,98 +275,123 @@ function updateTotal(manualCount = null) {
     const total = eventConfig.memberFee + (count * eventConfig.guestFee);
     document.getElementById('totalAmount').innerText = total;
 }
+async function submitForm(event) {
+    if (event && event.preventDefault) event.preventDefault();
+
+    const overlay = document.getElementById('loadingOverlay');
     
-    async function submitForm(event) {
-        if (event && event.preventDefault) event.preventDefault();
+    try {
+        // --- 1. 主要報名者資料抓取與轉換 ---
+        const mainIDRaw = document.getElementById('mainID') ? document.getElementById('mainID').value.trim() : "";
+        const mainID = toHalfWidth(mainIDRaw);
+        const mainPhone = toHalfWidth(currentUser.phone || "");
+        const regNote = document.getElementById('regNote') ? document.getElementById('regNote').value : "";
 
-        const overlay = document.getElementById('loadingOverlay');
-        
-        try {
-            const mainIDRaw = document.getElementById('mainID') ? document.getElementById('mainID').value : "";
-            const mainID = toHalfWidth(mainIDRaw); // 轉半形
-            const regNote = document.getElementById('regNote') ? document.getElementById('regNote').value : "";
+        // --- 2. 主要報名者必填驗證 ---
+        if (!currentUser.name) {
+            showToast("主要報名者姓名遺失，請重新登入", "error");
+            return;
+        }
+        if (!mainPhone) {
+            showToast("主要報名者電話遺失，請重新登入", "error");
+            return;
+        }
+        if (eventConfig.needId && !mainID) {
+            showToast("請輸入主要報名者的身分證字號", "error");
+            return;
+        }
 
-            if (eventConfig.needId && !mainID) {
-                showToast("請輸入身分證字號", "error");
+        // --- 3. 攜伴資料抓取與必填驗證 ---
+        const pNames = document.querySelectorAll('.partner-name');
+        const pPhones = document.querySelectorAll('.partner-phone');
+        const pIDs = document.querySelectorAll('.partner-id');
+        const pDiets = document.querySelectorAll('.partner-diet');
+        const partnerRegistrations = [];
+
+        for (let i = 0; i < pNames.length; i++) {
+            const name = pNames[i].value.trim();
+            const phone = toHalfWidth(pPhones[i] ? pPhones[i].value : "");
+            const idNumber = toHalfWidth(pIDs[i] ? pIDs[i].value : "");
+
+            // 驗證姓名
+            if (!name) {
+                showToast(`請填寫訪客 ${i + 1} 的姓名`, "error");
+                return;
+            }
+            // 驗證電話
+            if (!phone) {
+                showToast(`請填寫訪客 ${i + 1} 的電話`, "error");
+                return;
+            }
+            // 驗證身分證 (若活動需要)
+            if (eventConfig.needId && !idNumber) {
+                showToast(`請填寫訪客 ${i + 1} 的身分證字號`, "error");
                 return;
             }
 
-            const pNames = document.querySelectorAll('.partner-name');
-            for (let el of pNames) {
-                if (!el.value.trim()) {
-                    showToast("請填寫攜伴姓名", "error");
-                    return;
-                }
-            }
-
-            // 顯示 Loading
-            overlay.style.display = 'flex';
-
-            const payload = {
-                type: 'register',
-                eventTitle: eventConfig.title,
-                mainPhone: toHalfWidth(currentUser.phone), // 轉半形
-                registrations: []
-            };
-
-            // 本人
-            payload.registrations.push({
-                name: currentUser.name,
-                phone: toHalfWidth(currentUser.phone),
-                idNumber: mainID,
-                diet: document.getElementById('mainDiet').value,
-                transport: document.getElementById('mainTransport').value,
-                seats: document.getElementById('mainSeats').value || 0,
-                isMember: true,
-                proxy: "本人",
-                fee: eventConfig.memberFee,
-                note: regNote
+            partnerRegistrations.push({
+                name: name,
+                phone: phone,
+                idNumber: idNumber,
+                diet: pDiets[i] ? pDiets[i].value : "不拘",
+                transport: "",
+                seats: 0,
+                isMember: false,
+                proxy: currentUser.name,
+                fee: eventConfig.guestFee,
+                note: ""
             });
-
-            // 攜伴
-            const pPhones = document.querySelectorAll('.partner-phone');
-            const pIDs = document.querySelectorAll('.partner-id');
-            const pDiets = document.querySelectorAll('.partner-diet');
-
-            pNames.forEach((el, i) => {
-                payload.registrations.push({
-                    name: el.value.trim(),
-                    phone: pPhones[i] ? toHalfWidth(pPhones[i].value) : "", // 轉半形
-                    idNumber: pIDs[i] ? toHalfWidth(pIDs[i].value) : "",   // 轉半形
-                    diet: pDiets[i] ? pDiets[i].value : "不拘",
-                    transport: "",
-                    seats: 0,
-                    isMember: false,
-                    proxy: currentUser.name,
-                    fee: eventConfig.guestFee,
-                    note: ""
-                });
-            });
-
-            const response = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-            
-            if (result.result === "SUCCESS") {
-                showToast("報名成功！即將跳轉...");
-                setTimeout(() => { location.href = "member_zone.html"; }, 1000);
-            } if( result.result === "ALREADY_DONE") {
-                showToast("重複報名 如需修改請洽活動組！即將跳轉...");
-                setTimeout(() => { location.href = "member_zone.html"; }, 1000);          
-        } else {
-                overlay.style.display = 'none';
-                showToast("錯誤：" + result.message, "error");
-            }
-
-        } catch (e) {
-            overlay.style.display = 'none';
-            showToast("執行出錯，請檢查網路", "error");
-            console.error(e);
         }
-    }    
+
+        // --- 4. 封裝 Payload 並送出 ---
+        overlay.style.display = 'flex';
+
+        const payload = {
+            type: 'register',
+            eventTitle: eventConfig.title,
+            mainPhone: mainPhone,
+            registrations: [
+                {
+                    name: currentUser.name,
+                    phone: mainPhone,
+                    idNumber: mainID,
+                    diet: document.getElementById('mainDiet').value,
+                    transport: document.getElementById('mainTransport').value,
+                    seats: document.getElementById('mainSeats').value || 0,
+                    isMember: true,
+                    proxy: "本人",
+                    fee: eventConfig.memberFee,
+                    note: regNote
+                },
+                ...partnerRegistrations
+            ]
+        };
+
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (result.result === "SUCCESS") {
+            showToast("報名成功！即將跳轉...");
+            setTimeout(() => { location.href = "member_zone.html"; }, 1000);
+        } else if (result.result === "ALREADY_DONE") {
+            showToast("重複報名，如需修改請洽活動組！", "error");
+            setTimeout(() => { location.href = "member_zone.html"; }, 1500);
+        } else {
+            overlay.style.display = 'none';
+            showToast("錯誤：" + result.message, "error");
+        }
+
+    } catch (e) {
+        overlay.style.display = 'none';
+        showToast("執行出錯，請檢查網路", "error");
+        console.error(e);
+    }
+}
+   
 </script>
 </body>
 </html>

@@ -500,9 +500,12 @@ function openRegModal(phone, name) {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
+    // 🌟 修正點：精準對應 GAS H欄的 "(需要身分證)" (注意括號與名稱)
     const isTourBus = (ev?.isTourBus === 'Y' || ev?.["是遊覽車行"] === '是');
     const needId = (ev?.needId === 'Y' || ev?.["(需要身分證)"] === '是');
     
+    console.log("活動規格檢查:", { title, isTourBus, needId }); // 除錯用
+
     document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
     document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
 
@@ -600,7 +603,18 @@ function formatDateForInput(dVal) {
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1'; setTimeout(()=>t.style.opacity='0', 2500); }
         function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工報名</div>`; }
-        function updateSeatInput(val) { document.getElementById('seat_input_zone').style.display = (val === '自駕') ? 'block' : 'none'; }
+        function updateSeatInput(val) { 
+            const seatZone = document.getElementById('seat_input_zone');
+            const seatInput = document.getElementById('reg_seats');
+    
+            if (val === '自駕') {
+               seatZone.style.display = 'block';
+            } else {
+               seatZone.style.display = 'none';
+               seatInput.value = 0; // 🌟 關鍵：切換到共乘時，強制將人數歸零，避免帶入舊資料
+            }
+        }
+        
         document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
 
         // 儲存邏輯 (略，與原版 POST 邏輯相同但確保 Payload 完整)

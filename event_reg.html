@@ -747,31 +747,26 @@ function formatDateForInput(dVal) {
         }
 async function saveSingleReg() {
     const title = document.getElementById('eventSelector').value;
-
-    // 取得當前活動的配置
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
-    // 🌟 判斷活動規則
     const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
     const needId = (ev?.["(需要身分證)"] === '是' || ev?.needId === '是' || ev?.needId === 'Y');
     
-    // 🌟 取得輸入值並預處理
     const name = document.getElementById('reg_name').value.trim();
     const rawPhone = document.getElementById('reg_phone').value;
-    const phone = toHalfWidth(rawPhone).replace(/\s/g, ""); // 轉半形並去空格
+    const phone = toHalfWidth(rawPhone).replace(/\s/g, ""); 
     const rawId = document.getElementById('reg_id').value;
-    const idCard = toHalfWidth(rawId).toUpperCase().trim(); // 轉半形、大寫、去空格
+    const idCard = toHalfWidth(rawId).toUpperCase().trim();
 
-    // --- 🚩 關鍵：必填欄位驗證邏輯 ---
     if (!name || !phone) {
         return showToast("⚠️ 姓名與電話為必填");
     }
 
-    // 🌟 新增：如果活動需要身分證，則進行必填檢查
     if (needId && !idCard) {
         return showToast("⚠️ 此活動需要身分證字號，請務必輸入");
     }
 
+    // --- 🌟 修改重點：新增 regTime 欄位 ---
     const payload = {
         type: 'save_single_registration',
         key: sessionStorage.getItem('staff_key'),
@@ -783,14 +778,10 @@ async function saveSingleReg() {
         isMember: document.getElementById('reg_is_member').value,
         idCard: idCard,
         note: document.getElementById('reg_note').value,
-        
-        // 修正點：如果是遊覽車，強制存入「搭乘遊覽車」；否則才去抓 Radio 的值
         transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
-        
-        // 修正點：如果是遊覽車，可載人數強制為 0
-        seats: isTourBus ? 0 : (parseInt(document.getElementById('reg_seats').length) || 0),
-        
-        isPaid: "未繳" 
+        seats: isTourBus ? 0 : (parseInt(document.getElementById('reg_seats').value) || 0), // 修正：原 code .length 是錯的，改為 .value
+        isPaid: "未繳",
+        regTime: new Date().toLocaleString('zh-TW', { hour12: false }) // 🌟 新增：帶入當前時間 (M欄)
     };
 
     showLoading(true);

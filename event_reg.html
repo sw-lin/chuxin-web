@@ -791,7 +791,7 @@ async function deleteSingleReg(phone, name) {
 
     const title = document.getElementById('eventSelector').value;
     const payload = {
-        type: 'delete_single_registration', 
+        type: 'delete_single_registration',
         key: sessionStorage.getItem('staff_key'),
         eventTitle: title,
         phone: phone,
@@ -800,40 +800,39 @@ async function deleteSingleReg(phone, name) {
 
     showLoading(true);
     try {
-        // 🌟 修正點 1：確保使用 POST 且傳送 JSON
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
-            // 如果後端沒特別處理 CORS，建議不要加 mode: 'no-cors'，否則拿不到 result
             body: JSON.stringify(payload) 
         });
-        
         const result = await res.json();
-        
+
         if (result.result === "SUCCESS") {
             showToast("✅ 已成功刪除");
-            
-            // 🌟 修正點 2：強制清空目前的內容並重新載入
-            // 有時候直接呼叫 loadEventDetails 太快，資料庫可能還在寫入
-            // 我們可以先手動從前端陣列移除，或延遲 500ms 再載入
+
+            // 🌟 核心修正：前端即時「刷屏」邏輯
+            // 1. 從全域變數 allData.registrations 中移除該筆資料
             allData.registrations = allData.registrations.filter(r => 
-                !(String(r["電話"]).trim() === String(phone).trim() && 
-                  String(r["姓名"]).trim() === String(name).trim())
+                !(String(r["電話"] || r["phone"]).trim() === String(phone).trim() && 
+                  String(r["姓名"] || r["name"]).trim() === String(name).trim())
             );
-            
-            // 重新渲染畫面
+
+            // 2. 立即重新渲染列表 (使用者會看到該卡片立刻消失)
             renderRegList(allData.registrations);
-            
-            // 同時重新向後端抓取最新統計 (雙重保險)
-            loadEventDetails(); 
+
+            // 3. 更新統計數字
+            document.getElementById('statCount').innerText = allData.registrations.length;
+
+            // 4. (選擇性) 0.5秒後再偷偷從後端撈一次最新資料，確保萬無一失
+            setTimeout(() => {
+                loadEventDetails();
+            }, 500);
+
         } else {
             showToast("❌ 刪除失敗：" + result.message);
         }
     } catch (e) {
         console.error("刪除錯誤:", e);
-        showToast("網路錯誤或後端未回應");
-        
-        // 🌟 修正點 3：即使出錯，如果確認資料庫已刪除，也可以手動 reload
-        // location.reload(); // 這是最終手段，但不建議，因為會跳回初始頁面
+        showToast("網路錯誤，請稍後再試");
     }
     showLoading(false);
 }        

@@ -536,8 +536,12 @@ function openRegModal(phone, name) {
     console.log("當前活動物件:", ev);    
     console.log("活動規格檢查:", { title, isTourBus, needId }); // 除錯用
 
-    document.getElementById('reg_id_zone').style.display = needId ? 'block' : 'none';
-    document.getElementById('reg_transport_zone').style.display = isTourBus ? 'none' : 'block';
+    // 🌟 修正點：將 reg_id_zone 改為 reg_insurance_zone (與你的 HTML 一致)
+    const insuranceZone = document.getElementById('reg_insurance_zone');
+    const transZone = document.getElementById('reg_transport_zone');
+    
+    if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none'; // 因為 HTML 是 grid 佈局
+    if (transZone) transZone.style.display = isTourBus ? 'none' : 'block';
 
     if (phone && name) {
         // 🌟 修正：確保 phone 轉為字串比較，避免型別錯誤

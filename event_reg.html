@@ -502,7 +502,7 @@ function openRegModal(phone, name) {
     
     // 🌟 修正點：精準對應 GAS H欄的 "(需要身分證)" (注意括號與名稱)
     const isTourBus = (ev?.isTourBus === 'Y' || ev?.["是遊覽車行"] === '是');
-    const needId = (ev?.needId === 'Y' || ev?.["(需要身分證)"] === '是');
+    const needId = (ev?.["(需要身分證)"] === '是'||'Y');
     
     console.log("活動規格檢查:", { title, isTourBus, needId }); // 除錯用
 

@@ -473,12 +473,13 @@ function openEditModal() {
     document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || 0;
     document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || 0;
     
-    // 3. 選項欄位 (精準對接括號與中文值)
-    const needIdVal = ev["(需要身分證)"] || ev.needId;
-    document.getElementById('ev_needId').value = (needIdVal === '是' || needIdVal === 'Y') ? '是' : '否';
-    
-    const busVal = ev["是遊覽車行"] || ev.isTourBus;
-    document.getElementById('ev_bus').value = (busVal === '是' || busVal === '有' || busVal === 'Y') ? '是' : '否';
+    // 3. 選項欄位 (統一判斷邏輯)
+    const needIdVal = String(ev["(需要身分證)"] || ev.needId || "").trim();
+    // 只要資料庫裡面是 "是" 或 "Y"，UI 就顯示 'Ｙ' (或是改顯示 '是')
+    document.getElementById('ev_needId').value = (needIdVal === '是' || needIdVal === 'Y') ? 'Ｙ' : 'Ｎ';
+
+    const busVal = String(ev["是遊覽車行"] || ev.isTourBus || "").trim();
+    document.getElementById('ev_bus').value = (busVal === '是' || busVal === 'Y') ? 'Ｙ' : 'Ｎ';  
     
     // 4. 日期欄位 (精準對接截圖中的中文 Key)
     document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate);
@@ -501,8 +502,8 @@ function openRegModal(phone, name) {
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     
     // 🌟 修正點：精準對應 GAS H欄的 "(需要身分證)" (注意括號與名稱)
-    const isTourBus = (ev?.isTourBus === 'Y' || ev?.["是遊覽車行"] === '是');
-    const needId = (ev?.["(需要身分證)"] === '是' || ev?.["(需要身分證)"] === 'Y');
+    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
+    const needId = (ev?.["(需要身分證)"] === '是' || ev?.needId === '是' || ev?.needId === 'Y');
 
     console.log("當前活動物件:", ev);    
     console.log("活動規格檢查:", { title, isTourBus, needId }); // 除錯用
@@ -620,6 +621,9 @@ function formatDateForInput(dVal) {
 
         // 儲存邏輯 (略，與原版 POST 邏輯相同但確保 Payload 完整)
         async function saveEvent() {
+            // 取得 UI 上的 Y/N 並轉換成 是/否
+            const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
+            
             const payload = {
                 type: document.getElementById('old_title').value ? 'update_calendar_event' : 'add_new_event',
                 key: sessionStorage.getItem('staff_key'),
@@ -629,8 +633,10 @@ function formatDateForInput(dVal) {
                 start_date: document.getElementById('ev_start').value,
                 display_until: document.getElementById('ev_until').value,
                 date: document.getElementById('ev_date').value,
-                needId: document.getElementById('ev_needId').value,
-                isTourBus: document.getElementById('ev_bus').value,
+                
+                needId: translateToChinese(document.getElementById('ev_needId').value),
+                isTourBus: translateToChinese(document.getElementById('ev_bus').value),
+                
                 memberFee: document.getElementById('ev_mFee').value,
                 guestFee: document.getElementById('ev_gFee').value,
                 oldTitle: document.getElementById('old_title').value

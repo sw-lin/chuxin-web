@@ -498,8 +498,18 @@ function openEditModal() {
     document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
     
     // 4. 選項欄位 (🌟 修正：統一使用「是」與「否」)
-    const rawNeedId = String(ev["(需要身分證)"] || ev.needId || ev.need_id || "").trim();
-    const rawBus = String(ev["是遊覽車行"] || ev.isTourBus || ev.is_bus || "").trim();
+    const rawNeedId = String(
+    ev["(需要身分證)"] ||  // 半形括號
+    ev["（需要身分證）"] || // 全形括號
+    ev["需要身分證"] ||    // 沒括號
+    ev.needId || ""
+).trim();
+
+const rawBus = String(
+    ev["是遊覽車行"] || 
+    ev["遊覽車"] || 
+    ev.isTourBus || ""
+).trim();
 
     // 只要後端資料是 '是'、'Y' 或 全型 'Ｙ'，就判定為「是」，否則為「否」
     const needIdResult = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';

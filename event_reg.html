@@ -173,6 +173,16 @@
                             <option value="不拘">不拘</option>
                         </select>
                     </div>
+    <div class="grid grid-cols-2 gap-3">
+    <div>
+        <label class="text-[10px] font-bold text-emerald-600 ml-2">是否為會員</label>
+        <select id="reg_is_member" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+            <option value="是">是 (會員價)</option>
+            <option value="否">否 (非會員價)</option>
+        </select>
+    </div>
+   
+    </div>                    
                     <div id="reg_id_zone">
                         <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
                         <input type="text" id="reg_id" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
@@ -532,6 +542,11 @@ function openRegModal(phone, name) {
             document.getElementById('reg_name').value = r["姓名"] || "";
             document.getElementById('reg_phone').value = r["電話"] || "";
             document.getElementById('reg_diet').value = r["餐食"] || "葷";
+
+            // 🌟 新增：設定會員狀態下拉選單
+            // 判斷 H 欄的值，如果抓不到則預設為「否」
+            const isMemVal = String(r["是否為會員"] || r["會員身分"] || "否").trim();
+            document.getElementById('reg_is_member').value = isMemVal === "是" ? "是" : "否";
             
             // 🌟 修正身分證：增加欄位名容錯
             const idVal = r["身分證"] || r["身分證字號"] || r["idCard"] || r["ID"] || "";
@@ -576,6 +591,7 @@ function resetRegForm() {
     document.getElementById('reg_note').value = "";
     document.getElementById('reg_diet').value = "葷";
     document.getElementById('reg_seats').value = 0;
+    document.getElementById('reg_is_member').value = "否"; // 預設為非會員
     const defaultRadio = document.querySelector('input[name="trans"][value="自駕"]');
     if (defaultRadio) defaultRadio.checked = true;
     updateSeatInput("自駕");
@@ -681,6 +697,8 @@ async function saveSingleReg() {
         name: document.getElementById('reg_name').value.trim(),
         phone: toHalfWidth(rawPhone).replace(/\s/g, ""), // 轉半形並去空格
         diet: document.getElementById('reg_diet').value,
+        // 🌟 新增：將選單的值傳回後端
+        isMember: document.getElementById('reg_is_member').value,
         idCard: toHalfWidth(rawId).toUpperCase().trim(), // 轉半形、大寫、去空格
         note: document.getElementById('reg_note').value,
         transport: document.querySelector('input[name="trans"]:checked')?.value || "自駕",

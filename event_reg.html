@@ -821,7 +821,7 @@ async function deleteSingleReg(phone, name) {
             if(countEl) countEl.innerText = allData.registrations.length;
 
         } else {
-            showToast("❌ 刪除失敗：" + result.message);
+            showToast("❌ 刪除失敗：" + (result.message || "找不到匹配資料或權限不足"));
         }
     } catch (e) {
         console.error("刪除請求出錯:", e);

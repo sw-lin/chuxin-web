@@ -460,7 +460,7 @@ function openEditModal() {
         return;
     }
 
-    console.log("正在編輯的原始資料:", ev); // 調試用
+    console.log("正在編輯的原始資料:", ev); // 🌟 檢查這裡的屬性名稱
 
     // 1. 基本欄位
     document.getElementById('modalTitle').innerText = "修改活動";
@@ -469,22 +469,26 @@ function openEditModal() {
     document.getElementById('ev_poster').value = ev["海報連結 (poster_url)"] || ev.poster_url || "";
     document.getElementById('ev_desc').value = ev["活動簡介 (desc)"] || ev.desc || "";
     
-    // 2. 費用欄位 (精準對接截圖中的「會員報名費」)
-    document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || 0;
-    document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || 0;
+    // 2. 費用欄位 (確保相容縮寫與中文)
+    document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || ev.member_fee || 0;
+    document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
     
-    // 3. 選項欄位 (統一判斷邏輯)
-    const needIdVal = String(ev["(需要身分證)"] || ev.needId || "").trim();
-    // 只要資料庫裡面是 "是" 或 "Y"，UI 就顯示 'Ｙ' (或是改顯示 '是')
-    document.getElementById('ev_needId').value = (needIdVal === '是' || needIdVal === 'Y') ? 'Ｙ' : 'Ｎ';
+    // 3. 選項欄位 (🌟 修正點：增加對 need_id 與 is_bus 的支援)
+    // 這裡我們把所有可能的屬性名稱都列出來
+    const needIdVal = String(ev["(需要身分證)"] || ev.needId || ev.need_id || "").trim();
+    const busVal = String(ev["是遊覽車行"] || ev.isTourBus || ev.is_bus || "").trim();
 
-    const busVal = String(ev["是遊覽車行"] || ev.isTourBus || "").trim();
-    document.getElementById('ev_bus').value = (busVal === '是' || busVal === 'Y') ? 'Ｙ' : 'Ｎ';  
+    // 判斷邏輯：只要包含 "是"、"Y" 或 全形 "Ｙ"，就選中全形 'Ｙ' 選項
+    const isNeedId = (needIdVal === '是' || needIdVal === 'Y' || needIdVal === 'Ｙ');
+    const isBus = (busVal === '是' || busVal === 'Y' || busVal === 'Ｙ');
+
+    document.getElementById('ev_needId').value = isNeedId ? 'Ｙ' : 'Ｎ';
+    document.getElementById('ev_bus').value = isBus ? 'Ｙ' : 'Ｎ';  
     
-    // 4. 日期欄位 (精準對接截圖中的中文 Key)
-    document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate);
-    document.getElementById('ev_until').value = formatDateForInput(ev["下架日期 (display_until)"] || ev.deadline);
-    document.getElementById('ev_date').value = formatDateForInput(ev["活動日期 (date)"] || ev.eventDate);
+    // 4. 日期欄位
+    document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate || ev.start_date);
+    document.getElementById('ev_until').value = formatDateForInput(ev["下架日期 (display_until)"] || ev.deadline || ev.display_until);
+    document.getElementById('ev_date').value = formatDateForInput(ev["活動日期 (date)"] || ev.eventDate || ev.date);
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');

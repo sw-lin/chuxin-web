@@ -623,6 +623,12 @@ function formatDateForInput(dVal) {
         async function saveEvent() {
             // 取得 UI 上的 Y/N 並轉換成 是/否
             const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
+
+            // 新增費用處理邏輯：轉半形並強制轉整數
+    const parseFee = (id) => {
+        const val = document.getElementById(id).value;
+        return parseInt(toHalfWidth(val).replace(/\s/g, "")) || 0;
+    };
             
             const payload = {
                 type: document.getElementById('old_title').value ? 'update_calendar_event' : 'add_new_event',
@@ -637,8 +643,10 @@ function formatDateForInput(dVal) {
                 needId: translateToChinese(document.getElementById('ev_needId').value),
                 isTourBus: translateToChinese(document.getElementById('ev_bus').value),
                 
-                memberFee: document.getElementById('ev_mFee').value,
-                guestFee: document.getElementById('ev_gFee').value,
+                // 🌟 修正點：確保費用在存入資料庫前是乾淨的半形數字
+                memberFee: parseFee('ev_mFee'),
+                guestFee: parseFee('ev_gFee'),
+                
                 oldTitle: document.getElementById('old_title').value
             };
             if(!payload.title || !payload.date) return alert("必填未填");
@@ -784,11 +792,23 @@ async function quickUpdatePayment(phone, name, newStatus, selectElement) {
 document.addEventListener('DOMContentLoaded', () => {
     const idInput = document.getElementById('reg_id');
     const phoneInput = document.getElementById('reg_phone');
-
-    [idInput, phoneInput].forEach(el => {
+    // 新增費用欄位
+    const mFeeInput = document.getElementById('ev_mFee');
+    const gFeeInput = document.getElementById('ev_gFee');
+    
+[idInput, phoneInput, mFeeInput, gFeeInput].forEach(el => {
         if(!el) return;
         el.addEventListener('blur', function() {
+            // 1. 轉半形 2. 去空格 3. 轉大寫(身分證需要，數字不影響)
             this.value = toHalfWidth(this.value).replace(/\s/g, "").toUpperCase();
+            
+            // 針對費用欄位額外確保它是數字格式
+            if (el === mFeeInput || el === gFeeInput) {
+                // 如果輸入後不是數字，強制轉為 0，避免傳送空值或亂碼到 GAS
+                if (isNaN(this.value) || this.value === "") {
+                    this.value = 0;
+                }
+            }
         });
     });
 });        

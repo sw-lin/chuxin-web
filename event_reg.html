@@ -820,7 +820,8 @@ async function deleteSingleReg(phone, name) {
     try {
         const res = await fetch(`${GAS_URL}?${params.toString()}`);
         const result = await res.json();
-
+        console.log("GAS 回傳結果：", result);
+        
         if (result.result === "SUCCESS") {
             showToast("✅ 已成功刪除");
             

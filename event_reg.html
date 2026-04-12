@@ -790,30 +790,20 @@ async function deleteSingleReg(phone, name) {
     if (!confirm(`確定要刪除 ${name} 的報名資料嗎？`)) return;
 
     const title = document.getElementById('eventSelector').value;
-    const payload = {
+    
+    // 🌟 關鍵改動：改用 GET 請求，將參數帶在 URL 後面
+    const params = new URLSearchParams({
         type: 'delete_single_registration',
         key: sessionStorage.getItem('staff_key'),
         eventTitle: title,
         phone: phone,
-        name: name
-    };
+        name: name,
+        t: Date.now() // 防止快取
+    });
 
     showLoading(true);
     try {
-        // 🌟 修正點：使用 URLSearchParams 封裝數據，這會發送最簡單的 POST 請求，避開 CORS 預檢
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            mode: 'cors', // 確保開啟 cors 模式
-            body: JSON.stringify(payload), // 直接傳 JSON 字串
-            headers: {
-                // 不要手動設定 'Content-Type': 'application/json'，有時會觸發 CORS 預檢
-                // GAS 的 doPost(e) 會自動處理 textBody
-            }
-        });
-
-        // 檢查是否成功收到回應
-        if (!res.ok) throw new Error('網路回應不正常');
-
+        const res = await fetch(`${GAS_URL}?${params.toString()}`);
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
@@ -821,17 +811,21 @@ async function deleteSingleReg(phone, name) {
             
             // 手動從本地陣列移除，達成即時刷屏
             allData.registrations = allData.registrations.filter(r => 
-                !(String(r["電話"]).trim() === String(phone).trim() && 
-                  String(r["姓名"]).trim() === String(name).trim())
+                !(String(r["電話"] || "").trim() === String(phone).trim() && 
+                  String(r["姓名"] || "").trim() === String(name).trim())
             );
             renderRegList(allData.registrations);
+            
+            // 更新統計數字
+            const countEl = document.getElementById('statCount');
+            if(countEl) countEl.innerText = allData.registrations.length;
+
         } else {
             showToast("❌ 刪除失敗：" + result.message);
         }
     } catch (e) {
         console.error("刪除請求出錯:", e);
-        // 如果報 CORS 錯誤但資料庫其實刪了，提示使用者手動重整
-        showToast("伺服器連線異常，請手動重整網頁檢查");
+        showToast("連線失敗，請檢查 GAS 是否發佈為「所有人」");
     }
     showLoading(false);
 }        

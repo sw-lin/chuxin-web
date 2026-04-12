@@ -475,10 +475,10 @@ function openEditModal() {
     
     // 3. 選項欄位 (精準對接括號與中文值)
     const needIdVal = ev["(需要身分證)"] || ev.needId;
-    document.getElementById('ev_needId').value = (needIdVal === '是' || needIdVal === 'Y') ? 'Y' : 'N';
+    document.getElementById('ev_needId').value = (needIdVal === '是' || needIdVal === 'Y') ? '是' : '否';
     
     const busVal = ev["是遊覽車行"] || ev.isTourBus;
-    document.getElementById('ev_bus').value = (busVal === '是' || busVal === '有' || busVal === 'Y') ? 'Y' : 'N';
+    document.getElementById('ev_bus').value = (busVal === '是' || busVal === '有' || busVal === 'Y') ? '是' : '否';
     
     // 4. 日期欄位 (精準對接截圖中的中文 Key)
     document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate);

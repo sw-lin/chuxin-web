@@ -750,36 +750,48 @@ async function saveSingleReg() {
 
     // 取得當前活動的配置
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
-    // 🌟 判斷是否為遊覽車活動
-    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
     
-    // 🌟 修正2：存檔前自動將電話與身分證轉為半形
+    // 🌟 判斷活動規則
+    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
+    const needId = (ev?.["(需要身分證)"] === '是' || ev?.needId === '是' || ev?.needId === 'Y');
+    
+    // 🌟 取得輸入值並預處理
+    const name = document.getElementById('reg_name').value.trim();
     const rawPhone = document.getElementById('reg_phone').value;
+    const phone = toHalfWidth(rawPhone).replace(/\s/g, ""); // 轉半形並去空格
     const rawId = document.getElementById('reg_id').value;
+    const idCard = toHalfWidth(rawId).toUpperCase().trim(); // 轉半形、大寫、去空格
+
+    // --- 🚩 關鍵：必填欄位驗證邏輯 ---
+    if (!name || !phone) {
+        return showToast("⚠️ 姓名與電話為必填");
+    }
+
+    // 🌟 新增：如果活動需要身分證，則進行必填檢查
+    if (needId && !idCard) {
+        return showToast("⚠️ 此活動需要身分證字號，請務必輸入");
+    }
 
     const payload = {
         type: 'save_single_registration',
         key: sessionStorage.getItem('staff_key'),
         eventTitle: title,
         oldPhone: document.getElementById('reg_old_phone').value,
-        name: document.getElementById('reg_name').value.trim(),
-        phone: toHalfWidth(rawPhone).replace(/\s/g, ""), // 轉半形並去空格
+        name: name,
+        phone: phone,
         diet: document.getElementById('reg_diet').value,
-        // 🌟 新增：將選單的值傳回後端
         isMember: document.getElementById('reg_is_member').value,
-        idCard: toHalfWidth(rawId).toUpperCase().trim(), // 轉半形、大寫、去空格
+        idCard: idCard,
         note: document.getElementById('reg_note').value,
         
-        // 🌟 修正點：如果是遊覽車，強制存入「搭乘遊覽車」；否則才去抓 Radio 的值
+        // 修正點：如果是遊覽車，強制存入「搭乘遊覽車」；否則才去抓 Radio 的值
         transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
         
-        // 🌟 修正點：如果是遊覽車，可載人數強制為 0
-        seats: isTourBus ? 0 : (parseInt(document.getElementById('reg_seats').value) || 0),
+        // 修正點：如果是遊覽車，可載人數強制為 0
+        seats: isTourBus ? 0 : (parseInt(document.getElementById('reg_seats').length) || 0),
         
         isPaid: "未繳" 
     };
-
-    if (!payload.name || !payload.phone) return showToast("姓名與電話為必填");
 
     showLoading(true);
     try {
@@ -789,14 +801,14 @@ async function saveSingleReg() {
         });
         const result = await res.json();
         if (result.result === "SUCCESS") {
-            showToast("報名資訊已更新");
+            showToast("✅ 報名資訊已更新");
             closeRegModal();
             loadEventDetails(); 
         } else {
-            showToast("儲存失敗：" + result.message);
+            showToast("❌ 儲存失敗：" + result.message);
         }
     } catch (e) {
-        showToast("網路連線錯誤");
+        showToast("❌ 網路連線錯誤");
     }
     showLoading(false);
 }        

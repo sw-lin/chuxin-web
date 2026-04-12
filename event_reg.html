@@ -604,48 +604,36 @@ function resetRegForm() {
  * 解決 ReferenceError 並執行聯集刪除
  */
 async function deleteCurrentEvent() {
-    const title = document.getElementById('old_title').value; // 取得目前編輯中的活動名稱
-    if (!title) return;
+    const title = document.getElementById('old_title').value; 
+    if (!title) return alert("無法取得活動名稱");
 
-    const confirmMsg = `⚠️ 警告！\n這將永久刪除「${title}」活動，\n以及該活動下「所有的報名人員名單」。\n\n此操作無法復原，確定要執行嗎？`;
-    
-    if (!confirm(confirmMsg)) return;
+    if (!confirm(`確定要「永久刪除」活動：${title} 嗎？\n這將一併刪除所有已報名人員資料！`)) return;
 
     const payload = {
         type: 'delete_event_completely',
-        key: sessionStorage.getItem('staff_key'),
+        key: sessionStorage.getItem('staff_key'), // 確保 key 有傳送以通過權限檢查
         title: title
     };
 
     showLoading(true);
     try {
+        // 使用 POST 傳送 JSON 字串
         const res = await fetch(GAS_URL, {
             method: 'POST',
+            mode: 'no-cors', // ⚠️ 如果持續 CORS 報錯，可嘗試改為預設或檢查 GAS 是否已「發佈新版本」
             body: JSON.stringify(payload)
         });
-        const result = await res.json();
+        
+        // 注意：若使用 no-cors 模式將無法讀取 response，建議 GAS 重新發佈為「所有人」並更新 URL
+        showToast("刪除指令已發出，請重新載入頁面確認");
+        setTimeout(() => { location.reload(); }, 1500);
 
-        if (result.result === "SUCCESS") {
-            showToast("活動及相關名單已完全刪除");
-            closeModal(); // 關閉彈窗
-            
-            // 重置選單並重新載入
-            document.getElementById('eventSelector').value = "";
-            loadData(); 
-            
-            // 清空畫面上的名單
-            document.getElementById('regList').innerHTML = "";
-            document.getElementById('statsSection').classList.add('hidden');
-        } else {
-            showToast("刪除失敗：" + (result.message || "未知原因"));
-        }
     } catch (e) {
-        console.error("刪除請求出錯:", e);
-        showToast("網路連線異常，請稍後再試");
+        console.error("刪除失敗:", e);
+        showToast("網路錯誤或權限不足");
     }
     showLoading(false);
-}
-        
+}        
 // 將全形數字/字母轉換為半形
 function toHalfWidth(str) {
     if (!str) return "";

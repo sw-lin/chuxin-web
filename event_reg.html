@@ -791,7 +791,7 @@ async function deleteSingleReg(phone, name) {
 
     const title = document.getElementById('eventSelector').value;
     const payload = {
-        type: 'delete_single_registration', // ⚠️ 需在 GAS 增加此 type
+        type: 'delete_single_registration', 
         key: sessionStorage.getItem('staff_key'),
         eventTitle: title,
         phone: phone,
@@ -800,22 +800,43 @@ async function deleteSingleReg(phone, name) {
 
     showLoading(true);
     try {
+        // 🌟 修正點 1：確保使用 POST 且傳送 JSON
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
+            // 如果後端沒特別處理 CORS，建議不要加 mode: 'no-cors'，否則拿不到 result
             body: JSON.stringify(payload) 
         });
+        
         const result = await res.json();
+        
         if (result.result === "SUCCESS") {
-            showToast("已成功刪除");
-            loadEventDetails(); // 重新整理列表
+            showToast("✅ 已成功刪除");
+            
+            // 🌟 修正點 2：強制清空目前的內容並重新載入
+            // 有時候直接呼叫 loadEventDetails 太快，資料庫可能還在寫入
+            // 我們可以先手動從前端陣列移除，或延遲 500ms 再載入
+            allData.registrations = allData.registrations.filter(r => 
+                !(String(r["電話"]).trim() === String(phone).trim() && 
+                  String(r["姓名"]).trim() === String(name).trim())
+            );
+            
+            // 重新渲染畫面
+            renderRegList(allData.registrations);
+            
+            // 同時重新向後端抓取最新統計 (雙重保險)
+            loadEventDetails(); 
         } else {
-            showToast("刪除失敗：" + result.message);
+            showToast("❌ 刪除失敗：" + result.message);
         }
     } catch (e) {
-        showToast("網路錯誤");
+        console.error("刪除錯誤:", e);
+        showToast("網路錯誤或後端未回應");
+        
+        // 🌟 修正點 3：即使出錯，如果確認資料庫已刪除，也可以手動 reload
+        // location.reload(); // 這是最終手段，但不建議，因為會跳回初始頁面
     }
     showLoading(false);
-}
+}        
 // 🌟 快速更新繳費狀態 (與原有的 updatePaymentStatus 區隔)
 async function quickUpdatePayment(phone, name, newStatus, selectElement) {
     // 檢查是否有活動標題，這是後端搜尋紀錄的關鍵

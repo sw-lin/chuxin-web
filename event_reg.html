@@ -1282,38 +1282,45 @@ function copyPaidListToLine() {
         });
     }
 } 
-// 1. 打開視窗並渲染清單
+// 打開共乘分配視窗
 function openCarpoolModal() {
     const list = allData.registrations;
-    // 司機名單：交通包含「自駕」或「開車」
+    if (!list || list.length === 0) return showToast("目前尚無報名資料");
+
+    // 過濾司機與乘客 (交通方式包含 自駕/開車 vs 共乘/搭車)
     const drivers = list.filter(r => (r["交通"] || "").includes("駕") || (r["交通"] || "").includes("車"));
-    // 乘客名單：交通包含「共乘」或「搭車」
     const passengers = list.filter(r => (r["交通"] || "").includes("共乘") || (r["交通"] || "").includes("搭"));
 
     const container = document.getElementById('carpoolListContainer');
     container.innerHTML = "";
 
-    passengers.forEach(p => {
-        const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100";
-        
-        // 取得該乘客目前的分配司機 (假設資料庫裡這欄叫「分配車號」)
-        const currentDriver = p["分配車號"] || "";
+    if (passengers.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 text-gray-400 font-bold">目前沒有共乘需求的乘客</div>`;
+    } else {
+        passengers.forEach(p => {
+            const pName = p["姓名"];
+            // 🌟 對接您的 O 欄：搭乘車主
+            const currentDriver = p["搭乘車主"] || ""; 
 
-        row.innerHTML = `
-            <div class="font-bold text-gray-700">${p["姓名"]}</div>
-            <select class="carpool-assignment bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500" data-passenger="${p["姓名"]}">
-                <option value="">-- 尚未分配 --</option>
-                ${drivers.map(d => `
-                    <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''}>
-                        🚗 ${d["姓名"]} (載 ${d["可載人數"] || 0}人)
-                    </option>
-                `).join('')}
-            </select>
-        `;
-        container.appendChild(row);
-    });
-
+            const row = document.createElement('div');
+            row.className = "flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100";
+            row.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="font-bold text-gray-800">${pName}</span>
+                    <span class="text-[10px] text-blue-500 font-bold">乘客</span>
+                </div>
+                <select class="carpool-select bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm" data-passenger="${pName}">
+                    <option value="">-- 尚未分配 --</option>
+                    ${drivers.map(d => `
+                        <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''}>
+                            👤 司機：${d["姓名"]} (餘 ${d["可載人數"] || 0})
+                        </option>
+                    `).join('')}
+                </select>
+            `;
+            container.appendChild(row);
+        });
+    }
     document.getElementById('carpoolModal').classList.remove('hidden');
 }
 
@@ -1321,33 +1328,35 @@ function closeCarpoolModal() {
     document.getElementById('carpoolModal').classList.add('hidden');
 }
 
-// 2. 儲存到後端
+// 儲存到 Google Sheets
 async function saveCarpoolAssignment() {
-    const selects = document.querySelectorAll('.carpool-assignment');
-    const dataToSave = Array.from(selects).map(sel => ({
-        passengerName: sel.getAttribute('data-passenger'),
-        driverName: sel.value
+    const selects = document.querySelectorAll('.carpool-select');
+    const assignments = Array.from(selects).map(sel => ({
+        pName: sel.getAttribute('data-passenger'),
+        dName: sel.value
     }));
 
-    showLoading(true, "儲存分配中...");
+    showLoading(true, "正在儲存車主分配...");
     try {
         const payload = {
-            type: 'save_carpool_data', // 需在 GAS 新增此對應 type
+            type: 'save_carpool_data', // 需在 GAS 對應
             key: sessionStorage.getItem('staff_key'),
             eventTitle: document.getElementById('eventSelector').value,
-            assignments: dataToSave
+            assignments: assignments
         };
-        
+
         const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            showToast("✅ 分配成功！");
+            showToast("✅ 車主分配已寫入 O 欄");
             closeCarpoolModal();
-            loadEventDetails(); // 重新整理名單
+            loadEventDetails(); // 重新整理前端名單
+        } else {
+            showToast("❌ 儲存失敗：" + result.message);
         }
     } catch (e) {
-        showToast("❌ 儲存失敗");
+        showToast("❌ 網路連線錯誤");
     }
     showLoading(false);
 }        

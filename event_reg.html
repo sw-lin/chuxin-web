@@ -1069,16 +1069,15 @@ function exportInsuranceCSV() {
     if (regs.length === 0) return;
 
     // 包含 UTF-8 BOM 以防 Excel 亂碼
-    let csv = "\uFEFF姓名,身分證字號,生日,電話,餐食,備註\n";
+    let csv = "\uFEFF姓名,身分證字號,生日,電話\n";
     
     regs.forEach(r => {
         // 🌟 修正：確保抓到正確的欄位名稱
         const name = r["姓名"] || "";
         const id = r["身分證"] || r["身分證字號"] || "";
         const bday = r["生日"] || "";
-        const phone = r["電話"] || "";
-        const meal = r["餐食"] || "";
-        const note = (r["備註"] || "").replace(/[\r\n,]/g, " "); // 移除備註中的換行與逗點，避免 CSV 格式錯亂
+        const phone = r["電話"] || ""
+        ).replace(/[\r\n,]/g, " "); // 移除備註中的換行與逗點，避免 CSV 格式錯亂
 
         csv += `${name},${id},${bday},'${phone},${meal},${note}\n`;
     });
@@ -1132,6 +1131,18 @@ function updateAdminStats(list) {
         const isBus = currentEventConfig?.["是遊覽車行"] === "是";
         trafficZone.style.display = isBus ? 'none' : 'block';
     }
+    // 在 updateAdminStats(list) 函式的最後面加入：
+const insuranceBtn = document.querySelector('button[onclick="exportInsuranceCSV()"]');
+if (insuranceBtn) {
+    // 取得當前活動名稱（從下拉選單或全域變數）
+    const eventName = document.getElementById('eventSelector').value; 
+    
+    if (eventName.includes("無保險")) {
+        insuranceBtn.style.display = 'none'; // 隱藏按鈕
+    } else {
+        insuranceBtn.style.display = 'inline-flex'; // 顯示按鈕
+    }
+}
 }
         
     </script>

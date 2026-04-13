@@ -1359,6 +1359,62 @@ async function saveCarpoolAssignment() {
         showToast("❌ 網路連線錯誤");
     }
     showLoading(false);
+}  
+// 🌟 修改後的渲染邏輯：為 select 加入監聽與初始餘額標記
+function renderCarpoolList() {
+    const list = allData.registrations;
+    const drivers = list.filter(r => (r["交通"] || "").includes("駕") || (r["交通"] || "").includes("車"));
+    const passengers = list.filter(r => (r["交通"] || "").includes("共乘") || (r["交通"] || "").includes("搭"));
+    const container = document.getElementById('carpoolListContainer');
+    
+    container.innerHTML = passengers.map(p => {
+        const currentDriver = p["搭乘車主"] || "";
+        return `
+            <div class="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 mb-2">
+                <div class="flex flex-col"><span class="font-bold text-gray-800">${p["姓名"]}</span></div>
+                <select class="carpool-select bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm" 
+                        data-passenger="${p["姓名"]}" onchange="refreshCarpoolSeats()">
+                    <option value="">-- 未分配 --</option>
+                    ${drivers.map(d => `
+                        <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''} 
+                                data-limit="${d["可載人數"] || 0}">
+                            👤 司機：${d["姓名"]} (餘 ${d["可載人數"] || 0})
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+        `;
+    }).join('');
+    
+    refreshCarpoolSeats(); // 初始計算一次
+}
+
+// 🌟 新增：計算並更新所有選單顯示的人數
+function refreshCarpoolSeats() {
+    const selects = document.querySelectorAll('.carpool-select');
+    // 統計目前各個司機被選了幾次
+    const counts = {};
+    selects.forEach(s => {
+        if (s.value) counts[s.value] = (counts[s.value] || 0) + 1;
+    });
+
+    // 更新所有 select 內的 option 顯示文字
+    selects.forEach(s => {
+        Array.from(s.options).forEach(opt => {
+            if (!opt.value) return;
+            const limit = parseInt(opt.getAttribute('data-limit')) || 0;
+            const currentUsed = counts[opt.value] || 0;
+            const remaining = limit - currentUsed;
+            
+            // 重新組合顯示文字
+            opt.text = `👤 司機：${opt.value} (餘 ${remaining})`;
+            
+            // 如果超載，可以變色或加警告標示
+            if (remaining < 0) {
+                opt.text += " ⚠️ 已超載";
+            }
+        });
+    });
 }        
     </script>
 </body>    

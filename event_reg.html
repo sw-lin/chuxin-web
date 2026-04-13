@@ -733,7 +733,9 @@ function formatDateForInput(dVal) {
         async function saveEvent() {
             // 取得 UI 上的 Y/N 並轉換成 是/否
             const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
-
+            const needIdValue = document.getElementById('ev_needId').value; // 取得 select 的 "是" 或 "否"
+            const isTourBusValue = document.getElementById('ev_bus').value;  
+            
             // 新增費用處理邏輯：轉半形並強制轉整數
     const parseFee = (id) => {
         const val = document.getElementById(id).value;
@@ -750,8 +752,9 @@ function formatDateForInput(dVal) {
                 display_until: document.getElementById('ev_until').value,
                 date: document.getElementById('ev_date').value,
                 
-                needId: translateToChinese(document.getElementById('ev_needId').value),
-                isTourBus: translateToChinese(document.getElementById('ev_bus').value),
+                // 🌟 修正點：確保名稱與 GAS handleAddNewEvent_Registration 接收的一致
+                needId: needIdValue, 
+                isTourBus: isTourBusValue,
                 
                 // 🌟 修正點：確保費用在存入資料庫前是乾淨的半形數字
                 memberFee: parseFee('ev_mFee'),

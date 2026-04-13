@@ -75,13 +75,13 @@
             </div>
 
             <div id="mainIDSection" class="input-group hidden">
-                <label class="label-text">身分證字號 (保險使用)</label>
-                <input type="text" id="mainID" class="input-field" placeholder="請輸入身分證字號">
-            </div>
+               <label class="label-text">身分證字號 (保險使用)</label>
+               <input type="text" id="mainID" class="input-field" placeholder="請輸入身分證字號">
+             </div>
 
-            <div class="input-group">
-            <label class="label-text">出生年月日 (例如：1990/01/01)</label>
-            <input type="date" id="mainBirthday" class="input-field">
+             <div id="mainBirthdaySection" class="input-group hidden">
+               <label class="label-text">出生年月日 (例如：1990/01/01)</label>
+               <input type="date" id="mainBirthday" class="input-field">
             </div>
             
             <div class="input-group">
@@ -206,8 +206,18 @@
     };    
     
     function initDynamicUI() {
+        // 取得身分證與生日的區塊
         const idSection = document.getElementById('mainIDSection');
-        if(eventConfig.needId) idSection.classList.remove('hidden');
+        const bdaySection = document.getElementById('mainBirthdaySection');
+        
+        // 根據活動設定決定是否顯示
+    if(eventConfig.needId) {
+        idSection.classList.remove('hidden');
+        bdaySection.classList.remove('hidden');
+    } else {
+        idSection.classList.add('hidden');
+        bdaySection.classList.add('hidden');
+    }
 
         const transportSelect = document.getElementById('mainTransport');
         if(eventConfig.isTourBus) {

@@ -60,23 +60,16 @@
             <button id="exportInsuranceBtn" onclick="exportInsuranceCSV()" class="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all" title="保險名冊">
                 <i class="fas fa-file-csv"></i>
             </button>
-            <button id="// 2. 車輛分配按鈕：僅在「非遊覽車行程」時顯示 (與交通統計區邏輯一致)
-const carpoolBtn = document.getElementById('carpoolBtn');
-const trafficZone = document.getElementById('trafficStats');
-const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
-
-if (carpoolBtn) {
-    // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
-    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
-}" onclick="openCarpoolModal()" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all" title="共乘分配">
+            
+            <button id="carpoolBtn" onclick="openCarpoolModal()" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all" title="共乘分配">
                 <i class="fas fa-car-side"></i>
             </button>
+            
             <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center">進行中</span>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
         <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
             <h4 class="text-[11px] text-emerald-700 font-bold mb-2">💰 報名與繳費</h4>
             <div class="flex items-baseline gap-1 mb-3">
@@ -107,9 +100,8 @@ if (carpoolBtn) {
                 名單載入中...
             </div>
         </div>
-
     </div>
-</div>
+</div>        
 
         <div class="space-y-3">
             <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
@@ -1176,29 +1168,27 @@ function updateAdminStats(list) {
     }
 
     // --- 第四階段：控制按鈕顯示/隱藏 ---
-    
-    // 1. 保險名冊按鈕
+    // --- UI 自動切換邏輯 ---
+    const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
+    const needID = (currentEventConfig?.["是否需要身分證"] === "是");
+
+    // 1. 處理保險圖示
     const insBtn = document.getElementById('exportInsuranceBtn');
     if (insBtn) {
-        const needID = (currentEventConfig?.["是否需要身分證"] === "是");
         insBtn.style.display = needID ? 'inline-block' : 'none';
     }
 
-    // 2. 車輛分配按鈕與交通統計區
-    const carpoolBtn = document.getElementById('carpoolBtn');
-    const trafficZone = document.getElementById('trafficStats');
-    const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
-
-    if (carpoolBtn) {
-        // ✅ 修正：加上註解符號 //
-        // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
-        carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
+    // 2. 處理車輛分配按鈕
+    const carBtn = document.getElementById('carpoolBtn');
+    if (carBtn) {
+        carBtn.style.display = isBus ? 'none' : 'inline-block';
     }
 
-    if (trafficZone) {
-        // 如果是遊覽車，隱藏下方統計區
-        trafficZone.style.display = isBus ? 'none' : 'block';
-    }   
+    // 3. 處理交通統計區塊
+    const tStats = document.getElementById('trafficStats');
+    if (tStats) {
+        tStats.style.display = isBus ? 'none' : 'block';
+    }    
 }        
 function copyPaidListToLine() {
     // 1. 取得已繳費名單

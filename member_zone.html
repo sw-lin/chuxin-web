@@ -568,6 +568,7 @@ function renderEventSection(events, registrations) {
                         <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || '額滿為止'}</span>
                     </div>
                     <h4 class="font-black text-emerald-900 text-xl mb-3">${ev.title}</h4>
+                    
                     <div class="space-y-3 mb-5 text-gray-600">
                         <div class="flex items-center gap-3 text-xs">
                             <i class="far fa-calendar-alt text-emerald-600"></i>
@@ -577,6 +578,12 @@ function renderEventSection(events, registrations) {
                             <i class="fas fa-tag text-emerald-600"></i>
                             <span class="font-bold">費用：</span>會員 $${mFee} / 非會員 $${gFee}
                         </div>
+                        
+                ${ev.desc ? `
+                 <p class="text-xs text-emerald-700/70 leading-relaxed mb-4 bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">
+                ${ev.desc.replace(/\n/g, '<br>')}
+                </p>` : ''}
+                
                     </div>
                     ${actionBtn}
                 </div>`;

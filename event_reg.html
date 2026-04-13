@@ -50,19 +50,38 @@
             </div>
         </div>
 
-        <div id="statsSection" class="hidden bg-white p-6 rounded-[2.5rem] shadow-md border border-emerald-100 flex items-center justify-between">
-            <div class="space-y-1">
-                <span class="text-xs font-bold text-gray-400 block ml-1">報名進度</span>
-                <div class="flex items-baseline gap-2">
-                    <span id="statCount" class="text-4xl font-black text-emerald-900">0</span>
-                    <span class="text-xl font-bold text-gray-400">位成員報名</span>
-                </div>
+<div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50 mb-6">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <p class="text-xs text-gray-400 font-bold mb-1">REGISTRATION PROGRESS</p>
+            <div class="flex items-baseline gap-2">
+                <span class="text-4xl font-serif text-emerald-900" id="totalCount">5</span>
+                <span class="text-gray-500 font-bold">位成員報名</span>
             </div>
-            <button onclick="sendToLine()" class="bg-[#06C755] text-white w-20 h-20 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
-                <i class="fab fa-line text-2xl mb-1"></i>
-                <span class="text-[10px]">發送名單</span>
-            </button>
         </div>
+        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">進行中</span>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+        <button onclick="generateLineStats()" 
+                class="flex flex-col items-center justify-center py-3 px-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-all shadow-md active:scale-95">
+            <i class="fab fa-line text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">LINE 統計</span>
+        </button>
+
+        <button onclick="exportInsuranceCSV()" 
+                class="flex flex-col items-center justify-center py-3 px-2 bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all active:scale-95">
+            <i class="fas fa-file-csv text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">保險名冊</span>
+        </button>
+
+        <button onclick="openCarpoolModal()" 
+                class="flex flex-col items-center justify-center py-3 px-2 bg-gray-50 border-2 border-dashed border-gray-200 text-gray-400 rounded-2xl hover:border-emerald-300 hover:text-emerald-500 transition-all">
+            <i class="fas fa-car-side text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">共乘分配</span>
+        </button>
+    </div>
+</div>        
 
         <div class="space-y-3">
             <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
@@ -972,7 +991,63 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-});        
+});   
+function generateLineStats() {
+    const regs = window.currentRegistrations || []; 
+    if (regs.length === 0) return;
+
+    let stats = {
+        paid: 0,
+        meat: 0,
+        veg: 0,
+        bus: 0,
+        selfDrive: 0,
+        seatsAvailable: 0
+    };
+
+    regs.forEach(r => {
+        if (r.status === '已繳費') stats.paid++;
+        r.meal === '素食' ? stats.veg++ : stats.meat++;
+        
+        if (r.transport === '搭乘遊覽車') {
+            stats.bus++;
+        } else if (r.transport === '自行開車') {
+            stats.selfDrive++;
+            stats.seatsAvailable += parseInt(r.canDriveNum || 0);
+        }
+    });
+
+    const msg = `
+【${$('#eventSelect').val()} 統計】
+--------------------
+總人數：${regs.length} 位 (${stats.paid} 已繳費)
+🍱 餐食：葷 ${stats.meat} / 素 ${stats.veg}
+🚌 交通：遊覽車 ${stats.bus} 人
+🚗 自駕：${stats.selfDrive} 台 (可載 ${stats.seatsAvailable} 人)
+--------------------
+產出日期：${new Date().toLocaleDateString()}
+    `.trim();
+
+    navigator.clipboard.writeText(msg);
+    showToast("統計文字已複製", "success");
+}    
+function exportInsuranceCSV() {
+    const regs = window.currentRegistrations || [];
+    // 包含 UTF-8 BOM 以防 Excel 亂碼
+    let csv = "\uFEFF姓名,身分證字號,生日,電話,餐食\n";
+    
+    regs.forEach(r => {
+        csv += `${r.name},${r.idNumber},${r.birthday},'${r.phone},${r.meal}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `活動報名_保險清冊_${new Date().getTime()}.csv`;
+    link.click();
+}
+
+        
     </script>
 </body>    
 </html>

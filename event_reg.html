@@ -382,8 +382,8 @@ function renderRegList(list) {
         const agent = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
         
         // 🌟 修正：精準對接 F 欄位「交通(僅本人)」與 G 欄位「可載人(僅本人)」
-        const trans = r["交通"] || r["交通狀況"] || r["交通(僅本人)"] || ""; 
-        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || r["人數"] || 0);
+        const trans = r["交通"] || r["交通(僅本人)"] || ""; 
+        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
 
         const dueAmount = isMember ? mFee : gFee;
 

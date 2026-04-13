@@ -50,38 +50,58 @@
             </div>
         </div>
 
-<div class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50 mb-6">
-    <div class="flex justify-between items-start mb-6">
+<div id="statsSection" class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50 mb-6">
+    <div class="flex justify-between items-center mb-6">
         <div>
-            <p class="text-xs text-gray-400 font-bold mb-1">REGISTRATION PROGRESS</p>
-            <div class="flex items-baseline gap-2">
-                <span class="text-4xl font-serif text-emerald-900" id="totalCount">5</span>
-                <span class="text-gray-500 font-bold">位成員報名</span>
+            <p class="text-xs text-gray-400 font-bold mb-1">ADMIN DASHBOARD | 行政看板</p>
+            <h3 class="text-lg font-bold text-emerald-900" id="currentEventTitle">活動統計總覽</h3>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="exportInsuranceCSV()" class="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all" title="保險名冊">
+                <i class="fas fa-file-csv"></i>
+            </button>
+            <button onclick="openCarpoolModal()" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all" title="共乘分配">
+                <i class="fas fa-car-side"></i>
+            </button>
+            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center">進行中</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+            <h4 class="text-[11px] text-emerald-700 font-bold mb-2">💰 報名與繳費</h4>
+            <div class="flex items-baseline gap-1 mb-3">
+                <span class="text-3xl font-serif text-emerald-900" id="paidCount">0</span>
+                <span class="text-gray-400 text-xs">/ <span id="totalReg">0</span> 已繳費</span>
+            </div>
+            <button onclick="copyPaidListToLine()" class="w-full py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-emerald-600 active:scale-95 transition-all">
+                <i class="fab fa-line mr-1"></i> 發送已繳名單
+            </button>
+        </div>
+
+        <div id="trafficStats" class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+            <h4 class="text-[11px] text-blue-700 font-bold mb-2">🚗 交通統計</h4>
+            <div class="space-y-1 text-[12px] font-bold text-blue-900">
+                <p>自駕：<span id="carCount">0</span> 台 (可載 <span id="seatCount">0</span> 人)</p>
+                <p>共乘需求：<span id="carpoolCount">0</span> 人</p>
+            </div>
+            <p class="text-[10px] text-blue-500/70 mt-2 italic">※ 僅限非遊覽車活動</p>
+        </div>
+
+        <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+            <h4 class="text-[11px] text-orange-700 font-bold mb-2">🍱 餐食統計</h4>
+            <div class="flex items-baseline gap-1 mb-1">
+                <span class="text-2xl font-serif text-orange-900" id="vegCount">0</span>
+                <span class="text-gray-400 text-xs">位素食</span>
+            </div>
+            <div id="vegNames" class="text-[10px] text-orange-600/80 leading-snug break-words">
+                名單載入中...
             </div>
         </div>
-        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">進行中</span>
+
     </div>
-
-    <div class="grid grid-cols-3 gap-3">
-        <button onclick="generateLineStats()" 
-                class="flex flex-col items-center justify-center py-3 px-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl transition-all shadow-md active:scale-95">
-            <i class="fab fa-line text-xl mb-1"></i>
-            <span class="text-[10px] font-bold">LINE 統計</span>
-        </button>
-
-        <button onclick="exportInsuranceCSV()" 
-                class="flex flex-col items-center justify-center py-3 px-2 bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all active:scale-95">
-            <i class="fas fa-file-csv text-xl mb-1"></i>
-            <span class="text-[10px] font-bold">保險名冊</span>
-        </button>
-
-        <button onclick="openCarpoolModal()" 
-                class="flex flex-col items-center justify-center py-3 px-2 bg-gray-50 border-2 border-dashed border-gray-200 text-gray-400 rounded-2xl hover:border-emerald-300 hover:text-emerald-500 transition-all">
-            <i class="fas fa-car-side text-xl mb-1"></i>
-            <span class="text-[10px] font-bold">共乘分配</span>
-        </button>
-    </div>
-</div>        
+</div>
 
         <div class="space-y-3">
             <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
@@ -370,6 +390,13 @@ async function loadEventDetails() {
 
 function renderRegList(list) {
     const container = document.getElementById('regList');
+
+    // --- 🌟 關鍵：在此處呼叫「行政看板」統計邏輯 ---
+    // 確保每次名單更新時，上方的看板數字也會跟著變
+    if (typeof updateAdminStats === "function") {
+        updateAdminStats(list); 
+    }
+    
     if (!list || list.length === 0) {
         container.innerHTML = '<div class="text-center py-20 text-gray-400 italic text-[13px]">📭 目前尚無報名人員</div>' + (isEditMode ? renderManualAddBtn() : '');
         return;
@@ -1062,6 +1089,49 @@ function exportInsuranceCSV() {
     link.download = `保險名冊_${currentEventTitle}_${new Date().getTime()}.csv`;
     link.click();
     showToast("📂 CSV 匯出完成");
+}
+// --- 🌟 新增：行政看板數據計算函式 ---
+function updateAdminStats(list) {
+    // 1. 基本統計
+    const total = list.length;
+    const paidList = list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳"));
+    
+    // 2. 餐食統計
+    const vegList = list.filter(r => r["餐食"] === "素食").map(r => r["姓名"]);
+
+    // 3. 交通統計 (非遊覽車活動)
+    let carCount = 0, seatCount = 0, carpoolCount = 0;
+    list.forEach(r => {
+        const trans = String(r["交通"] || r["交通(僅本人)"] || "").trim();
+        if (trans === "自駕" || trans === "開車") {
+            carCount++;
+            seatCount += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+        } else if (trans === "共乘" || trans === "搭車") {
+            carpoolCount++;
+        }
+    });
+
+    // 4. 將數據填入看板 (對應您剛改好的 HTML ID)
+    const setUI = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = val; };
+    
+    setUI('totalReg', total);
+    setUI('paidCount', paidList.length);
+    setUI('carCount', carCount);
+    setUI('seatCount', seatCount);
+    setUI('carpoolCount', carpoolCount);
+    setUI('vegCount', vegList.length);
+    
+    const vegNamesElem = document.getElementById('vegNames');
+    if (vegNamesElem) {
+        vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
+    }
+
+    // 動態判斷是否隱藏交通區 (若是遊覽車活動則隱藏)
+    const trafficZone = document.getElementById('trafficStats');
+    if (trafficZone) {
+        const isBus = currentEventConfig?.["是遊覽車行"] === "是";
+        trafficZone.style.display = isBus ? 'none' : 'block';
+    }
 }
         
     </script>

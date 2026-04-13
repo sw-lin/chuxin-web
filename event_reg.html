@@ -1188,12 +1188,14 @@ const carpoolBtn = document.getElementById('carpoolBtn');
 const trafficZone = document.getElementById('trafficStats');
 const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
 
-if (carpoolBtn) {
-    // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
-    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
-}
+// if (carpoolBtn) {
+//    如果是遊覽車，就不需要分配車輛，隱藏按鈕
+//    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
+// }
 
 if (trafficZone) {
+    // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
+    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';    
     // 如果是遊覽車，隱藏下方自駕/共乘的人數統計區
     trafficZone.style.display = isBus ? 'none' : 'block';
  }    

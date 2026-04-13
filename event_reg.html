@@ -1111,59 +1111,81 @@ function exportInsuranceCSV() {
 }        
 // --- 🌟 新增：行政看板數據計算函式 ---
 function updateAdminStats(list) {
-    // 1. 基本統計
-    const total = list.length;
-    const paidList = list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳"));
-    
-    // 2. 餐食統計
-    const vegList = list.filter(r => r["餐食"] === "素食").map(r => r["姓名"]);
+    if (!list) return;
 
-    // 3. 交通統計 (非遊覽車活動)
-    let carCount = 0, seatCount = 0, carpoolCount = 0;
+    // --- 第一階段：建立「誰代理誰」的交通對照表 ---
+    const transportMap = {};
     list.forEach(r => {
-        const trans = String(r["交通"] || r["交通(僅本人)"] || "").trim();
-        if (trans === "自駕" || trans === "開車") {
-            carCount++;
-            seatCount += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
-        } else if (trans === "共乘" || trans === "搭車") {
-            carpoolCount++;
+        const name = (r["姓名"] || "").trim();
+        const agent = (r["報名代理人"] || "").trim();
+        const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+
+        // 如果是本人報名，就把他的交通方式存起來
+        if (agent === "本人" || agent === "") {
+            transportMap[name] = trans;
         }
     });
 
-    // 4. 將數據填入看板 (對應您剛改好的 HTML ID)
-    const setUI = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = val; };
-    
-    setUI('totalReg', total);
-    setUI('paidCount', paidList.length);
+    // --- 第二階段：正式統計人數 ---
+    let carCount = 0;      // 總車輛數
+    let totalSeats = 0;    // 總空位數
+    let carpoolCount = 0;  // 總共乘需求 (含攜伴)
+    const vegList = [];    // 素食名單
+
+    list.forEach(r => {
+        const name = (r["姓名"] || "").trim();
+        const agent = (r["報名代理人"] || "").trim();
+        let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+
+        // 🌟 關鍵邏輯：如果是攜伴者且交通空白，強制繼承代理人的交通
+        if (agent !== "本人" && agent !== "" && trans === "") {
+            trans = transportMap[agent] || ""; 
+        }
+
+        // 開始計數
+        if (trans === "自駕" || trans === "開車") {
+            // 只有代理人本人算「一台車」
+            if (agent === "本人" || agent === "") {
+                carCount++;
+                totalSeats += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+            }
+        } else if (trans === "共乘" || trans === "搭車") {
+            // 無論是誰，只要最後判定是共乘，人頭就 +1
+            carpoolCount++;
+        }
+
+        // 素食統計
+        if ((r["餐食"] || "").includes("素")) {
+            vegList.push(name);
+        }
+    });
+
+    // --- 第三階段：更新 UI 畫面 ---
+    const setUI = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    };
+
+    setUI('totalCount', list.length); // 總報名人數
+    setUI('totalReg', list.length);   // 看板總人數
+    setUI('paidCount', list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳")).length);
     setUI('carCount', carCount);
-    setUI('seatCount', seatCount);
+    setUI('seatCount', totalSeats);
     setUI('carpoolCount', carpoolCount);
     setUI('vegCount', vegList.length);
-    
+
     const vegNamesElem = document.getElementById('vegNames');
     if (vegNamesElem) {
         vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
     }
 
-    // 動態判斷是否隱藏交通區 (若是遊覽車活動則隱藏)
+    // 自動隱藏交通區邏輯
     const trafficZone = document.getElementById('trafficStats');
     if (trafficZone) {
-        const isBus = currentEventConfig?.["是遊覽車行"] === "是";
+        const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
         trafficZone.style.display = isBus ? 'none' : 'block';
     }
-    // 在 updateAdminStats(list) 函式的最後面加入：
-const insuranceBtn = document.querySelector('button[onclick="exportInsuranceCSV()"]');
-if (insuranceBtn) {
-    // 取得當前活動名稱（從下拉選單或全域變數）
-    const eventName = document.getElementById('eventSelector').value; 
-    
-    if (eventName.includes("無保險")) {
-        insuranceBtn.style.display = 'none'; // 隱藏按鈕
-    } else {
-        insuranceBtn.style.display = 'inline-flex'; // 顯示按鈕
-    }
-  }
-}
+}        
 function copyPaidListToLine() {
     // 1. 取得資料並過濾「已繳費」名單
     const regs = allData.registrations || [];

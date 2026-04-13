@@ -445,12 +445,9 @@ function renderRegList(list) {
         // B. 交通資訊區 - 優化顯示邏輯
         console.log("單筆資料內容:", r);
 
-        const agent = String(r["報名代理人"] || "").trim();
         const isFollower = (agent !== "本人" && agent !== ""); // 是否為攜伴者        
         let transHTML = "";
-        const transText = String(trans).trim();
-
-        
+        const transText = String(trans).trim();        
 
 if (transText === "自駕" || transText === "開車") {
     if (isFollower) {

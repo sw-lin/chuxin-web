@@ -920,15 +920,18 @@ async function deleteSingleReg(phone, name) {
         if (result.result === "SUCCESS") {
             showToast("✅ 已成功刪除");
             
-            // 手動從本地陣列移除，達成即時刷屏
+            // 🌟 修正點：不要直接用 countEl，改用以下方式重新抓取與更新
+        const statCountEl = document.getElementById('statCount');
+        if (statCountEl) {
+            // 從全域變數 allData 中移除該筆資料並重新計算
             allData.registrations = allData.registrations.filter(r => 
-                !(String(r["電話"] || "").trim() === String(phone).trim() && 
-                  String(r["姓名"] || "").trim() === String(name).trim())
+                !(r["電話"] === phone && r["姓名"] === name)
             );
-            renderRegList(allData.registrations);
             
-
-            if(countEl) countEl.innerText = allData.registrations.length;
+            // 更新看板與名單
+            statCountEl.innerText = allData.registrations.length;
+            renderRegList(allData.registrations); 
+        }
 
         } else {
             showToast("❌ 刪除失敗：" + (result.message || "找不到匹配資料或權限不足"));

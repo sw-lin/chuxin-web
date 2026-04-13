@@ -710,6 +710,14 @@ function renderCalendarActivity(calendar) {
     const posterUrl = getDirectImageUrl(nextEvent.poster);
     console.log("海報解析網址:", posterUrl); // 您可以在控制台確認網址是否正確
 
+    // --- 新增：日期格式化邏輯 ---
+    let displayDate = nextEvent.dateText; // 預設值
+    if (nextEvent.dateText && nextEvent.dateText.includes('-')) {
+        const parts = nextEvent.dateText.split('-');
+        if (parts.length >= 3) {
+            displayDate = `${parts[1]}/${parts[2]}`; // 變成 04/13
+        }
+    }
     if (posterUrl) {
         container.innerHTML = `
             <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
@@ -741,6 +749,14 @@ function handleImageError(img, title, date, desc) {
 
 // 純文字顯示模式
 function renderTextActivity(container, ev) {
+    // --- 新增：日期格式化邏輯 ---
+    let displayDate = ev.dateText;
+    if (ev.dateText && ev.dateText.includes('-')) {
+        const parts = ev.dateText.split('-');
+        if (parts.length >= 3) {
+            displayDate = `${parts[1]}/${parts[2]}`;
+        }
+    }    
     container.innerHTML = `
         <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-3 mb-6">
             <div class="flex items-center gap-3">

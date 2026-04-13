@@ -993,60 +993,80 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });   
 function generateLineStats() {
-    const regs = window.currentRegistrations || []; 
-    if (regs.length === 0) return;
+    // 🌟 修正：使用正確的全域資料變數
+    const regs = allData.registrations || []; 
+    if (regs.length === 0) {
+        showToast("目前尚無報名資料");
+        return;
+    }
 
     let stats = {
-        paid: 0,
-        meat: 0,
-        veg: 0,
-        bus: 0,
-        selfDrive: 0,
-        seatsAvailable: 0
+        paid: 0, meat: 0, veg: 0, 
+        bus: 0, selfDrive: 0, seatsAvailable: 0
     };
 
     regs.forEach(r => {
-        if (r.status === '已繳費') stats.paid++;
-        r.meal === '素食' ? stats.veg++ : stats.meat++;
+        // 🌟 修正：對接您在 renderRegList 用的中文 Key
+        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
+        if (rawStatus.includes("已繳")) stats.paid++;
+
+        const meal = r["餐食"] || "";
+        meal === '素食' ? stats.veg++ : stats.meat++;
         
-        if (r.transport === '搭乘遊覽車') {
+        // 🌟 修正：對接交通方式與可載人數的正確 Key
+        const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        const cap = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+
+        if (trans === '搭乘遊覽車' || trans === '共乘') {
             stats.bus++;
-        } else if (r.transport === '自行開車') {
+        } else if (trans === '自駕' || trans === '開車' || trans === '自行開車') {
             stats.selfDrive++;
-            stats.seatsAvailable += parseInt(r.canDriveNum || 0);
+            stats.seatsAvailable += cap;
         }
     });
 
+    const eventTitle = document.getElementById('eventSelector').value;
     const msg = `
-【${$('#eventSelect').val()} 統計】
+【${eventTitle} 統計】
 --------------------
 總人數：${regs.length} 位 (${stats.paid} 已繳費)
 🍱 餐食：葷 ${stats.meat} / 素 ${stats.veg}
-🚌 交通：遊覽車 ${stats.bus} 人
+🚌 交通：共乘/遊覽車 ${stats.bus} 人
 🚗 自駕：${stats.selfDrive} 台 (可載 ${stats.seatsAvailable} 人)
 --------------------
-產出日期：${new Date().toLocaleDateString()}
+產出日期：${new Date().toLocaleString()}
     `.trim();
 
-    navigator.clipboard.writeText(msg);
-    showToast("統計文字已複製", "success");
-}    
+    navigator.clipboard.writeText(msg).then(() => {
+        showToast("✅ 統計文字已複製");
+    });
+}        
 function exportInsuranceCSV() {
-    const regs = window.currentRegistrations || [];
+    const regs = allData.registrations || [];
+    if (regs.length === 0) return;
+
     // 包含 UTF-8 BOM 以防 Excel 亂碼
-    let csv = "\uFEFF姓名,身分證字號,生日,電話,餐食\n";
+    let csv = "\uFEFF姓名,身分證字號,生日,電話,餐食,備註\n";
     
     regs.forEach(r => {
-        csv += `${r.name},${r.idNumber},${r.birthday},'${r.phone},${r.meal}\n`;
+        // 🌟 修正：確保抓到正確的欄位名稱
+        const name = r["姓名"] || "";
+        const id = r["身分證"] || r["身分證字號"] || "";
+        const bday = r["生日"] || "";
+        const phone = r["電話"] || "";
+        const meal = r["餐食"] || "";
+        const note = (r["備註"] || "").replace(/[\r\n,]/g, " "); // 移除備註中的換行與逗點，避免 CSV 格式錯亂
+
+        csv += `${name},${id},${bday},'${phone},${meal},${note}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `活動報名_保險清冊_${new Date().getTime()}.csv`;
+    link.download = `保險名冊_${currentEventTitle}_${new Date().getTime()}.csv`;
     link.click();
+    showToast("📂 CSV 匯出完成");
 }
-
         
     </script>
 </body>    

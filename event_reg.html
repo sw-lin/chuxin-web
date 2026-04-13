@@ -1154,7 +1154,65 @@ if (insuranceBtn) {
     } else {
         insuranceBtn.style.display = 'inline-flex'; // 顯示按鈕
     }
+  }
 }
+function copyPaidListToLine() {
+    // 1. 取得資料並過濾「已繳費」名單
+    const regs = allData.registrations || [];
+    const paidList = regs.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳"));
+
+    if (paidList.length === 0) {
+        showToast("⚠️ 目前尚無已繳費人員");
+        return;
+    }
+
+    // 2. 格式化訊息：僅包含姓名與人數
+    const eventName = document.getElementById('eventSelector')?.value || "活動";
+    let message = `【${eventName}】已繳費名單：\n`;
+    message += `------------------\n`;
+    
+    paidList.forEach((r, index) => {
+        const name = r["姓名"] || "未提供";
+        message += `${index + 1}. ${name}\n`;
+    });
+
+    message += `------------------\n`;
+    message += `✅ 確認完成繳費：共 ${paidList.length} 位\n`;
+    message += `📅 統計日期：${new Date().toLocaleString()}`;
+
+    // 3. 🌟 發送前預覽確認 (參考您提供的大聲公邏輯)
+    const isConfirmed = confirm(`請確認發送內容：\n\n${message}\n\n確定要推播至 LINE 群組嗎？`);
+    
+    if (isConfirmed) {
+        // 呼叫原本的 Loading 動畫
+        if (typeof showLoading === "function") showLoading(true, "LINE 名單發送中...");
+        
+        const payload = {
+            type: 'send_line', 
+            key: STAFF_KEY,    // 確保您的全域變數中存有 STAFF_KEY
+            message: message
+        };
+
+        fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.result === "SUCCESS") {
+                showToast("🚀 已繳費名單已成功送出");
+            } else {
+                alert("發送失敗：" + (result.message || "請檢查後端設定"));
+            }
+        })
+        .catch(err => {
+            console.error("LINE 發送錯誤:", err);
+            alert("發送過程發生錯誤，請稍後再試。");
+        })
+        .finally(() => {
+            if (typeof showLoading === "function") showLoading(false);
+        });
+    }
 }
         
     </script>

@@ -322,7 +322,7 @@ async function loadEventDetails() {
     
     if (!title) {
         // 如果沒選活動，清空統計與列表
-        document.getElementById('statsSection').classList.add('hidden');
+
         document.getElementById('regList').innerHTML = "";
         return;
     }
@@ -350,10 +350,7 @@ async function loadEventDetails() {
         if (Array.isArray(json)) {
             allData.registrations = json; // 存入全域變數
             renderRegList(json);          // 渲染畫面
-            
-            // 更新統計數字
-            document.getElementById('statCount').innerText = json.length;
-            document.getElementById('statsSection').classList.remove('hidden');
+        
             
             // 如果在編輯模式下，顯示管理按鈕
             if(isEditMode) {
@@ -898,8 +895,7 @@ async function deleteSingleReg(phone, name) {
             );
             renderRegList(allData.registrations);
             
-            // 更新統計數字
-            const countEl = document.getElementById('statCount');
+
             if(countEl) countEl.innerText = allData.registrations.length;
 
         } else {

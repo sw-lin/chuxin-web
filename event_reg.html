@@ -1187,11 +1187,11 @@ function copyPaidListToLine() {
 
     const eventName = document.getElementById('eventSelector')?.value || "活動";
     let message = `【${eventName}】已繳費名單：\n`;
-    message += `------------------\n`;
+    message += `---------------\n`;
     paidList.forEach((r, index) => {
         message += `${index + 1}. ${r["姓名"]}\n`;
     });
-    message += `------------------\n`;
+    message += `---------------\n`;
     message += `✅ 總計：${paidList.length} 位\n`;
 
     const isConfirmed = confirm(`確定發送至 LINE 嗎？\n\n${message}`);

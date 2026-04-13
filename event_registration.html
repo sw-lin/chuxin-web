@@ -16,6 +16,18 @@
         /* 加大輸入框文字至 text-base (16px) */
         .input-field { @apply w-full px-4 py-4 bg-gray-50 rounded-xl outline-none text-base border-2 border-transparent focus:border-emerald-500 transition-all; }
         .hidden { display: none !important; }
+        /* 1. 移除數字輸入框在手機上可能出現的內建擠壓 */
+input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+    appearance: textfield;
+}
+
+/* 移除 Chrome/Safari 的內建箭頭 (我們稍後用更大的 UI 代替) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}        
         
         /* Loading 遮罩樣式 */
         #loadingOverlay {
@@ -97,11 +109,18 @@
                 <label class="label-text">交通方式</label>
                 <select id="mainTransport" onchange="checkTransportLogic()" class="input-field"></select>
             </div>
-
-            <div id="seatsWrapper" class="input-group hidden">
-                <label class="label-text">可載人數 (不含自己)</label>
-                <input type="number" id="mainSeats" class="input-field" value="0" min="0" max="4">
-            </div>
+          
+    <div id="seatsWrapper" class="input-group hidden">
+    <label class="label-text">可載人數 (不含自己)</label>
+      <div class="flex items-center gap-3 mt-2">
+        <button type="button" onclick="changeSeats(-1)" class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-2xl font-black active:bg-emerald-200">-</button>
+        
+        <input type="number" id="mainSeats" class="input-field text-center font-black !mb-0" value="0" min="0" max="4" readonly>
+        
+        <button type="button" onclick="changeSeats(1)" class="w-14 h-14 bg-emerald-700 text-white rounded-xl flex items-center justify-center text-2xl font-black active:scale-95">+</button>
+      </div>
+    </div>
+            
         </section>
 
 <section class="mb-8">
@@ -294,6 +313,17 @@ function updateTotal(manualCount = null) {
     const total = eventConfig.memberFee + (count * eventConfig.guestFee);
     document.getElementById('totalAmount').innerText = total;
 }
+function changeSeats(delta) {
+    const input = document.getElementById('mainSeats');
+    let val = parseInt(input.value) || 0;
+    val += delta;
+    
+    // 限制範圍在 0 ~ 4 之間
+    if (val < 0) val = 0;
+    if (val > 4) val = 4;
+    
+    input.value = val;
+}    
 async function submitForm(event) {
     if (event && event.preventDefault) event.preventDefault();
 

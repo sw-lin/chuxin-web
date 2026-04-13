@@ -1147,7 +1147,6 @@ function updateAdminStats(list) {
                 totalSeats += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
             }
         } else if (trans === "共乘" || trans === "搭車") {
-            // 無論是誰，只要最後判定是共乘，人頭就 +1
             carpoolCount++;
         }
 
@@ -1163,8 +1162,8 @@ function updateAdminStats(list) {
         if (el) el.innerText = val;
     };
 
-    setUI('totalCount', list.length); // 總報名人數
-    setUI('totalReg', list.length);   // 看板總人數
+    setUI('totalCount', list.length); 
+    setUI('totalReg', list.length);   
     setUI('paidCount', list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳")).length);
     setUI('carCount', carCount);
     setUI('seatCount', totalSeats);
@@ -1175,28 +1174,31 @@ function updateAdminStats(list) {
     if (vegNamesElem) {
         vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
     }
-    // --- 🌟 控制保險名冊圖示按鈕顯示 ---
-    // 1. 保險名冊按鈕：僅在「需要身分證」時顯示
-const insBtn = document.getElementById('exportInsuranceBtn');
-if (insBtn) {
-    const needID = (currentEventConfig?.["是否需要身分證"] === "是");
-    insBtn.style.display = needID ? 'inline-block' : 'none';
-}
 
-// 2. 車輛分配按鈕：僅在「非遊覽車行程」時顯示 (與交通統計區邏輯一致)
-const carpoolBtn = document.getElementById('carpoolBtn');
-const trafficZone = document.getElementById('trafficStats');
-const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
+    // --- 第四階段：控制按鈕顯示/隱藏 ---
+    
+    // 1. 保險名冊按鈕
+    const insBtn = document.getElementById('exportInsuranceBtn');
+    if (insBtn) {
+        const needID = (currentEventConfig?.["是否需要身分證"] === "是");
+        insBtn.style.display = needID ? 'inline-block' : 'none';
+    }
 
- if (carpoolBtn) {
-    如果是遊覽車，就不需要分配車輛，隱藏按鈕
-    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
- }
+    // 2. 車輛分配按鈕與交通統計區
+    const carpoolBtn = document.getElementById('carpoolBtn');
+    const trafficZone = document.getElementById('trafficStats');
+    const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
 
-if (trafficZone) {
-    // 如果是遊覽車，隱藏下方自駕/共乘的人數統計區
-    trafficZone.style.display = isBus ? 'none' : 'block';
- }    
+    if (carpoolBtn) {
+        // ✅ 修正：加上註解符號 //
+        // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
+        carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
+    }
+
+    if (trafficZone) {
+        // 如果是遊覽車，隱藏下方統計區
+        trafficZone.style.display = isBus ? 'none' : 'block';
+    }   
 }        
 function copyPaidListToLine() {
     // 1. 取得已繳費名單

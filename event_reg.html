@@ -60,7 +60,15 @@
             <button id="exportInsuranceBtn" onclick="exportInsuranceCSV()" class="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all" title="保險名冊">
                 <i class="fas fa-file-csv"></i>
             </button>
-            <button id="carpoolBtn" onclick="openCarpoolModal()" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all" title="共乘分配">
+            <button id="// 2. 車輛分配按鈕：僅在「非遊覽車行程」時顯示 (與交通統計區邏輯一致)
+const carpoolBtn = document.getElementById('carpoolBtn');
+const trafficZone = document.getElementById('trafficStats');
+const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
+
+if (carpoolBtn) {
+    // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
+    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
+}" onclick="openCarpoolModal()" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all" title="共乘分配">
                 <i class="fas fa-car-side"></i>
             </button>
             <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center">進行中</span>
@@ -1168,32 +1176,27 @@ function updateAdminStats(list) {
         vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
     }
     // --- 🌟 控制保險名冊圖示按鈕顯示 ---
-    const insBtn = document.getElementById('exportInsuranceBtn');
-    if (insBtn) {
-        // 檢查活動設定：只有當「是否需要身分證」為「是」時才顯示
-        const needID = (currentEventConfig?.["是否需要身分證"] === "是");
-        
-        if (needID) {
-            insBtn.style.display = 'inline-block'; // 顯示
-        } else {
-            insBtn.style.display = 'none';         // 隱藏
-        }
-    }
-    // 2. 車輛分配按鈕：僅在「非遊覽車行程」時顯示 (與交通統計區邏輯一致)
-    const carpoolBtn = document.getElementById('carpoolBtn');
-    const trafficZone = document.getElementById('trafficStats');
-    const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
+    // 1. 保險名冊按鈕：僅在「需要身分證」時顯示
+const insBtn = document.getElementById('exportInsuranceBtn');
+if (insBtn) {
+    const needID = (currentEventConfig?.["是否需要身分證"] === "是");
+    insBtn.style.display = needID ? 'inline-block' : 'none';
+}
 
-    if (carpoolBtn) {
-      // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
-      carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
-    }    
-    // 自動隱藏交通區邏輯
-    const trafficZone = document.getElementById('trafficStats');
-    if (trafficZone) {
-        const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
-        trafficZone.style.display = isBus ? 'none' : 'block';
-    }
+// 2. 車輛分配按鈕：僅在「非遊覽車行程」時顯示 (與交通統計區邏輯一致)
+const carpoolBtn = document.getElementById('carpoolBtn');
+const trafficZone = document.getElementById('trafficStats');
+const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
+
+if (carpoolBtn) {
+    // 如果是遊覽車，就不需要分配車輛，隱藏按鈕
+    carpoolBtn.style.display = isBus ? 'none' : 'inline-block';
+}
+
+if (trafficZone) {
+    // 如果是遊覽車，隱藏下方自駕/共乘的人數統計區
+    trafficZone.style.display = isBus ? 'none' : 'block';
+ }    
 }        
 function copyPaidListToLine() {
     // 1. 取得已繳費名單

@@ -1290,8 +1290,10 @@ function openCarpoolModal() {
     // 過濾司機與乘客 (交通方式包含 自駕/開車 vs 共乘/搭車)
     const drivers = list.filter(r => (r["交通"] || "").includes("駕") || (r["交通"] || "").includes("車"));
     const passengers = list.filter(r => (r["交通"] || "").includes("共乘") || (r["交通"] || "").includes("搭"));
-
+    // 🌟 確保容器高度足以捲動
+    
     const container = document.getElementById('carpoolListContainer');
+    container.className = "flex-1 overflow-y-auto max-h-[60vh] space-y-3 pr-2 custom-scrollbar";
     container.innerHTML = "";
 
     if (passengers.length === 0) {
@@ -1392,26 +1394,30 @@ function renderCarpoolList() {
 // 🌟 新增：計算並更新所有選單顯示的人數
 function refreshCarpoolSeats() {
     const selects = document.querySelectorAll('.carpool-select');
-    // 統計目前各個司機被選了幾次
-    const counts = {};
+    const usedSeats = {};
+
+    // 1. 統計每個司機目前被選了幾次
     selects.forEach(s => {
-        if (s.value) counts[s.value] = (counts[s.value] || 0) + 1;
+        if (s.value) usedSeats[s.value] = (usedSeats[s.value] || 0) + 1;
     });
 
-    // 更新所有 select 內的 option 顯示文字
+    // 2. 更新所有選單中的剩餘人數顯示
     selects.forEach(s => {
         Array.from(s.options).forEach(opt => {
             if (!opt.value) return;
-            const limit = parseInt(opt.getAttribute('data-limit')) || 0;
-            const currentUsed = counts[opt.value] || 0;
-            const remaining = limit - currentUsed;
+            const limit = parseInt(opt.dataset.limit) || 0;
+            const current = usedSeats[opt.value] || 0;
+            const remain = limit - current;
             
-            // 重新組合顯示文字
-            opt.text = `👤 司機：${opt.value} (餘 ${remaining})`;
+            // 動態更新文字
+            opt.text = `👤 司機：${opt.value} (餘 ${remain})`;
             
-            // 如果超載，可以變色或加警告標示
-            if (remaining < 0) {
-                opt.text += " ⚠️ 已超載";
+            // 超載警示
+            if (remain < 0) {
+                opt.classList.add('text-red-500');
+                opt.text += " ⚠️ 超額";
+            } else {
+                opt.classList.remove('text-red-500');
             }
         });
     });

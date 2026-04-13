@@ -197,7 +197,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="text-[10px] font-bold text-emerald-600 ml-2">姓名</label>
-                    <input type="text" id="reg_name" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                    <input type="text" id="reg_name" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none transition-all focus:ring-2 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-emerald-600 ml-2">電話</label>
@@ -600,6 +600,7 @@ function openRegModal(phone, name) {
     // 🌟 修正點：將 reg_id_zone 改為 reg_insurance_zone (與你的 HTML 一致)
     const insuranceZone = document.getElementById('reg_insurance_zone');
     const transZone = document.getElementById('reg_transport_zone');
+    const nameInput = document.getElementById('reg_name'); // 取得姓名輸入框
     
     if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none'; // 因為 HTML 是 grid 佈局
     if (transZone) transZone.style.display = isTourBus ? 'none' : 'block';
@@ -612,8 +613,15 @@ function openRegModal(phone, name) {
         );
 
         if (r) {
+            // 1. 🌟 鎖定姓名欄位 (防止資料庫產生兩筆名單)
+            if (nameInput) {
+                nameInput.value = r["姓名"] || "";
+                nameInput.readOnly = true; // 設為唯讀
+                nameInput.style.backgroundColor = "#e5e7eb"; // 變灰色
+                nameInput.style.cursor = "not-allowed"; // 顯示禁止符號
+            }            
             document.getElementById('reg_old_phone').value = phone;
-            document.getElementById('reg_name').value = r["姓名"] || "";
+            
             document.getElementById('reg_phone').value = r["電話"] || "";
             document.getElementById('reg_diet').value = r["餐食"] || "葷";
 
@@ -653,6 +661,13 @@ function openRegModal(phone, name) {
         }
     } else {
         resetRegForm();
+        // 2. 🌟 開放姓名欄位
+        if (nameInput) {
+            nameInput.readOnly = false; // 解除唯讀
+            nameInput.style.backgroundColor = "#f9fafb"; // 恢復 gray-50 顏色
+            nameInput.style.cursor = "text"; // 恢復文字指標
+        }
+        
         // 🌟 新增：如果是遊覽車，確保 Radio 沒被勾選，避免誤傳「自駕」
         if (isTourBus) {
             document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);

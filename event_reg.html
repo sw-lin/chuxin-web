@@ -444,24 +444,32 @@ function renderRegList(list) {
 
         // B. 交通資訊區 - 優化顯示邏輯
         console.log("單筆資料內容:", r);
-        
+
+        const agent = String(r["報名代理人"] || "").trim();
+        const isFollower = (agent !== "本人" && agent !== ""); // 是否為攜伴者        
         let transHTML = "";
         const transText = String(trans).trim();
 
-        if (transText === "自駕" || transText === "開車") {
-            // 如果是自駕，顯示可載人數
-            const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
-            transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600">${transText}${capText}</span></div>`;
-        } else if (transText === "共乘" || transText === "搭車") {
-            // 如果是共乘，顯示共乘標籤
-            transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-orange-600 font-black">共乘者</span></div>`;
-        } else if (transText !== "") {
-            // 其他文字（例如：搭遊覽車、步行）
-            transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
-        } else {
-            // 如果完全沒資料，顯示未填
-            transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
-        }
+        
+
+if (transText === "自駕" || transText === "開車") {
+    if (isFollower) {
+        transHTML = `<div class="flex items-center gap-1 text-gray-400">🚙 交通：<span>隨車 (自駕)</span></div>`;
+    } else {
+        const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
+        transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600 font-bold">${transText}${capText}</span></div>`;
+    }
+} else if (transText === "共乘" || transText === "搭車") {
+    transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-orange-600 font-black">共乘需求</span></div>`;
+} else if (transText.includes("遊覽車")) {
+    // 🌟 新增：針對遊覽車活動的顯示
+    // 使用綠色標籤，代表這是不需要額外調度交通的人員
+    transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-emerald-600 font-bold">搭遊覽車</span></div>`;
+} else if (transText !== "") {
+    transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
+} else {
+    transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
+}
 
         // C. 繳費區 (防止點擊穿透)
         let paymentActionHTML = "";

@@ -1167,18 +1167,18 @@ function updateAdminStats(list) {
     if (vegNamesElem) {
         vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
     }
-    // 1. 判斷是否顯示「產製保險表單」按鈕
-const insuranceBtn = document.getElementById('insuranceBtn');
-if (insuranceBtn) {
-    // 檢查活動設定：只有當「需要身分證」為「是」時，才顯示該按鈕
-    const needID = (currentEventConfig?.["是否需要身分證"] === "是" || currentEventConfig?.needId === "是");
+// 控制「保險名冊 CSV」按鈕顯示
+const insCSVBtn = document.getElementById('exportInsuranceBtn');
+if (insCSVBtn) {
+    // 檢查設定：只有「需要身分證」才顯示
+    const needID = (
+        currentEventConfig?.["是否需要身分證"] === "是" || 
+        currentEventConfig?.needID === "是"
+    );
     
-    if (needID) {
-        insuranceBtn.style.display = 'inline-flex'; // 顯示按鈕
-    } else {
-        insuranceBtn.style.display = 'none';        // 隱藏按鈕
-    }
-}
+    // 隱藏時使用 'none'，顯示時因為它是 flex 容器內的按鈕，建議用 'block' 或 'inline-block'
+    insCSVBtn.style.display = needID ? 'block' : 'none';
+}    
     // 自動隱藏交通區邏輯
     const trafficZone = document.getElementById('trafficStats');
     if (trafficZone) {

@@ -361,6 +361,7 @@ function renderRegList(list) {
 
     const mFee = currentEventConfig?.["會員報名費"] || currentEventConfig?.memberFee || 0;
     const gFee = currentEventConfig?.["非會員報名費"] || currentEventConfig?.guestFee || 0;
+    
 
     let html = list.map((r, i) => {
         // --- 資料抓取 ---
@@ -381,8 +382,8 @@ function renderRegList(list) {
         const agent = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
         
         // 🌟 修正：精準對接 F 欄位「交通(僅本人)」與 G 欄位「可載人(僅本人)」
-        const trans = r["交通(僅本人)"] || r["交通狀況"] || ""; 
-        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"]) || 0;
+        const trans = r["交通"] || r["交通狀況"] || r["交通(僅本人)"] || ""; 
+        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || r["人數"] || 0);
 
         const dueAmount = isMember ? mFee : gFee;
 
@@ -399,21 +400,25 @@ function renderRegList(list) {
         }
 
         // B. 交通資訊區 - 優化顯示邏輯
-let transHTML = "";
-// 取得原始交通方式 (例如：自駕、共乘、搭車)
-const transText = (trans || "").trim();
+        console.log("單筆資料內容:", r);
+        
+        let transHTML = "";
+        const transText = String(trans).trim();
 
-if (transText === "自駕") {
-    // 如果是自駕，顯示自駕與人數 (即使是 0 也顯示，或維持您的邏輯 >0 才顯示)
-    const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
-    transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600">${transText}${capText}</span></div>`;
-} else if (transText === "共乘") {
-    // 如果是共乘，特別標註
-    transHTML = `<div class="flex items-center gap-1">同乘：<span class="text-orange-600 font-black">🚌 共乘者</span></div>`;
-} else if (transText !== "") {
-    // 其他交通方式 (如：搭車、步行等)
-    transHTML = `<div>交通：${transText}</div>`;
-}
+        if (transText === "自駕" || transText === "開車") {
+            // 如果是自駕，顯示可載人數
+            const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
+            transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600">${transText}${capText}</span></div>`;
+        } else if (transText === "共乘" || transText === "搭車") {
+            // 如果是共乘，顯示共乘標籤
+            transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-orange-600 font-black">共乘者</span></div>`;
+        } else if (transText !== "") {
+            // 其他文字（例如：搭遊覽車、步行）
+            transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
+        } else {
+            // 如果完全沒資料，顯示未填
+            transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
+        }
 
         // C. 繳費區 (防止點擊穿透)
         let paymentActionHTML = "";

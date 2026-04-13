@@ -391,8 +391,6 @@ async function loadEventDetails() {
 function renderRegList(list) {
     const container = document.getElementById('regList');
 
-    // --- 🌟 關鍵：在此處呼叫「行政看板」統計邏輯 ---
-    // 確保每次名單更新時，上方的看板數字也會跟著變
     if (typeof updateAdminStats === "function") {
         updateAdminStats(list); 
     }
@@ -402,94 +400,86 @@ function renderRegList(list) {
         return;
     }
 
+    // 🌟 步驟 1：建立代理人交通地圖 (解決攜伴者顯示未填寫的問題)
+    const transportMap = {};
+    list.forEach(r => {
+        const name = (r["姓名"] || "").trim();
+        const agent = (r["報名代理人"] || "").trim();
+        if (agent === "本人" || agent === "") {
+            transportMap[name] = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        }
+    });
+
     const mFee = currentEventConfig?.["會員報名費"] || currentEventConfig?.memberFee || 0;
     const gFee = currentEventConfig?.["非會員報名費"] || currentEventConfig?.guestFee || 0;
-    
 
     let html = list.map((r, i) => {
-        // --- 資料抓取 ---
         const name = r["姓名"] || "未提供"; 
         const phone = r["電話"] || "無號碼";
         const diet = r["餐食"] || "未填";
         const note = r["備註"] || "無";
         
-        // 繳費狀態處理
         const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
         const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; 
-
-        // 會員身分
         const isMember = String(r["是否為會員"] || r["會員身分"]).trim() === "是";
         
-        // 🌟 修正：過濾「本人」顯示
         const rawAgent = String(r["報名代理人"] || "").trim();
-        const agent = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
+        const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
         
-        // 🌟 修正：精準對接 F 欄位「交通(僅本人)」與 G 欄位「可載人(僅本人)」
-        const trans = r["交通"] || r["交通(僅本人)"] || ""; 
+        // 🌟 步驟 2：獲取交通方式，若空白則從地圖繼承
+        let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        if (trans === "" && agentName) {
+            trans = transportMap[agentName] || "";
+        }
+        
         const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
-
         const dueAmount = isMember ? mFee : gFee;
 
-        // --- 介面構造 ---
-
-        // A. 頭像區 (隱藏本人字樣)
+        // --- A. 頭像區 ---
         let avatarHTML = "";
-        if (agent) {
-            avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">${agent.substring(1,3)}</div>`;
+        if (agentName) {
+            avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">${agentName.substring(0,2)}</div>`;
         } else if (!isMember) {
             avatarHTML = `<div class="px-2 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 font-bold text-[10px] min-w-[50px]">非會員</div>`;
         } else {
             avatarHTML = `<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs">會員</div>`;
         }
 
-        // B. 交通資訊區 - 優化顯示邏輯
-        console.log("單筆資料內容:", r);
-
-        const isFollower = (agent !== "本人" && agent !== ""); // 是否為攜伴者        
+        // --- B. 交通資訊顯示邏輯 ---
         let transHTML = "";
-        const transText = String(trans).trim();        
+        const transText = trans;
 
-if (transText === "自駕" || transText === "開車") {
-    if (isFollower) {
-        transHTML = `<div class="flex items-center gap-1 text-gray-400">🚙 交通：<span>隨車 (自駕)</span></div>`;
-    } else {
-        const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
-        transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600 font-bold">${transText}${capText}</span></div>`;
-    }
-} else if (transText === "共乘" || transText === "搭車") {
-    transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-orange-600 font-black">共乘需求</span></div>`;
-} else if (transText.includes("遊覽車")) {
-    // 🌟 新增：針對遊覽車活動的顯示
-    // 使用綠色標籤，代表這是不需要額外調度交通的人員
-    transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-emerald-600 font-bold">搭遊覽車</span></div>`;
-} else if (transText !== "") {
-    transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
-} else {
-    transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
-}
-
-        // C. 繳費區 (防止點擊穿透)
-        let paymentActionHTML = "";
-        if (isEditMode) {
-            paymentActionHTML = `
-                <div class="flex items-center gap-2" onclick="event.stopPropagation()">
-                    <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
-                    <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
-                            class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">
-                        <option value="未繳費" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
-                        <option value="已繳費" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
-                    </select>
-                </div>`;
+        if (transText === "自駕" || transText === "開車") {
+            if (agentName) {
+                transHTML = `<div class="flex items-center gap-1 text-gray-400">🚙 交通：<span>隨車 (自駕)</span></div>`;
+            } else {
+                const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
+                transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600 font-bold">${transText}${capText}</span></div>`;
+            }
+        } else if (transText === "共乘" || transText === "搭車") {
+            transHTML = `<div class="flex items-center gap-1">發送：<span class="text-orange-600 font-black">共乘需求</span></div>`;
+        } else if (transText.includes("遊覽車")) {
+            transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-emerald-600 font-bold">搭遊覽車</span></div>`;
+        } else if (transText !== "") {
+            transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
         } else {
-            paymentActionHTML = `<span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">${isPaid}</span>`;
+            transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
         }
 
-        // --- 組合卡片 ---
-        // 將 onclick 放在最外層 div，並使用 cursor-pointer 提示可點擊
+        // --- C. 繳費區 (保持不變) ---
+        let paymentActionHTML = isEditMode ? `
+            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
+                <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
+                        class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">
+                    <option value="未繳費" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
+                    <option value="已繳費" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
+                </select>
+            </div>` : 
+            `<span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">${isPaid}</span>`;
+
         return `
-        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3 cursor-pointer transition-all active:scale-[0.98]" 
-             onclick="toggleRegDetail(${i})">
-            
+        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3 cursor-pointer transition-all active:scale-[0.98]" onclick="toggleRegDetail(${i})">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     ${avatarHTML}
@@ -500,7 +490,6 @@ if (transText === "自駕" || transText === "開車") {
                 </div>
                 ${paymentActionHTML}
             </div>
-            
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
                     <div>飲食：${diet}</div>
@@ -518,7 +507,7 @@ if (transText === "自駕" || transText === "開車") {
 
     if (isEditMode) html += renderManualAddBtn();
     container.innerHTML = html;
-}  
+}
         
         // 彈窗邏輯
         function toggleEditMode() {

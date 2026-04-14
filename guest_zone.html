@@ -98,7 +98,7 @@ function transformDriveUrl(url) {
     let id = "";
     if (url.includes('id=')) { id = url.split('id=')[1].split('&')[0]; }
     else if (url.includes('/d/')) { id = url.split('/d/')[1].split('/')[0]; }
-    return id ? `https://lh3.googleusercontent.com/d/$${id}` : url;
+    return id ? `https://lh3.googleusercontent.com/d/${id}` : url;
 }
 
 async function initData() {

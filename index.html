@@ -221,34 +221,33 @@ async function handleLogin() {
         });
         
         const result = await res.json();
-        console.log("【登入結果】:", result);
         
         if (result.result === "SUCCESS") {
-            // --- 核心修正：Session 只存身分，不存活動資料 ---
+            // 🌟 1. 儲存更完整的資料到 Session
             const userStore = {
                 result: "SUCCESS",
                 name: result.name,
                 role: result.role,
-                phone: u,  // 這是後續頁面撈資料的關鍵 Key
-                staffKey: result.staffKey || "" // 如果是幹部，存入金鑰
+                phone: u,
+                staffKey: result.staffKey || "",
+                isPaid: result.isPaid // 儲存繳費狀態
             };
-            
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
-            
-            // 清除可能殘留的舊活動快取，確保進入下一頁是抓最新的
-            sessionStorage.removeItem('allEvents');
-            
-            console.log("身分驗證成功，準備跳轉...");
-            window.location.href = 'member_zone.html';
+
+            // 🌟 2. 判斷跳轉目標
+            // 條件：(身分是管理員) 或 (繳費狀態為 true)
+            if (result.role === "Admin" || result.isPaid === true) {
+                console.log("導向：會員專區");
+                window.location.href = 'member_zone.html';
+            } else {
+                console.log("導向：訪客/未繳費專區");
+                window.location.href = 'guest_zone.html';
+            }
         } else { 
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤")); 
         }
     } catch (e) { 
-        console.error("登入錯誤:", e);
-        alert("網路異常，請稍後再試"); 
-    } finally { 
-        btn.disabled = false; 
-        btn.innerText = "確認進入"; 
+        alert("登入過程發生異常"); 
     }
 }
     

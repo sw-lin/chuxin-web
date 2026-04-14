@@ -53,10 +53,24 @@
                 <input type="text" id="mName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
                 <input type="tel" id="mPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono" oninput="formatPhoneInput(event)">
                 
-                <div class="text-xs font-bold text-gray-400 pl-2">聯絡方式</div>
+                <div class="text-xs font-bold text-gray-400 pl-2">電子郵件</div>
                 <input type="email" id="mEmail" placeholder="電子郵件 Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 
-                <input type="hidden" id="mRole" value="">
+                <div id="roleSection">
+                    <div class="text-xs font-bold text-gray-400 pl-2 mb-1">職位設定</div>
+                    <select id="mRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-700">
+                        <option value="">-- 選擇職位 --</option>
+                        <option value="會長">會長</option>
+                        <option value="副會長">副會長</option>
+                        <option value="班務">班務</option>
+                        <option value="文書">文書</option>
+                        <option value="財務">財務</option>
+                        <option value="資訊圖書">資訊圖書</option>
+                        <option value="企劃">企劃</option>
+                        <option value="活動">活動</option>
+                        <option value="會員">會員</option>
+                    </select>
+                </div>
 
                 <div class="text-xs font-bold text-gray-400 pl-2">入會日期</div>
                 <input type="date" id="mJoinDate" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-700">
@@ -78,7 +92,6 @@
     </div>
 
     <script>
-        // 確保 URL 正確
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec';
         var STAFF_KEY = sessionStorage.getItem('staff_key');
         var isEditMode = false;
@@ -93,12 +106,9 @@
             loadMembers();
         };
 
-        // 🌟 新增：手機號碼全形轉半形，並強制只保留數字
         function formatPhoneInput(e) {
             let val = e.target.value;
-            // 1. 全形數字轉半形
             val = val.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
-            // 2. 移除所有非數字的字元 (包含空白、破折號等)
             val = val.replace(/\D/g, '');
             e.target.value = val;
         }
@@ -117,21 +127,7 @@
                     var html = '';
                     users.forEach(u => {
                         var rawP = String(u.phone).trim();
-                        var p;
-
-                        if (rawP.startsWith('886')) {
-                            // 1. 如果是 886 開頭，去掉 886 並補回 0
-                            p = '0' + rawP.substring(3);
-                        } else if (rawP.startsWith('0')) {
-                            // 2. 如果已經是 0 開頭，保持原樣
-                            p = rawP;
-                        } else if (rawP.length === 9) {
-                            // 3. 如果只有 9 碼且非 0 開頭，補回 0
-                            p = '0' + rawP;
-                        } else {
-                            // 4. 其餘情況（如空值或異常）
-                            p = rawP;
-                        }                        
+                        var p = rawP.startsWith('886') ? '0' + rawP.substring(3) : (rawP.length === 9 && !rawP.startsWith('0') ? '0' + rawP : rawP);
                         
                         var uName = (u.name || "").replace(/'/g, "\\'");
                         var uEmail = (u.email || "").replace(/'/g, "\\'");
@@ -179,6 +175,10 @@
             document.getElementById('modalTitle').innerText = "新增新會員";
             document.getElementById('mPhone').disabled = false;
             document.getElementById('deleteInModalBtn').classList.add('hidden');
+            
+            // 🌟 隱藏職位欄位並清空值
+            document.getElementById('roleSection').classList.add('hidden');
+            
             ['mName', 'mPhone', 'mEmail', 'mRole', 'mNote'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('mJoinDate').value = new Date().toISOString().split('T')[0];
             openModal('memberModal');
@@ -189,10 +189,14 @@
             document.getElementById('modalTitle').innerText = "修改會員資料";
             document.getElementById('mPhone').disabled = true;
             document.getElementById('deleteInModalBtn').classList.remove('hidden');
+            
+            // 🌟 顯示職位欄位
+            document.getElementById('roleSection').classList.remove('hidden');
+            
             document.getElementById('mName').value = name;
             document.getElementById('mPhone').value = phone;
             document.getElementById('mEmail').value = email;
-            document.getElementById('mRole').value = role; // 隱藏欄位會記住原本的職位
+            document.getElementById('mRole').value = role; 
             document.getElementById('mJoinDate').value = joinDate;
             document.getElementById('mNote').value = note;
             openModal('memberModal');
@@ -212,7 +216,7 @@
                 name: n,
                 phone: p,
                 email: document.getElementById('mEmail').value.trim(),
-                role: document.getElementById('mRole').value, // 新增時會是空值，編輯時保留舊值
+                role: document.getElementById('mRole').value, 
                 joinDate: document.getElementById('mJoinDate').value,
                 note: document.getElementById('mNote').value.trim()
             };

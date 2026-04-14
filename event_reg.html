@@ -275,8 +275,15 @@
     </div>
 </div>  
     <script>
+        // 🌟 在程式碼最開頭宣告，確保所有 function 都讀得到
+    let allData = {
+        events: [],
+        registrations: [],    // 存放原始報名資料
+        currentDrivers: [],   // 🌟 新增：存放篩選後的司機
+        currentPassengers: [] // 🌟 新增：存放篩選後的乘客
+    };        
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
-        let allData = { events: [], registrations: [] };
+        
         let isEditMode = false;
         let currentEventConfig = null; // 🌟 儲存目前選中活動的詳細規格（費用、日期等）
         let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱        
@@ -1135,6 +1142,10 @@ function updateAdminStats(list) {
 
     // --- 第一階段：建立「誰代理誰」的交通對照表 ---
     const transportMap = {};
+    // 🌟 新增：準備存放過濾後的名單
+    allData.currentDrivers = [];   // 存放司機
+    allData.currentPassengers = []; // 存放乘客
+    
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
         const agent = (r["報名代理人"] || "").trim();
@@ -1168,9 +1179,11 @@ function updateAdminStats(list) {
             if (agent === "本人" || agent === "") {
                 carCount++;
                 totalSeats += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+                allData.currentDrivers.push(r); // 存入司機名單
             }
         } else if (trans === "共乘" || trans === "搭車") {
             carpoolCount++;
+            allData.currentPassengers.push(r); // 存入乘客名單
         }
 
         // 素食統計
@@ -1284,38 +1297,38 @@ function copyPaidListToLine() {
 } 
 // 打開共乘分配視窗
 function openCarpoolModal() {
-    const list = allData.registrations;
-    if (!list || list.length === 0) return showToast("目前尚無報名資料");
+    // 直接從 allData 取出剛才統計好的名單
+    const passengers = allData.currentPassengers || [];
+    const drivers = allData.currentDrivers || [];
 
-    // 過濾司機與乘客 (交通方式包含 自駕/開車 vs 共乘/搭車)
-    const drivers = list.filter(r => (r["交通"] || "").includes("駕") || (r["交通"] || "").includes("車"));
-    const passengers = list.filter(r => (r["交通"] || "").includes("共乘") || (r["交通"] || "").includes("搭"));
-    // 🌟 確保容器高度足以捲動
-    
     const container = document.getElementById('carpoolListContainer');
-    container.className = "flex-1 overflow-y-auto max-h-[60vh] space-y-3 pr-2 custom-scrollbar";
+    // 🌟 修正無法捲動：確保高度與溢出處理
+    container.style.maxHeight = "60vh";
+    container.style.overflowY = "auto";
+    container.className = "flex-1 space-y-3 pr-2"; 
     container.innerHTML = "";
 
     if (passengers.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 text-gray-400 font-bold">目前沒有共乘需求的乘客</div>`;
+        container.innerHTML = `<div class="text-center py-10 text-gray-400 font-bold">目前沒有共乘需求</div>`;
     } else {
         passengers.forEach(p => {
             const pName = p["姓名"];
-            // 🌟 對接您的 O 欄：搭乘車主
             const currentDriver = p["搭乘車主"] || ""; 
 
             const row = document.createElement('div');
-            row.className = "flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100";
+            row.className = "flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 mb-2";
             row.innerHTML = `
                 <div class="flex flex-col">
                     <span class="font-bold text-gray-800">${pName}</span>
-                    <span class="text-[10px] text-blue-500 font-bold">乘客</span>
+                    <span class="text-[10px] text-blue-500 font-bold">${p["報名代理人"] === '本人' ? '本人' : '攜伴'}</span>
                 </div>
-                <select class="carpool-select bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm" data-passenger="${pName}">
-                    <option value="">-- 尚未分配 --</option>
+                <select class="carpool-select bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm w-[150px]" 
+                        data-passenger="${pName}" onchange="refreshCarpoolSeats()">
+                    <option value="">-- 未分配 --</option>
                     ${drivers.map(d => `
-                        <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''}>
-                            👤 司機：${d["姓名"]} (餘 ${d["可載人數"] || 0})
+                        <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''} 
+                                data-limit="${d["可載人(僅本人)"] || d["可載人數"] || 0}">
+                            👤 ${d["姓名"]}
                         </option>
                     `).join('')}
                 </select>
@@ -1324,8 +1337,9 @@ function openCarpoolModal() {
         });
     }
     document.getElementById('carpoolModal').classList.remove('hidden');
+    setTimeout(refreshCarpoolSeats, 100); 
 }
-
+        
 function closeCarpoolModal() {
     document.getElementById('carpoolModal').classList.add('hidden');
 }

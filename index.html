@@ -198,7 +198,7 @@ function startSlides() {
     setTimeout(startSlides, 5000);
 }
 
-async function handleLogin() {
+async function。handleLogin() {
     const rawU = document.getElementById('userPhone').value.trim();
     const u = toHalfWidth(rawU).toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
@@ -208,7 +208,7 @@ async function handleLogin() {
         sessionStorage.setItem('userInfo', JSON.stringify({ 
             result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
         }));
-        window.location.href = 'guest_zone.html';
+        window.location.href = //'guest_zone.html';
         return;
     }
 

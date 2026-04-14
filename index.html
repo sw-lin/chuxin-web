@@ -198,17 +198,17 @@ function startSlides() {
     setTimeout(startSlides, 5000);
 }
 
-async function。handleLogin() {
+async function handleLogin() {
     const rawU = document.getElementById('userPhone').value.trim();
     const u = toHalfWidth(rawU).toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
-    // 1. 訪客模式
     if (u === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ 
             result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
         }));
-        window.location.href = //'guest_zone.html';
+        alert("訪客登入，即將前往訪客區...");
+        window.location.href = 'guest_zone.html';
         return;
     }
 
@@ -225,13 +225,13 @@ async function。handleLogin() {
         });
         
         const result = await res.json();
-        
-        if (result.result === "SUCCESS") {
-            // 🌟 關鍵修正：確保轉換為布林值
-            const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
+        console.log("--- 偵錯資訊開始 ---");
+        console.log("1. 後端傳回原始資料:", result);
 
-            console.log("後端原始回傳:", result); 
-            console.log("解析後的繳費狀態 (isPaidStatus):", isPaidStatus);
+        if (result.result === "SUCCESS") {
+            const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
+            console.log("2. 解析後的 isPaidStatus:", isPaidStatus);
+            console.log("3. 使用者身分 (Role):", result.role);
 
             const userStore = {
                 result: "SUCCESS",
@@ -243,26 +243,30 @@ async function。handleLogin() {
             };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
-            // 🌟 判斷條件：管理員或已繳費者進入會員區
-            if (result.role === "Admin" || isPaidStatus === true) {
-                console.log("條件符合：進入會員區");
-                window.location.href = 'member_zone.html';
-            } else {
-                console.log("條件不符：進入訪客區");
-                window.location.href = 'guest_zone.html';
-            }
+            // --- 停看聽：延遲 3 秒再跳轉 ---
+            let targetPage = (result.role === "Admin" || isPaidStatus === true) ? 'member_zone.html' : 'guest_zone.html';
+            
+            console.log("4. 系統判定目標頁面:", targetPage);
+            console.log("--- 偵錯資訊結束 (3秒後自動跳轉) ---");
+
+            // 如果您想「完全停住」不跳轉來檢查，可以把下面這三行註解掉
+            setTimeout(() => {
+                window.location.href = targetPage;
+            }, 3000); 
+
         } else {
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));
             btn.disabled = false;
             btn.innerText = "確認進入";
         }
     } catch (e) { 
-        console.error("登入錯誤:", e);
-        alert("登入過程發生異常，請檢查網路連線"); 
+        console.error("發生錯誤:", e);
+        alert("連線異常"); 
         btn.disabled = false;
         btn.innerText = "確認進入";
     }
-} // 這裡要補上函式的結尾括號
+}
+    
 function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
 window.onload = initData;        

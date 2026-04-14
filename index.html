@@ -203,18 +203,20 @@ async function handleLogin() {
     const u = toHalfWidth(rawU).toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
-    // 1. 訪客模式：既然有了 guest_zone，訪客應該導向 guest_zone
+    // 1. 訪客模式
     if (u === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ 
             result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
         }));
-        window.location.href = 'guest_zone.html'; // 訪客去訪客區
+        window.location.href = 'guest_zone.html';
         return;
     }
 
     if(!u || !p) return alert("請輸入帳號密碼");
+    
     const btn = document.getElementById('loginBtn');
-    btn.disabled = true; btn.innerText = "驗證中...";
+    btn.disabled = true; 
+    btn.innerText = "驗證中...";
     
     try {
         const res = await fetch(GAS_URL, { 
@@ -225,7 +227,7 @@ async function handleLogin() {
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // 修正變數名稱 mismatch
+            // 🌟 關鍵修正：確保轉換為布林值
             const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
 
             console.log("後端原始回傳:", result); 
@@ -240,8 +242,8 @@ async function handleLogin() {
                 isPaid: isPaidStatus 
             };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
-            
-            // 使用修正後的變數 isPaidStatus
+
+            // 🌟 判斷條件：管理員或已繳費者進入會員區
             if (result.role === "Admin" || isPaidStatus === true) {
                 console.log("條件符合：進入會員區");
                 window.location.href = 'member_zone.html';
@@ -249,9 +251,18 @@ async function handleLogin() {
                 console.log("條件不符：進入訪客區");
                 window.location.href = 'guest_zone.html';
             }
+        } else {
+            alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));
+            btn.disabled = false;
+            btn.innerText = "確認進入";
         }
+    } catch (e) { 
+        console.error("登入錯誤:", e);
+        alert("登入過程發生異常，請檢查網路連線"); 
+        btn.disabled = false;
+        btn.innerText = "確認進入";
     }
-}
+} // 這裡要補上函式的結尾括號
 function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
 window.onload = initData;        

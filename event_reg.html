@@ -1466,6 +1466,62 @@ function refreshCarpoolSeats() {
             lineBtn.classList.remove('flex-1');
         }
     }
+} 
+// 🌟 新增：打包車主與乘客名單，並傳送到 LINE
+function sendCarpoolToLine() {
+    const selects = document.querySelectorAll('.carpool-select');
+    const driverMap = {}; // 用來整理 { "車主A": ["乘客1", "乘客2"] }
+
+    // 1. 整理名單
+    selects.forEach(sel => {
+        const pName = sel.getAttribute('data-passenger');
+        const dName = sel.value;
+        if (!dName) return; // 安全機制：未分配不列入
+        
+        if (!driverMap[dName]) driverMap[dName] = [];
+        driverMap[dName].push(pName);
+    });
+
+    // 2. 組合 LINE 訊息文字
+    const eventName = document.getElementById('eventSelector').value;
+    let msg = `🚗 【${eventName}】共乘分配表 🚗\n`;
+    msg += `----------------------\n`;
+    
+    for (const [driver, passengers] of Object.entries(driverMap)) {
+        msg += `👤 車主：${driver}\n`;
+        msg += `👥 乘客：${passengers.join("、")}\n\n`;
+    }
+    msg += `✅ 已全數分配完畢`;
+
+    // 3. 確認與傳送
+    if (confirm(`確定發送以下分配結果至群組嗎？\n\n${msg}`)) {
+        const sessionKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+        if (!sessionKey) return alert("❌ 權限驗證失效：請重新登入。");
+
+        showLoading(true, "LINE 傳送中...");
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'send_line', // 呼叫您既有的 GAS 廣播功能
+                key: sessionKey,
+                message: msg
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.result === "SUCCESS") {
+                showToast("🚀 LINE 傳送成功");
+            } else {
+                alert("發送失敗: " + (res.message || "未知錯誤"));
+            }
+        })
+        .catch(err => {
+            alert("網路連線錯誤，無法傳送。");
+        })
+        .finally(() => {
+            showLoading(false);
+        });
+    }
 }        
     </script>
 </body>    

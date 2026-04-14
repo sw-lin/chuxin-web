@@ -250,9 +250,9 @@ async function handleLogin() {
             console.log("--- 偵錯資訊結束 (3秒後自動跳轉) ---");
 
             // 如果您想「完全停住」不跳轉來檢查，可以把下面這三行註解掉
-    //        setTimeout(() => {
-    //            window.location.href = targetPage;
-    //        }, 3000); 
+            setTimeout(() => {
+                window.location.href = targetPage;
+            }, 3000); 
 
         } else {
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));

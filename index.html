@@ -203,10 +203,12 @@ async function handleLogin() {
     const u = toHalfWidth(rawU).toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
-    // 訪客模式保持不變
+    // 1. 訪客模式：既然有了 guest_zone，訪客應該導向 guest_zone
     if (u === 'guest') {
-        sessionStorage.setItem('userInfo', JSON.stringify({ result: "SUCCESS", name: "訪客", phone: "guest", isGuest: true }));
-        window.location.href = 'member_zone.html';
+        sessionStorage.setItem('userInfo', JSON.stringify({ 
+            result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
+        }));
+        window.location.href = 'guest_zone.html'; // 訪客去訪客區
         return;
     }
 
@@ -223,34 +225,37 @@ async function handleLogin() {
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // 🌟 1. 儲存更完整的資料到 Session
+            // 🌟 核心修正：將 isPaid 統一轉換為布林值進行判斷
+            // 這樣不論 GAS 回傳 true, "true", "TRUE" 都能正確識別
+            const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
+
             const userStore = {
                 result: "SUCCESS",
                 name: result.name,
                 role: result.role,
                 phone: u,
                 staffKey: result.staffKey || "",
-                isPaid: result.isPaid // 儲存繳費狀態
+                isPaid: isPaidStatus 
             };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
-            // 🌟 2. 判斷跳轉目標
-            // 條件：(身分是管理員) 或 (繳費狀態為 true)
-            if (result.role === "Admin" || result.isPaid === true) {
-                console.log("導向：會員專區");
+            // 🌟 判斷條件增加容錯
+            if (result.role === "Admin" || isPaidStatus === true) {
+                console.log("登入成功，進入會員區");
                 window.location.href = 'member_zone.html';
             } else {
-                console.log("導向：訪客/未繳費專區");
+                console.log("登入成功，但未繳費，進入訪客區");
                 window.location.href = 'guest_zone.html';
             }
         } else { 
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤")); 
+            btn.disabled = false; btn.innerText = "確認進入";
         }
     } catch (e) { 
         alert("登入過程發生異常"); 
+        btn.disabled = false; btn.innerText = "確認進入";
     }
-}
-    
+}    
 function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
 window.onload = initData;        

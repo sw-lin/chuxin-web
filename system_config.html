@@ -127,40 +127,25 @@
     <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000]"></div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec"; // 請確保與之前一致
-        let isEditMode = false;
-        
-        // 在讀取循環中加入 guest 相關欄位
-        
-        const guestFields = [
-          'guest_slide1', 'guest_slide2', 'guest_slide3', 
-          'guest_content1', 'guest_content2', 'guest_content3'
-        ];
+       const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
+let isEditMode = false;
 
-guestFields.forEach(f => {
-    const el = document.getElementById(f);
-    if (el) {
-        const val = config[f];
-        // 考慮到 B/C 欄結構，優先取 .promo 或 .normal，若無則取純字串
-        el.value = (typeof val === 'object' && val !== null) ? (val.promo || val.normal || '') : (val || '');
-    }
-});
-        
-        function formatToDateInput(dateStr) {
-            if (!dateStr) return '';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return '';
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
+// 1. 日期格式轉換
+function formatToDateInput(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
+// 2. 初始化首頁輪播圖輸入框
 function initImageInputs() {
     const container = document.getElementById('img_container');
     let html = '';
     
-    // 原有的 5 組首頁輪播
     for(let i=1; i<=5; i++) {
         html += `
             <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50 mb-4">
@@ -174,7 +159,7 @@ function initImageInputs() {
     container.innerHTML = html;
 }
 
-// 2. 讀取邏輯：確保資料「各歸各位」
+// 3. 讀取資料庫邏輯 (已修正變數範圍)
 async function loadCurrentConfigs() {
     showLoading(true);
     try {
@@ -201,8 +186,9 @@ async function loadCurrentConfigs() {
         for(let i=1; i<=3; i++) {
             const sEl = document.getElementById(`guest_slide${i}`);
             const cEl = document.getElementById(`guest_content${i}`);
-            if(sEl) sEl.value = config[`guest_slide${i}`]?.promo || config[`guest_slide${i}`] || '';
-            if(cEl) cEl.value = config[`guest_content${i}`]?.promo || config[`guest_content${i}`] || '';
+            // 兼容資料庫中可能是純字串或 {promo: '', normal: ''} 物件的寫法
+            if(sEl) sEl.value = (typeof config[`guest_slide${i}`] === 'object') ? (config[`guest_slide${i}`]?.promo || config[`guest_slide${i}`]?.normal || '') : (config[`guest_slide${i}`] || '');
+            if(cEl) cEl.value = (typeof config[`guest_content${i}`] === 'object') ? (config[`guest_content${i}`]?.promo || config[`guest_content${i}`]?.normal || '') : (config[`guest_content${i}`] || '');
         }
 
         // D. 填入外部連結
@@ -218,24 +204,32 @@ async function loadCurrentConfigs() {
     }
     showLoading(false);
 }
-        
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            const inputs = document.querySelectorAll('.config-input');
-            const navEditBtn = document.getElementById('navEditBtn');
-            const saveActions = document.getElementById('saveActions');
 
-            inputs.forEach(input => {
-                input.readOnly = !isEditMode;
-                input.className = `config-input w-full p-4 rounded-2xl outline-none transition ` + (isEditMode ? 'input-enabled' : 'input-disabled');
-            });
+// 4. 切換編輯模式 (優化版：保留原始 Tailwind 樣式)
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const inputs = document.querySelectorAll('.config-input');
+    const navEditBtn = document.getElementById('navEditBtn');
+    const saveActions = document.getElementById('saveActions');
 
-            navEditBtn.innerHTML = isEditMode ? '<i class="fas fa-times mr-1"></i>結束編輯' : '<i class="fas fa-edit mr-1"></i>編輯模式';
-            navEditBtn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-            saveActions.classList.toggle('hidden', !isEditMode);
+    inputs.forEach(input => {
+        input.readOnly = !isEditMode;
+        // 使用 classList 切換，避免洗掉原本的寬度與圓角設定
+        if(isEditMode) {
+            input.classList.remove('input-disabled');
+            input.classList.add('input-enabled');
+        } else {
+            input.classList.remove('input-enabled');
+            input.classList.add('input-disabled');
         }
+    });
 
-// 3. 儲存邏輯：完整打包所有欄位回傳 GAS
+    navEditBtn.innerHTML = isEditMode ? '<i class="fas fa-times mr-1"></i>結束編輯' : '<i class="fas fa-edit mr-1"></i>編輯模式';
+    navEditBtn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+    saveActions.classList.toggle('hidden', !isEditMode);
+}
+
+// 5. 儲存資料庫邏輯 (已還原您舊版能成功顯示 ✅ 儲存成功的寫法)
 async function saveConfigs() {
     const staffKey = sessionStorage.getItem('staff_key');
     if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
@@ -262,30 +256,43 @@ async function saveConfigs() {
         configs[`guest_content${i}`] = document.getElementById(`guest_content${i}`).value;
     }
 
+    const payload = { type: 'update_config', key: staffKey, configs: configs };
+
     showLoading(true);
     try {
         const res = await fetch(GAS_URL, { 
             method: 'POST', 
-            mode: 'no-cors', // 若有跨域問題可加，但建議 GAS 端處理好 CORS
-            body: JSON.stringify({ type: 'update_config', key: staffKey, configs: configs }) 
+            body: JSON.stringify(payload) 
         });
-        // 由於 no-cors 無法讀取內容，若正常建議用回原本的 fetch
-        showToast("✅ 設定已送出至雲端");
-        setTimeout(() => location.reload(), 1500);
+        const result = await res.json();
+        
+        if(result.result === "SUCCESS") {
+            showToast("✅ 設定已成功同步至雲端");
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast("❌ 儲存失敗：" + result.message);
+        }
     } catch (e) {
+        console.error(e);
         showToast("❌ 連線異常");
     }
     showLoading(false);
 }
 
-        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
-        function showToast(m) {
-            const t = document.getElementById('toast');
-            t.innerText = m; t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 3000);
-        }
+// UI 輔助功能
+function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+function showToast(m) {
+    const t = document.getElementById('toast');
+    t.innerText = m; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 3000);
+}
 
-        window.onload = () => { initImageInputs(); loadCurrentConfigs(); };
+// 網頁載入時執行
+window.onload = () => { 
+    initImageInputs(); 
+    loadCurrentConfigs(); 
+};
+        
     </script>
 </body>
 </html>

@@ -50,13 +50,50 @@
                     <input type="date" id="promo_end" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
                 </div>
             </div>
+            
             <hr class="my-10 border-emerald-50">
+            
             <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
                 <i class="fas fa-images text-orange-500"></i>首頁輪播圖管理
             </h2>
-            <div id="img_container" class="space-y-4">
-                </div>
+            <div id="img_container" class="space-y-4"></div>
         </section>
+
+<section class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-orange-100">
+    <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+        <i class="fas fa-user-clock text-orange-500"></i>訪客專區內容 (Guest Zone)
+    </h2>
+    
+    <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <div>
+            <label class="block text-[10px] font-bold text-orange-600 mb-1 ml-1">訪客輪播圖 1 (B欄)</label>
+            <input type="text" id="guest_slide1" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly>
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-orange-600 mb-1 ml-1">訪客輪播圖 2 (B欄)</label>
+            <input type="text" id="guest_slide2" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly>
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-orange-600 mb-1 ml-1">訪客輪播圖 3 (B欄)</label>
+            <input type="text" id="guest_slide3" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 1 (支援多行/星號列表)</label>
+            <textarea id="guest_content1" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-24" readonly></textarea>
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 2</label>
+            <textarea id="guest_content2" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-24" readonly></textarea>
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 3</label>
+            <textarea id="guest_content3" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-24" readonly></textarea>
+        </div>
+    </div>
+</section>        
 
         <section class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-emerald-100">
             <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
@@ -90,10 +127,25 @@
     <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000]"></div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec"; // 請確保與之前一致
         let isEditMode = false;
+        
+        // 在讀取循環中加入 guest 相關欄位
+        
+        const guestFields = [
+          'guest_slide1', 'guest_slide2', 'guest_slide3', 
+          'guest_content1', 'guest_content2', 'guest_content3'
+        ];
 
-        // 強制轉換日期格式為 YYYY-MM-DD 以便 <input type="date"> 顯示
+guestFields.forEach(f => {
+    const el = document.getElementById(f);
+    if (el) {
+        const val = config[f];
+        // 考慮到 B/C 欄結構，優先取 .promo 或 .normal，若無則取純字串
+        el.value = (typeof val === 'object' && val !== null) ? (val.promo || val.normal || '') : (val || '');
+    }
+});
+        
         function formatToDateInput(dateStr) {
             if (!dateStr) return '';
             const d = new Date(dateStr);
@@ -124,40 +176,25 @@
                 const data = await res.json();
                 const config = data.config || {};
 
-                // 1. 填入日期 (關鍵修復：格式化日期)
-                const startDate = config.promo_start;
-                const endDate = config.promo_end;
-                document.getElementById('promo_start').value = formatToDateInput(typeof startDate === 'object' ? startDate.promo : startDate);
-                document.getElementById('promo_end').value = formatToDateInput(typeof endDate === 'object' ? endDate.promo : endDate);
+                // 1. 日期
+                document.getElementById('promo_start').value = formatToDateInput(config.promo_start);
+                document.getElementById('promo_end').value = formatToDateInput(config.promo_end);
 
-                // 2. 填入輪播圖
+                // 2. 輪播圖
                 for(let i=1; i<=5; i++) {
                     const item = config[`slide_img${i}`];
-                    const promoEl = document.getElementById(`slide_img${i}_promo`);
-                    const normalEl = document.getElementById(`slide_img${i}_normal`);
-                    if(typeof item === 'object' && item !== null) {
-                        promoEl.value = item.promo || '';
-                        normalEl.value = item.normal || '';
-                    } else {
-                        normalEl.value = item || '';
-                        promoEl.value = '';
-                    }
+                    document.getElementById(`slide_img${i}_promo`).value = item?.promo || '';
+                    document.getElementById(`slide_img${i}_normal`).value = item?.normal || (typeof item === 'string' ? item : '');
                 }
 
-                // 3. 填入其他網址
-                const setVal = (id, key) => {
-                    const val = config[key];
-                    const target = document.getElementById(id);
-                    if (target) {
-                        target.value = (typeof val === 'object' && val !== null) ? (val.promo || val.normal || '') : (val || '');
-                    }
-                };
-                setVal('reading_folder_url', 'reading_folder_url');
-                setVal('photo_gallery_url', 'photo_gallery_url');
-                setVal('about_us_url', 'about_us_url');
+                // 3. 訪客與外部連結 (通用填入)
+                const fields = ['guest_announcement', 'guest_guide_url', 'reading_folder_url', 'photo_gallery_url', 'about_us_url'];
+                fields.forEach(f => {
+                    const val = config[f];
+                    document.getElementById(f).value = (typeof val === 'object' && val !== null) ? (val.promo || val.normal || '') : (val || '');
+                });
 
             } catch (e) {
-                console.error("Load Error:", e);
                 showToast("❌ 無法獲取資料");
             }
             showLoading(false);
@@ -171,25 +208,17 @@
 
             inputs.forEach(input => {
                 input.readOnly = !isEditMode;
-                const isSlide = input.id.includes('slide_img');
-                input.className = `config-input w-full ${isSlide ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'} outline-none transition ` + 
-                                 (isEditMode ? 'input-enabled' : 'input-disabled');
+                input.className = `config-input w-full p-4 rounded-2xl outline-none transition ` + (isEditMode ? 'input-enabled' : 'input-disabled');
             });
 
-            if (isEditMode) {
-                navEditBtn.innerHTML = '<i class="fas fa-times mr-1"></i>結束編輯';
-                navEditBtn.className = "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md";
-                saveActions.classList.remove('hidden');
-            } else {
-                navEditBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>編輯模式';
-                navEditBtn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
-                saveActions.classList.add('hidden');
-            }
+            navEditBtn.innerHTML = isEditMode ? '<i class="fas fa-times mr-1"></i>結束編輯' : '<i class="fas fa-edit mr-1"></i>編輯模式';
+            navEditBtn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            saveActions.classList.toggle('hidden', !isEditMode);
         }
 
         async function saveConfigs() {
             const staffKey = sessionStorage.getItem('staff_key');
-            if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
+            if(!staffKey) return showToast("❌ 權限錯誤");
 
             const payload = {
                 type: 'update_config',
@@ -197,6 +226,14 @@
                 configs: {
                     promo_start: document.getElementById('promo_start').value,
                     promo_end: document.getElementById('promo_end').value,
+                    
+                    guest_slide1: document.getElementById('guest_slide1').value,
+                    guest_slide2: document.getElementById('guest_slide2').value,
+                    guest_slide3: document.getElementById('guest_slide3').value,
+                    guest_content1: document.getElementById('guest_content1').value,
+                    guest_content2: document.getElementById('guest_content2').value,
+                    guest_content3: document.getElementById('guest_content3').value,
+                    
                     reading_folder_url: document.getElementById('reading_folder_url').value,
                     photo_gallery_url: document.getElementById('photo_gallery_url').value,
                     about_us_url: document.getElementById('about_us_url').value,
@@ -213,15 +250,11 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
                 if(result.result === "SUCCESS") {
-                    showToast("✅ 設定已成功同步至雲端");
-                    isEditMode = true; toggleEditMode();
+                    showToast("✅ 已成功同步至雲端");
+                    toggleEditMode();
                     await loadCurrentConfigs();
-                } else {
-                    showToast("❌ 儲存失敗：" + result.message);
-                }
-            } catch (e) {
-                showToast("❌ 連線異常");
-            }
+                } else { showToast("❌ 儲存失敗"); }
+            } catch (e) { showToast("❌ 連線異常"); }
             showLoading(false);
         }
 
@@ -232,10 +265,7 @@
             setTimeout(() => t.style.opacity = '0', 3000);
         }
 
-        window.onload = () => {
-            initImageInputs();
-            loadCurrentConfigs();
-        };
+        window.onload = () => { initImageInputs(); loadCurrentConfigs(); };
     </script>
 </body>
 </html>

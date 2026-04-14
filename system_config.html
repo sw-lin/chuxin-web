@@ -156,50 +156,69 @@ guestFields.forEach(f => {
             return `${year}-${month}-${day}`;
         }
 
-        function initImageInputs() {
-            const container = document.getElementById('img_container');
-            container.innerHTML = Array.from({length: 5}, (_, i) => `
-                <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
-                    <span class="text-xs font-black text-emerald-800 mb-3 block italic tracking-widest">IMAGE SLIDE #${i+1}</span>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div><span class="sub-label text-orange-600 text-[10px] font-bold">宣傳圖 (B欄)</span><input type="text" id="slide_img${i+1}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                        <div><span class="sub-label text-gray-400 text-[10px] font-bold">常態圖 (C欄)</span><input type="text" id="slide_img${i+1}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
-                    </div>
+function initImageInputs() {
+    const container = document.getElementById('img_container');
+    let html = '';
+    
+    // 原有的 5 組首頁輪播
+    for(let i=1; i<=5; i++) {
+        html += `
+            <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50 mb-4">
+                <span class="text-xs font-black text-emerald-800 mb-3 block italic tracking-widest">HOME SLIDE #${i}</span>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div><span class="sub-label text-orange-600 text-[10px] font-bold">宣傳圖 (B欄)</span><input type="text" id="slide_img${i}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                    <div><span class="sub-label text-gray-400 text-[10px] font-bold">常態圖 (C欄)</span><input type="text" id="slide_img${i}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
                 </div>
-            `).join('');
-        }
+            </div>`;
+    }
+    container.innerHTML = html;
+}
 
-        async function loadCurrentConfigs() {
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL + "?t=" + Date.now());
-                const data = await res.json();
-                const config = data.config || {};
+// 2. 讀取邏輯：確保資料「各歸各位」
+async function loadCurrentConfigs() {
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL + "?t=" + Date.now());
+        const data = await res.json();
+        const config = data.config || {};
 
-                // 1. 日期
-                document.getElementById('promo_start').value = formatToDateInput(config.promo_start);
-                document.getElementById('promo_end').value = formatToDateInput(config.promo_end);
+        // A. 填入日期
+        document.getElementById('promo_start').value = formatToDateInput(config.promo_start?.promo || config.promo_start || '');
+        document.getElementById('promo_end').value = formatToDateInput(config.promo_end?.promo || config.promo_end || '');
 
-                // 2. 輪播圖
-                for(let i=1; i<=5; i++) {
-                    const item = config[`slide_img${i}`];
-                    document.getElementById(`slide_img${i}_promo`).value = item?.promo || '';
-                    document.getElementById(`slide_img${i}_normal`).value = item?.normal || (typeof item === 'string' ? item : '');
-                }
-
-                // 3. 訪客與外部連結 (通用填入)
-                const fields = ['guest_announcement', 'guest_guide_url', 'reading_folder_url', 'photo_gallery_url', 'about_us_url'];
-                fields.forEach(f => {
-                    const val = config[f];
-                    document.getElementById(f).value = (typeof val === 'object' && val !== null) ? (val.promo || val.normal || '') : (val || '');
-                });
-
-            } catch (e) {
-                showToast("❌ 無法獲取資料");
+        // B. 填入首頁輪播圖 (slide_img1 ~ slide_img5)
+        for(let i=1; i<=5; i++) {
+            const item = config[`slide_img${i}`];
+            const promoEl = document.getElementById(`slide_img${i}_promo`);
+            const normalEl = document.getElementById(`slide_img${i}_normal`);
+            if (promoEl && normalEl) {
+                promoEl.value = (typeof item === 'object') ? (item?.promo || '') : '';
+                normalEl.value = (typeof item === 'object') ? (item?.normal || '') : (item || '');
             }
-            showLoading(false);
         }
 
+        // C. 填入訪客專區 (guest_slide & guest_content)
+        for(let i=1; i<=3; i++) {
+            const sEl = document.getElementById(`guest_slide${i}`);
+            const cEl = document.getElementById(`guest_content${i}`);
+            if(sEl) sEl.value = config[`guest_slide${i}`]?.promo || config[`guest_slide${i}`] || '';
+            if(cEl) cEl.value = config[`guest_content${i}`]?.promo || config[`guest_content${i}`] || '';
+        }
+
+        // D. 填入外部連結
+        const links = ['reading_folder_url', 'photo_gallery_url', 'about_us_url'];
+        links.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.value = config[id]?.promo || config[id] || '';
+        });
+
+    } catch (e) {
+        console.error("Load Error:", e);
+        showToast("❌ 無法獲取資料");
+    }
+    showLoading(false);
+}
+        
         function toggleEditMode() {
             isEditMode = !isEditMode;
             const inputs = document.querySelectorAll('.config-input');
@@ -216,47 +235,48 @@ guestFields.forEach(f => {
             saveActions.classList.toggle('hidden', !isEditMode);
         }
 
-        async function saveConfigs() {
-            const staffKey = sessionStorage.getItem('staff_key');
-            if(!staffKey) return showToast("❌ 權限錯誤");
+// 3. 儲存邏輯：完整打包所有欄位回傳 GAS
+async function saveConfigs() {
+    const staffKey = sessionStorage.getItem('staff_key');
+    if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
 
-            const payload = {
-                type: 'update_config',
-                key: staffKey,
-                configs: {
-                    promo_start: document.getElementById('promo_start').value,
-                    promo_end: document.getElementById('promo_end').value,
-                    
-                    guest_slide1: document.getElementById('guest_slide1').value,
-                    guest_slide2: document.getElementById('guest_slide2').value,
-                    guest_slide3: document.getElementById('guest_slide3').value,
-                    guest_content1: document.getElementById('guest_content1').value,
-                    guest_content2: document.getElementById('guest_content2').value,
-                    guest_content3: document.getElementById('guest_content3').value,
-                    
-                    reading_folder_url: document.getElementById('reading_folder_url').value,
-                    photo_gallery_url: document.getElementById('photo_gallery_url').value,
-                    about_us_url: document.getElementById('about_us_url').value,
-                    slide_img1: { promo: document.getElementById('slide_img1_promo').value, normal: document.getElementById('slide_img1_normal').value },
-                    slide_img2: { promo: document.getElementById('slide_img2_promo').value, normal: document.getElementById('slide_img2_normal').value },
-                    slide_img3: { promo: document.getElementById('slide_img3_promo').value, normal: document.getElementById('slide_img3_normal').value },
-                    slide_img4: { promo: document.getElementById('slide_img4_promo').value, normal: document.getElementById('slide_img4_normal').value },
-                    slide_img5: { promo: document.getElementById('slide_img5_promo').value, normal: document.getElementById('slide_img5_normal').value }
-                }
-            };
+    const configs = {
+        promo_start: document.getElementById('promo_start').value,
+        promo_end: document.getElementById('promo_end').value,
+        reading_folder_url: document.getElementById('reading_folder_url').value,
+        photo_gallery_url: document.getElementById('photo_gallery_url').value,
+        about_us_url: document.getElementById('about_us_url').value
+    };
 
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await res.json();
-                if(result.result === "SUCCESS") {
-                    showToast("✅ 已成功同步至雲端");
-                    toggleEditMode();
-                    await loadCurrentConfigs();
-                } else { showToast("❌ 儲存失敗"); }
-            } catch (e) { showToast("❌ 連線異常"); }
-            showLoading(false);
-        }
+    // 自動打包 5 組首頁圖
+    for(let i=1; i<=5; i++){
+        configs[`slide_img${i}`] = { 
+            promo: document.getElementById(`slide_img${i}_promo`).value, 
+            normal: document.getElementById(`slide_img${i}_normal`).value 
+        };
+    }
+
+    // 自動打包 3 組訪客資料
+    for(let i=1; i<=3; i++){
+        configs[`guest_slide${i}`] = document.getElementById(`guest_slide${i}`).value;
+        configs[`guest_content${i}`] = document.getElementById(`guest_content${i}`).value;
+    }
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', // 若有跨域問題可加，但建議 GAS 端處理好 CORS
+            body: JSON.stringify({ type: 'update_config', key: staffKey, configs: configs }) 
+        });
+        // 由於 no-cors 無法讀取內容，若正常建議用回原本的 fetch
+        showToast("✅ 設定已送出至雲端");
+        setTimeout(() => location.reload(), 1500);
+    } catch (e) {
+        showToast("❌ 連線異常");
+    }
+    showLoading(false);
+}
 
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) {

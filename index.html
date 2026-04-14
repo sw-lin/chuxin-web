@@ -203,16 +203,16 @@ async function handleLogin() {
     const u = toHalfWidth(rawU).toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
+    // 1. 訪客模式：直接跳轉，不再彈窗
     if (u === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ 
             result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
         }));
-        alert("訪客登入，即將前往訪客區...");
-        window.location.href = 'guest_zone.html';
+        window.location.href = 'guest_zone.html'; 
         return;
     }
 
-    if(!u || !p) return alert("請輸入帳號密碼");
+    if(!u || !p) return alert("請輸入帳號密碼"); // 這個保留，提醒使用者沒輸入
     
     const btn = document.getElementById('loginBtn');
     btn.disabled = true; 
@@ -225,13 +225,9 @@ async function handleLogin() {
         });
         
         const result = await res.json();
-        console.log("--- 偵錯資訊開始 ---");
-        console.log("1. 後端傳回原始資料:", result);
-
+        
         if (result.result === "SUCCESS") {
             const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
-            console.log("2. 解析後的 isPaidStatus:", isPaidStatus);
-            console.log("3. 使用者身分 (Role):", result.role);
 
             const userStore = {
                 result: "SUCCESS",
@@ -243,16 +239,11 @@ async function handleLogin() {
             };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
-            // --- 停看聽：延遲 3 秒再跳轉 ---
+            // 判斷跳轉目標
             let targetPage = (result.role === "Admin" || isPaidStatus === true) ? 'member_zone.html' : 'guest_zone.html';
             
-            console.log("4. 系統判定目標頁面:", targetPage);
-            console.log("--- 偵錯資訊結束 (3秒後自動跳轉) ---");
-
-            // 如果您想「完全停住」不跳轉來檢查，可以把下面這三行註解掉
-            setTimeout(() => {
-                window.location.href = targetPage;
-            }); 
+            // 🌟 移除 setTimeout 的延遲，實現秒跳轉
+            window.location.href = targetPage;
 
         } else {
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));

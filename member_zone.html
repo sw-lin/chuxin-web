@@ -673,18 +673,20 @@ async function enterStaffMode() {
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 1. 先存 Key，確保這一步最優先執行
-    sessionStorage.setItem('staffKey', result.staffKey);
-    
-    // 2. 存入其他資訊
-    sessionStorage.setItem('userTitle', result.userTitle);
-    sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
+        // 關鍵：直接用一開始 prompt 拿到的那個變數 staffKey
+            const finalKey = staffKey.trim(); 
+            
+            console.log("準備存入的金鑰：", finalKey); // 偵錯用
+            
+            // 存入 Session
+            sessionStorage.setItem('staffKey', finalKey); 
+            sessionStorage.setItem('userTitle', result.userTitle);
+            sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
 
-    // 3. 偵錯用：在跳轉前先印出來看看
-    console.log("儲存檢查:", sessionStorage.getItem('staff_key'));
+            // 強制檢查一次，如果這裡印出來是空的，代表變數拿錯了
+            alert("驗證成功，職稱：" + result.userTitle); 
 
-    // 4. 最後才跳轉
-    window.location.href = 'staff_menu.html';
+            window.location.href = 'staff_menu.html';
         } else {
             alert(result.message || "金鑰不正確");
         }

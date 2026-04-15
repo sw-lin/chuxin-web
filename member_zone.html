@@ -674,7 +674,7 @@ async function enterStaffMode() {
 
         if (result.result === "SUCCESS") {
             // 存入通行證
-            sessionStorage.setItem('staff_key', result.staffKey);
+            sessionStorage.setItem('staff_key', staffKey.trim());
             sessionStorage.setItem('userTitle', result.userTitle);
             sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
 

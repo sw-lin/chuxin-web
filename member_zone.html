@@ -670,13 +670,21 @@ async function enterStaffMode() {
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 存入金鑰，名稱必須與 staff_menu.html 一致
+            // 1. 存入金鑰 (用於後端後續驗證)
             sessionStorage.setItem('staff_key', staffKey.trim()); 
-            window.location.href = 'staff_menu.html'; 
+            
+            // 2. 存入職稱 (例如：會長、班務)
+            sessionStorage.setItem('userTitle', result.userTitle || "幹部");
+            
+            // 3. 存入權限清單 (轉換為字串存入，例如: ["edit_calendar", "edit_member"])
+            sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
+
+            // 跳轉至管理選單
+            window.location.href = 'staff_menu.html';
         } else {
             alert("失敗：金鑰不正確 (ERROR)");
         }
-    } // <--- 之前您漏掉了這個結束 try 的右大括號
+    } 
     catch (e) {
         console.error(e);
         alert("發生嚴重錯誤！錯誤訊息：" + e.message);

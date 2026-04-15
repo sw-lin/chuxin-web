@@ -653,41 +653,39 @@ function getDirectImageUrl(url) {
 // 保留進入工作人員模式功能
 async function enterStaffMode() {   
     const staffKey = prompt("請輸入幹部管理金鑰：");
-    if (!staffKey) {
-        alert("使用者取消輸入或未填寫");
-        return;
-    }
+    if (!staffKey) return;
+
+    // 從當前登入的會員資料中抓取職稱 (C欄)
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    const currentTitle = userInfo ? userInfo.title : "一般幹部";
 
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'verify_staff_key',
-                staffKey: staffKey.trim()
+                staffKey: staffKey.trim(),
+                userTitle: currentTitle // 👈 把職稱傳給後端去查 Config
             })
         });
 
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 1. 存入金鑰 (用於後端後續驗證)
-            sessionStorage.setItem('staff_key', staffKey.trim()); 
-            
-            // 2. 存入職稱 (例如：會長、班務)
-            sessionStorage.setItem('userTitle', result.userTitle || "幹部");
-            
-            // 3. 存入權限清單 (轉換為字串存入，例如: ["edit_calendar", "edit_member"])
+            // 存入通行證
+            sessionStorage.setItem('staff_key', staffKey.trim());
+            sessionStorage.setItem('userTitle', result.userTitle);
             sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
 
             // 跳轉至管理選單
-            window.location.href = 'staff_menu.html';
+            window.location.href = 'staff_menu.html'; 
         } else {
-            alert("失敗：金鑰不正確 (ERROR)");
+            alert(result.message || "金鑰不正確");
         }
-    } 
-    catch (e) {
+    } catch (e) {
         console.error(e);
-        alert("發生嚴重錯誤！錯誤訊息：" + e.message);
+        alert("驗證出錯：" + e.message);
     }
 }    
     // 核心：控制載入中遮罩

@@ -238,7 +238,8 @@ async function handleLogin() {
                 role: result.role,
                 title: result.title, // 👈 關鍵新增：把 GAS 回傳的職稱接住
                 phone: u,
-                staffKey: result.staffKey || ""                
+                staffKey: result.staffKey || "",
+                isPaid: isPaidStatus        
             };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 

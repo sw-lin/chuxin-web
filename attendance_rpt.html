@@ -199,6 +199,7 @@
         toggleLoading(false);
     }    
     // 補登執行函數 (修正名稱與邏輯)
+// 補登執行函數 (加入發送前的最終電話號碼清洗防線)
     async function submitManualCheckin() {
         if (!pendingCheckin.phone) return;
 
@@ -211,8 +212,15 @@
             return;
         }
 
-        // 格式化為與 QR Code 相同的格式
         const eventMark = `EVENT:${date}|${title}`;
+
+        // 🎯 核心修正：在送出給後端之前，再次強制清洗電話格式，當作最後一道防線
+        let finalPhone = String(pendingCheckin.phone).trim();
+        if (finalPhone.startsWith("8869")) {
+            finalPhone = "09" + finalPhone.substring(4);
+        } else if (finalPhone.length === 9 && finalPhone.startsWith("9")) {
+            finalPhone = "0" + finalPhone;
+        }
 
         toggleLoading(true);
         try {
@@ -221,7 +229,7 @@
                 body: JSON.stringify({ 
                     type: 'manual_checkin', 
                     key: STAFF_KEY, 
-                    phone: pendingCheckin.phone, 
+                    phone: finalPhone, // 👈 這裡替換為強制清洗後的最終號碼
                     name: pendingCheckin.name, 
                     eventTitle: eventMark 
                 })
@@ -237,7 +245,7 @@
         }
         toggleLoading(false);
     }
-
+    
     // 其他輔助函數
     function renderReport() {
         const list = document.getElementById('reportList');

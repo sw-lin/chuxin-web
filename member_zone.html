@@ -674,7 +674,7 @@ async function enterStaffMode() {
 
         if (result.result === "SUCCESS") {
             // 1. 先存 Key，確保這一步最優先執行
-    sessionStorage.setItem('staff_key', staffKey.trim()); 
+    sessionStorage.setItem('staffKey', staffKey.trim());
     
     // 2. 存入其他資訊
     sessionStorage.setItem('userTitle', result.userTitle);

@@ -143,7 +143,7 @@
         toggleLoading(false);
     }
 
-    // 獲取報表資料
+    // 獲取報表資料 (已加入電話號碼自動校正機制)
     async function fetchReport() {
         const selector = document.getElementById('eventSelector');
         const title = selector.value;
@@ -165,18 +165,39 @@
                 })
             });
             const result = await res.json();
+            
             if (result.result === "SUCCESS") {
-                currentReport = result.report;
+                // 🎯 核心修正：在這裡直接攔截並清洗電話號碼
+                currentReport = result.report.map(r => {
+                    let cleanPhone = String(r.phone || "").trim();
+                    // 如果是 8869 開頭，替換成 09
+                    if (cleanPhone.startsWith("8869")) {
+                        cleanPhone = "09" + cleanPhone.substring(4);
+                    } 
+                    // 如果剛好是 9 碼且 9 開頭 (例如 912345678)，補 0
+                    else if (cleanPhone.length === 9 && cleanPhone.startsWith("9")) {
+                        cleanPhone = "0" + cleanPhone;
+                    }
+
+                    return {
+                        ...r,           // 保留原本的 name, status 等屬性
+                        phone: cleanPhone // 覆寫為清洗後的電話
+                    };
+                });
+
                 document.getElementById('statsLabel').innerText = "目前進度";
                 document.getElementById('statsSubLabel').innerText = "已出席";
                 document.getElementById('lineBtn').classList.remove('hidden');
-                renderReport();
+                
+                renderReport(); // 這裡算出來的畫面就會是 09 開頭了
+                
                 document.getElementById('statsSection').classList.remove('hidden');
             }
-        } catch (e) { showToast("❌ 讀取報表錯誤"); }
+        } catch (e) { 
+            showToast("❌ 讀取報表錯誤"); 
+        }
         toggleLoading(false);
-    }
-
+    }    
     // 補登執行函數 (修正名稱與邏輯)
     async function submitManualCheckin() {
         if (!pendingCheckin.phone) return;

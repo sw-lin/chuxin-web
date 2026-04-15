@@ -230,25 +230,55 @@
         }
 
         async function createNewLedger(defStatus) {
-            const name = document.getElementById('newItemName').value.trim();
-            if (!name) return;
+            const nameInput = document.getElementById('newItemName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert("請輸入帳簿名稱");
+                return;
+            }
+
+            // 🌟 防呆機制：檢查名稱是否重複
+            const selector = document.getElementById('itemSelector');
+            const existingItems = Array.from(selector.options).map(opt => opt.value);
+            
+            if (existingItems.includes(name)) {
+                alert(`⚠️ 錯誤：已經有名稱為「${name}」的帳簿了！\n請使用不同的名稱，或先刪除舊帳簿再重新建立。`);
+                return;
+            }
+
+            // 確認流程
+            if (!confirm(`確定要以「${name}」為名建立新帳簿嗎？\n(預設狀態：${defStatus})`)) return;
+
             closeModal('createModal');
             toggleLoading(true);
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ type: 'init_ledger', itemName: name, status: defStatus, key: STAFF_KEY })
+                    mode: 'cors', // 確保跨域請求正常
+                    body: JSON.stringify({ 
+                        type: 'init_ledger', 
+                        itemName: name, 
+                        status: defStatus, 
+                        key: STAFF_KEY 
+                    })
                 });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
                     showToast("✅ 新帳簿已建立");
-                    await fetchItems();
+                    nameInput.value = ""; // 清空輸入框
+                    await fetchItems(); // 重新抓取選單
                     document.getElementById('itemSelector').value = name;
                     loadLedger();
+                } else {
+                    alert("建立失敗：" + result.message);
                 }
-            } finally { toggleLoading(false); }
+            } catch (e) { 
+                showToast("❌ 連線異常，請稍後再試"); 
+            } finally { 
+                toggleLoading(false); 
+            }
         }
-
         // --- 項目管理功能 ---
         function openEditItemModal() {
             const currentItem = document.getElementById('itemSelector').value;

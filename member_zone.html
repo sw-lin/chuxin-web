@@ -673,13 +673,18 @@ async function enterStaffMode() {
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 存入通行證
-            sessionStorage.setItem('staff_key', staffKey.trim());
-            sessionStorage.setItem('userTitle', result.userTitle);
-            sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
+            // 1. 先存 Key，確保這一步最優先執行
+    sessionStorage.setItem('staff_key', staffKey.trim()); 
+    
+    // 2. 存入其他資訊
+    sessionStorage.setItem('userTitle', result.userTitle);
+    sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
 
-            // 跳轉至管理選單
-            window.location.href = 'staff_menu.html'; 
+    // 3. 偵錯用：在跳轉前先印出來看看
+    console.log("儲存檢查:", sessionStorage.getItem('staff_key'));
+
+    // 4. 最後才跳轉
+    window.location.href = 'staff_menu.html';
         } else {
             alert(result.message || "金鑰不正確");
         }

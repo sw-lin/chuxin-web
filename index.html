@@ -236,9 +236,9 @@ async function handleLogin() {
                 result: "SUCCESS",
                 name: result.name,
                 role: result.role,
+                title: result.title, // 👈 關鍵新增：把 GAS 回傳的職稱接住
                 phone: u,
-                staffKey: result.staffKey || "",
-                isPaid: isPaidStatus 
+                staffKey: result.staffKey || ""                
             };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 

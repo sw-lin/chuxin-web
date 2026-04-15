@@ -228,9 +228,9 @@ async function handleLogin() {
         
         if (result.result === "SUCCESS") {
             // --- 應急修改：暫時忽略繳費狀態判斷 ---
-            // 原本：const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
+            const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
             // 現在：強制設定為 true，讓判斷邏輯暫時失效
-            const isPaidStatus = true;
+            // const isPaidStatus = true;
 
             const userStore = {
                 result: "SUCCESS",

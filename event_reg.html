@@ -642,130 +642,59 @@ const rawBus = String(
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-function openRegModal(phone, name) {
+function openRegModal(index = null) {
+    const modal = document.getElementById('reg_modal');
+    const form = document.getElementById('regForm');
+    if (form) form.reset(); // 先清空表單
+
+    // 取得當前活動名稱
     const title = document.getElementById('eventSelector').value;
-    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
-    
-    // 🌟 修正點：精準對應 GAS H欄的 "(需要身分證)" (注意括號與名稱)
-    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
-    const needId = (ev?.["(需要身分證)"] === '是' || ev?.needId === '是' || ev?.needId === 'Y');
+    document.getElementById('reg_event_title').innerText = title;
 
-    console.log("當前活動物件:", ev);    
-    console.log("活動規格檢查:", { title, isTourBus, needId }); // 除錯用
+    if (index !== null) {
+        // --- 編輯模式 ---
+        const r = currentViewData[index];
+        console.log("👉 正在對接這筆資料:", r); // 除錯用
 
-    // 🌟 修正點：將 reg_id_zone 改為 reg_insurance_zone (與你的 HTML 一致)
-    const insuranceZone = document.getElementById('reg_insurance_zone');
-    const transZone = document.getElementById('reg_transport_zone');
-    const nameInput = document.getElementById('reg_name'); // 取得姓名輸入框
-    
-    if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none'; // 因為 HTML 是 grid 佈局
-    if (transZone) transZone.style.display = isTourBus ? 'none' : 'block';
+        // 填入基本資料
+        document.getElementById('reg_name').value = r["姓名"] || "";
+        document.getElementById('reg_phone').value = r["電話"] || "";
+        document.getElementById('reg_old_phone').value = r["電話"] || "";
+        document.getElementById('reg_id').value = r["身分證"] || "";
+        document.getElementById('reg_diet').value = r["餐食"] || "葷";
+        document.getElementById('reg_is_member').value = r["會員身分"] || "否";
+        document.getElementById('reg_note').value = r["備註"] || "";
 
-    if (phone && name) {
-        // 🌟 修正：確保 phone 轉為字串比較，避免型別錯誤
-        const r = allData.registrations.find(reg => 
-            String(reg["電話"] || "").trim() === String(phone).trim() && 
-            String(reg["姓名"] || "").trim() === String(name).trim()
-        );
-
-        if (r) {
-            // 1. 🌟 鎖定姓名欄位 (防止資料庫產生兩筆名單)
-            if (nameInput) {
-                nameInput.value = r["姓名"] || "";
-                nameInput.readOnly = true; // 設為唯讀
-                nameInput.style.backgroundColor = "#e5e7eb"; // 變灰色
-                nameInput.style.cursor = "not-allowed"; // 顯示禁止符號
-            }            
-            document.getElementById('reg_old_phone').value = phone;
+        // 🌟 關鍵修正：處理生日欄位
+        const bdayField = document.getElementById('reg_birthday');
+        if (bdayField) {
+            let bdayValue = r["生日"] || "";
             
-            document.getElementById('reg_phone').value = r["電話"] || "";
-            document.getElementById('reg_diet').value = r["餐食"] || "葷";
-
-            // 🌟 新增：設定會員狀態下拉選單
-            // 判斷 H 欄的值，如果抓不到則預設為「否」
-            const isMemVal = String(r["是否為會員"] || r["會員身分"] || "否").trim();
-            document.getElementById('reg_is_member').value = isMemVal === "是" ? "是" : "否";
-            
-            // 🌟 修正身分證：增加欄位名容錯
-            const idVal = r["身分證"] || r["身分證字號"] || r["idCard"] || r["ID"] || "";
-            document.getElementById('reg_id').value = idVal;
-            
-            // 🌟 修正：讀取生日並「徹底強制」轉換格式
-            let rawBirthday = r["生日"] || "";
-            let bdayForInput = "";
-            
-            console.log("最終準備填入生日欄位的值:", rawBirthday); // 除錯用
-            
-            if (rawBirthday) {
-                // 如果拿到的是 ISO 字串 (帶有 T)，先切掉時間部分
-                if (typeof rawBirthday === 'string' && rawBirthday.includes('T')) {
-                    bdayForInput = rawBirthday.split('T')[0];
-                } else {
-                    const d = new Date(rawBirthday);
-                    if (!isNaN(d.getTime())) {
-                        const y = d.getFullYear();
-                        const m = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        bdayForInput = `${y}-${m}-${day}`;
-                    }
-                }
-            }
-
-            console.log("最終準備填入生日欄位的值:", bdayForInput); // 除錯用
-            
-            const bdayField = document.getElementById('reg_birthday');
-            if (bdayField) {
-                bdayField.value = bdayForInput;
+            // 如果 GAS 傳來的是完整 ISO 字串 (例如 2003-03-14T12:00:00Z)
+            // HTML date input 只接受 "YYYY-MM-DD"
+            if (bdayValue && bdayValue.includes("T")) {
+                bdayValue = bdayValue.split("T")[0];
             }
             
-            document.getElementById('reg_note').value = r["備註"] || "";
-            
-// 🌟 修正交通：處理 Excel 欄位名稱帶有括號的狀況
-    // 檢查 F 欄與 G 欄
-    const transValue = r["交通"] || "自駕";
-    
-    // 尋找對應的 Radio Button
-    const transRadio = document.querySelector(`input[name="trans"][value="${transValue}"]`);
-    if (transRadio) {
-        transRadio.checked = true;
-    } else {
-        // 如果資料庫存的是「自開車」等字眼，強制 fallback 到自駕
-        document.querySelector('input[name="trans"][value="自駕"]').checked = true;
-    }
-    
-    // 🌟 修正人數：確保轉為數字且處理欄位名
-    const seatValue = parseInt(r["可載人數"]) || 0;
-    document.getElementById('reg_seats').value = seatValue;
-
-    // 手動觸發一次顯示邏輯
-    updateSeatInput(transValue);
-    
-    console.log("偵測到資料:", r); // 這行很重要，請在瀏覽器 F12 檢查輸出的物件內容
+            console.log("🛠️ 準備填入生日格子的值:", bdayValue);
+            bdayField.value = bdayValue;
         }
+
+        // 處理交通方式
+        const transVal = r["交通"] || "自駕";
+        const transRadios = document.getElementsByName('trans');
+        transRadios.forEach(rad => {
+            if (rad.value === transVal) rad.checked = true;
+        });
+
     } else {
-        resetRegForm();
-        // 2. 🌟 開放姓名欄位
-        if (nameInput) {
-            nameInput.readOnly = false; // 解除唯讀
-            nameInput.style.backgroundColor = "#f9fafb"; // 恢復 gray-50 顏色
-            nameInput.style.cursor = "text"; // 恢復文字指標
-        }
-        
-        // 🌟 新增：如果是遊覽車，確保 Radio 沒被勾選，避免誤傳「自駕」
-        if (isTourBus) {
-            document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);
-        } else {
-            // 一般活動預設勾選自駕
-            const defaultRadio = document.querySelector('input[name="trans"][value="自駕"]');
-            if (defaultRadio) {
-                defaultRadio.checked = true;
-                updateSeatInput("自駕");
-            }
-        }        
+        // --- 新增模式 ---
+        document.getElementById('reg_old_phone').value = "";
     }
-    document.getElementById('regModal').classList.remove('hidden');
-}
-        
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";

@@ -645,18 +645,29 @@ const rawBus = String(
 function openRegModal(index = null) {
     const modal = document.getElementById('reg_modal');
     const form = document.getElementById('regForm');
-    if (form) form.reset(); // 先清空表單
+    if (form) form.reset();
 
-    // 取得當前活動名稱
     const title = document.getElementById('eventSelector').value;
     document.getElementById('reg_event_title').innerText = title;
 
     if (index !== null) {
-        // --- 編輯模式 ---
-        const r = currentViewData[index];
-        console.log("👉 正在對接這筆資料:", r); // 除錯用
+        // --- 🌟 修正：確保抓到正確的資料來源 ---
+        // 優先嘗試使用 allData.registrations (這是您原本邏輯常用的名稱)
+        let r = null;
+        if (typeof allData !== 'undefined' && allData.registrations) {
+            r = allData.registrations[index];
+        } else if (typeof currentViewData !== 'undefined') {
+            r = currentViewData[index];
+        }
 
-        // 填入基本資料
+        if (!r) {
+            console.error("找不到該筆報名資料，請檢查資料變數名稱");
+            return;
+        }
+
+        console.log("👉 正在對接這筆資料:", r);
+
+        // 填入資料
         document.getElementById('reg_name').value = r["姓名"] || "";
         document.getElementById('reg_phone').value = r["電話"] || "";
         document.getElementById('reg_old_phone').value = r["電話"] || "";
@@ -665,22 +676,19 @@ function openRegModal(index = null) {
         document.getElementById('reg_is_member').value = r["會員身分"] || "否";
         document.getElementById('reg_note').value = r["備註"] || "";
 
-        // 🌟 關鍵修正：處理生日欄位
+        // --- 🌟 修正：生日格式轉換 ---
         const bdayField = document.getElementById('reg_birthday');
         if (bdayField) {
             let bdayValue = r["生日"] || "";
-            
-            // 如果 GAS 傳來的是完整 ISO 字串 (例如 2003-03-14T12:00:00Z)
-            // HTML date input 只接受 "YYYY-MM-DD"
-            if (bdayValue && bdayValue.includes("T")) {
-                bdayValue = bdayValue.split("T")[0];
+            // 如果 GAS 傳來的是 2003-03-14T00:00:00.000Z 這種格式，截取前 10 碼
+            if (bdayValue && bdayValue.length > 10) {
+                bdayValue = bdayValue.substring(0, 10);
             }
-            
-            console.log("🛠️ 準備填入生日格子的值:", bdayValue);
             bdayField.value = bdayValue;
+            console.log("🛠️ 填入生日值:", bdayValue);
         }
 
-        // 處理交通方式
+        // 處理交通 (Radio 格式)
         const transVal = r["交通"] || "自駕";
         const transRadios = document.getElementsByName('trans');
         transRadios.forEach(rad => {
@@ -688,7 +696,6 @@ function openRegModal(index = null) {
         });
 
     } else {
-        // --- 新增模式 ---
         document.getElementById('reg_old_phone').value = "";
     }
 

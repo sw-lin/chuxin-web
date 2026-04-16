@@ -186,14 +186,22 @@ async function loadCurrentConfigs() {
         }
 
         // D. 填入關於我們文字 (對應資料庫 Key: about_us_text)
-        document.getElementById('about_us_text').value = config.about_us_text || '';
+        const aboutVal = config.about_us_text;
+        const aboutBox = document.getElementById('about_us_text');
 
-    } catch (e) {
-        console.error("Load Error:", e);
-        showToast("❌ 無法獲取資料");
+        if (typeof aboutVal === 'object' && aboutVal !== null) {
+           // 如果是物件，取 normal 或 promo，若都沒值則給空字串
+           aboutBox.value = aboutVal.normal || aboutVal.promo || '';
+        } else {
+        // 如果是純字串，直接填入
+           aboutBox.value = aboutVal || '';
+        }
+        } catch (e) {
+          console.error("Load Error:", e);
+          showToast("❌ 無法獲取資料");
+       }
+          showLoading(false);
     }
-    showLoading(false);
-}
 
 // 4. 切換編輯模式 (優化版：保留原始 Tailwind 樣式)
 function toggleEditMode() {

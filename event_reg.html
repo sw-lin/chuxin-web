@@ -641,78 +641,70 @@ const rawBus = String(
             document.getElementById('deleteZone').classList.add('hidden');
             document.getElementById('eventModal').classList.remove('hidden');
         }
-
 function openRegModal(phone = null, name = null) {
-    console.log("=== 彈窗觸發成功 ===");
-    const modal = document.getElementById('reg_modal');
-    if (!modal) return;
+  console.log("=== 彈窗開始對接資料 ===");
+  console.log("正在尋找 -> 電話:", phone, "姓名:", name);
 
-    // 1. 自動偵測資料來源 (根據截圖，您的資料在 events 變數中)
-    let list = [];
-    if (typeof events !== 'undefined') {
-        list = Array.isArray(events) ? events : (events.registrations || []);
-    } else if (typeof allData !== 'undefined') {
-        list = allData.registrations || [];
-    }
+  const modal = document.getElementById('reg_modal');
+  if (!modal) return;
 
-    // 2. 執行模糊比對搜尋 (忽略空格與單引號)
-    const searchPhone = String(phone || "").replace(/['\s]/g, "");
-    const searchName = String(name || "").trim();
-    
-    let r = list.find(item => {
-        // 找出包含「電話」和「姓名」關鍵字的欄位
-        const pKey = Object.keys(item).find(k => k.includes("電話"));
-        const nKey = Object.keys(item).find(k => k.includes("姓名"));
-        
-        const itemPhone = String(item[pKey] || "").replace(/['\s]/g, "");
-        const itemName = String(item[nKey] || "").trim();
-        
-        return itemPhone === searchPhone && itemName === searchName;
-    });
-
-    // 3. 填入資料
-    if (r) {
-        console.log("✅ 找到匹配資料:", r);
-
-        // 基本欄位填充
-        const safeSet = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.value = val || "";
-        };
-
-        safeSet('reg_name', searchName);
-        safeSet('reg_phone', searchPhone);
-        safeSet('reg_old_phone', searchPhone);
-        
-        // 自動尋找身分證、餐食、備註等欄位 (防止標題微差)
-        const getVal = (keyword) => {
-            const key = Object.keys(r).find(k => k.includes(keyword));
-            return r[key] || "";
-        };
-
-        safeSet('reg_id', getVal("身分證"));
-        safeSet('reg_diet', getVal("餐食") || getVal("飲食"));
-        safeSet('reg_note', getVal("備註"));
-        safeSet('reg_is_member', getVal("會員"));
-
-        // 🌟 核心修復：生日對接 (處理 YYYY-MM-DD)
-        const bdayField = document.getElementById('reg_birthday');
-        if (bdayField) {
-            let bday = getVal("生日") || getVal("出生");
-            if (bday && bday.toString().includes("T")) {
-                bday = bday.split("T")[0];
-            }
-            bdayField.value = bday;
-            console.log("📍 生日欄位填入成功:", bday);
-        }
-    } else {
-        console.error("❌ 搜尋失敗。請檢查 events 內容:", list);
-    }
-
-    // 4. 開啟彈窗
+  // 1. 強制鎖定資料來源
+  let list = (typeof allData !== 'undefined' && allData.registrations) ? allData.registrations : [];
+  
+  // 檢查資料庫是否為空
+  if (list.length === 0) {
+    console.error("❌ allData.registrations 是空的或未定義，無法進行編輯。");
+    // 如果是空的，視窗還是要開（可能是新增模式）
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-}        
+    return;
+  }
+
+  // 2. 執行比對 (排除單引號與空格)
+  const searchP = String(phone || "").replace(/['\s]/g, "");
+  const searchN = String(name || "").trim();
+
+  const r = list.find(item => {
+    // 自動相容可能帶有空格的 Key
+    const pKey = Object.keys(item).find(k => k.includes("電話"));
+    const nKey = Object.keys(item).find(k => k.includes("姓名"));
+    
+    const itemP = String(item[pKey] || "").replace(/['\s]/g, "");
+    const itemN = String(item[nKey] || "").trim();
+    
+    return itemP === searchP && itemN === searchN;
+  });
+
+  // 3. 填入資料
+  if (r) {
+    console.log("✅ 成功找到該學員:", r);
+
+    const fill = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || "";
+    };
+
+    fill('reg_name', name);
+    fill('reg_phone', searchP);
+    fill('reg_old_phone', searchP);
+    
+    // 模糊抓取：身分證、餐食、備註
+    const getVal = (kw) => {
+      const k = Object.keys(r).find(key => key.includes(kw));
+      return r[k] || "";
+    };
+
+    fill('reg_id', getVal("身分證"));
+    fill('reg_diet', getVal("餐食"));
+    fill('reg_note', getVal("備註"));
+    fill('reg_is_member', getVal("會員") || "否");
+
+    // 🌟 生日對接 (處理 YYYY-MM-DD)
+    const bdayField = document.getElementById('reg_birthday');
+    if (bdayField) {
+      let bday = getVal("生日") || getVal("出生");
+      if (bday && bday.
+        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";

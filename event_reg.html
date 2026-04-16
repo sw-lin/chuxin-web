@@ -641,71 +641,81 @@ const rawBus = String(
             document.getElementById('deleteZone').classList.add('hidden');
             document.getElementById('eventModal').classList.remove('hidden');
         }
-function openRegModal(phone = null, name = null) {
+
+        function openRegModal(phone = null, name = null) {
   console.log("=== 彈窗觸發成功 ===");
+  console.log("搜尋條件 -> 電話:", phone, "姓名:", name);
+
   const modal = document.getElementById('reg_modal');
   if (!modal) return;
 
-  // 1. 取得資料來源 (優先用您截圖中顯示的 events 陣列)
+  // 1. 定義資料來源 (根據截圖，您的資料在 events 變數裡)
   let list = [];
-  if (typeof allData !== 'undefined' && allData.registrations) {
+  if (typeof events !== 'undefined' && Array.isArray(events)) {
+    list = events;
+  } else if (typeof allData !== 'undefined' && allData.registrations) {
     list = allData.registrations;
-  } else if (typeof events !== 'undefined') {
-    list = events; // 根據您 Console 的截圖，有時資料可能在 events 裡
   }
 
-  // 2. 執行比對 (加入自動 Key 偵測)
-  const cleanPhone = String(phone).replace(/'/g, "").trim();
-  const r = list.find(item => {
-    // 自動尋找電話欄位 (相容 "電話", "電話 ", "手機" 等)
-    const phoneKey = Object.keys(item).find(k => k.includes("電話"));
-    const nameKey = Object.keys(item).find(k => k.includes("姓名"));
-    
-    const itemPhone = String(item[phoneKey] || "").replace(/'/g, "").trim();
-    const itemName = String(item[nameKey] || "").trim();
-    
-    return itemPhone === cleanPhone && itemName === String(name).trim();
-  });
+  // 2. 尋找匹配的資料 (使用最保險的迴圈)
+  let r = null;
+  const searchPhone = String(phone || "").replace(/'/g, "").trim();
+  const searchName = String(name || "").trim();
 
+  for (let item of list) {
+    // 自動尋找物件中包含 "電話" 與 "姓名" 的 Key (防止空格干擾)
+    const pKey = Object.keys(item).find(k => k.includes("電話"));
+    const nKey = Object.keys(item).find(k => k.includes("姓名"));
+    
+    const itemPhone = String(item[pKey] || "").replace(/'/g, "").trim();
+    const itemName = String(item[nKey] || "").trim();
+
+    if (itemPhone === searchPhone && itemName === searchName) {
+      r = item;
+      break;
+    }
+  }
+
+  // 3. 填入資料
   if (r) {
-    console.log("✅ 成功對接資料物件:", r);
+    console.log("✅ 成功找到資料物件:", r);
 
-    // 3. 填入欄位 (加上安全性檢查)
-    const setVal = (id, val) => {
+    // 填入所有 input 欄位
+    const fill = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.value = val || "";
     };
 
-    setVal('reg_name', r["姓名"] || r["姓名 "]);
-    setVal('reg_phone', cleanPhone);
-    setVal('reg_old_phone', cleanPhone);
-    setVal('reg_id', r["身分證"] || r["身分證字號"]);
-    setVal('reg_diet', r["餐食"]);
-    setVal('reg_is_member', r["會員身分"]);
-    setVal('reg_note', r["備註"]);
+    fill('reg_name', name);
+    fill('reg_phone', searchPhone);
+    fill('reg_old_phone', searchPhone);
+    fill('reg_id', r["身分證"] || r["身分證字號"]);
+    fill('reg_diet', r["餐食"] || r["膳食"]);
+    fill('reg_note', r["備註"] || "");
+    fill('reg_is_member', r["會員身分"] || "否");
 
-    // 🌟 關鍵：填入生日 (N 欄)
+    // 🌟 處理生日 (N 欄)
     const bdayField = document.getElementById('reg_birthday');
     if (bdayField) {
-      // 嘗試所有可能的生日欄位名稱
+      // 找到包含 "生日" 的欄位名稱
       const bdayKey = Object.keys(r).find(k => k.includes("生日"));
       let bday = r[bdayKey] || "";
       
-      // 轉為 HTML date input 格式 (YYYY-MM-DD)
+      // 處理日期格式 (HTML 只收 YYYY-MM-DD)
       if (bday && bday.toString().includes("T")) {
         bday = bday.split("T")[0];
       }
       bdayField.value = bday;
-      console.log("📍 生日欄位 (" + bdayKey + ") 填入值:", bday);
+      console.log("📍 生日成功對齊:", bday);
     }
   } else {
-    console.error("❌ 搜尋失敗！目前的資料陣列中找不到匹配項。資料庫內容：", list);
+    console.error("❌ 找不到匹配資料。請在 Console 輸入 'events' 檢查欄位名稱。");
   }
 
+  // 4. 顯示彈窗
   modal.classList.remove('hidden');
   modal.classList.add('flex');
-}
-        
+}        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";

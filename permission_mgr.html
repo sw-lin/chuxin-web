@@ -117,69 +117,78 @@
         }
 
         async function loadSettings() {
-            showLoading(true);
-            try {
-                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                const data = await res.json();
-                const config = data.config || {};
-                
-                // 讀取權限 (假設後端回傳格式為 { "副會長": ["edit_member", "edit_calendar"], ... })
-                const rolePerms = data.rolePermissions || {}; 
+        showLoading(true);
+        try {
+        const res = await fetch(`${GAS_URL}?type=get_permission_settings&t=${Date.now()}`);
+        const data = await res.json();
+        const config = data.config || {};
+        
+        // 核心邏輯：GAS 現在傳回的是 rolePermissions: { "副會長": ["edit_member"], ... }
+        // 這是由 GAS 在後端 split(",") 處理好的，所以前端這段「比對並勾選」的邏輯可以維持：
+        const rolePerms = data.rolePermissions || {}; 
 
-                document.querySelectorAll('.permission-checkbox').forEach(cb => {
-                    const k = cb.dataset.key;
-                    const r = cb.dataset.role;
-                    if (rolePerms[r] && rolePerms[r].includes(k)) {
-                        cb.checked = true;
-                    }
-                });
-
-                // 讀取連結
-                document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
-                document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
-
-            } catch (e) {
-                showToast("❌ 無法連接資料庫");
+        document.querySelectorAll('.permission-checkbox').forEach(cb => {
+            const k = cb.dataset.key;  // 功能 Key
+            const r = cb.dataset.role; // 職稱
+            
+            // 只要該職稱的權限清單中包含這個 Key，就勾起來
+            if (rolePerms[r] && rolePerms[r].includes(k)) {
+                cb.checked = true;
             }
-            showLoading(false);
+        });
+
+        // 填入連結
+        document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
+        document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
+
+       } catch (e) {
+        showToast("❌ 無法連接資料庫");
+       }
+       showLoading(false);
+       }
+async function saveAllSettings() {
+    const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+    if(!staffKey) return alert("驗證失效，請重新登入");
+
+    // 建立一個以職稱為 Key 的物件
+    const rolePermissions = {};
+    roles.forEach(r => rolePermissions[r] = []);
+
+    // 遍歷所有被勾選的框框，按職稱分類存入陣列
+    document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
+        const role = cb.dataset.role;
+        const key = cb.dataset.key;
+        rolePermissions[role].push(key);
+    });
+
+    const payload = {
+        type: 'update_permissions_and_links',
+        key: staffKey,
+        rolePermissions: rolePermissions,
+        links: {
+            reading_folder_url: document.getElementById('reading_folder_url').value,
+            photo_gallery_url: document.getElementById('photo_gallery_url').value
         }
+    };
 
-        async function saveAllSettings() {
-            const staffKey = sessionStorage.getItem('staffKey');
-            if(!staffKey) return alert("驗證失效，請重新登入");
-
-            const rolePermissions = {};
-            roles.forEach(r => rolePermissions[r] = []);
-
-            document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
-                rolePermissions[cb.dataset.role].push(cb.dataset.key);
-            });
-
-            const payload = {
-                type: 'update_permissions_and_links',
-                key: staffKey,
-                rolePermissions: rolePermissions,
-                links: {
-                    reading_folder_url: document.getElementById('reading_folder_url').value,
-                    photo_gallery_url: document.getElementById('photo_gallery_url').value
-                }
-            };
-
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await res.json();
-                if(result.result === "SUCCESS") {
-                    showToast("✅ 設定已成功儲存");
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showToast("❌ 儲存失敗：" + result.message);
-                }
-            } catch (e) {
-                showToast("❌ 連線異常");
-            }
-            showLoading(false);
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        const result = await res.json();
+        if(result.result === "SUCCESS") {
+            showToast("✅ 設定已成功同步至 B 欄");
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast("❌ 儲存失敗：" + result.message);
         }
+    } catch (e) {
+        showToast("❌ 連線異常");
+    }
+    showLoading(false);
+}
 
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) {

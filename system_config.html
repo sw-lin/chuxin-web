@@ -231,7 +231,7 @@ function toggleEditMode() {
 
 // 5. 儲存資料庫邏輯 (已還原您舊版能成功顯示 ✅ 儲存成功的寫法)
 async function saveConfigs() {
-    const staffKey = sessionStorage.getItem('staff_key');
+    const staffKey = sessionStorage.getItem('staffKey');
     if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
 
     const configs = {

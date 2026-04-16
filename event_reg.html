@@ -690,21 +690,31 @@ function openRegModal(phone, name) {
             const idVal = r["身分證"] || r["身分證字號"] || r["idCard"] || r["ID"] || "";
             document.getElementById('reg_id').value = idVal;
             
-            // 🌟 修正：讀取生日並轉換格式以適應 HTML date input
-            const rawBirthday = r["生日"] || "";
+            // 🌟 修正：讀取生日並「徹底強制」轉換格式
+            let rawBirthday = r["生日"] || "";
             let bdayForInput = "";
+
             if (rawBirthday) {
-                const d = new Date(rawBirthday);
-                if (!isNaN(d.getTime())) {
-                    // 強制轉為 YYYY-MM-DD 格式
-                    const y = d.getFullYear();
-                    const m = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    bdayForInput = `${y}-${m}-${day}`;
+                // 如果拿到的是 ISO 字串 (帶有 T)，先切掉時間部分
+                if (typeof rawBirthday === 'string' && rawBirthday.includes('T')) {
+                    bdayForInput = rawBirthday.split('T')[0];
+                } else {
+                    const d = new Date(rawBirthday);
+                    if (!isNaN(d.getTime())) {
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        bdayForInput = `${y}-${m}-${day}`;
+                    }
                 }
             }
+
+            console.log("最終準備填入生日欄位的值:", bdayForInput); // 除錯用
+            
             const bdayField = document.getElementById('reg_birthday');
-            if (bdayField) bdayField.value = bdayForInput;
+            if (bdayField) {
+                bdayField.value = bdayForInput;
+            }
             
             document.getElementById('reg_note').value = r["備註"] || "";
             

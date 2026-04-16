@@ -641,57 +641,51 @@ const rawBus = String(
             document.getElementById('deleteZone').classList.add('hidden');
             document.getElementById('eventModal').classList.remove('hidden');
         }
-function openRegModal(passedValue = null) {
-    const modal = document.getElementById('reg_modal');
-    if (!modal) return;
 
-    if (passedValue !== null) {
-        // 1. 確定資料來源 (優先找您目前的 registrations 陣列)
-        let registrations = [];
-        if (typeof allData !== 'undefined' && allData.registrations) {
-            registrations = allData.registrations;
-        } else if (typeof currentFilteredRegistrations !== 'undefined') {
-            registrations = currentFilteredRegistrations;
-        }
+        function openRegModal(index = null) {
+  // 1. 基本檢查
+  const modal = document.getElementById('reg_modal');
+  if (!modal) return;
+  
+  // 重置表單
+  const form = document.getElementById('regForm');
+  if (form) form.reset();
 
-        // 2. 🌟 關鍵修正：用傳進來的「電話」去陣列裡搜尋那筆物件
-        const searchValue = String(passedValue).trim();
-        const r = registrations.find(item => {
-            // 考慮到電話可能帶有單引號 "'" (GAS 常見格式)
-            const cleanPhone = String(item["電話"]).replace(/'/g, "").trim();
-            return cleanPhone === searchValue.replace(/'/g, "");
-        });
-
-        if (r) {
-            console.log("✅ 成功找到資料物件:", r);
-
-            // 3. 填入欄位 (請確保 ID 跟您的 HTML 一致)
-            document.getElementById('reg_name').value = r["姓名"] || "";
-            document.getElementById('reg_phone').value = String(r["電話"]).replace(/'/g, "");
-            document.getElementById('reg_id').value = r["身分證"] || "";
-            document.getElementById('reg_diet').value = r["餐食"] || "葷";
-            document.getElementById('reg_note').value = r["備註"] || "";
-
-            // 4. 🌟 處理生日 (強制格式化為 YYYY-MM-DD)
-            const bdayField = document.getElementById('reg_birthday');
-            if (bdayField) {
-                let bday = r["生日"] || "";
-                // 如果格式是 2003-03-14T... 則截取前 10 碼
-                if (bday.includes("T")) bday = bday.split("T")[0];
-                bdayField.value = bday;
-                console.log("📍 生日已填入:", bday);
-            }
-        } else {
-            console.error("❌ 找不到電話為 " + passedValue + " 的報名資料");
-            // 如果找不到，建議在此處印出 registrations 看一下 Key 叫什麼
-            console.log("目前陣列內容:", registrations);
-        }
+  // 2. 只有在傳入 index 且 allData 存在時才執行填值
+  if (index !== null && typeof allData !== 'undefined' && allData.registrations) {
+    
+    // 如果傳入的是電話(長字串)，嘗試轉成 index；如果是數字就直接用
+    let r = allData.registrations[index];
+    
+    // 🌟 如果因為傳電話號碼導致 r 是 undefined，我們手動搜一次
+    if (!r) {
+      r = allData.registrations.find(item => String(item["電話"]).replace(/'/g,"") === String(index));
     }
 
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    if (r) {
+      console.log("找到報名資料:", r);
+
+      // 直接填入 (ID 必須完全對準您的 HTML)
+      if(document.getElementById('reg_name')) document.getElementById('reg_name').value = r["姓名"] || "";
+      if(document.getElementById('reg_phone')) document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g,"");
+      if(document.getElementById('reg_id')) document.getElementById('reg_id').value = r["身分證"] || "";
+      if(document.getElementById('reg_diet')) document.getElementById('reg_diet').value = r["餐食"] || "葷";
+      if(document.getElementById('reg_note')) document.getElementById('reg_note').value = r["備註"] || "";
+
+      // 🌟 生日對接 (強制格式化)
+      const bdayField = document.getElementById('reg_birthday');
+      if (bdayField) {
+        let bday = r["生日"] || "";
+        if (bday.includes("T")) bday = bday.split("T")[0]; // 處理日期格式
+        bdayField.value = bday;
+      }
+    }
+  }
+
+  // 3. 顯示彈窗
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
 }        
-        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";

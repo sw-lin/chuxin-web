@@ -643,67 +643,91 @@ const rawBus = String(
         }
 
 function openRegModal(phone = null, name = null) {
-  console.log("=== 彈窗開始對接資料 ===");
-  const modal = document.getElementById('reg_modal');
-  if (!modal) return;
+    console.log("🚀 [Debug] 函式啟動點");
+    console.log("🔎 [Debug] 傳入參數 -> 電話:", phone, "姓名:", name);
 
-  // 1. 初始化所有欄位
-  const setVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val || "";
-  };
+    try {
+        const modal = document.getElementById('reg_modal');
+        if (!modal) {
+            console.error("❌ [Error] 找不到 ID 為 'reg_modal' 的彈窗元素");
+            return;
+        }
 
-  // 2. 基本資料填充 (直接使用傳入的參數)
-  const cleanPhone = String(phone || "").replace(/['\s]/g, "");
-  setVal('reg_name', name);
-  setVal('reg_phone', cleanPhone);
-  setVal('reg_old_phone', cleanPhone);
+        // 1. 取得資料來源 (加上嚴格檢查)
+        let list = [];
+        if (typeof allData !== 'undefined' && allData && allData.registrations) {
+            list = allData.registrations;
+            console.log("📦 [Debug] 成功鎖定 allData.registrations，總筆數:", list.length);
+        } else {
+            console.warn("⚠️ [Warn] 無法讀取 allData.registrations，嘗試全域搜尋...");
+            // 如果 allData 抓不到，嘗試看看有沒有單獨的 registrations 變數
+            list = (typeof registrations !== 'undefined') ? registrations : [];
+        }
 
-  // 3. 嘗試從「畫面上的卡片」抓取其他資訊 (如餐食、備註)
-  // 透過電話號碼定位畫面上那張卡片
-  const allCards = document.querySelectorAll('.bg-white.rounded-3xl'); // 根據您的 CSS 定位卡片
-  let targetCard = null;
-  
-  allCards.forEach(card => {
-    if (card.innerText.includes(cleanPhone)) targetCard = card;
-  });
+        // 2. 格式化搜尋條件
+        const searchP = String(phone || "").replace(/['\s]/g, "");
+        const searchN = String(name || "").trim();
+        console.log("🎯 [Debug] 格式化後搜尋條件 -> 電話:", searchP, "姓名:", searchN);
 
-  if (targetCard) {
-    console.log("📍 成功定位畫面卡片，進行逆向填充");
-    const text = targetCard.innerText;
-    
-    // 逆向判斷餐食
-    if (text.includes("素食")) setVal('reg_diet', "素");
-    else if (text.includes("葷食") || text.includes("葷")) setVal('reg_diet', "葷");
-    
-    // 逆向判斷會員
-    if (text.includes("會員")) setVal('reg_is_member', "是");
-    else setVal('reg_is_member', "否");
-  }
+        // 3. 執行比對
+        const r = list.find(item => {
+            // 找出包含「電話」和「姓名」的 Key
+            const pKey = Object.keys(item).find(k => k.includes("電話"));
+            const nKey = Object.keys(item).find(k => k.includes("姓名"));
+            if (!pKey) return false;
 
-  // 4. 針對生日與身分證：如果全域變數還有救，嘗試撈最後一次
-  let list = (typeof allData !== 'undefined') ? (allData.registrations || []) : [];
-  let r = list.find(item => String(item["電話"] || "").replace(/['\s]/g, "") === cleanPhone);
+            const itemP = String(item[pKey] || "").replace(/['\s]/g, "");
+            const itemN = String(item[nKey] || "").trim();
+            return itemP === searchP && itemN === searchN;
+        });
 
-  if (r) {
-    console.log("✅ 變數搜尋成功，補充剩餘資料:", r);
-    setVal('reg_id', r["身分證"] || r["身分證字號"]);
-    
-    // 生日對接
-    const bdayField = document.getElementById('reg_birthday');
-    if (bdayField) {
-      let bday = r["生日"] || r["出生年月日"] || "";
-      if (bday && bday.toString().includes("T")) bday = bday.split("T")[0];
-      bdayField.value = bday;
+        // 4. 開始填充 (每一行都加上存在檢查)
+        const safeFill = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = val || "";
+            } else {
+                console.warn(`❓ [Warn] 找不到 HTML 欄位 ID: ${id}`);
+            }
+        };
+
+        if (r) {
+            console.log("✅ [Success] 找到匹配對象:", r);
+            safeFill('reg_name', searchN);
+            safeFill('reg_phone', searchP);
+            safeFill('reg_old_phone', searchP);
+            
+            // 模糊對接其餘欄位
+            const getR = (kw) => {
+                const k = Object.keys(r).find(key => key.includes(kw));
+                return r[k] || "";
+            };
+
+            safeFill('reg_id', getR("身分證"));
+            safeFill('reg_diet', getR("餐食") || getR("飲食"));
+            safeFill('reg_note', getR("備註"));
+
+            // 生日特別處理
+            const bdayVal = getR("生日") || getR("出生");
+            let formattedBday = String(bdayVal);
+            if (formattedBday.includes("T")) formattedBday = formattedBday.split("T")[0];
+            safeFill('reg_birthday', formattedBday);
+            console.log("📅 [Debug] 生日填入值:", formattedBday);
+
+        } else {
+            console.error("❌ [Fail] 在清單中找不到這筆資料，請檢查資料結構：", list[0]);
+        }
+
+        // 5. 最後顯示彈窗
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        console.log("✨ [Debug] 彈窗顯示完畢");
+
+    } catch (err) {
+        console.error("🚨 [Fatal Error] 程式執行中崩潰了！錯誤訊息:", err.message);
+        console.error("堆疊追蹤:", err.stack);
     }
-  } else {
-    console.warn("⚠️ 變數中仍找不到資料，僅完成基本欄位填充");
-  }
-
-  // 5. 顯示彈窗
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-}        
+}
         
 // 輔助清空表單
 function resetRegForm() {

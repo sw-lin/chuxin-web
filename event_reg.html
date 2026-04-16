@@ -642,7 +642,7 @@ const rawBus = String(
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-        function openRegModal(phone, name) {
+function openRegModal(phone, name) {
     console.log("🚀 [Debug] 彈窗啟動，正在抓取資料...");
     
     // 1. 鎖定 UI 元素 (確認 ID 為 regModal)
@@ -663,7 +663,6 @@ const rawBus = String(
 
     // 3. 資料比對與填入
     if (phone && name) {
-        // 關鍵：從 allData.registrations 找人
         const r = allData.registrations.find(reg => 
             String(reg["電話"] || "").trim().replace(/'/g, "") === String(phone).trim() && 
             String(reg["姓名"] || "").trim() === String(name).trim()
@@ -680,21 +679,23 @@ const rawBus = String(
             document.getElementById('reg_diet').value = r["餐食"] || "葷食";
             document.getElementById('reg_note').value = r["備註"] || "";
 
-            // 🌟 生日填充 (解決 NaN-NaN-NaN 的關鍵)
+            // 🌟 生日填充 (暴力切字串防呆版)
             const bdayField = document.getElementById('reg_birthday');
             if (bdayField) {
-                let rawBday = r["生日"] || r["出生日期"] || "";
+                let rawBday = r["生日"] || r["出生日期"] || r["出生年月日"] || "";
                 let finalDate = "";
 
                 if (rawBday) {
-                    // 如果是 ISO 字串 (包含 T)，直接切前半段
-                    if (typeof rawBday === 'string' && rawBday.includes('T')) {
-                        finalDate = rawBday.split('T')[0];
-                    } else {
-                        // 如果是物件或其他格式，嘗試轉 Date
+                    let strBday = String(rawBday).trim();
+                    
+                    // 1. 如果開頭就是 YYYY-MM-DD 的格式 (包含帶有 T 的 ISO 格式)
+                    if (/^\d{4}-\d{2}-\d{2}/.test(strBday)) {
+                        finalDate = strBday.substring(0, 10);
+                    } 
+                    // 2. 如果是其他古怪格式，再試圖讓 JS Date 解析
+                    else {
                         const d = new Date(rawBday);
                         if (!isNaN(d.getTime())) {
-                            // 格式化為 YYYY-MM-DD
                             const y = d.getFullYear();
                             const m = String(d.getMonth() + 1).padStart(2, '0');
                             const day = String(d.getDate()).padStart(2, '0');
@@ -702,8 +703,9 @@ const rawBus = String(
                         }
                     }
                 }
+                
                 bdayField.value = finalDate;
-                console.log("📅 生日填充結果:", finalDate);
+                console.log("📅 生日最終填入值:", finalDate);
             }
 
             // 交通方式
@@ -717,7 +719,7 @@ const rawBus = String(
     // 4. 顯示彈窗
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-}  
+}
         
 // 輔助清空表單
 function resetRegForm() {

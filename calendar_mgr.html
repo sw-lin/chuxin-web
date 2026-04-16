@@ -103,15 +103,28 @@
     let allEvents = [];
     let isEditMode = false;
     let currentEditData = null;
-
+    // 從 Session 抓取權限清單
+    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+    
     window.onload = () => {
         if (!STAFF_KEY) { location.href="index.html"; return; }
+        // --- 新增：權限檢查開關 ---
+        const editToggleBtn = document.getElementById('editToggleBtn');
+        // 如果沒有 "all" 且沒有 "edit_calendar" 權限，就把編輯按鈕移除
+        if (!userPermissions.includes("all") && !userPermissions.includes("edit_calendar")) {
+            if (editToggleBtn) editToggleBtn.remove();
+        }        
         loadCalendar();
     };
 
     function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 
     function toggleEditMode() {
+        // 安全檢查：防止有人透過 Console 強行執行此 function
+        if (!userPermissions.includes("all") && !userPermissions.includes("edit_calendar")) {
+            alert("您沒有權限進行編輯作業");
+            return;
+        }        
         isEditMode = !isEditMode;
         const btn = document.getElementById('editToggleBtn');
         const addBtn = document.getElementById('addBtnContainer');

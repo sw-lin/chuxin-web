@@ -127,15 +127,24 @@ async function initData() {
         console.log("接收到的 Config:", config);      
 
         // --- 1. 處理「關於築心」文字 ---
-        // 優先讀取 about_us_text，若無則降級讀取舊有的 about_content
-        const aboutText = config.about_us_text || config.about_content || "";
+        // --- 🌟 修正後的「關於築心」文字處理 ---
+        // 由於資料可能是物件 {promo: '...', normal: '...'} 或純字串
+        const rawAbout = config.about_us_text || config.about_content || "";
+        let aboutText = "";
+
+        if (typeof rawAbout === 'object') {
+            // 如果是物件，根據邏輯選取內容（這裡優先取 normal，因為介紹通常不分活動期）
+            // 或者您可以根據 isPromoTime 來決定取哪一個
+            aboutText = rawAbout.normal || rawAbout.promo || "";
+        } else {
+            aboutText = rawAbout;
+        }
         
         if (aboutText) {
-            // 因為 HTML 已經加了 whitespace-pre-line，所以這裡直接賦值即可
-            // 如果沒加 CSS，才需要用 .replace(/\n/g, '<br>')
+            // 使用 innerText 配合 CSS 的 whitespace-pre-line 完美呈現換行
             contentDiv.innerText = aboutText; 
         } else {
-            contentDiv.innerHTML = "歡迎來到築心會館。";
+            contentDiv.innerHTML = "歡迎來到築心讀書會。";
         }
         // --- 2. 判斷是否為宣傳期 ---
         const now = new Date();

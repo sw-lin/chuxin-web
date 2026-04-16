@@ -38,16 +38,17 @@
     </header>
 
     <section id="about" class="py-24 px-6 bg-white">
-        <div class="max-w-4xl mx-auto">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-emerald-900 mb-4 italic flex items-center justify-center">
-                    <i class="fas fa-leaf mr-3 text-emerald-600"></i>關於築心
-                </h2>
-                <div class="h-1 w-20 bg-amber-400 mx-auto rounded-full"></div>
-            </div>
-            <div id="aboutContent" class="text-gray-600 leading-relaxed text-lg text-justify">
-                </div>
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-emerald-900 mb-4 italic flex items-center justify-center">
+                <i class="fas fa-leaf mr-3 text-emerald-600"></i>關於築心
+            </h2>
+            <div class="h-1 w-20 bg-amber-400 mx-auto rounded-full"></div>
         </div>
+        <div id="aboutContent" class="text-gray-600 leading-relaxed text-lg text-justify whitespace-pre-line">
+            載入中...
+        </div>
+    </div>
     </section>
 
     <section id="register" class="py-24 px-6 bg-[#F9F6F0]">
@@ -126,10 +127,16 @@ async function initData() {
         console.log("接收到的 Config:", config);      
 
         // --- 1. 處理「關於築心」文字 ---
-        const aboutObj = config.about_content || config.about_us_url;
-        const aboutText = (typeof aboutObj === 'object') ? aboutObj.promo : aboutObj;
-        contentDiv.innerHTML = aboutText ? aboutText.replace(/\n/g, '<br>') : "系統目前無法取得介紹內容。";
+        // 優先讀取 about_us_text，若無則降級讀取舊有的 about_content
+        const aboutText = config.about_us_text || config.about_content || "";
         
+        if (aboutText) {
+            // 因為 HTML 已經加了 whitespace-pre-line，所以這裡直接賦值即可
+            // 如果沒加 CSS，才需要用 .replace(/\n/g, '<br>')
+            contentDiv.innerText = aboutText; 
+        } else {
+            contentDiv.innerHTML = "歡迎來到築心會館。";
+        }
         // --- 2. 判斷是否為宣傳期 ---
         const now = new Date();
         let isPromoTime = false;

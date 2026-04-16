@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>職務權限分配 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .permission-checkbox { width: 1.25rem; height: 1.25rem; cursor: pointer; accent-color: #059669; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        th { background-color: #f8fafc; position: sticky; top: 0; }
+    </style>
+</head>
+<body class="pb-32">
+
+    <nav class="emerald-gradient text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回選單</button>
+            <h1 class="font-black tracking-[0.2em] text-lg">職務權限分配表</h1>
+            <div class="w-12"></div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto p-4 md:p-8">
+        
+        <section class="bg-white rounded-[2rem] shadow-sm border border-emerald-100 overflow-hidden mb-8">
+            <div class="p-6 border-b border-emerald-50 bg-emerald-50/30">
+                <h2 class="text-emerald-900 font-black flex items-center gap-2 text-lg">
+                    <i class="fas fa-user-shield text-orange-500"></i> 功能存取授權
+                </h2>
+                <p class="text-[11px] text-gray-500 mt-1 font-bold italic tracking-wider">對應資料庫 A 欄權限 Key 值</p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs font-black text-emerald-800 border-b border-emerald-100">
+                            <th class="p-5">系統功能名稱</th>
+                            <th class="p-4 text-center">副會長</th>
+                            <th class="p-4 text-center">文書</th>
+                            <th class="p-4 text-center">班務</th>
+                            <th class="p-4 text-center">企劃</th>
+                            <th class="p-4 text-center">活動</th>
+                            <th class="p-4 text-center">財務</th>
+                        </tr>
+                    </thead>
+                    <tbody id="permissionBody" class="text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-[2rem] p-8 shadow-sm border border-emerald-100">
+            <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+                <i class="fas fa-link text-orange-500"></i> 資源連結管理
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">導讀資料夾 (reading_folder_url)</label>
+                    <input type="text" id="reading_folder_url" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://drive.google.com/...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">活動剪影 (photo_gallery_url)</label>
+                    <input type="text" id="photo_gallery_url" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://photos.app.goo.gl/...">
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-md border-t border-emerald-100 p-4 z-40 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+        <div class="max-w-4xl mx-auto">
+            <button onclick="saveAllSettings()" class="w-full py-4 rounded-2xl font-black text-white emerald-gradient shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-cloud-upload-alt"></i> 儲存權限與資源設定
+            </button>
+        </div>
+    </div>
+
+    <div id="loadingOverlay"><div class="flex flex-col items-center gap-4"><div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div><p class="text-emerald-900 font-bold">同步權限資料中...</p></div></div>
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000]"></div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
+        
+        // 1. 完全對齊您的資料庫 Key
+        const featureConfig = [
+            { name: "會員名冊管理", key: "edit_member" },
+            { name: "行事曆排程", key: "edit_calendar" },
+            { name: "出席紀錄查詢", key: "edit_attendance" },
+            { name: "繳費財務管理", key: "edit_payments" },
+            { name: "活動報名下載", key: "edit_registration" },
+            { name: "首頁佈置與參數", key: "manage_config" }
+        ];
+
+        const roles = ["副會長", "文書", "班務", "企劃", "活動", "財務"];
+
+        function initUI() {
+            const body = document.getElementById('permissionBody');
+            let html = '';
+            featureConfig.forEach(feat => {
+                html += `<tr class="border-b border-emerald-50 hover:bg-emerald-50/40 transition">
+                            <td class="p-5 font-bold text-emerald-900">
+                                <div>${feat.name}</div>
+                                <div class="text-[10px] text-gray-400 font-normal mt-0.5">${feat.key}</div>
+                            </td>`;
+                roles.forEach(role => {
+                    html += `<td class="p-4 text-center">
+                                <input type="checkbox" class="permission-checkbox" data-key="${feat.key}" data-role="${role}">
+                             </td>`;
+                });
+                html += `</tr>`;
+            });
+            body.innerHTML = html;
+        }
+
+        async function loadSettings() {
+            showLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+                const data = await res.json();
+                const config = data.config || {};
+                
+                // 讀取權限 (假設後端回傳格式為 { "副會長": ["edit_member", "edit_calendar"], ... })
+                const rolePerms = data.rolePermissions || {}; 
+
+                document.querySelectorAll('.permission-checkbox').forEach(cb => {
+                    const k = cb.dataset.key;
+                    const r = cb.dataset.role;
+                    if (rolePerms[r] && rolePerms[r].includes(k)) {
+                        cb.checked = true;
+                    }
+                });
+
+                // 讀取連結
+                document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
+                document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
+
+            } catch (e) {
+                showToast("❌ 無法連接資料庫");
+            }
+            showLoading(false);
+        }
+
+        async function saveAllSettings() {
+            const staffKey = sessionStorage.getItem('staffKey');
+            if(!staffKey) return alert("驗證失效，請重新登入");
+
+            const rolePermissions = {};
+            roles.forEach(r => rolePermissions[r] = []);
+
+            document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
+                rolePermissions[cb.dataset.role].push(cb.dataset.key);
+            });
+
+            const payload = {
+                type: 'update_permissions_and_links',
+                key: staffKey,
+                rolePermissions: rolePermissions,
+                links: {
+                    reading_folder_url: document.getElementById('reading_folder_url').value,
+                    photo_gallery_url: document.getElementById('photo_gallery_url').value
+                }
+            };
+
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if(result.result === "SUCCESS") {
+                    showToast("✅ 設定已成功儲存");
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast("❌ 儲存失敗：" + result.message);
+                }
+            } catch (e) {
+                showToast("❌ 連線異常");
+            }
+            showLoading(false);
+        }
+
+        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 3000);
+        }
+
+        window.onload = () => {
+            initUI();
+            loadSettings();
+        };
+    </script>
+</body>
+</html>

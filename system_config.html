@@ -130,10 +130,10 @@
        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
        let isEditMode = false;
 
- // --- 權限控管初始化 ---
-        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
-        const hasConfigPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");  
-                
+    // --- 🌟 權限控管初始化 ---
+    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+    // 定義誰有權限修改：具備 all 或 manage_config 的人
+    const hasConfigPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");                
 
 // 1. 日期格式轉換
 function formatToDateInput(dateStr) {
@@ -214,9 +214,9 @@ async function loadCurrentConfigs() {
 function toggleEditMode() {
     // 雖然外層擋掉了，但這裡再加一道安全檢查
     if (!hasConfigPermission) {
-        showToast("⚠️ 權限不足");
-        return;
-    }
+            showToast("⚠️ 您不具備修改參數的權限");
+            return;
+        }
     
     isEditMode = !isEditMode;
     const inputs = document.querySelectorAll('.config-input');
@@ -308,12 +308,12 @@ window.onload = () => {
         return;
     }
 
-    // B. 權限攔截：如果不是總管，不給進
-    if (!hasConfigPermission) {
-        alert("⚠️ 您不具備修改系統參數的權限，將返回主選單。");
-        location.href = "staff_menu.html";
-        return;
-    }    
+    // 2. 權限控管：如果沒有修改權限，直接隱藏「編輯模式」按鈕
+        const navEditBtn = document.getElementById('navEditBtn');
+        if (!hasConfigPermission && navEditBtn) {
+            navEditBtn.style.display = 'none'; // 讓按鈕直接消失
+        }
+    
     initImageInputs(); 
     loadCurrentConfigs(); 
 };

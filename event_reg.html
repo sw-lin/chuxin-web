@@ -643,73 +643,65 @@ const rawBus = String(
         }
 function openRegModal(phone = null, name = null) {
   console.log("=== 彈窗觸發成功 ===");
-  console.log("搜尋條件 - 電話:", phone, " 姓名:", name);
-
   const modal = document.getElementById('reg_modal');
   if (!modal) return;
 
-  // 1. 確保資料來源存在
+  // 1. 取得資料來源 (優先用您截圖中顯示的 events 陣列)
   let list = [];
   if (typeof allData !== 'undefined' && allData.registrations) {
     list = allData.registrations;
-  } else if (typeof currentFilteredRegistrations !== 'undefined') {
-    list = currentFilteredRegistrations;
+  } else if (typeof events !== 'undefined') {
+    list = events; // 根據您 Console 的截圖，有時資料可能在 events 裡
   }
 
-  // 2. 執行雙重比對搜尋
-  let r = null;
-  if (phone) {
-    const cleanPhone = String(phone).replace(/'/g, "").trim();
-    const cleanName = name ? String(name).trim() : null;
+  // 2. 執行比對 (加入自動 Key 偵測)
+  const cleanPhone = String(phone).replace(/'/g, "").trim();
+  const r = list.find(item => {
+    // 自動尋找電話欄位 (相容 "電話", "電話 ", "手機" 等)
+    const phoneKey = Object.keys(item).find(k => k.includes("電話"));
+    const nameKey = Object.keys(item).find(k => k.includes("姓名"));
+    
+    const itemPhone = String(item[phoneKey] || "").replace(/'/g, "").trim();
+    const itemName = String(item[nameKey] || "").trim();
+    
+    return itemPhone === cleanPhone && itemName === String(name).trim();
+  });
 
-    r = list.find(item => {
-      const itemPhone = String(item["電話"] || "").replace(/'/g, "").trim();
-      const itemName = String(item["姓名"] || "").trim();
-      
-      // 如果有姓名就比對電話+姓名，沒有就只比對電話
-      if (cleanName) {
-        return itemPhone === cleanPhone && itemName === cleanName;
-      }
-      return itemPhone === cleanPhone;
-    });
-  }
-
-  // 3. 將資料填入畫面
   if (r) {
-    console.log("✅ 成功找到對應資料:", r);
+    console.log("✅ 成功對接資料物件:", r);
 
-    // 填入所有基本欄位
-    if(document.getElementById('reg_name')) document.getElementById('reg_name').value = r["姓名"] || "";
-    if(document.getElementById('reg_phone')) document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g, "");
-    if(document.getElementById('reg_old_phone')) document.getElementById('reg_old_phone').value = String(r["電話"] || "").replace(/'/g, "");
-    if(document.getElementById('reg_id')) document.getElementById('reg_id').value = r["身分證"] || "";
-    if(document.getElementById('reg_diet')) document.getElementById('reg_diet').value = r["餐食"] || "葷";
-    if(document.getElementById('reg_is_member')) document.getElementById('reg_is_member').value = r["會員身分"] || "否";
-    if(document.getElementById('reg_note')) document.getElementById('reg_note').value = r["備註"] || "";
+    // 3. 填入欄位 (加上安全性檢查)
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || "";
+    };
 
-    // 🌟 生日欄位對接 (處理 N 欄)
+    setVal('reg_name', r["姓名"] || r["姓名 "]);
+    setVal('reg_phone', cleanPhone);
+    setVal('reg_old_phone', cleanPhone);
+    setVal('reg_id', r["身分證"] || r["身分證字號"]);
+    setVal('reg_diet', r["餐食"]);
+    setVal('reg_is_member', r["會員身分"]);
+    setVal('reg_note', r["備註"]);
+
+    // 🌟 關鍵：填入生日 (N 欄)
     const bdayField = document.getElementById('reg_birthday');
     if (bdayField) {
-      let bday = r["生日"] || "";
-      // 轉換 GAS 日期格式為 YYYY-MM-DD
+      // 嘗試所有可能的生日欄位名稱
+      const bdayKey = Object.keys(r).find(k => k.includes("生日"));
+      let bday = r[bdayKey] || "";
+      
+      // 轉為 HTML date input 格式 (YYYY-MM-DD)
       if (bday && bday.toString().includes("T")) {
         bday = bday.split("T")[0];
       }
       bdayField.value = bday;
-      console.log("📍 生日填入值:", bday);
+      console.log("📍 生日欄位 (" + bdayKey + ") 填入值:", bday);
     }
-
-    // 處理交通方式 (Radio)
-    const transVal = r["交通"] || "自駕";
-    const transRadios = document.getElementsByName('trans');
-    transRadios.forEach(rad => { if (rad.value === transVal) rad.checked = true; });
-
   } else {
-    console.warn("⚠️ 找不到匹配的報名資料");
-    if (document.getElementById('regForm')) document.getElementById('regForm').reset();
+    console.error("❌ 搜尋失敗！目前的資料陣列中找不到匹配項。資料庫內容：", list);
   }
 
-  // 4. 開啟視窗
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 }

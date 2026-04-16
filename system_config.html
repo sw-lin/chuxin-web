@@ -128,7 +128,13 @@
 
     <script>
        const GAS_URL = "https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec";
-let isEditMode = false;
+       let isEditMode = false;
+
+// --- 🌟 1. 權限控管邏輯 ---
+// 從 Session 中取得權限清單
+const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+// 系統設定通常僅限 "all" 權限（總管理員）
+const hasConfigPermission = userPermissions.includes("all");
 
 // 1. 日期格式轉換
 function formatToDateInput(dateStr) {

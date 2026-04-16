@@ -38,7 +38,9 @@
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回</button>
-        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">繳費管理</h1>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">繳費管理</h1>
+        
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
     </nav>
 
@@ -124,11 +126,20 @@
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFMJ5BBSmK-joVE_BWMMCeqjXEISG-u3iyND1zBmGiA-QssM86Wo85BJBttzVIllw/exec';
         const STAFF_KEY = sessionStorage.getItem('staffKey');
+         // --- 權限控管初始化 ---
+        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+        const hasLedgerPermission = userPermissions.includes("all") || userPermissions.includes("edit_payments");  
+        
         let currentLedger = [];
         let isEditMode = false;
 
         window.onload = () => {
             if (!STAFF_KEY) { location.href = "index.html"; return; }
+            // 如果沒有權限，直接隱藏編輯按鈕
+            const editToggleBtn = document.getElementById('editToggleBtn');
+            if (!hasLedgerPermission && editToggleBtn) {
+               editToggleBtn.style.visibility = 'hidden';
+            }            
             fetchItems();
         };
 
@@ -196,6 +207,11 @@
         }
 
         function toggleEditMode() {
+            // 安全檢查
+            if (!hasLedgerPermission) {
+               showToast("⚠️ 您沒有編輯繳費紀錄的權限");
+               return;
+            }            
             isEditMode = !isEditMode;
             const btn = document.getElementById('editToggleBtn');
             const adminBox = document.getElementById('adminActions');

@@ -108,12 +108,15 @@
     
     window.onload = () => {
         if (!STAFF_KEY) { location.href="index.html"; return; }
-        // --- 新增：權限檢查開關 ---
+        // --- 修正後的權限檢查 ---
         const editToggleBtn = document.getElementById('editToggleBtn');
-        // 如果沒有 "all" 且沒有 "edit_calendar" 權限，就把編輯按鈕移除
         if (!userPermissions.includes("all") && !userPermissions.includes("edit_calendar")) {
-            if (editToggleBtn) editToggleBtn.remove();
-        }        
+            if (editToggleBtn) {
+                // 不要 remove()，改為隱藏但保留位置 (或是設為 invisible)
+                editToggleBtn.style.visibility = 'hidden'; 
+                // 這樣它雖然看不見，但依然會佔據右側空間，標題就能維持在中間
+            }
+        }
         loadCalendar();
     };
 

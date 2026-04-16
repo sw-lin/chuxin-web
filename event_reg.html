@@ -693,7 +693,9 @@ function openRegModal(phone, name) {
             // 🌟 修正：讀取生日並「徹底強制」轉換格式
             let rawBirthday = r["生日"] || "";
             let bdayForInput = "";
-
+            
+            console.log("最終準備填入生日欄位的值:", rawBirthday); // 除錯用
+            
             if (rawBirthday) {
                 // 如果拿到的是 ISO 字串 (帶有 T)，先切掉時間部分
                 if (typeof rawBirthday === 'string' && rawBirthday.includes('T')) {

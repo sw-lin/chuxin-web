@@ -248,13 +248,14 @@ input[type="number"]::-webkit-inner-spin-button {
                 <option value="共乘">共乘不開車</option>
             `;
             transportSelect.disabled = false;
+            transportSelect.value = "自駕"; // 🌟 手動強制指定為「自駕」
         }
         checkTransportLogic();
     }
     
     function checkTransportLogic() {
         const val = document.getElementById('mainTransport').value;
-        const showSeats = (!eventConfig.isTourBus && val === '自行開車');
+        const showSeats = (!eventConfig.isTourBus && val === '自駕');
         document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
     }
 

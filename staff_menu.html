@@ -108,7 +108,7 @@
     <script>
         // 初始化權限檢查
         window.onload = function() {
-            var key = sessionStorage.getItem('staff_key');
+            var key = sessionStorage.getItem('staffKey');
             // 相容性處理：嘗試從網址抓取
             if (!key) {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -120,7 +120,7 @@
                 location.href = 'index.html';
             } else {
                 // 確保 sessionStorage 存有金鑰供子頁面使用
-                sessionStorage.setItem('staff_key', key);
+                sessionStorage.setItem('staffKey', key);
             }
         };
 

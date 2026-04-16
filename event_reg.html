@@ -642,102 +642,82 @@ const rawBus = String(
             document.getElementById('eventModal').classList.remove('hidden');
         }
 
-/**
- * 開啟報名者編輯彈窗並自動填入資料
- */
-function openRegModal(phone, name) {
-    const title = document.getElementById('eventSelector').value;
-    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
-
-    // 1. 取得活動配置：判斷是否需要保險(身分證)或顯示交通
-    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
-    const needId = (ev?.["(需要身分證)"] === '是' || ev?.["需要身分證"] === '是' || ev?.needId === '是');
-
-    // 2. 鎖定 UI 元素 (使用檔案中正確的 ID: regModal)
+        function openRegModal(phone, name) {
+    console.log("🚀 [Debug] 彈窗啟動，正在抓取資料...");
+    
+    // 1. 鎖定 UI 元素 (確認 ID 為 regModal)
     const modal = document.getElementById('regModal');
-    const insuranceZone = document.getElementById('reg_insurance_zone');
-    const transZone = document.getElementById('reg_transport_zone');
-    const nameInput = document.getElementById('reg_name');
-
     if (!modal) {
-        console.error("❌ 找不到 ID 為 'regModal' 的彈窗元素，請檢查 HTML。");
+        console.error("❌ 找不到 ID 為 'regModal' 的元素");
         return;
     }
 
-    // 顯示或隱藏特定區塊
-    if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none';
-    if (transZone) transZone.style.display = isTourBus ? 'none' : 'block';
+    // 2. 取得活動配置 (從畫面上的選擇器判斷)
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    const needId = (ev?.["(需要身分證)"] === '是' || ev?.[" needId"] === '是');
 
-    // 3. 資料填入邏輯
+    // 切換身分證區塊顯示
+    const insuranceZone = document.getElementById('reg_insurance_zone');
+    if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none';
+
+    // 3. 資料比對與填入
     if (phone && name) {
-        // 從全域變數尋找該筆報名資料
+        // 關鍵：從 allData.registrations 找人
         const r = allData.registrations.find(reg => 
-            String(reg["電話"] || "").trim() === String(phone).trim() && 
+            String(reg["電話"] || "").trim().replace(/'/g, "") === String(phone).trim() && 
             String(reg["姓名"] || "").trim() === String(name).trim()
         );
 
         if (r) {
             console.log("✅ 找到報名資料:", r);
 
-            // 鎖定姓名，避免修改導致資料庫對接錯誤
-            if (nameInput) {
-                nameInput.value = r["姓名"] || "";
-                nameInput.readOnly = true;
-                nameInput.style.backgroundColor = "#f3f4f6"; 
-            }
-
-            document.getElementById('reg_old_phone').value = phone;
-            document.getElementById('reg_phone').value = r["電話"] || "";
+            // 填入基本欄位
+            document.getElementById('reg_name').value = r["姓名"] || "";
+            document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g, "");
+            document.getElementById('reg_old_phone').value = String(phone).replace(/'/g, "");
+            document.getElementById('reg_id').value = r["身分證"] || r["身分證字號"] || "";
             document.getElementById('reg_diet').value = r["餐食"] || "葷食";
             document.getElementById('reg_note').value = r["備註"] || "";
-            
-            // 會員狀態
-            const isMemVal = String(r["是否為會員"] || r["會員身分"] || "否").trim();
-            document.getElementById('reg_is_member').value = (isMemVal === "是") ? "是" : "否";
 
-            // 身分證字號
-            const idVal = r["身分證"] || r["身分證字號"] || "";
-            document.getElementById('reg_id').value = idVal;
+            // 🌟 生日填充 (解決 NaN-NaN-NaN 的關鍵)
+            const bdayField = document.getElementById('reg_birthday');
+            if (bdayField) {
+                let rawBday = r["生日"] || r["出生日期"] || "";
+                let finalDate = "";
 
-            // 🌟 生日格式強化處理 (確保能夠填入 <input type="date">)
-            let bdayForInput = "";
-            let rawB = r["生日"] || r["出生日期"] || "";
-            if (rawB) {
-                if (typeof rawB === 'string' && rawB.includes('T')) {
-                    bdayForInput = rawB.split('T')[0];
-                } else {
-                    const d = new Date(rawB);
-                    if (!isNaN(d.getTime())) {
-                        bdayForInput = d.toISOString().split('T')[0];
+                if (rawBday) {
+                    // 如果是 ISO 字串 (包含 T)，直接切前半段
+                    if (typeof rawBday === 'string' && rawBday.includes('T')) {
+                        finalDate = rawBday.split('T')[0];
+                    } else {
+                        // 如果是物件或其他格式，嘗試轉 Date
+                        const d = new Date(rawBday);
+                        if (!isNaN(d.getTime())) {
+                            // 格式化為 YYYY-MM-DD
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            finalDate = `${y}-${m}-${day}`;
+                        }
                     }
                 }
+                bdayField.value = finalDate;
+                console.log("📅 生日填充結果:", finalDate);
             }
-            document.getElementById('reg_birthday').value = bdayForInput;
 
-            // 交通方式處理 (單選按鈕)
-            const transVal = (r["交通"] || r["交通(僅本人)"] || "").trim();
-            const radios = document.getElementsByName('trans');
-            radios.forEach(rd => {
+            // 交通方式
+            const transVal = (r["交通"] || "").trim();
+            document.getElementsByName('trans').forEach(rd => {
                 if (rd.value === transVal) rd.checked = true;
             });
-
-            // 座位數
-            const seatVal = r["可載人(僅本人)"] || r["可載人數"] || 0;
-            if (document.getElementById('reg_seats')) {
-                document.getElementById('reg_seats').value = seatVal;
-            }
         }
-    } else {
-        // 若為新增模式，清空欄位並開放姓名編輯
-        nameInput.readOnly = false;
-        nameInput.style.backgroundColor = "";
-        document.querySelectorAll('#regModal input:not([type=radio]), #regModal textarea').forEach(i => i.value = "");
     }
 
-    // 4. 開啟彈窗
+    // 4. 顯示彈窗
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-}        
+}  
         
 // 輔助清空表單
 function resetRegForm() {

@@ -24,7 +24,7 @@
                <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回</button>
             </div>
             <div class="text-center">
-                <h1 class="font-black tracking-[0.2em] text-lg">系統參數設定</h1>
+                <h1 class="font-black tracking-[0.2em] text-lg">首頁輪播圖管理</h1>
             </div>
             <div class="flex justify-end">
                 <button onclick="toggleEditMode()" id="navEditBtn" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all hover:bg-white/20">
@@ -57,6 +57,15 @@
                 <i class="fas fa-images text-orange-500"></i>首頁輪播圖管理
             </h2>
             <div id="img_container" class="space-y-4"></div>
+            <hr class="my-10 border-emerald-50">
+
+            <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+            <i class="fas fa-address-card text-orange-500"></i> 關於我們 (文字介紹)
+            </h2>
+            <div class="p-2">
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">將直接顯示於首頁底部</label>
+            <textarea id="about_us_text" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-40" placeholder="請輸入介紹文字，支援換行..." readonly></textarea>
+           </div>            
         </section>
 
 <section class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-orange-100">
@@ -196,12 +205,8 @@ async function loadCurrentConfigs() {
             if(cEl) cEl.value = (typeof config[`guest_content${i}`] === 'object') ? (config[`guest_content${i}`]?.promo || config[`guest_content${i}`]?.normal || '') : (config[`guest_content${i}`] || '');
         }
 
-        // D. 填入外部連結
-        const links = ['reading_folder_url', 'photo_gallery_url', 'about_us_url'];
-        links.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.value = config[id]?.promo || config[id] || '';
-        });
+        // D. 填入關於我們文字 (對應資料庫 Key: about_us_text)
+        document.getElementById('about_us_text').value = config.about_us_text || '';
 
     } catch (e) {
         console.error("Load Error:", e);
@@ -248,9 +253,7 @@ async function saveConfigs() {
     const configs = {
         promo_start: document.getElementById('promo_start').value,
         promo_end: document.getElementById('promo_end').value,
-        reading_folder_url: document.getElementById('reading_folder_url').value,
-        photo_gallery_url: document.getElementById('photo_gallery_url').value,
-        about_us_url: document.getElementById('about_us_url').value
+        about_us_text: document.getElementById('about_us_text').value, // 儲存文字而非連結        
     };
 
     // 自動打包 5 組首頁圖

@@ -293,9 +293,29 @@
         let currentEventConfig = null; // 🌟 儲存目前選中活動的詳細規格（費用、日期等）
         let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱 
         // --- 權限控管初始化 ---
+        // --- 🌟 權限控管初始化 ---
         const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]"); 
+        const hasEventPermission = userPermissions.includes("all") || userPermissions.includes("edit_registration");
         
-        window.onload = loadData;
+    // --- 改成以下這個包含權限檢查的流程 ---
+    window.onload = () => {
+        // 1. 基本防護：檢查是否有登入金鑰
+        const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+        if (!staffKey) { 
+            alert("請重新登入");
+            location.href = "index.html"; 
+            return; 
+        }
+
+        // 2. 權限攔截：沒有權限的人，直接把右上角的編輯按鈕隱藏
+        const editToggleBtn = document.getElementById('editToggleBtn');
+        if (!hasEventPermission && editToggleBtn) {
+            editToggleBtn.style.visibility = 'hidden';
+        }
+
+        // 3. 畫面與權限準備好後，開始載入活動資料
+        loadData();
+    }
 
         // 核心載入
 // 核心載入
@@ -337,7 +357,7 @@ async function fetchAPI(type, params = {}) {
     const url = new URL(GAS_URL);
     url.searchParams.append('type', type);
     // 確保 staff_key 有帶入
-    url.searchParams.append('key', sessionStorage.getItem('staff_key') || '');
+    url.searchParams.append('key', sessionStorage.getItem('staffKey') || '');
     
     // 🌟 修正：確保每個參數都被正確編碼
     Object.keys(params).forEach(key => {
@@ -542,6 +562,11 @@ function renderRegList(list) {
         
         // 彈窗邏輯
         function toggleEditMode() {
+            // 安全防線：防止透過瀏覽器 Console 強行觸發
+            if (!hasEventPermission) {
+               showToast("⚠️ 您沒有編輯活動與報名名單的權限");
+               return;
+            }            
             isEditMode = !isEditMode;
             document.getElementById('editToggleBtn').innerText = isEditMode ? "完成編輯" : "開啟編輯";
             document.getElementById('editToggleBtn').classList.toggle('bg-red-500', isEditMode);
@@ -741,7 +766,7 @@ async function deleteCurrentEvent() {
 
     const payload = {
         type: 'delete_event_completely',
-        key: sessionStorage.getItem('staff_key'), // 確保 key 有傳送以通過權限檢查
+        key: sessionStorage.getItem('staffKey'), // 確保 key 有傳送以通過權限檢查
         title: title
     };
 
@@ -841,7 +866,7 @@ function formatDateForInput(dVal) {
             
             const payload = {
                 type: document.getElementById('old_title').value ? 'update_calendar_event' : 'add_new_event',
-                key: sessionStorage.getItem('staff_key'),
+                key: sessionStorage.getItem('staffKey'),
                 title: document.getElementById('ev_title').value,
                 poster_url: document.getElementById('ev_poster').value,
                 desc: document.getElementById('ev_desc').value,
@@ -895,7 +920,7 @@ if (seatValue < 0) seatValue = 0;
     // --- 🌟 修改重點：新增 regTime 欄位 ---
     const payload = {
         type: 'save_single_registration',
-        key: sessionStorage.getItem('staff_key'),
+        key: sessionStorage.getItem('staffKey'),
         eventTitle: title,
         oldPhone: document.getElementById('reg_old_phone').value,
         name: name,
@@ -939,7 +964,7 @@ async function deleteSingleReg(phone, name) {
     // 🌟 關鍵改動：改用 GET 請求，將參數帶在 URL 後面
     const params = new URLSearchParams({
         type: 'delete_single_registration',
-        key: sessionStorage.getItem('staff_key'),
+        key: sessionStorage.getItem('staffKey'),
         eventTitle: title,
         phone: phone,
         name: name,
@@ -986,7 +1011,7 @@ async function quickUpdatePayment(phone, name, newStatus, selectElement) {
     }
 
     // 取得管理權限密鑰
-    const staffKey = sessionStorage.getItem('staff_key') || "";
+    const staffKey = sessionStorage.getItem('staffKey') || "";
 
     // 顯示讀取中狀態（避免重複點擊）
     selectElement.disabled = true;
@@ -1364,7 +1389,7 @@ async function saveCarpoolAssignment() {
     try {
         const payload = {
             type: 'save_carpool_data', // 需在 GAS 對應
-            key: sessionStorage.getItem('staff_key'),
+            key: sessionStorage.getItem('staffKey'),
             eventTitle: document.getElementById('eventSelector').value,
             assignments: assignments
         };

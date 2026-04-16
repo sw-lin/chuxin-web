@@ -641,62 +641,79 @@ const rawBus = String(
             document.getElementById('deleteZone').classList.add('hidden');
             document.getElementById('eventModal').classList.remove('hidden');
         }
+function openRegModal(phone = null, name = null) {
+  console.log("=== 彈窗觸發成功 ===");
+  console.log("搜尋條件 - 電話:", phone, " 姓名:", name);
 
-function openRegModal(passedValue = null) {
-  console.log("=== 觸發彈窗，傳入值為:", passedValue);
-  
   const modal = document.getElementById('reg_modal');
-  if (!modal) {
-    console.error("找不到 ID 為 reg_modal 的元素");
-    return;
-  }
+  if (!modal) return;
 
-  // 1. 取得資料來源 (嘗試多種可能的變數名)
+  // 1. 確保資料來源存在
   let list = [];
   if (typeof allData !== 'undefined' && allData.registrations) {
     list = allData.registrations;
   } else if (typeof currentFilteredRegistrations !== 'undefined') {
     list = currentFilteredRegistrations;
   }
-  
-  // 2. 找出目標資料
+
+  // 2. 執行雙重比對搜尋
   let r = null;
-  if (passedValue !== null) {
-    // 優先當作 Index 抓取
-    if (typeof passedValue === 'number' && list[passedValue]) {
-      r = list[passedValue];
-    } 
-    // 如果抓不到，則當作「電話號碼」搜尋
-    if (!r) {
-      r = list.find(item => String(item["電話"] || "").replace(/'/g, "") === String(passedValue).replace(/'/g, ""));
-    }
+  if (phone) {
+    const cleanPhone = String(phone).replace(/'/g, "").trim();
+    const cleanName = name ? String(name).trim() : null;
+
+    r = list.find(item => {
+      const itemPhone = String(item["電話"] || "").replace(/'/g, "").trim();
+      const itemName = String(item["姓名"] || "").trim();
+      
+      // 如果有姓名就比對電話+姓名，沒有就只比對電話
+      if (cleanName) {
+        return itemPhone === cleanPhone && itemName === cleanName;
+      }
+      return itemPhone === cleanPhone;
+    });
   }
 
-  // 3. 填入資料到畫面
+  // 3. 將資料填入畫面
   if (r) {
-    console.log("✅ 成功對接資料:", r);
-    // 姓名、電話
+    console.log("✅ 成功找到對應資料:", r);
+
+    // 填入所有基本欄位
     if(document.getElementById('reg_name')) document.getElementById('reg_name').value = r["姓名"] || "";
     if(document.getElementById('reg_phone')) document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g, "");
+    if(document.getElementById('reg_old_phone')) document.getElementById('reg_old_phone').value = String(r["電話"] || "").replace(/'/g, "");
     if(document.getElementById('reg_id')) document.getElementById('reg_id').value = r["身分證"] || "";
     if(document.getElementById('reg_diet')) document.getElementById('reg_diet').value = r["餐食"] || "葷";
+    if(document.getElementById('reg_is_member')) document.getElementById('reg_is_member').value = r["會員身分"] || "否";
     if(document.getElementById('reg_note')) document.getElementById('reg_note').value = r["備註"] || "";
 
-    // 🌟 處理生日 (對接 N 欄)
+    // 🌟 生日欄位對接 (處理 N 欄)
     const bdayField = document.getElementById('reg_birthday');
     if (bdayField) {
       let bday = r["生日"] || "";
-      // 確保格式為 YYYY-MM-DD
-      if (bday && bday.includes("T")) bday = bday.split("T")[0];
+      // 轉換 GAS 日期格式為 YYYY-MM-DD
+      if (bday && bday.toString().includes("T")) {
+        bday = bday.split("T")[0];
+      }
       bdayField.value = bday;
-      console.log("📍 生日填入完成:", bday);
+      console.log("📍 生日填入值:", bday);
     }
+
+    // 處理交通方式 (Radio)
+    const transVal = r["交通"] || "自駕";
+    const transRadios = document.getElementsByName('trans');
+    transRadios.forEach(rad => { if (rad.value === transVal) rad.checked = true; });
+
+  } else {
+    console.warn("⚠️ 找不到匹配的報名資料");
+    if (document.getElementById('regForm')) document.getElementById('regForm').reset();
   }
 
-  // 4. 強制顯示視窗
+  // 4. 開啟視窗
   modal.classList.remove('hidden');
-  modal.style.display = 'flex'; // 雙重確保顯示
-}        
+  modal.classList.add('flex');
+}
+        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";

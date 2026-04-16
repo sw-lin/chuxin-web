@@ -132,7 +132,7 @@
 
  // --- 權限控管初始化 ---
         const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
-        const hasLedgerPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");  
+        const hasConfigPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");  
                 
 
 // 1. 日期格式轉換

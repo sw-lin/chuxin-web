@@ -37,7 +37,9 @@
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回</button>
-        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">出席狀況統計</h1>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">出席狀況統計</h1>
+        
         <button id="editBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
     </nav>
 
@@ -98,9 +100,19 @@
     let currentReport = [];
     let isEditMode = false;
     let pendingCheckin = { phone: '', name: '' }; 
-
+    // --- 權限控管初始化 ---
+    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+    
     window.onload = async () => {
         if (!STAFF_KEY) { location.href = "index.html"; return; }
+        // 檢查編輯權限
+        const editBtn = document.getElementById('editBtn');
+        const hasEditPermission = userPermissions.includes("all") || userPermissions.includes("view_attendance");
+        
+        if (!hasEditPermission && editBtn) {
+            // 無權限則隱藏按鈕，保持標題置中
+            editBtn.style.visibility = 'hidden';
+        }        
         await loadFinishedEvents();
     };
 
@@ -282,6 +294,11 @@
     }
 
     function toggleEditMode() {
+        // 安全檢查：防止透過控制台強行觸發
+        if (!userPermissions.includes("all") && !userPermissions.includes("view_attendance")) {
+            showToast("⚠️ 您沒有編輯出席狀況的權限");
+            return;
+        }        
         isEditMode = !isEditMode;
         const btn = document.getElementById('editBtn');
         btn.innerText = isEditMode ? "關閉編輯" : "開啟編輯";

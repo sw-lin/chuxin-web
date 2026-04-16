@@ -642,71 +642,53 @@ const rawBus = String(
             document.getElementById('eventModal').classList.remove('hidden');
         }
 function openRegModal(index = null) {
-    const modal = document.getElementById('reg_modal');
-    const form = document.getElementById('regForm');
-    if (form) form.reset();
+    console.log("=== 正在偵測報名資料對接情形 ===");
+    console.log("收到的 index:", index);
 
-    // 取得當前活動名稱
-    const title = document.getElementById('eventSelector').value;
-    document.getElementById('reg_event_title').innerText = title;
+    // 1. 自動尋找您的資料陣列 (不管它叫什麼名字)
+    let dataSource = null;
+    let dataName = "";
 
-    if (index !== null) {
-        // --- 修正：自動找尋資料來源 ---
-        let r = null;
-        
-        // 嘗試所有您可能使用的變數名稱
-        if (typeof currentFilteredRegistrations !== 'undefined') {
-            r = currentFilteredRegistrations[index];
-        } else if (typeof filteredRegistrations !== 'undefined') {
-            r = filteredRegistrations[index];
-        } else if (typeof allRegistrations !== 'undefined') {
-            r = allRegistrations[index];
-        }
-
-        if (!r) {
-            alert("找不到該筆報名資料，請確認 currentFilteredRegistrations 是否定義");
-            return;
-        }
-
-        console.log("👉 正在對接這筆資料:", r);
-
-        // 1. 填入一般欄位 (請確保 ID 與您 HTML 裡的一致)
-        document.getElementById('reg_name').value = r["姓名"] || "";
-        document.getElementById('reg_phone').value = r["電話"] || "";
-        document.getElementById('reg_old_phone').value = r["電話"] || "";
-        document.getElementById('reg_id').value = r["身分證"] || "";
-        document.getElementById('reg_diet').value = r["餐食"] || "葷";
-        document.getElementById('reg_is_member').value = r["會員身分"] || "否";
-        document.getElementById('reg_note').value = r["備註"] || "";
-
-        // 2. 🌟 重點：處理生日對接 (強制轉為 YYYY-MM-DD)
-        const bdayField = document.getElementById('reg_birthday');
-        if (bdayField) {
-            let bdayValue = r["生日"] || "";
-            // 如果是 2003-03-14T... 這種帶時間的格式，只取前10碼
-            if (bdayValue && bdayValue.length > 10) {
-                bdayValue = bdayValue.substring(0, 10);
-            }
-            bdayField.value = bdayValue;
-            console.log("🛠️ 生日填入成功:", bdayValue);
-        }
-
-        // 3. 處理交通 Radio
-        const transVal = r["交通"] || "自駕";
-        const transRadios = document.getElementsByName('trans');
-        transRadios.forEach(rad => {
-            if (rad.value === transVal) rad.checked = true;
-        });
-
-    } else {
-        // 新增模式
-        document.getElementById('reg_old_phone').value = "";
+    if (typeof allData !== 'undefined' && allData.registrations) {
+        dataSource = allData.registrations;
+        dataName = "allData.registrations";
+    } else if (typeof currentFilteredRegistrations !== 'undefined') {
+        dataSource = currentFilteredRegistrations;
+        dataName = "currentFilteredRegistrations";
+    } else if (typeof filteredRegistrations !== 'undefined') {
+        dataSource = filteredRegistrations;
+        dataName = "filteredRegistrations";
     }
 
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
+    if (!dataSource) {
+        console.error("❌ 找不到資料來源變數！請確認您的資料存在哪個陣列中。");
+        return;
+    }
+
+    // 2. 抓出那一筆資料
+    const r = dataSource[index];
+    
+    // 3. 🌟 這是您想看的：把整筆資料噴出來
+    console.log("✅ 成功從 " + dataName + " 抓到第 " + index + " 筆資料：");
+    console.dir(r); // 使用 console.dir 可以展開物件看所有 Key
+
+    if (r) {
+        // 檢查特定欄位是否存在
+        console.log("📍 姓名:", r["姓名"]);
+        console.log("📍 生日 (原始內容):", r["生日"]);
+        console.log("📍 生日的資料型態:", typeof r["生日"]);
         
+        // 如果想看有哪些 Key，防止中英文對不起來
+        console.log("📍 該物件擁有的所有 Key:", Object.keys(r));
+    }
+
+    // --- 暫時保留原本的畫面邏輯，確保視窗會彈出來 ---
+    const modal = document.getElementById('reg_modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}        
 // 輔助清空表單
 function resetRegForm() {
     document.getElementById('reg_old_phone').value = "";

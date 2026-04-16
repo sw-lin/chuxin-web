@@ -703,7 +703,20 @@ function openRegModal(phone = null, name = null) {
     const bdayField = document.getElementById('reg_birthday');
     if (bdayField) {
       let bday = getVal("生日") || getVal("出生");
-      if (bday && bday.
+      if (bday && bday.toString().includes("T")) bday = bday.split("T")[0];
+      bdayField.value = bday;
+      console.log("📅 生日對齊成功:", bday);
+    }
+  } else {
+    console.warn("⚠️ 在 allData.registrations 中找不到匹配的學員。");
+    if (document.getElementById('regForm')) document.getElementById('regForm').reset();
+  }
+
+  // 4. 開啟視窗
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
         
 // 輔助清空表單
 function resetRegForm() {

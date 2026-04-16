@@ -28,7 +28,9 @@
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
             <i class="fas fa-chevron-left mr-1"></i> 返回
         </button>
-        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">活動報名管理</h1>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">活動報名管理</h1>
+        
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all">開啟編輯</button>
     </nav>
 
@@ -289,7 +291,10 @@
         
         let isEditMode = false;
         let currentEventConfig = null; // 🌟 儲存目前選中活動的詳細規格（費用、日期等）
-        let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱        
+        let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱 
+        // --- 權限控管初始化 ---
+        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]"); 
+        
         window.onload = loadData;
 
         // 核心載入

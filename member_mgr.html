@@ -27,7 +27,9 @@
 
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left mr-1"></i>返回</button>
-        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2">會員名冊管理</h1>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">會員名冊管理</h1>
+        
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
     </nav>
 
@@ -96,13 +98,23 @@
         var STAFF_KEY = sessionStorage.getItem('staffKey');
         var isEditMode = false;
         var currentEditPhone = null;
-
+        // 從 Session 抓取權限清單
+        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+        
         window.onload = function() {
             if (!STAFF_KEY) { 
                 alert("請重新登入");
                 window.location.href = "index.html"; 
                 return; 
             }
+        // --- 職位權限檢查 ---
+        const editToggleBtn = document.getElementById('editToggleBtn');
+        const hasPermission = userPermissions.includes("all") || userPermissions.includes("edit_member");
+        
+        if (!hasPermission && editToggleBtn) {
+            // 使用 visibility 隱藏，保持版面平衡且絕對無法點擊
+            editToggleBtn.style.visibility = 'hidden';
+        }    
             loadMembers();
         };
 
@@ -251,6 +263,12 @@
         }
 
         function toggleEditMode() {
+            // 安全二次檢查
+            if (!userPermissions.includes("all") && !userPermissions.includes("edit_member")) {
+               alert("您沒有編輯會員名冊的權限");
+               return;
+            }
+            
             isEditMode = !isEditMode;
             var btn = document.getElementById('editToggleBtn');
             btn.innerText = isEditMode ? "結束編輯" : "開啟編輯";

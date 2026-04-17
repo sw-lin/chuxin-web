@@ -633,7 +633,8 @@ const rawBus = String(
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
-}        
+}
+        
         function openAddModal() {
             document.getElementById('modalTitle').innerText = "發布新活動";
             document.getElementById('old_title').value = "";
@@ -852,9 +853,11 @@ function formatDateForInput(dVal) {
                 title: document.getElementById('ev_title').value,
                 poster_url: document.getElementById('ev_poster').value,
                 desc: document.getElementById('ev_desc').value,
-                start_date: document.getElementById('ev_start').value,
-                display_until: document.getElementById('ev_until').value,
-                date: document.getElementById('ev_date').value,
+                
+                // 🌟 修正點：Key 名稱必須與 GAS 的 p.startDate 等一致
+                startDate: document.getElementById('ev_start').value,   // 對應 B 欄
+                deadline: document.getElementById('ev_until').value,    // 對應 C 欄
+                eventDate: document.getElementById('ev_date').value,    // 對應 F 欄 (活動日)
                 
                 // 🌟 修正點：確保名稱與 GAS handleAddNewEvent_Registration 接收的一致
                 needId: needIdValue, 

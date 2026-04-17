@@ -873,22 +873,29 @@ async function submitProfileUpdate() {
     }
 }   
 function goToAI() {
-    // 1. 取得網址列原本的參數
-    const queryString = window.location.search;
-    
-    // 2. 顯示偵錯資訊 (會在瀏覽器跳出視窗)
-    // 如果這裡彈出來的內容是空的，代表 member_zone.html 本身就沒拿到電話
-    alert("偵錯資訊：即將帶往下一頁的參數是 -> " + (queryString || "空值"));
+    try {
+        // 1. 從 sessionStorage 抓取首頁存進去的 userInfo 字串
+        const userInfoRaw = sessionStorage.getItem('userInfo');
+        
+        if (userInfoRaw) {
+            // 2. 將字串轉回 JSON 物件
+            const userInfo = JSON.parse(userInfoRaw);
+            const phone = userInfo.phone; // 這裡就是您首頁存的 u (電話)
 
-    // 3. 同時在 Console 印出詳細資訊 (按 F12 可以看)
-    console.log("Current URL:", window.location.href);
-    console.log("Extracted Parameters:", queryString);
+            // 3. 偵錯斷點 (確認是否有從 Session 拿到資料)
+            alert("✅ Session 偵錯：成功從口袋掏出電話 -> " + phone);
 
-    // 4. 執行跳轉
-    if (queryString) {
-        window.location.href = 'ai_chat.html' + queryString;
-    } else {
-        alert("警告：偵測不到參數，將以無參數狀態跳轉");
+            // 4. 帶著電話跳轉到 AI 頁面
+            // 使用 encodeURIComponent 確保特殊字元傳遞正確
+            window.location.href = 'ai_chat.html?phone=' + encodeURIComponent(phone);
+            
+        } else {
+            // 如果連 Session 都沒資料，說明可能是直接開網頁沒登入
+            alert("⚠️ 錯誤：找不到登入資訊 (Session)，將以訪客身分跳轉。");
+            window.location.href = 'ai_chat.html';
+        }
+    } catch (e) {
+        console.error("解析 Session 失敗:", e);
         window.location.href = 'ai_chat.html';
     }
 }

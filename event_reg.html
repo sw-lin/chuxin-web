@@ -646,23 +646,21 @@ const rawBus = String(
 function openRegModal(phone, name) {
     console.log("🚀 [Debug] 彈窗啟動，正在抓取資料...");
     
-    // 1. 鎖定 UI 元素 (確認 ID 為 regModal)
-    const modal = document.getElementById('regModal');
-    if (!modal) {
-        console.error("❌ 找不到 ID 為 'regModal' 的元素");
-        return;
-    }
+    // 1. 先執行清空，確保不會殘留上一個人的資料
+    resetRegForm(); 
 
-    // 2. 取得活動配置 (從畫面上的選擇器判斷)
+    const modal = document.getElementById('regModal');
+    if (!modal) return;
+
+    // 2. 取得活動配置 (決定是否顯示身分證區塊)
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
-    const needId = (ev?.["(需要身分證)"] === '是' || ev?.[" needId"] === '是');
+    const needId = (ev?.["(需要身分證)"] === '是' || ev?.["needId"] === '是');
 
-    // 切換身分證區塊顯示
     const insuranceZone = document.getElementById('reg_insurance_zone');
     if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none';
 
-    // 3. 資料比對與填入
+    // 3. 如果有傳入 phone 和 name，代表是「修改」模式，從 allData 抓資料填入
     if (phone && name) {
         const r = allData.registrations.find(reg => 
             String(reg["電話"] || "").trim().replace(/'/g, "") === String(phone).trim() && 
@@ -670,9 +668,9 @@ function openRegModal(phone, name) {
         );
 
         if (r) {
-            console.log("✅ 找到報名資料:", r);
+            console.log("✅ 找到報名資料，正在回填 UI:", r);
 
-            // 填入基本欄位
+            // 基本欄位回填
             document.getElementById('reg_name').value = r["姓名"] || "";
             document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g, "");
             document.getElementById('reg_old_phone').value = String(phone).replace(/'/g, "");
@@ -680,21 +678,21 @@ function openRegModal(phone, name) {
             document.getElementById('reg_diet').value = r["餐食"] || "葷食";
             document.getElementById('reg_note').value = r["備註"] || "";
 
-            // 🌟 生日填充 (暴力切字串防呆版)
+            // 🌟 修正點 1：讀取會員狀態 (H 欄位)
+            // 檢查可能的 Key 名稱 (中文或英文)
+            const memStatus = r["會員身份"] || r["會員"] || r["isMember"] || "否";
+            document.getElementById('reg_is_member').value = (memStatus === '是' || memStatus === 'Y') ? '是' : '否';
+
+            // 生日填充
             const bdayField = document.getElementById('reg_birthday');
             if (bdayField) {
                 let rawBday = r["生日"] || r["出生日期"] || r["出生年月日"] || "";
                 let finalDate = "";
-
                 if (rawBday) {
                     let strBday = String(rawBday).trim();
-                    
-                    // 1. 如果開頭就是 YYYY-MM-DD 的格式 (包含帶有 T 的 ISO 格式)
                     if (/^\d{4}-\d{2}-\d{2}/.test(strBday)) {
                         finalDate = strBday.substring(0, 10);
-                    } 
-                    // 2. 如果是其他古怪格式，再試圖讓 JS Date 解析
-                    else {
+                    } else {
                         const d = new Date(rawBday);
                         if (!isNaN(d.getTime())) {
                             const y = d.getFullYear();
@@ -704,16 +702,29 @@ function openRegModal(phone, name) {
                         }
                     }
                 }
-                
                 bdayField.value = finalDate;
-                console.log("📅 生日最終填入值:", finalDate);
             }
 
-            // 交通方式
+            // 交通方式回填
             const transVal = (r["交通"] || "").trim();
             document.getElementsByName('trans').forEach(rd => {
                 if (rd.value === transVal) rd.checked = true;
             });
+            
+            // 如果有記錄可載人數
+            if (r["可載人數"] !== undefined) {
+                document.getElementById('reg_seats').value = r["可載人數"];
+                updateSeatInput(transVal); // 同步顯示/隱藏座位框
+            }
+        }
+    } else {
+        // 如果沒有傳入參數，代表是「新增報名」
+        console.log("📝 新增報名模式：已執行重置。");
+        // 額外確保新增時預設選取一個交通方式（例如自駕）
+        const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
+        if (defaultTrans) {
+            defaultTrans.checked = true;
+            updateSeatInput("自駕");
         }
     }
 
@@ -729,7 +740,7 @@ function resetRegForm() {
     document.getElementById('reg_phone').value = "";
     document.getElementById('reg_id').value = "";
     document.getElementById('reg_note').value = "";
-    document.getElementById('reg_diet').value = "葷";
+    document.getElementById('reg_diet').value = "葷食";
     document.getElementById('reg_seats').value = 0;
     document.getElementById('reg_is_member').value = "否"; // 預設為非會員
     // 🌟 移除原本強制勾選自駕的程式碼，交給 openRegModal 處理

@@ -3,19 +3,27 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
- 
-  // 立即從網址抓電話
-  const _urlParams = new URLSearchParams(window.location.search);
-  const _phone = _urlParams.get('phone') || "未提供";
-  
+  // 1. 第一步：先抓網址參數
+  var _uParam = new URLSearchParams(window.location.search);
+  var _uPhone = _uParam.get('phone') || "訪客";
+
+  // 2. 第二步：立刻把設定寫入全域 window
   window.difyChatbotConfig = {
     token: 'ERNQLHGG3QKClfr7',
     baseUrl: 'https://udify.app',
     inputs: {
-      "user_phone": _phone // 👈 這裡就是關鍵！Dify 會收到這個變數
+      user_phone: _uPhone // 確保這裡跟 Dify 後台的 user_phone 完全一致
     }
-  }
+  };
 </script>
-<script src="https://udify.app/embed.min.js" id="ERNQLHGG3QKClfr7" defer></script>
+
+<script src="https://udify.app/embed.min.js" id="ERNQLHGG3QKClfr7"></script>
+
+<style>
+  /* 修正部分手機瀏覽器可能看不到對話框的問題 */
+  #dify-chatbot-bubble-button { 
+    z-index: 9999 !important; 
+  }
+</style>
 </body>
 </html>

@@ -3,12 +3,15 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
-  alert("抵達 AI 頁面，目前網址參數為：" + window.location.search);
+  // 1. 從網址列抓取電話號碼
+  const urlParams = new URLSearchParams(window.location.search);
+  const userPhone = urlParams.get('phone') || "未提供電話";
+  
   window.difyChatbotConfig = {
     token: 'ERNQLHGG3QKClfr7',
     baseUrl: 'https://udify.app',
     inputs: {
-     user_phone: '0928528517'
+      "phone": userPhone // 👈 這裡就是關鍵！Dify 會收到這個變數
     }
   }
 </script>

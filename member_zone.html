@@ -684,8 +684,8 @@ async function enterStaffMode() {
             sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
 
             // 強制檢查一次，如果這裡印出來是空的，代表變數拿錯了
-            alert("驗證成功，職稱：" + result.userTitle + result.permissions); 
-
+            alert("驗證成功！\n職稱：" + result.userTitle + "\n權限清單：" + JSON.stringify(result.permissions));
+            
             window.location.href = 'staff_menu.html';
         } else {
             alert(result.message || "金鑰不正確");

@@ -871,7 +871,15 @@ async function submitProfileUpdate() {
         // 無論成功或失敗，最後一定要隱藏轉圈圈，否則頁面會被鎖死
         if (loading) loading.style.display = 'none'; // 隱藏
     }
-}        
+}   
+function goToAI() {
+    // 取得當前網址的參數 (例如 ?inputs={"user_name":"..."})
+    const currentParams = window.location.search;
+    
+    // 跳轉到 ai_chat.html，並帶上同樣的參數
+    // 這樣 ai_chat.html 也能知道是哪位會員在說話
+    window.location.href = 'ai_chat.html' + currentParams;
+}
 </script>   
 </body>
 </html>

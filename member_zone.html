@@ -684,7 +684,7 @@ async function enterStaffMode() {
             sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
 
             // 強制檢查一次，如果這裡印出來是空的，代表變數拿錯了
-       //     alert("驗證成功，職稱：" + result.userTitle); 
+            alert("驗證成功，職稱：" + result.userTitle); 
 
             window.location.href = 'staff_menu.html';
         } else {

@@ -3,15 +3,16 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
-  // 1. 從網址列抓取電話號碼
-  const urlParams = new URLSearchParams(window.location.search);
-  const userPhone = urlParams.get('phone') || "未提供電話";
+ 
+  // 立即從網址抓電話
+  const _urlParams = new URLSearchParams(window.location.search);
+  const _phone = _urlParams.get('phone') || "未提供";
   
   window.difyChatbotConfig = {
     token: 'ERNQLHGG3QKClfr7',
     baseUrl: 'https://udify.app',
     inputs: {
-      "phone": userPhone // 👈 這裡就是關鍵！Dify 會收到這個變數
+      "user_phone": _phone // 👈 這裡就是關鍵！Dify 會收到這個變數
     }
   }
 </script>

@@ -869,7 +869,7 @@ function formatDateForInput(dVal) {
                 
                 oldTitle: document.getElementById('old_title').value
             };
-            if(!payload.title || !payload.date) return alert("必填未填");
+         //   if(!payload.title) return alert("必填未填");
             showLoading(true);
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });

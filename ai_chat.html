@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家</title>
-    <script src="https://cdn.jsdelivr.net/npm/@coze/api@1.0.21/dist/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@coze/api/dist/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -14,20 +14,26 @@
     <div id="chat-container"></div>
     <script>
         window.addEventListener('load', () => {
-            // 兼容不同版本的 SDK 命名
-        const SDK = window.CozeWebSDK || window.CozeAPI;
+            // 嘗試抓取 SDK 物件
+            const SDK = window.CozeWebSDK;
             
             if (!SDK) {
-                document.body.innerHTML = "<h1>錯誤：找不到 coze_sdk.js 檔案，請檢查資料夾。</h1>";
+                console.error("SDK 載入失敗，CDN 可能被阻擋");
+                document.body.innerHTML = "<h2 style='padding:20px;'>連線異常：無法從雲端取得聊天套件，請嘗試重新整理或檢查網路設定。</h2>";
                 return;
             }
+
             const urlParams = new URLSearchParams(window.location.search);
+            
             new SDK.WebChatClient({
-                config: { bot_id: '7620394792719499317' },
+                config: { 
+                    bot_id: '7620394792719499317' 
+                },
                 componentProps: {
                     title: '築心智慧管家',
                     layout: 'window',
                     initial_variables: {
+                        // 這裡會正確抓取網址後的參數
                         user_name: urlParams.get('user_name') || '訪客',
                         user_phone: urlParams.get('user_phone') || ''
                     }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家</title>
-    <script src="coze_sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@coze/api@1.0.21/dist/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -14,7 +14,9 @@
     <div id="chat-container"></div>
     <script>
         window.addEventListener('load', () => {
-            const SDK = window.CozeWebSDK;
+            // 兼容不同版本的 SDK 命名
+        const SDK = window.CozeWebSDK || window.CozeAPI;
+            
             if (!SDK) {
                 document.body.innerHTML = "<h1>錯誤：找不到 coze_sdk.js 檔案，請檢查資料夾。</h1>";
                 return;

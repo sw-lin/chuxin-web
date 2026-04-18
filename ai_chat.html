@@ -13,13 +13,14 @@
     <div id="chat-container"></div>
 
     <script type="module">
-        // 改從模組化路徑載入
-        import { WebChatClient } from 'https://cdn.jsdelivr.net/npm/@coze/api/+esm';
+        // 改用全量匯入 (*)，確保能抓到所有匯出的物件
+        import * as CozeWebSDK from 'https://cdn.jsdelivr.net/npm/@coze/api/+esm';
 
         try {
             const urlParams = new URLSearchParams(window.location.search);
             
-            new WebChatClient({
+            // 使用 CozeWebSDK.WebChatClient 啟動
+            new CozeWebSDK.WebChatClient({
                 config: { 
                     bot_id: '7620394792719499317' 
                 },
@@ -33,10 +34,10 @@
                 },
                 el: document.getElementById('chat-container'),
             });
-            console.log("Coze SDK 啟動成功");
+            console.log("築心智慧管家 SDK 啟動完成！");
         } catch (error) {
-            console.error("啟動失敗:", error);
-            document.body.innerHTML = "<h2 style='padding:20px;'>載入器啟動失敗，請確認網路環境或 bot_id 是否正確。</h2>";
+            console.error("啟動失敗原因:", error);
+            document.body.innerHTML = "<h2 style='padding:20px;'>載入失敗，請確認網址參數是否包含名稱與電話。</h2>";
         }
     </script>
 </body>

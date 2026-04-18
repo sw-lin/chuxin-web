@@ -2,29 +2,30 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <title>AI Chat</title>
     <style>
         #dify-chatbot-bubble-button { z-index: 9999 !important; }
     </style>
 </head>
 <body>
 
-<script>
-    (function() {
-        var _uParam = new URLSearchParams(window.location.search);
-        var _uPhone = (_uParam.get('phone') || "anonymous").replace(/\D/g, '');
-        
-        window.difyChatbotConfig = {
-            token: 'ERNQLHGG3QKClfr7',
-            baseUrl: 'https://udify.app',
-            inputs: { "user_phone": _uPhone }
-        };
-    })();
-</script>
-
 <script
     src="https://udify.app/embed.min.js"
     id="ERNQLHGG3QKClfr7"
+    data-token="ERNQLHGG3QKClfr7"
+    data-baseurl="https://udify.app"
     defer>
+</script>
+
+<script>
+    // 如果連這個簡單的變數賦值都被擋，代表您的伺服器完全不允許 <script> 標籤
+    window.difyChatbotConfig = {
+        token: 'ERNQLHGG3QKClfr7',
+        baseUrl: 'https://udify.app',
+        inputs: {
+            "user_phone": new URLSearchParams(window.location.search).get('phone') || "anonymous"
+        }
+    };
 </script>
 
 </body>

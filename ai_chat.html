@@ -3,25 +3,25 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
-  // 1. 抓取網址參數
-  var _rawParams = new URLSearchParams(window.location.search);
-  var _rawPhone = _rawParams.get('phone') || "anonymous";
+  // 1. 抓取並清洗電話號碼
+  var _uParam = new URLSearchParams(window.location.search);
+  var _uPhone = (_uParam.get('phone') || "anonymous").replace(/\D/g, '');
 
-  // 2. 關鍵：使用正規表達式只保留數字，移除任何括號或空白
-  var _cleanPhone = _rawPhone.replace(/\D/g, ''); 
-
+  // 2. 設定 Dify 配置 (請確保這裡只有這三個欄位)
   window.difyChatbotConfig = {
-  // 注意：這裡要貼「嵌入式」頁面看到的 Token，不是 API Key
-  token: 'ERNQLHGG3QKClfr7', 
-  baseUrl: 'https://udify.app',
-  inputs: {
-    "user_phone": _cleanPhone 
-  }
-};
+    token: 'ERNQLHGG3QKClfr7', // 👈 剛才截圖確認過的正確 Token
+    baseUrl: 'https://udify.app',
+    inputs: {
+      "user_phone": _uPhone
+    }
+  };
 </script>
-<script src="https://udify.app/embed.min.js" id="ERNQLHGG3QKClfr7"></script>
 
-<style>
+<script>
+  src="https://udify.app/embed.min.js"
+  id="ERNQLHGG3QKClfr7"
+  defer>
+</script>
   /* 修正部分手機瀏覽器可能看不到對話框的問題 */
   #dify-chatbot-bubble-button { 
     z-index: 9999 !important; 

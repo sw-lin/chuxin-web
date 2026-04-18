@@ -126,9 +126,9 @@ async function initData() {
         };
 
         // 使用 replace 將 Google Sheet 的換行符號轉成 HTML 換行
-        document.getElementById('content1').innerHTML = (getVal('guest_content1') || "建置中...").replace(/\n/g, '<br>');
-        document.getElementById('content2').innerHTML = (getVal('guest_content2') || "建置中...").replace(/\n/g, '<br>');
-        document.getElementById('content3').innerHTML = (getVal('guest_content3') || "建置中...").replace(/\n/g, '<br>');
+        document.getElementById('content1').innerHTML = formatContent((getVal('guest_content1') || "建置中...").replace(/\n/g, '<br>'));
+        document.getElementById('content2').innerHTML = formatContent((getVal('guest_content2') || "建置中...").replace(/\n/g, '<br>'));
+        document.getElementById('content3').innerHTML = formatContent((getVal('guest_content3') || "建置中...").replace(/\n/g, '<br>'));
 
         // --- 2. 載入圖片 (最多3張) ---
         let slidesUrls = [];
@@ -172,6 +172,24 @@ function startSlides() {
     slideTimeout = setTimeout(startSlides, 5000);
 }
 
+// --- 修改後的內容處理邏輯 ---
+const formatContent = (text) => {
+    if (!text) return "建置中...";
+    
+    // 1. 處理換行
+    let html = text.replace(/\n/g, '<br>');
+
+    // 2. 🌟 關鍵修正：支援 [標題|網址] 轉換為漂亮的按鈕或連結
+    // 正則表達式會抓取 [文字|網址] 的格式
+    html = html.replace(/\[([^|\]]+)\|([^\]]+)\]/g, (match, title, url) => {
+        return `<a href="${url}" target="_blank" class="inline-flex items-center px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-all font-bold mx-1">
+                    <i class="fas fa-map-marker-alt mr-1"></i>${title}
+                </a>`;
+    });
+
+    return html;
+};
+    
 window.onload = initData;
 </script>
 </body>

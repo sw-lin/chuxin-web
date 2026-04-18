@@ -881,13 +881,15 @@ function goToAI() {
             // 2. 將字串轉回 JSON 物件
             const userInfo = JSON.parse(userInfoRaw);
             const phone = userInfo.phone; // 這裡就是您首頁存的 u (電話)
-
+            const name = userInfo.name || "";   // 👈 新增：抓取姓名
+            
             // 3. 偵錯斷點 (確認是否有從 Session 拿到資料)
-            alert("✅ Session 偵錯：成功從口袋掏出電話 -> " + phone);
+            alert("✅ Session 偵錯：成功拿到資料 -> " + name + " / " + phone);
 
             // 4. 帶著電話跳轉到 AI 頁面
             // 使用 encodeURIComponent 確保特殊字元傳遞正確
-            window.location.href = 'ai_chat.html?phone=' + encodeURIComponent(phone);
+            window.location.href = 'ai_chat.html?user_phone=' + encodeURIComponent(phone) + 
+                                   '&user_name=' + encodeURIComponent(name);
             
         } else {
             // 如果連 Session 都沒資料，說明可能是直接開網頁沒登入

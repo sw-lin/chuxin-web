@@ -3,18 +3,20 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
-  // 1. 抓取電話
-  var _uParam = new URLSearchParams(window.location.search);
-  var _uPhone = _uParam.get('phone') || "anonymous_user";
+  // 1. 抓取網址參數
+  var _rawParams = new URLSearchParams(window.location.search);
+  var _rawPhone = _rawParams.get('phone') || "anonymous";
 
-  // 2. 使用 ext_user 來傳遞電話
+  // 2. 關鍵：使用正規表達式只保留數字，移除任何括號或空白
+  var _cleanPhone = _rawPhone.replace(/\D/g, ''); 
+
   window.difyChatbotConfig = {
     token: 'ERNQLHGG3QKClfr7',
     baseUrl: 'https://udify.app',
-    // 注意：我們把電話放在 ext_user，這在 Dify 裡是最高優先權
-    ext_user: _uPhone, 
+    // 傳送純淨的電話號碼
+    ext_user: _cleanPhone,
     inputs: {
-      "user_phone": _uPhone 
+      "user_phone": _cleanPhone 
     }
   };
 </script>

@@ -2,41 +2,42 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>築心智慧管家</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>築心智慧管家 - 會員專屬服務</title>
+    <script src="https://lf-cdn.coze.com/obj/unpkg/flow-platform/chat-sdk/1.0.1-beta.4/index.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #f5f5f5; }
-        iframe { border: none; width: 100%; height: 100%; display: block; }
+        body { margin: 0; padding: 0; background-color: #f4f7f9; font-family: sans-serif; }
+        #chat-container { width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
 
-    <iframe id="dify-frame"></iframe>
+<div id="chat-container"></div>
 
-    <script>
-        (function() {
-            // 1. 取得網址參數
-            const params = new URLSearchParams(window.location.search);
-            const phone = params.get('phone') || "";
-            const name = params.get('name') || "訪客";
+<script>
+    // 1. 從目前的網址中抓取會員資料 (例如: ?user_name=王小明&user_phone=0928528517)
+    const urlParams = new URLSearchParams(window.location.search);
+    const userName = urlParams.get('user_name') || '訪客';
+    const userPhone = urlParams.get('user_phone') || '未提供';
 
-            // 2. 封裝成 Dify 認得的 inputs JSON 格式
-            // 務必確認 Dify START 節點內的變數 Key 是 user_phone
-            const inputs = {
-                "user_phone": phone,
-                "user_name": name
-            };
+    // 2. 初始化 Coze Web SDK
+    new CozeWebSDK.WebChatClient({
+        config: {
+            // 這是您的專屬 Bot ID
+            bot_id: '7620394792719499317', 
+        },
+        componentProps: {
+            title: '築心智慧管家',
+            layout: 'window', // 使用視窗模式填充容器
+            // 關鍵：這行會把網址參數直接塞進您在 Coze 建立的變數裡
+            initial_variables: {
+                user_name: userName,
+                user_phone: userPhone
+            }
+        },
+        el: document.getElementById('chat-container'),
+    });
+</script>
 
-            // 3. 進行 Base64 或 URL 編碼以確保參數安全傳遞
-            const encodedInputs = encodeURIComponent(JSON.stringify(inputs));
-
-            // 4. 組合 URL：使用 /chatbot 路徑並帶上 inputs 參數
-            const baseUrl = "https://udify.app/chatbot/ERNQLHGG3QKClfr7";
-            const finalUrl = `${baseUrl}?inputs=${encodedInputs}`;
-
-            // 5. 注入 iframe
-            document.getElementById('dify-frame').src = finalUrl;
-        })();
-    </script>
 </body>
 </html>

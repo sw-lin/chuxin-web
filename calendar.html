@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動行程表 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        /* 案頭深綠色 */
+        .nav-emerald { background-color: #064e3b; }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <nav class="sticky top-0 z-40 nav-emerald text-white px-6 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-200 transition">
+            <i class="fas fa-chevron-left mr-1.5"></i> 返回
+        </button>
+        <h1 class="text-xl font-black tracking-widest absolute left-1/2 -translate-x-1/2">活動行程表</h1>
+        <div class="w-10"></div> 
+    </nav>
+
+    <main class="max-w-xl mx-auto p-6 mt-4 space-y-6">
+        
+        <div id="loading" class="text-center py-24 bg-white rounded-[2rem] border border-emerald-50 shadow-sm">
+            <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-700 rounded-full animate-spin mx-auto mb-5"></div>
+            <p class="text-emerald-900 font-bold text-sm tracking-wide">同步最新行程中...</p>
+        </div>
+
+        <div id="calendarList" class="space-y-4">
+            </div>
+
+    </main>
+
+    <script>
+// 請確保此處 URL 正確
+const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
+
+/**
+ * 格式化日期：將 2026-03-29 轉為 月與日
+ */
+function formatDisplayDate(dateStr) {
+    if (!dateStr) return { month: '--', day: '--' };
+    try {
+        const parts = dateStr.split('-');
+        if (parts.length < 3) return { month: '--', day: '--' };
+        return {
+            month: parseInt(parts[1]) + '月', 
+            day: parts[2]
+        };
+    } catch(e) { return { month: '--', day: '--' }; }
+}
+
+/**
+ * 從 GAS 抓取資料
+ */
+async function loadCalendar() {
+    const listContainer = document.getElementById('calendarList');
+    const loadingElem = document.getElementById('loading');
+    
+    try {
+        // 關鍵修正：移除 type=get_all，改用預設 sync 請求以對齊幹部頁面
+        const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        
+        // 取得行事曆資料
+        let events = data.calendar || [];
+        
+        // 嚴格過濾：標題與日期必須同時存在才顯示
+        events = events.filter(ev => ev.dateText && ev.dateText !== "" && ev.title);
+        
+        // 排序：由近到遠 (日期排序)
+        events.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
+        
+        if (events.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-20 bg-white rounded-[2rem] border border-emerald-50 shadow-sm">
+                    <p class="text-gray-400 text-sm font-bold italic">目前尚無預定行程</p>
+                </div>`;
+        } else {
+            renderList(events);
+        }
+    } catch (e) {
+        console.error("載入失敗:", e);
+        listContainer.innerHTML = `
+            <div class="text-center py-16 bg-white rounded-[2rem] border border-red-50 shadow-sm px-6">
+                <i class="fas fa-wifi text-red-200 text-5xl mb-4"></i>
+                <p class="text-red-900 font-bold">行程同步失敗</p>
+                <button onclick="location.reload()" class="mt-6 px-8 py-2 bg-red-50 text-red-800 rounded-xl font-bold text-sm border border-red-100">重試</button>
+            </div>`;
+    } finally {
+        loadingElem.style.display = 'none';
+    }
+}
+
+/**
+ * 渲染行程項目
+ */
+function renderList(events) {
+    const listContainer = document.getElementById('calendarList');
+    
+    listContainer.innerHTML = events.map(ev => {
+        const dateObj = formatDisplayDate(ev.dateText);
+        // 去除日期中的橫槓，用於 Google 日曆
+        const dateClean = ev.dateText.replace(/-/g, '');
+        
+        // 生成 Google 日曆連結 (設定為台灣時間 09:30 - 12:00)
+        // 注意：Z 代表 UTC 格式，0130Z 等於台灣 09:30
+        const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('築心讀書會：' + ev.title)}&dates=${dateClean}T013000Z/${dateClean}T040000Z&details=${encodeURIComponent(ev.description || '歡迎參加築心讀書會活動')}&location=${encodeURIComponent('築心會館')}&sf=true&output=xml`;
+        
+        return `
+            <div class="bg-white p-4 rounded-[2rem] border border-emerald-50 shadow-sm flex items-center gap-4 transition-all hover:border-emerald-200">
+                
+                <div class="flex flex-col items-center justify-center w-16 h-16 shrink-0 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                    <div class="text-[10px] font-bold text-emerald-700 leading-none">${dateObj.month}</div>
+                    <div class="text-3xl font-black text-emerald-900 mt-1 leading-none">${dateObj.day}</div>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-black text-emerald-950 text-base truncate">${ev.title}</h4>
+                    <div class="text-[11px] text-emerald-700/70 flex items-center gap-1 mt-1 font-medium">
+                        <i class="far fa-clock text-amber-500"></i>09:30 - 12:00
+                    </div>
+                </div>
+
+                <button onclick="window.open('${googleUrl}', '_blank')" class="bg-amber-50 text-amber-800 px-3 py-2.5 rounded-xl text-[10px] font-black border border-amber-100 shadow-sm shrink-0 flex flex-col items-center justify-center hover:bg-amber-100 transition-colors">
+                    <i class="fas fa-calendar-plus text-amber-500 text-sm mb-0.5"></i>
+                    <span>加日曆</span>
+                </button>
+            </div>`;
+    }).join('');
+}
+
+// 頁面啟動
+window.onload = loadCalendar;        
+    </script>
+</body>
+</html>

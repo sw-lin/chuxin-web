@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會員名冊管理 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px); }
+        .loading-card { background: white; padding: 40px; border-radius: 32px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 28px; border-radius: 50px; font-size: 14px; z-index: 10000; transition: opacity 0.5s; pointer-events: none; }
+        .detail-section { max-height: 0; overflow: hidden; transition: all 0.3s ease-out; opacity: 0; }
+        .card-active .detail-section { max-height: 300px; opacity: 1; padding-top: 1rem; margin-top: 1rem; border-top: 1px dashed #e5e7eb; }
+        .card-active { border-color: #059669 !important; }
+        .rotate-icon { transition: transform 0.3s; }
+        .card-active .rotate-icon { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="min-h-screen pb-32">
+
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold">同步中...</div></div></div>
+
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="window.location.href='staff_menu.html'" class="text-sm font-bold"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">會員名冊管理</h1>
+        
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
+    </nav>
+
+    <main class="p-4 max-w-2xl mx-auto">
+        <div class="flex items-center justify-between mb-6 px-2">
+            <h2 class="text-xs font-bold text-emerald-900/60 uppercase tracking-widest">Member Directory</h2>
+            <span id="memberCount" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">載入中...</span>
+        </div>
+        <div id="memberList" class="space-y-4"></div>
+    </main>
+
+    <div id="bottomAddArea" class="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xs px-6 hidden z-30">
+        <button onclick="openAddModal()" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+            <i class="fas fa-user-plus text-xl"></i> 新增新會員
+        </button>
+    </div>
+
+    <div id="memberModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6" onclick="closeModal('memberModal')">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-6 text-center">會員資料</h3>
+            <div class="space-y-4">
+                <div class="text-xs font-bold text-gray-400 pl-2">姓名與電話</div>
+                <input type="text" id="mName" placeholder="會員姓名" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-500">
+                <input type="tel" id="mPhone" placeholder="手機號碼 (帳號)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold font-mono" oninput="formatPhoneInput(event)">
+                
+                <div class="text-xs font-bold text-gray-400 pl-2">電子郵件</div>
+                <input type="email" id="mEmail" placeholder="電子郵件 Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
+                
+                <div id="roleSection">
+                    <div class="text-xs font-bold text-gray-400 pl-2 mb-1">職位設定</div>
+                    <select id="mRole" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-700">
+                        <option value="">-- 選擇職位 --</option>
+                        <option value="會長">會長</option>
+                        <option value="副會長">副會長</option>
+                        <option value="班務">班務</option>
+                        <option value="文書">文書</option>
+                        <option value="財務">財務</option>
+                        <option value="資訊圖書">資訊圖書</option>
+                        <option value="企劃">企劃</option>
+                        <option value="活動">活動</option>
+                        <option value="會員">會員</option>
+                    </select>
+                </div>
+
+                <div class="text-xs font-bold text-gray-400 pl-2">入會日期</div>
+                <input type="date" id="mJoinDate" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-gray-700">
+                
+                <div class="text-xs font-bold text-gray-400 pl-2">備註事項</div>
+                <textarea id="mNote" placeholder="輸入備註..." rows="2" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold"></textarea>
+            </div>
+
+            <div class="flex flex-col gap-3 mt-8">
+                <button id="modalSubmitBtn" onclick="saveMemberData()" class="w-full py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-lg active:scale-95 transition-all">確認儲存</button>
+                <div class="flex justify-between items-center px-2">
+                    <button id="deleteInModalBtn" onclick="deleteCurrentMember()" class="text-red-500 font-black text-sm hidden">
+                        <i class="fas fa-trash-alt mr-1"></i> 刪除此成員
+                    </button>
+                    <button onclick="closeModal('memberModal')" class="text-gray-400 font-bold text-sm">取消返回</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
+        var STAFF_KEY = sessionStorage.getItem('staffKey');
+        var isEditMode = false;
+        var currentEditPhone = null;
+        // 從 Session 抓取權限清單
+        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+        
+        window.onload = function() {
+            if (!STAFF_KEY) { 
+                alert("請重新登入");
+                window.location.href = "index.html"; 
+                return; 
+            }
+        // --- 職位權限檢查 ---
+        const editToggleBtn = document.getElementById('editToggleBtn');
+        const hasPermission = userPermissions.includes("all") || userPermissions.includes("edit_member");
+        
+        if (!hasPermission && editToggleBtn) {
+            // 使用 visibility 隱藏，保持版面平衡且絕對無法點擊
+            editToggleBtn.style.visibility = 'hidden';
+        }    
+            loadMembers();
+        };
+
+        function formatPhoneInput(e) {
+            let val = e.target.value;
+            val = val.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            val = val.replace(/\D/g, '');
+            e.target.value = val;
+        }
+
+        function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+
+        function loadMembers() {
+            toggleLoading(true);
+            fetch(GAS_URL + "?t=" + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    var list = document.getElementById('memberList');
+                    var users = data.users || [];
+                    document.getElementById('memberCount').innerText = users.length + ' 位成員';
+                    
+                    var html = '';
+                    users.forEach(u => {
+                        var rawP = String(u.phone).trim();
+                        var p = rawP.startsWith('886') ? '0' + rawP.substring(3) : (rawP.length === 9 && !rawP.startsWith('0') ? '0' + rawP : rawP);
+                        
+                        var uName = (u.name || "").replace(/'/g, "\\'");
+                        var uEmail = (u.email || "").replace(/'/g, "\\'");
+                        var uRole = (u.role || "").replace(/'/g, "\\'");
+                        var uJoinDate = (u.joinDate || "").replace(/'/g, "\\'");
+                        var uNote = (u.note || "").replace(/'/g, "\\'");
+
+                        html += `
+                        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-all cursor-pointer hover:border-emerald-200 active:scale-[0.98]" 
+                             onclick="handleCardClick(this, '${p}', '${uName}', '${uEmail}', '${uRole}', '${uJoinDate}', '${uNote}')">
+                            <div class="flex justify-between items-center w-full">
+                                <div class="flex items-center gap-2 overflow-hidden mr-4">
+                                    <span class="text-lg font-black text-emerald-900 truncate">${u.name}</span>
+                                    ${u.role ? `<span class="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full shrink-0">${u.role}</span>` : ''}
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0">
+                                    <div class="text-lg font-black text-emerald-800 font-mono">${p}</div>
+                                    ${isEditMode ? `<i class="fas fa-pen text-orange-400 text-sm ml-1"></i>` : `<i class="fas fa-chevron-down text-gray-300 rotate-icon"></i>`}
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="grid grid-cols-1 gap-3 text-xs">
+                                    <div class="flex"><span class="w-16 text-gray-400 font-bold">Email</span><span class="text-emerald-900 font-medium truncate">${u.email || '未提供'}</span></div>
+                                    <div class="flex"><span class="w-16 text-gray-400 font-bold">加入</span><span class="text-emerald-900 font-medium">${u.joinDate || '無'}</span></div>
+                                    <div class="flex"><span class="w-16 text-gray-400 font-bold">備註</span><span class="text-emerald-900 font-medium">${u.note || '無'}</span></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    list.innerHTML = html;
+                })
+                .finally(() => toggleLoading(false));
+        }
+
+        function handleCardClick(el, phone, name, email, role, joinDate, note) {
+            if (isEditMode) {
+                openEditModal(phone, name, email, role, joinDate, note);
+            } else {
+                el.classList.toggle('card-active');
+            }
+        }
+
+        function openAddModal() {
+            currentEditPhone = null;
+            document.getElementById('modalTitle').innerText = "新增新會員";
+            document.getElementById('mPhone').disabled = false;
+            document.getElementById('deleteInModalBtn').classList.add('hidden');
+            
+            // 🌟 隱藏職位欄位並清空值
+            document.getElementById('roleSection').classList.add('hidden');
+            
+            ['mName', 'mPhone', 'mEmail', 'mRole', 'mNote'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('mJoinDate').value = new Date().toISOString().split('T')[0];
+            openModal('memberModal');
+        }
+
+        function openEditModal(phone, name, email, role, joinDate, note) {
+            currentEditPhone = phone;
+            document.getElementById('modalTitle').innerText = "修改會員資料";
+            document.getElementById('mPhone').disabled = true;
+            document.getElementById('deleteInModalBtn').classList.remove('hidden');
+            
+            // 🌟 顯示職位欄位
+            document.getElementById('roleSection').classList.remove('hidden');
+            
+            document.getElementById('mName').value = name;
+            document.getElementById('mPhone').value = phone;
+            document.getElementById('mEmail').value = email;
+            document.getElementById('mRole').value = role; 
+            document.getElementById('mJoinDate').value = joinDate;
+            document.getElementById('mNote').value = note;
+            openModal('memberModal');
+        }
+
+        function saveMemberData() {
+            var n = document.getElementById('mName').value.trim();
+            var p = document.getElementById('mPhone').value.trim();
+            if (!n || !p) return alert("姓名與手機為必填");
+
+            toggleLoading(true);
+            closeModal('memberModal');
+
+            var payload = {
+                type: currentEditPhone ? 'edit_member' : 'add_member',
+                key: STAFF_KEY,
+                name: n,
+                phone: p,
+                email: document.getElementById('mEmail').value.trim(),
+                role: document.getElementById('mRole').value, 
+                joinDate: document.getElementById('mJoinDate').value,
+                note: document.getElementById('mNote').value.trim()
+            };
+
+            fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'cors',
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(res => {
+                showToast(res.result === "SUCCESS" ? "✅ 儲存成功" : "❌ 失敗: " + res.message);
+                loadMembers();
+            })
+            .catch(err => {
+                showToast("⏳ 資料處理中，請稍候...");
+                setTimeout(loadMembers, 2000); 
+            })
+            .finally(() => toggleLoading(false));
+        }
+
+        function deleteCurrentMember() {
+            var n = document.getElementById('mName').value;
+            var p = document.getElementById('mPhone').value;
+            if (confirm(`確定要刪除「${n}」嗎？`)) {
+                closeModal('memberModal');
+                toggleLoading(true);
+                fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'delete_member', key: STAFF_KEY, phone: p }) })
+                    .then(() => { showToast("🗑️ 已移除成員"); loadMembers(); })
+                    .finally(() => toggleLoading(false));
+            }
+        }
+
+        function toggleEditMode() {
+            // 安全二次檢查
+            if (!userPermissions.includes("all") && !userPermissions.includes("edit_member")) {
+               alert("您沒有編輯會員名冊的權限");
+               return;
+            }
+            
+            isEditMode = !isEditMode;
+            var btn = document.getElementById('editToggleBtn');
+            btn.innerText = isEditMode ? "結束編輯" : "開啟編輯";
+            btn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+            document.getElementById('bottomAddArea').classList.toggle('hidden', !isEditMode);
+            loadMembers();
+        }
+
+        function showToast(m) {
+            var t = document.createElement('div'); t.className = 'toast'; t.innerText = m;
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
+        }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    </script>
+</body>
+</html>

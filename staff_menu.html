@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理控制台 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
+        /* 選單卡片基礎樣式 */
+        .staff-card { 
+            background: white;
+            border-radius: 2rem;
+            border: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        
+        /* 點擊時的縮放反饋 */
+        .staff-card:active { transform: scale(0.95); background-color: #f9f9f9; }
+        
+        /* 統一的 Icon 背景深綠色漸層 */
+        .icon-box {
+            background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
+            box-shadow: 0 8px 20px rgba(6, 78, 59, 0.2);
+        }
+    </style>
+</head>
+<body class="pb-16">
+
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center">
+        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors z-10">
+            <i class="fas fa-chevron-left mr-1"></i> 會員中心
+        </button>
+        
+        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
+            管理控制台
+        </h1>
+        
+        </nav>
+
+    <main class="p-6 max-w-2xl mx-auto grid grid-cols-2 gap-5 mt-6">
+        
+        <div onclick="navTo('announcement')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-bullhorn text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">大聲公</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">公告與 LINE</span>
+        </div>
+
+        <div onclick="navTo('member_mgr')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-users text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">會員名冊</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">名單增刪改</span>
+        </div>
+
+        <div onclick="navTo('calendar_mgr')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-calendar-alt text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">行事曆</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">活動排程</span>
+        </div>
+
+        <div onclick="navTo('attendance_rpt')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-clipboard-check text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">出席紀錄</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">簽到數據查詢</span>
+        </div>
+
+        <div onclick="navTo('payment_mgr')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-hand-holding-usd text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">繳費記錄</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">會費與雜支</span>
+        </div>
+
+        <div onclick="navTo('event_reg')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-file-signature text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">活動報名</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">報名名單管理</span>
+        </div>
+
+        <div onclick="navTo('system_config')" class="staff-card p-6 flex flex-col items-center text-center bg-emerald-50/20 border-emerald-100/50">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-link text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">畫面佈局管理</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">首頁與來賓區管理</span>
+        </div>
+
+        <div id="permissionBtn" onclick="navTo('permission_mgr')" class="staff-card p-6 hidden flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-orange-700 !to-orange-900" style="background: linear-gradient(135deg, #7C2D12 0%, #431407 100%);">
+                <i class="fas fa-user-shield text-white text-2xl"></i>
+            </div>
+            <span class="text-orange-900 font-black text-base">權限管理</span>
+            <div class="text-[11px] text-gray-400 mt-1 font-bold">職位權限分配表</div>
+        </div>
+    </main>
+
+    <script>
+        // 初始化權限檢查
+        window.onload = function() {
+            var key = sessionStorage.getItem('staffKey');
+            // 相容性處理：嘗試從網址抓取
+            if (!key) {
+                const urlParams = new URLSearchParams(window.location.search);
+                key = urlParams.get('key');
+            }
+            
+            if (!key) {
+                alert("非法進入！請先驗證金鑰。");
+                location.href = 'index.html';
+            } else {
+                // 確保 sessionStorage 存有金鑰供子頁面使用
+                sessionStorage.setItem('staffKey', key);
+            }
+            // 2. 🌟 權限檢查：是否顯示「權限管理」按鈕
+            const permissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+            // 只有擁有 'all' 權限（會長/總管）的人可以看到
+            if (permissions.includes('all')) {
+                document.getElementById('permissionBtn').classList.remove('hidden');
+            }            
+        };
+
+        // 跳轉功能：子頁面將自行抓取 sessionStorage 中的金鑰
+        function navTo(page) {
+            location.href = page + '.html';
+        }
+    </script>
+</body>
+</html>

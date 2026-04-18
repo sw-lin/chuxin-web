@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動報名管理 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
+    </style>
+</head>
+<body class="pb-32">
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-emerald-500 mb-3"></div>
+        <div class="text-white font-bold tracking-widest text-sm">載入中...</div>
+    </div>
+    
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none z-[200] font-bold shadow-xl text-sm whitespace-nowrap"></div>
+
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
+            <i class="fas fa-chevron-left mr-1"></i> 返回
+        </button>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">活動報名管理</h1>
+        
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all">開啟編輯</button>
+    </nav>
+
+    <main class="p-4 max-w-2xl mx-auto space-y-4">
+        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
+            <label class="text-[10px] text-gray-400 font-black block mb-2 px-1 uppercase tracking-widest">Select Event</label>
+            <div class="flex gap-2">
+                <div class="relative flex-grow">
+                    <select id="eventSelector" onchange="loadEventDetails()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
+                        <option value="">-- 請選擇活動項目 --</option>
+                    </select>
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <button id="manageEventBtn" onclick="openEditModal()" class="hidden bg-emerald-100 text-emerald-700 w-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+        </div>
+
+<div id="statsSection" class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-50 mb-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <p class="text-xs text-gray-400 font-bold mb-1">ADMIN DASHBOARD | 行政看板</p>
+            <h3 class="text-lg font-bold text-emerald-900" id="currentEventTitle">活動統計總覽</h3>
+        </div>
+        <div class="flex gap-2">
+            <button id="exportInsuranceBtn" onclick="exportInsuranceCSV()" class="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all" title="保險名冊">
+                <i class="fas fa-file-csv"></i>
+            </button>
+            
+            <button id="carpoolBtn" onclick="openCarpoolModal()" class="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all" title="共乘分配">
+                <i class="fas fa-car-side"></i>
+            </button>
+            
+            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center">進行中</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+            <h4 class="text-[11px] text-emerald-700 font-bold mb-2">💰 報名與繳費</h4>
+            <div class="flex items-baseline gap-1 mb-3">
+                <span class="text-3xl font-serif text-emerald-900" id="paidCount">0</span>
+                <span class="text-gray-400 text-xs">/ <span id="totalReg">0</span> 已繳費</span>
+            </div>
+            <button onclick="copyPaidListToLine()" class="w-full py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-emerald-600 active:scale-95 transition-all">
+                <i class="fab fa-line mr-1"></i> 發送已繳名單
+            </button>
+        </div>
+
+        <div id="trafficStats" class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+            <h4 class="text-[11px] text-blue-700 font-bold mb-2">🚗 交通統計</h4>
+            <div class="space-y-1 text-[12px] font-bold text-blue-900">
+                <p>自駕：<span id="carCount">0</span> 台 (可載 <span id="seatCount">0</span> 人)</p>
+                <p>共乘需求：<span id="carpoolCount">0</span> 人</p>
+            </div>
+            <p class="text-[10px] text-blue-500/70 mt-2 italic">※ 僅限非遊覽車活動</p>
+        </div>
+
+        <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+            <h4 class="text-[11px] text-orange-700 font-bold mb-2">🍱 餐食統計</h4>
+            <div class="flex items-baseline gap-1 mb-1">
+                <span class="text-2xl font-serif text-orange-900" id="vegCount">0</span>
+                <span class="text-gray-400 text-xs">位素食</span>
+            </div>
+            <div id="vegNames" class="text-[10px] text-orange-600/80 leading-snug break-words">
+                名單載入中...
+            </div>
+        </div>
+    </div>
+</div>        
+
+        <div class="space-y-3">
+            <h3 class="text-sm font-black text-emerald-900 ml-2"><i class="fas fa-file-signature mr-2"></i>報名者名單</h3>
+            <div id="regList" class="space-y-3">
+                <div class="text-center py-20 text-gray-300 italic text-sm">請先選取活動項目</div>
+            </div>
+        </div>
+
+        <div id="adminActions" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
+            <button onclick="openAddModal()" class="bg-[#064E3B] text-white px-8 py-4 rounded-2xl font-black shadow-[0_10px_25px_rgba(6,78,59,0.3)] flex items-center gap-3 active:scale-95 border-2 border-emerald-400/30 transition-all whitespace-nowrap">
+                <i class="fas fa-plus-circle text-xl"></i>
+                <span>發佈全新活動表單</span>
+            </button>
+        </div>
+    </main>
+
+    <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="modalTitle" class="text-xl font-black text-emerald-900 mb-2">活動內容</h3>
+            <input type="hidden" id="old_title">
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 block">活動標題</label>
+                    <input type="text" id="ev_title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 block">海報圖片連結</label>
+                    <input type="text" id="ev_poster" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2 block">活動簡介</label>
+                    <textarea id="ev_desc" rows="2" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-orange-600 ml-2">需填身分證?</label>
+                        <select id="ev_needId" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                            <option value="否">不需要</option>  
+                            <option value="是">需要</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-orange-600 ml-2">提供遊覽車?</label>
+                        <select id="ev_bus" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                            <option value="否">無</option>       
+                            <option value="是">有</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-blue-600 ml-2">會員費用</label>
+                        <input type="number" id="ev_mFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-blue-600 ml-2">非會員費用</label>
+                        <input type="number" id="ev_gFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-emerald-600 ml-2">開始展示</label>
+                        <input type="date" id="ev_start" class="w-full bg-gray-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-emerald-600 ml-2">截止下架</label>
+                        <input type="date" id="ev_until" class="w-full bg-gray-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">活動舉辦日期</label>
+                    <input type="date" id="ev_date" class="w-full bg-gray-50 rounded-2xl px-5 py-4 text-xs font-bold border-none">
+                </div>
+            </div>
+            <div id="deleteZone" class="hidden pt-2">
+                <button onclick="deleteCurrentEvent()" class="w-full py-3 text-red-500 text-xs font-bold bg-red-50 rounded-xl border border-red-100 italic">
+                    <i class="fas fa-trash-alt mr-1"></i> 永久刪除此活動
+                </button>
+            </div>
+            <div class="flex gap-3 pt-4">
+                <button onclick="closeModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+                <button onclick="saveEvent()" class="flex-[2] bg-[#064e3b] text-white rounded-2xl font-black shadow-lg">確認儲存</button>
+            </div>
+        </div>
+    </div>
+
+<div id="regModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-black text-emerald-900 mb-2">報名者資訊</h3>
+        <input type="hidden" id="reg_old_phone">
+        
+        <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">姓名</label>
+                    <input type="text" id="reg_name" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none transition-all focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">電話</label>
+                    <input type="text" id="reg_phone" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">飲食</label>
+                    <select id="reg_diet" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                        <option value="葷食">葷食</option>
+                        <option value="素食">素食</option>
+                        <option value="不拘">不拘</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">是否為會員</label>
+                    <select id="reg_is_member" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                        <option value="是">是</option>
+                        <option value="否">否</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="reg_insurance_zone" class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
+                    <input type="text" id="reg_id" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none" placeholder="保險用">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-emerald-600 ml-2">出生年月日</label>
+                    <input type="date" id="reg_birthday" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none">
+                </div>
+            </div>
+
+            <div id="reg_transport_zone" class="p-4 bg-blue-50 rounded-2xl space-y-3">
+                <label class="text-[10px] font-bold text-blue-600">交通安排 (非遊覽車)</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="自駕"> 自駕</label>
+                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="共乘"> 共乘</label>
+                </div>
+                <div id="seat_input_zone">
+                    <label class="text-[10px] font-bold text-blue-400">可載人數</label>
+                    <input type="number" id="reg_seats" min="0" class="w-full bg-white rounded-xl px-4 py-2 text-sm font-bold border-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-emerald-600 ml-2">備註</label>
+                <textarea id="reg_note" rows="2" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none"></textarea>
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-4">
+            <button onclick="closeRegModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
+            <button onclick="saveSingleReg()" class="flex-[2] bg-[#064e3b] text-white rounded-2xl font-black shadow-lg">儲存變更</button>
+        </div>
+    </div>
+</div>
+<div id="carpoolModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xl rounded-[2.5rem] p-8 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex justify-between items-center">
+            <h3 class="text-xl font-black text-blue-900">🚗 共乘座位分配</h3>
+            <button onclick="closeCarpoolModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div id="carpoolListContainer" class="flex-1 overflow-y-auto space-y-3 pr-2">
+            </div>
+
+        <div class="flex gap-3 pt-4 border-t">
+            <button onclick="closeCarpoolModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>   
+           <button id="sendLineCarpoolBtn" onclick="sendCarpoolToLine()" class="hidden bg-green-500 text-white rounded-2xl font-black shadow-lg px-4 flex items-center justify-center">
+                <i class="fab fa-line text-xl mr-1"></i> 傳送
+           </button>          
+            <button onclick="saveCarpoolAssignment()" class="flex-[2] bg-blue-600 text-white rounded-2xl font-black shadow-lg">儲存分配結果</button>
+        </div>
+    </div>
+</div>  
+    <script>
+        // 🌟 在程式碼最開頭宣告，確保所有 function 都讀得到
+    let allData = {
+        events: [],
+        registrations: [],    // 存放原始報名資料
+        currentDrivers: [],   // 🌟 新增：存放篩選後的司機
+        currentPassengers: [] // 🌟 新增：存放篩選後的乘客
+    };        
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
+        
+        let isEditMode = false;
+        let currentEventConfig = null; // 🌟 儲存目前選中活動的詳細規格（費用、日期等）
+        let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱 
+        // --- 權限控管初始化 ---
+        // --- 🌟 權限控管初始化 ---
+        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]"); 
+        const hasEventPermission = userPermissions.includes("all") || userPermissions.includes("edit_registration");
+        
+    // --- 改成以下這個包含權限檢查的流程 ---
+    window.onload = () => {
+        // 1. 基本防護：檢查是否有登入金鑰
+        const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+        if (!staffKey) { 
+            alert("請重新登入");
+            location.href = "index.html"; 
+            return; 
+        }
+
+        // 2. 權限攔截：沒有權限的人，直接把右上角的編輯按鈕隱藏
+        const editToggleBtn = document.getElementById('editToggleBtn');
+        if (!hasEventPermission && editToggleBtn) {
+            editToggleBtn.style.visibility = 'hidden';
+        }
+
+        // 3. 畫面與權限準備好後，開始載入活動資料
+        loadData();
+    }
+
+        // 核心載入
+// 核心載入
+// --- 修正後的 loadData ---
+async function loadData() {
+    showLoading(true);
+    console.log("開始嘗試載入活動清單...");
+    try {
+        const res = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
+        const json = await res.json();
+        
+        console.log("從 GAS 接收到的原始資料:", json);
+
+        // 容錯處理：如果 GAS 直接回傳陣列，或回傳包含 events 的物件
+        if (Array.isArray(json)) {
+            allData.events = json;
+        } else if (json.events && Array.isArray(json.events)) {
+            allData.events = json.events;
+        } else {
+            allData.events = [];
+            console.error("資料格式不正確，預期為陣列但得到:", json);
+        }
+
+        if (allData.events.length === 0) {
+            showToast("清單目前是空的，請先發布活動");
+        } else {
+            console.table(allData.events); // 在控制台顯示漂亮的表格
+        }
+
+        renderSelector();
+    } catch (e) { 
+        console.error("載入失敗，錯誤原因:", e);
+        showToast("伺服器連線失敗，請檢查網路或 GAS 權限"); 
+    }
+    showLoading(false);
+}
+// 補上缺失的 API 呼叫工具
+async function fetchAPI(type, params = {}) {
+    const url = new URL(GAS_URL);
+    url.searchParams.append('type', type);
+    // 確保 staff_key 有帶入
+    url.searchParams.append('key', sessionStorage.getItem('staffKey') || '');
+    
+    // 🌟 修正：確保每個參數都被正確編碼
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.set(key, params[key]); 
+        }
+    });
+
+    console.log("發送請求至:", url.toString()); // 除錯用
+    const res = await fetch(url);
+    return await res.json();
+}        
+// --- 修正後的 renderSelector (增加屬性保護) ---
+function renderSelector() {
+    const selector = document.getElementById('eventSelector');
+    const currentValue = selector.value;
+    
+    // 確保這裡抓取的屬性名稱 ev.title 與您 GAS 回傳的一致
+    let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+    optionsHtml += allData.events.map(ev => {
+        const title = ev.title || ev["標題"] || "未命名活動";
+        return `<option value="${title}">${title}</option>`;
+    }).join('');
+    
+    selector.innerHTML = optionsHtml;
+    if (currentValue) selector.value = currentValue;
+}
+        
+// --- 核心函式：載入選中活動的詳細名單 ---
+async function loadEventDetails() {
+    const selector = document.getElementById('eventSelector');
+    const title = selector.value;
+    
+    if (!title) {
+        // 如果沒選活動，清空統計與列表
+
+        document.getElementById('regList').innerHTML = "";
+        return;
+    }
+
+    console.log("正在載入活動詳情:", title);
+
+    // 1. 從先前 loadData 存好的資料中找出該活動的詳細規格
+    // 這裡相容「標題」與「title」兩種 Key
+    currentEventTitle = title;
+    currentEventConfig = allData.events.find(e => (e["標題"] || e.title) === title);
+
+    if (!currentEventConfig) {
+        console.error("找不到該活動的配置資料");
+        showToast("活動配置讀取失敗");
+        return;
+    }
+
+    showLoading(true);
+    try {
+        // 2. 向 GAS 請求該活動的報名名單
+        // 建議這裡也改用你寫好的 fetchAPI 或是維持目前的 fetch
+        const res = await fetch(`${GAS_URL}?type=get_registrations_by_event&eventTitle=${encodeURIComponent(title)}&t=${Date.now()}`);
+        const json = await res.json();
+        
+        if (Array.isArray(json)) {
+            allData.registrations = json; // 存入全域變數
+            renderRegList(json);          // 渲染畫面
+        
+            
+            // 如果在編輯模式下，顯示管理按鈕
+            if(isEditMode) {
+                document.getElementById('manageEventBtn').classList.remove('hidden');
+            }
+        } else {
+            allData.registrations = [];
+            renderRegList([]);
+            showToast("尚無報名資料");
+        }
+    } catch (e) { 
+        console.error("名單載入出錯:", e);
+        showToast("名單載入失敗"); 
+    }
+    showLoading(false);
+}
+
+function renderRegList(list) {
+    const container = document.getElementById('regList');
+
+    if (typeof updateAdminStats === "function") {
+        updateAdminStats(list); 
+    }
+    
+    if (!list || list.length === 0) {
+        container.innerHTML = '<div class="text-center py-20 text-gray-400 italic text-[13px]">📭 目前尚無報名人員</div>' + (isEditMode ? renderManualAddBtn() : '');
+        return;
+    }
+
+    // 🌟 步驟 1：建立代理人交通地圖 (解決攜伴者顯示未填寫的問題)
+    const transportMap = {};
+    list.forEach(r => {
+        const name = (r["姓名"] || "").trim();
+        const agent = (r["報名代理人"] || "").trim();
+        if (agent === "本人" || agent === "") {
+            transportMap[name] = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        }
+    });
+
+    const mFee = currentEventConfig?.["會員報名費"] || currentEventConfig?.memberFee || 0;
+    const gFee = currentEventConfig?.["非會員報名費"] || currentEventConfig?.guestFee || 0;
+
+    let html = list.map((r, i) => {
+        const name = r["姓名"] || "未提供"; 
+        const phone = r["電話"] || "無號碼";
+        const diet = r["餐食"] || "未填";
+        const note = r["備註"] || "無";
+        
+        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
+        const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; 
+        const isMember = String(r["是否為會員"] || r["會員身分"]).trim() === "是";
+        
+        const rawAgent = String(r["報名代理人"] || "").trim();
+        const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
+        
+        // 🌟 步驟 2：獲取交通方式，若空白則從地圖繼承
+        let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        if (trans === "" && agentName) {
+            trans = transportMap[agentName] || "";
+        }
+        
+        const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+        const dueAmount = isMember ? mFee : gFee;
+
+        // --- A. 頭像區 ---
+        let avatarHTML = "";
+        if (agentName) {
+            avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">${agentName.substring(1,3)}</div>`;
+        } else if (!isMember) {
+            avatarHTML = `<div class="px-2 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 font-bold text-[10px] min-w-[50px]">非會員</div>`;
+        } else {
+            avatarHTML = `<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs">會員</div>`;
+        }
+
+        // --- B. 交通資訊顯示邏輯 ---
+        let transHTML = "";
+        const transText = trans;
+
+        if (transText === "自駕" || transText === "開車") {
+            if (agentName) {
+                transHTML = `<div class="flex items-center gap-1 text-gray-400">🚙 交通：<span>隨車 (自駕)</span></div>`;
+            } else {
+                const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
+                transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600 font-bold">${transText}${capText}</span></div>`;
+            }
+        } else if (transText === "共乘" || transText === "搭車") {
+            transHTML = `<div class="flex items-center gap-1">發送：<span class="text-orange-600 font-black">共乘需求</span></div>`;
+        } else if (transText.includes("遊覽車")) {
+            transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-emerald-600 font-bold">搭遊覽車</span></div>`;
+        } else if (transText !== "") {
+            transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
+        } else {
+            transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
+        }
+
+        // --- C. 繳費區 (保持不變) ---
+        let paymentActionHTML = isEditMode ? `
+            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
+                <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
+                        class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">
+                    <option value="未繳費" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
+                    <option value="已繳費" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
+                </select>
+            </div>` : 
+            `<span class="text-[10px] px-2 py-1 rounded-lg ${isPaid === '已繳' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'} font-black">${isPaid}</span>`;
+
+        return `
+        <div class="bg-white p-4 rounded-3xl shadow-sm border border-emerald-50 mb-3 cursor-pointer transition-all active:scale-[0.98]" onclick="toggleRegDetail(${i})">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    ${avatarHTML}
+                    <div>
+                        <div class="font-black text-emerald-900">${name}</div>
+                        <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
+                    </div>
+                </div>
+                ${paymentActionHTML}
+            </div>
+            <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
+                <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
+                    <div>飲食：${diet}</div>
+                    ${transHTML}
+                    <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
+                </div>
+                ${isEditMode ? `
+                <div class="flex gap-2 pt-2" onclick="event.stopPropagation()">
+                    <button onclick="openRegModal('${phone}', '${name}')" class="flex-1 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black">編輯資訊</button>
+                    <button onclick="deleteSingleReg('${phone}', '${name}')" class="px-4 py-2 bg-red-50 text-red-400 rounded-xl text-[10px]">刪除</button>
+                </div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    if (isEditMode) html += renderManualAddBtn();
+    container.innerHTML = html;
+}
+        
+        // 彈窗邏輯
+        function toggleEditMode() {
+            // 安全防線：防止透過瀏覽器 Console 強行觸發
+            if (!hasEventPermission) {
+               showToast("⚠️ 您沒有編輯活動與報名名單的權限");
+               return;
+            }            
+            isEditMode = !isEditMode;
+            document.getElementById('editToggleBtn').innerText = isEditMode ? "完成編輯" : "開啟編輯";
+            document.getElementById('editToggleBtn').classList.toggle('bg-red-500', isEditMode);
+            document.getElementById('adminActions').classList.toggle('hidden', !isEditMode);
+            const title = document.getElementById('eventSelector').value;
+            document.getElementById('manageEventBtn').classList.toggle('hidden', !isEditMode || !title);
+            loadEventDetails();
+        }
+
+/**
+ * 修改活動彈窗 - 統一「是/否」對接版本
+ */
+function openEditModal() {
+    const selector = document.getElementById('eventSelector');
+    const title = selector.value;
+    
+    // 1. 尋找對應活動，相容多種 Key 名稱
+    const ev = allData.events.find(e => (e["標題"] || e.title) === title);
+    
+    if (!ev) {
+        showToast("找不到活動配置，請重新選取");
+        return;
+    }
+
+    console.log("正在讀取編輯資料:", ev); 
+
+    // 2. 基本文字與隱藏欄位
+    document.getElementById('modalTitle').innerText = "修改活動";
+    document.getElementById('old_title').value = ev["標題"] || ev.title || "";
+    document.getElementById('ev_title').value = ev["標題"] || ev.title || "";
+    document.getElementById('ev_poster').value = ev["海報連結 (poster_url)"] || ev.poster_url || "";
+    document.getElementById('ev_desc').value = ev["活動簡介 (desc)"] || ev.desc || "";
+    
+    // 3. 費用欄位
+    document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || ev.member_fee || 0;
+    document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
+    
+    // 4. 選項欄位 (🌟 修正：統一使用「是」與「否」)
+    const rawNeedId = String(
+    ev["(需要身分證)"] ||  // 半形括號
+    ev["（需要身分證）"] || // 全形括號
+    ev["需要身分證"] ||    // 沒括號
+    ev.needId || ""
+).trim();
+
+const rawBus = String(
+    ev["是遊覽車行"] || 
+    ev["遊覽車"] || 
+    ev.isTourBus || ""
+).trim();
+
+    // 只要後端資料是 '是'、'Y' 或 全型 'Ｙ'，就判定為「是」，否則為「否」
+    const needIdResult = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
+    const busResult = (rawBus === '是' || rawBus.toUpperCase() === 'Y' || rawBus === 'Ｙ') ? '是' : '否';
+
+    // 🌟 賦值給 HTML Select
+    document.getElementById('ev_needId').value = needIdResult;
+    document.getElementById('ev_bus').value = busResult;  
+    
+    // 5. 日期欄位
+    document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日 (start_date)"] || ev.startDate || ev.start_date);
+    document.getElementById('ev_until').value = formatDateForInput(ev["下架日期 (display_until)"] || ev.deadline || ev.display_until);
+    document.getElementById('ev_date').value = formatDateForInput(ev["活動日期 (date)"] || ev.eventDate || ev.date);
+
+    document.getElementById('deleteZone').classList.remove('hidden');
+    document.getElementById('eventModal').classList.remove('hidden');
+}
+        
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "發布新活動";
+            document.getElementById('old_title').value = "";
+            document.querySelectorAll('#eventModal input, #eventModal textarea').forEach(i => i.value = "");
+            document.getElementById('deleteZone').classList.add('hidden');
+            document.getElementById('eventModal').classList.remove('hidden');
+        }
+
+function openRegModal(phone, name) {
+    console.log("🚀 [Debug] 彈窗啟動，正在抓取資料...");
+    
+    // 1. 先執行清空，確保不會殘留上一個人的資料
+    resetRegForm(); 
+
+    const modal = document.getElementById('regModal');
+    if (!modal) return;
+
+    // 2. 取得活動配置 (決定是否顯示身分證區塊)
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    const needId = (ev?.["(需要身分證)"] === '是' || ev?.["needId"] === '是');
+
+    const insuranceZone = document.getElementById('reg_insurance_zone');
+    if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none';
+
+    // 3. 如果有傳入 phone 和 name，代表是「修改」模式，從 allData 抓資料填入
+    if (phone && name) {
+        const r = allData.registrations.find(reg => 
+            String(reg["電話"] || "").trim().replace(/'/g, "") === String(phone).trim() && 
+            String(reg["姓名"] || "").trim() === String(name).trim()
+        );
+
+        if (r) {
+            console.log("✅ 找到報名資料，正在回填 UI:", r);
+
+            // 基本欄位回填
+            document.getElementById('reg_name').value = r["姓名"] || "";
+            document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g, "");
+            document.getElementById('reg_old_phone').value = String(phone).replace(/'/g, "");
+            document.getElementById('reg_id').value = r["身分證"] || r["身分證字號"] || "";
+            document.getElementById('reg_diet').value = r["餐食"] || "葷食";
+            document.getElementById('reg_note').value = r["備註"] || "";
+
+            // 🌟 修正點 1：讀取會員狀態 (H 欄位)
+            // 檢查可能的 Key 名稱 (中文或英文)
+            const memStatus = r["會員身份"] || r["會員"] || r["isMember"] || "否";
+            document.getElementById('reg_is_member').value = (memStatus === '是' || memStatus === 'Y') ? '是' : '否';
+
+            // 生日填充
+            const bdayField = document.getElementById('reg_birthday');
+            if (bdayField) {
+                let rawBday = r["生日"] || r["出生日期"] || r["出生年月日"] || "";
+                let finalDate = "";
+                if (rawBday) {
+                    let strBday = String(rawBday).trim();
+                    if (/^\d{4}-\d{2}-\d{2}/.test(strBday)) {
+                        finalDate = strBday.substring(0, 10);
+                    } else {
+                        const d = new Date(rawBday);
+                        if (!isNaN(d.getTime())) {
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            finalDate = `${y}-${m}-${day}`;
+                        }
+                    }
+                }
+                bdayField.value = finalDate;
+            }
+
+            // 交通方式回填
+            const transVal = (r["交通"] || "").trim();
+            document.getElementsByName('trans').forEach(rd => {
+                if (rd.value === transVal) rd.checked = true;
+            });
+            
+            // 如果有記錄可載人數
+            if (r["可載人數"] !== undefined) {
+                document.getElementById('reg_seats').value = r["可載人數"];
+                updateSeatInput(transVal); // 同步顯示/隱藏座位框
+            }
+        }
+    } else {
+        // 如果沒有傳入參數，代表是「新增報名」
+        console.log("📝 新增報名模式：已執行重置。");
+        // 額外確保新增時預設選取一個交通方式（例如自駕）
+        const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
+        if (defaultTrans) {
+            defaultTrans.checked = true;
+            updateSeatInput("自駕");
+        }
+    }
+
+    // 4. 顯示彈窗
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+        
+// 輔助清空表單
+function resetRegForm() {
+    document.getElementById('reg_old_phone').value = "";
+    document.getElementById('reg_name').value = "";
+    document.getElementById('reg_phone').value = "";
+    document.getElementById('reg_id').value = "";
+    document.getElementById('reg_note').value = "";
+    document.getElementById('reg_diet').value = "葷食";
+    document.getElementById('reg_seats').value = 0;
+    document.getElementById('reg_is_member').value = "否"; // 預設為非會員
+    // 🌟 移除原本強制勾選自駕的程式碼，交給 openRegModal 處理
+    document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);
+    updateSeatInput("共乘"); // 預設先隱藏座位輸入框    
+} 
+
+/**
+ * 刪除目前選中的活動及其所有報名名單
+ * 解決 ReferenceError 並執行聯集刪除
+ */
+async function deleteCurrentEvent() {
+    const title = document.getElementById('old_title').value; 
+    if (!title) return alert("無法取得活動名稱");
+
+    if (!confirm(`確定要「永久刪除」活動：${title} 嗎？\n這將一併刪除所有已報名人員資料！`)) return;
+
+    const payload = {
+        type: 'delete_event_completely',
+        key: sessionStorage.getItem('staffKey'), // 確保 key 有傳送以通過權限檢查
+        title: title
+    };
+
+    showLoading(true);
+    try {
+        // 使用 POST 傳送 JSON 字串
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors', // ⚠️ 如果持續 CORS 報錯，可嘗試改為預設或檢查 GAS 是否已「發佈新版本」
+            body: JSON.stringify(payload)
+        });
+        
+        // 注意：若使用 no-cors 模式將無法讀取 response，建議 GAS 重新發佈為「所有人」並更新 URL
+        showToast("刪除指令已發出，請重新載入頁面確認");
+        setTimeout(() => { location.reload(); }, 1500);
+
+    } catch (e) {
+        console.error("刪除失敗:", e);
+        showToast("網路錯誤或權限不足");
+    }
+    showLoading(false);
+}        
+// 將全形數字/字母轉換為半形
+function toHalfWidth(str) {
+    if (!str) return "";
+    return str.replace(/[\uff01-\uff5e]/g, function(ch) {
+        return String.fromCharCode(ch.charCodeAt(0) - 0xfee0);
+    }).replace(/\u3000/g, " "); // 處理全形空格
+}        
+        // 輔助工具
+function formatDateForInput(dVal) {
+    if (!dVal) return "";
+    try {
+        let d = new Date(dVal);
+        if (isNaN(d.getTime())) {
+            // 如果是字串格式 YYYY/MM/DD 或 YYYY-MM-DD... 直接截取前10碼
+            if (typeof dVal === 'string') return dVal.substring(0, 10).replace(/\//g, '-');
+            return "";
+        }
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    } catch (e) {
+        return "";
+    }
+}        
+        function toggleRegDetail(i) { document.getElementById(`regDetail-${i}`).classList.toggle('hidden'); }
+
+        
+        function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
+        function closeRegModal() { document.getElementById('regModal').classList.add('hidden'); }
+        function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        
+        function showToast(m) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+
+    // 🌟 如果傳進來的 m 是 null、undefined 或空字串，就顯示 "系統通知"
+    t.innerText = (m === undefined || m === null || m === "") ? "系統通知" : m;
+    
+    t.style.opacity = '1';
+    t.style.zIndex = '9999'; // 確保不會被彈窗遮住
+    
+    setTimeout(() => {
+        t.style.opacity = '0';
+    }, 2500);
+    }
+        
+        function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工輸入</div>`; }
+        function updateSeatInput(val) { 
+            const seatZone = document.getElementById('seat_input_zone');
+            const seatInput = document.getElementById('reg_seats');
+    
+            if (val === '自駕') {
+               seatZone.style.display = 'block';
+            } else {
+               seatZone.style.display = 'none';
+               seatInput.value = 0; // 🌟 關鍵：切換到共乘時，強制將人數歸零，避免帶入舊資料
+            }
+        }
+        
+        document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
+
+        // 儲存邏輯 (略，與原版 POST 邏輯相同但確保 Payload 完整)
+        async function saveEvent() {
+            // 取得 UI 上的 Y/N 並轉換成 是/否
+            const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
+            const needIdValue = document.getElementById('ev_needId').value; // 取得 select 的 "是" 或 "否"
+            const isTourBusValue = document.getElementById('ev_bus').value;  
+            
+            // 新增費用處理邏輯：轉半形並強制轉整數
+    const parseFee = (id) => {
+        const val = document.getElementById(id).value;
+        return parseInt(toHalfWidth(val).replace(/\s/g, "")) || 0;
+    };
+            
+            const payload = {
+                type: document.getElementById('old_title').value ? 'update_calendar_event' : 'add_new_event',
+                key: sessionStorage.getItem('staffKey'),
+                title: document.getElementById('ev_title').value,
+                poster_url: document.getElementById('ev_poster').value,
+                desc: document.getElementById('ev_desc').value,
+                
+                // 🌟 修正點：Key 名稱必須與 GAS 的 p.startDate 等一致
+                startDate: document.getElementById('ev_start').value,   // 對應 B 欄
+                deadline: document.getElementById('ev_until').value,    // 對應 C 欄
+                eventDate: document.getElementById('ev_date').value,    // 對應 F 欄 (活動日)
+                
+                // 🌟 修正點：確保名稱與 GAS handleAddNewEvent_Registration 接收的一致
+                needId: needIdValue, 
+                isTourBus: isTourBusValue,
+                
+                // 🌟 修正點：確保費用在存入資料庫前是乾淨的半形數字
+                memberFee: parseFee('ev_mFee'),
+                guestFee: parseFee('ev_gFee'),
+                
+                oldTitle: document.getElementById('old_title').value
+            };
+         //   if(!payload.title) return alert("必填未填");
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                if ((await res.json()).result === "SUCCESS") { showToast("成功"); closeModal(); loadData(); }
+            } catch (e) { showToast("失敗"); }
+            showLoading(false);
+        }
+async function saveSingleReg() {
+    const title = document.getElementById('eventSelector').value;
+    const ev = allData.events.find(e => (e.title || e["標題"]) === title);
+    
+    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
+    const needId = (ev?.["(需要身分證)"] === '是' || ev?.needId === '是' || ev?.needId === 'Y');
+    
+    const name = document.getElementById('reg_name').value.trim();
+    const rawPhone = document.getElementById('reg_phone').value;
+    const phone = toHalfWidth(rawPhone).replace(/\s/g, ""); 
+    const rawId = document.getElementById('reg_id').value;
+    const idCard = toHalfWidth(rawId).toUpperCase().trim();
+
+    // 確保人數不小於 0
+let seatValue = parseInt(document.getElementById('reg_seats').value) || 0;
+if (seatValue < 0) seatValue = 0;
+    
+    if (!name || !phone) {
+        return showToast("⚠️ 姓名與電話為必填");
+    }
+
+    if (needId && !idCard) {
+        return showToast("⚠️ 此活動需要身分證字號，請務必輸入");
+    }
+
+    // --- 🌟 修改重點：新增 regTime 欄位 ---
+    const payload = {
+        type: 'save_single_registration',
+        key: sessionStorage.getItem('staffKey'),
+        eventTitle: title,
+        oldPhone: document.getElementById('reg_old_phone').value,
+        name: name,
+        phone: phone,
+        diet: document.getElementById('reg_diet').value,
+        isMember: document.getElementById('reg_is_member').value,
+        idCard: idCard,
+        birthday: document.getElementById('reg_birthday').value, // 🌟 新增這一行
+        note: document.getElementById('reg_note').value,
+        transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
+        seats: isTourBus ? 0 : seatValue, // 使用處理過的 seatValue
+        isPaid: "未繳",
+        regTime: new Date().toLocaleString('zh-TW', { hour12: false }) // 🌟 新增：帶入當前時間 (M欄)
+    };
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        const result = await res.json();
+        if (result.result === "SUCCESS") {
+            showToast("✅ 報名資訊已更新");
+            closeRegModal();
+            loadEventDetails(); 
+        } else {
+            showToast("❌ 儲存失敗：" + result.message);
+        }
+    } catch (e) {
+        showToast("❌ 網路連線錯誤");
+    }
+    showLoading(false);
+}        
+// --- 新增：刪除單筆報名 ---
+async function deleteSingleReg(phone, name) {
+    if (!confirm(`確定要刪除 ${name} 的報名資料嗎？`)) return;
+
+    const title = document.getElementById('eventSelector').value;
+    
+    // 🌟 關鍵改動：改用 GET 請求，將參數帶在 URL 後面
+    const params = new URLSearchParams({
+        type: 'delete_single_registration',
+        key: sessionStorage.getItem('staffKey'),
+        eventTitle: title,
+        phone: phone,
+        name: name,
+        t: Date.now() // 防止快取
+    });
+
+    showLoading(true);
+    try {
+        const res = await fetch(`${GAS_URL}?${params.toString()}`);
+        const result = await res.json();
+        console.log("GAS 回傳結果：", result);
+        
+        if (result.result === "SUCCESS") {
+            showToast("✅ 已成功刪除");
+            
+            // 🌟 修正點：不要直接用 countEl，改用以下方式重新抓取與更新
+        const statCountEl = document.getElementById('statCount');
+        if (statCountEl) {
+            // 從全域變數 allData 中移除該筆資料並重新計算
+            allData.registrations = allData.registrations.filter(r => 
+                !(r["電話"] === phone && r["姓名"] === name)
+            );
+            
+            // 更新看板與名單
+            statCountEl.innerText = allData.registrations.length;
+            renderRegList(allData.registrations); 
+        }
+
+        } else {
+            showToast("❌ 刪除失敗：" + (result.message || "找不到匹配資料或權限不足"));
+        }
+    } catch (e) {
+        console.error("刪除請求出錯:", e);
+        showToast("連線失敗，請檢查 GAS 是否發佈為「所有人」");
+    }
+    showLoading(false);
+}        
+// 🌟 快速更新繳費狀態 (與原有的 updatePaymentStatus 區隔)
+async function quickUpdatePayment(phone, name, newStatus, selectElement) {
+    // 檢查是否有活動標題，這是後端搜尋紀錄的關鍵
+    if (!currentEventTitle) {
+        showToast("錯誤：未選定活動");
+        return;
+    }
+
+    // 取得管理權限密鑰
+    const staffKey = sessionStorage.getItem('staffKey') || "";
+
+    // 顯示讀取中狀態（避免重複點擊）
+    selectElement.disabled = true;
+    const originalColor = selectElement.style.backgroundColor;
+    selectElement.style.backgroundColor = "#f3f4f6"; 
+
+    try {
+        // 🌟 修正點：確保 URL 參數包含後端需要的資訊
+        // 根據截圖報錯，後端可能在找 eventTitle 或 rowEvent
+        const params = new URLSearchParams({
+            type: 'update_reg_status',
+            eventTitle: currentEventTitle, // 這是關鍵！
+            phone: phone,
+            name: name,
+            status: newStatus,
+            staff_key: staffKey
+        });
+
+        console.log("正在更新繳費狀態...", currentEventTitle, name);
+
+        // 使用 fetchAPI 或原生 fetch 發送
+        const res = await fetch(`${GAS_URL}?${params.toString()}`);
+        const result = await res.json();
+
+        if (result.result === "success") {
+            showToast(`✅ ${name} 已更新為 ${newStatus}`);
+            // 更新本地資料狀態，確保 UI 一致
+            const reg = allData.registrations.find(r => r["電話"] === phone && r["姓名"] === name);
+            if (reg) reg["狀態"] = newStatus;
+        } else {
+            throw new Error(result.message || "更新失敗");
+        }
+    } catch (e) {
+        console.error("更新出錯:", e);
+        // 🌟 處理截圖中的 ReferenceError: rowEvent is not defined
+        if (e.message.includes("rowEvent")) {
+            showToast("後端程式錯誤：請檢查 GAS 腳本中的變數定義");
+        } else {
+            showToast("更新失敗：" + e.message);
+        }
+        // 失敗時還原選單狀態
+        loadEventDetails(); 
+    } finally {
+        selectElement.disabled = false;
+        selectElement.style.backgroundColor = originalColor;
+    }
+}  
+// 自動轉半形監聽器
+document.addEventListener('DOMContentLoaded', () => {
+    const idInput = document.getElementById('reg_id');
+    const phoneInput = document.getElementById('reg_phone');
+    // 新增費用欄位
+    const mFeeInput = document.getElementById('ev_mFee');
+    const gFeeInput = document.getElementById('ev_gFee');
+    
+[idInput, phoneInput, mFeeInput, gFeeInput].forEach(el => {
+        if(!el) return;
+        el.addEventListener('blur', function() {
+            // 1. 轉半形 2. 去空格 3. 轉大寫(身分證需要，數字不影響)
+            this.value = toHalfWidth(this.value).replace(/\s/g, "").toUpperCase();
+            
+            // 針對費用欄位額外確保它是數字格式
+            if (el === mFeeInput || el === gFeeInput) {
+                // 如果輸入後不是數字，強制轉為 0，避免傳送空值或亂碼到 GAS
+                if (isNaN(this.value) || this.value === "") {
+                    this.value = 0;
+                }
+            }
+        });
+    });
+});   
+function generateLineStats() {
+    // 🌟 修正：使用正確的全域資料變數
+    const regs = allData.registrations || []; 
+    if (regs.length === 0) {
+        showToast("目前尚無報名資料");
+        return;
+    }
+
+    let stats = {
+        paid: 0, meat: 0, veg: 0, 
+        bus: 0, selfDrive: 0, seatsAvailable: 0
+    };
+
+    regs.forEach(r => {
+        // 🌟 修正：對接您在 renderRegList 用的中文 Key
+        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
+        if (rawStatus.includes("已繳")) stats.paid++;
+
+        const meal = r["餐食"] || "";
+        meal === '素食' ? stats.veg++ : stats.meat++;
+        
+        // 🌟 修正：對接交通方式與可載人數的正確 Key
+        const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        const cap = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+
+        if (trans === '搭乘遊覽車' || trans === '共乘') {
+            stats.bus++;
+        } else if (trans === '自駕' || trans === '開車' || trans === '自行開車') {
+            stats.selfDrive++;
+            stats.seatsAvailable += cap;
+        }
+    });
+
+    const eventTitle = document.getElementById('eventSelector').value;
+    const msg = `
+【${eventTitle} 統計】
+--------------------
+總人數：${regs.length} 位 (${stats.paid} 已繳費)
+🍱 餐食：葷 ${stats.meat} / 素 ${stats.veg}
+🚌 交通：共乘/遊覽車 ${stats.bus} 人
+🚗 自駕：${stats.selfDrive} 台 (可載 ${stats.seatsAvailable} 人)
+--------------------
+產出日期：${new Date().toLocaleString()}
+    `.trim();
+
+    navigator.clipboard.writeText(msg).then(() => {
+        showToast("✅ 統計文字已複製");
+    });
+}
+        
+function exportInsuranceCSV() {
+    const regs = allData.registrations || [];
+    if (regs.length === 0) {
+        showToast("❌ 沒有報名資料可匯出");
+        return;
+    }
+
+    // 包含 UTF-8 BOM 以防 Excel 亂碼
+    let csv = "\uFEFF姓名,身分證字號,生日,電話\n";
+    
+    regs.forEach(r => {
+        // 抓取欄位並清理資料
+        const name = (r["姓名"] || "").replace(/[\r\n,]/g, " ");
+        const id = (r["身分證"] || r["身分證字號"] || "").replace(/[\r\n,]/g, " ");
+        const bday = (r["生日"] || "").replace(/[\r\n,]/g, " ");
+        const phone = (r["電話"] || "").replace(/[\r\n,]/g, " ");
+
+        // 組合成一行
+        csv += `${name},${id},${bday},${phone}\n`;
+    });
+
+    // 建立下載連結
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    
+    // 檔名加上活動標題
+    const eventName = document.getElementById('eventSelector')?.value || "活動";
+    link.download = `保險名冊_${eventName}_${new Date().toLocaleDateString()}.csv`;
+    
+    document.body.appendChild(link); // 建議加入這一行以增加瀏覽器相容性
+    link.click();
+    document.body.removeChild(link); // 下載完移除
+    
+    showToast("📂 CSV 匯出完成");
+}        
+// --- 🌟 新增：行政看板數據計算函式 ---
+function updateAdminStats(list) {
+    if (!list) return;
+
+    // --- 第一階段：建立「誰代理誰」的交通對照表 ---
+    const transportMap = {};
+    // 🌟 新增：準備存放過濾後的名單
+    allData.currentDrivers = [];   // 存放司機
+    allData.currentPassengers = []; // 存放乘客
+    
+    list.forEach(r => {
+        const name = (r["姓名"] || "").trim();
+        const agent = (r["報名代理人"] || "").trim();
+        const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+
+        // 如果是本人報名，就把他的交通方式存起來
+        if (agent === "本人" || agent === "") {
+            transportMap[name] = trans;
+        }
+    });
+
+    // --- 第二階段：正式統計人數 ---
+    let carCount = 0;      // 總車輛數
+    let totalSeats = 0;    // 總空位數
+    let carpoolCount = 0;  // 總共乘需求 (含攜伴)
+    const vegList = [];    // 素食名單
+
+    list.forEach(r => {
+        const name = (r["姓名"] || "").trim();
+        const agent = (r["報名代理人"] || "").trim();
+        let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+
+        // 🌟 關鍵邏輯：如果是攜伴者且交通空白，強制繼承代理人的交通
+        if (agent !== "本人" && agent !== "" && trans === "") {
+            trans = transportMap[agent] || ""; 
+        }
+
+        // 開始計數
+        if (trans === "自駕" || trans === "開車") {
+            // 只有代理人本人算「一台車」
+            if (agent === "本人" || agent === "") {
+                carCount++;
+                totalSeats += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
+                allData.currentDrivers.push(r); // 存入司機名單
+            }
+        } else if (trans === "共乘" || trans === "搭車") {
+            carpoolCount++;
+            allData.currentPassengers.push(r); // 存入乘客名單
+        }
+
+        // 素食統計
+        if ((r["餐食"] || "").includes("素")) {
+            vegList.push(name);
+        }
+    });
+
+    // --- 第三階段：更新 UI 畫面 ---
+    const setUI = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    };
+
+    setUI('totalCount', list.length); 
+    setUI('totalReg', list.length);   
+    setUI('paidCount', list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳")).length);
+    setUI('carCount', carCount);
+    setUI('seatCount', totalSeats);
+    setUI('carpoolCount', carpoolCount);
+    setUI('vegCount', vegList.length);
+
+    const vegNamesElem = document.getElementById('vegNames');
+    if (vegNamesElem) {
+        vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
+    }
+
+    // --- 第四階段：控制按鈕顯示/隱藏 ---
+    // --- UI 自動切換邏輯 ---
+    const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
+    const needID = (currentEventConfig?.["是否需要身分證"] === "是");
+
+    // 1. 處理保險圖示
+    const insBtn = document.getElementById('exportInsuranceBtn');
+    if (insBtn) {
+        insBtn.style.display = needID ? 'inline-block' : 'none';
+    }
+
+    // 2. 處理車輛分配按鈕
+    const carBtn = document.getElementById('carpoolBtn');
+    if (carBtn) {
+        carBtn.style.display = isBus ? 'none' : 'inline-block';
+    }
+
+    // 3. 處理交通統計區塊
+    const tStats = document.getElementById('trafficStats');
+    if (tStats) {
+        tStats.style.display = isBus ? 'none' : 'block';
+    }    
+}        
+function copyPaidListToLine() {
+    // 1. 取得已繳費名單
+    const regs = allData.registrations || [];
+    const paidList = regs.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳"));
+
+    if (paidList.length === 0) {
+        showToast("⚠️ 目前沒有已繳費的人員");
+        return;
+    }
+
+    const eventName = document.getElementById('eventSelector')?.value || "活動";
+    let message = `【${eventName}】已繳費名單：\n`;
+    message += `---------------\n`;
+    paidList.forEach((r, index) => {
+        message += `${index + 1}. ${r["姓名"]}\n`;
+    });
+    message += `---------------\n`;
+    message += `✅ 總計：${paidList.length} 位\n`;
+
+    const isConfirmed = confirm(`確定發送至 LINE 嗎？\n\n${message}`);
+    
+    if (isConfirmed) {
+        // --- 🔒 安全檢查：從 Session 獲取金鑰 ---
+        // 參考您幹部登錄的儲存方式，通常 key 是存成 'staffKey'
+        const sessionKey = sessionStorage.getItem('staffKey');
+        const finalURL = (typeof scriptURL !== 'undefined' ? scriptURL : (typeof GAS_URL !== 'undefined' ? GAS_URL : ""));
+
+        if (!sessionKey) {
+            alert("❌ 權限驗證失效：請重新從「幹部登入」頁面登入後再執行發送。");
+            return;
+        }
+
+        if (typeof showLoading === "function") showLoading(true, "LINE 名單發送中...");
+
+        const payload = {
+            type: 'send_line', 
+            key: sessionKey, // 動態使用 Session 中的金鑰
+            message: message
+        };
+
+        fetch(finalURL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.result === "SUCCESS") {
+                showToast("🚀 已繳費名單已成功送出");
+            } else {
+                alert("發送失敗：" + (result.message || "金鑰驗證錯誤"));
+            }
+        })
+        .catch(err => {
+            console.error("發送出錯:", err);
+            alert("通訊失敗，請檢查網路連線。");
+        })
+        .finally(() => {
+            if (typeof showLoading === "function") showLoading(false); // 確保圈圈消失
+        });
+    }
+} 
+// 打開共乘分配視窗
+function openCarpoolModal() {
+    // 直接從 allData 取出剛才統計好的名單
+    const passengers = allData.currentPassengers || [];
+    const drivers = allData.currentDrivers || [];
+
+    const container = document.getElementById('carpoolListContainer');
+    // 🌟 修正無法捲動：確保高度與溢出處理
+    container.style.maxHeight = "60vh";
+    container.style.overflowY = "auto";
+    container.className = "flex-1 space-y-3 pr-2"; 
+    container.innerHTML = "";
+
+    if (passengers.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 text-gray-400 font-bold">目前沒有共乘需求</div>`;
+    } else {
+        passengers.forEach(p => {
+            const pName = p["姓名"];
+            const currentDriver = p["搭乘車主"] || ""; 
+
+            const row = document.createElement('div');
+            row.className = "flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 mb-2";
+            row.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="font-bold text-gray-800">${pName}</span>
+                    <span class="text-[10px] text-blue-500 font-bold">${p["報名代理人"] === '本人' ? '本人' : '攜伴'}</span>
+                </div>
+                <select class="carpool-select bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm w-[150px]" 
+                        data-passenger="${pName}" onchange="refreshCarpoolSeats()">
+                    <option value="">-- 未分配 --</option>
+                    ${drivers.map(d => `
+                        <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''} 
+                                data-limit="${d["可載人(僅本人)"] || d["可載人數"] || 0}">
+                            👤 ${d["姓名"]}
+                        </option>
+                    `).join('')}
+                </select>
+            `;
+            container.appendChild(row);
+        });
+    }
+    document.getElementById('carpoolModal').classList.remove('hidden');
+    setTimeout(refreshCarpoolSeats, 100); 
+}
+        
+function closeCarpoolModal() {
+    document.getElementById('carpoolModal').classList.add('hidden');
+}
+
+// 儲存到 Google Sheets
+async function saveCarpoolAssignment() {
+    const selects = document.querySelectorAll('.carpool-select');
+    const assignments = Array.from(selects).map(sel => ({
+        pName: sel.getAttribute('data-passenger'),
+        dName: sel.value
+    }));
+
+    showLoading(true, "正在儲存車主分配...");
+    try {
+        const payload = {
+            type: 'save_carpool_data', // 需在 GAS 對應
+            key: sessionStorage.getItem('staffKey'),
+            eventTitle: document.getElementById('eventSelector').value,
+            assignments: assignments
+        };
+
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        
+        if (result.result === "SUCCESS") {
+            showToast("✅ 車主分配已寫入 O 欄");
+            closeCarpoolModal();
+            loadEventDetails(); // 重新整理前端名單
+        } else {
+            showToast("❌ 儲存失敗：" + result.message);
+        }
+    } catch (e) {
+        showToast("❌ 網路連線錯誤");
+    }
+    showLoading(false);
+}  
+// 🌟 修改後的渲染邏輯：為 select 加入監聽與初始餘額標記
+function renderCarpoolList() {
+    const list = allData.registrations;
+    const drivers = list.filter(r => (r["交通"] || "").includes("駕") || (r["交通"] || "").includes("車"));
+    const passengers = list.filter(r => (r["交通"] || "").includes("共乘") || (r["交通"] || "").includes("搭"));
+    const container = document.getElementById('carpoolListContainer');
+    
+    container.innerHTML = passengers.map(p => {
+        const currentDriver = p["搭乘車主"] || "";
+        return `
+            <div class="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 mb-2">
+                <div class="flex flex-col"><span class="font-bold text-gray-800">${p["姓名"]}</span></div>
+                <select class="carpool-select bg-white border-none rounded-xl text-sm font-bold px-3 py-2 shadow-sm" 
+                        data-passenger="${p["姓名"]}" onchange="refreshCarpoolSeats()">
+                    <option value="">-- 未分配 --</option>
+                    ${drivers.map(d => `
+                        <option value="${d["姓名"]}" ${currentDriver === d["姓名"] ? 'selected' : ''} 
+                                data-limit="${d["可載人數"] || 0}">
+                            👤 司機：${d["姓名"]} (餘 ${d["可載人數"] || 0})
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+        `;
+    }).join('');
+    
+    refreshCarpoolSeats(); // 初始計算一次
+}
+
+// 🌟 新增：計算並更新所有選單顯示的人數
+// 🌟 升級版：計算人數、隱藏客滿司機、控制 LINE 按鈕
+function refreshCarpoolSeats() {
+    const selects = Array.from(document.querySelectorAll('.carpool-select'));
+    const usedSeats = {};
+    let isAllAssigned = true; // 追蹤是否全部分配完畢
+
+    // 1. 統計每個司機目前被選了幾次，並檢查是否有人沒分配
+    selects.forEach(s => {
+        if (s.value) {
+            usedSeats[s.value] = (usedSeats[s.value] || 0) + 1;
+        } else {
+            isAllAssigned = false; // 只要有一個人是「未分配」，就設為 false
+        }
+    });
+
+    // 2. 更新選單文字與隱藏狀態
+    selects.forEach(s => {
+        Array.from(s.options).forEach(opt => {
+            if (!opt.value) return; // 略過「-- 未分配 --」的選項
+            
+            const limit = parseInt(opt.dataset.limit) || 0;
+            const currentUsed = usedSeats[opt.value] || 0;
+            const remain = limit - currentUsed;
+            const isSelected = opt.selected; // 這個選項在目前的下拉選單中是否正被選取？
+            
+            // 🌟 核心邏輯：如果沒位子了，且目前不是被選中的狀態，就隱藏並停用
+            if (remain <= 0 && !isSelected) {
+                opt.disabled = true; // 停用
+                opt.hidden = true;   // 隱藏 (瀏覽器支援時就不會出現在選單中)
+                opt.text = `👤 司機：${opt.value} (已滿)`;
+            } else {
+                opt.disabled = false;
+                opt.hidden = false;
+                opt.text = `👤 司機：${opt.value} (餘 ${remain})`;
+                
+                if (remain < 0) {
+                    opt.style.color = "red";
+                    opt.text += " ⚠️ 超額";
+                } else {
+                    opt.style.color = "black";
+                }
+            }
+        });
+    });
+
+    // 3. 控制 LINE 按鈕的顯示與隱藏
+    const lineBtn = document.getElementById('sendLineCarpoolBtn');
+    if (lineBtn) {
+        // 如果有乘客名單 (length > 0) 且全部分配完畢 (isAllAssigned)
+        if (selects.length > 0 && isAllAssigned) {
+            lineBtn.classList.remove('hidden');
+            lineBtn.classList.add('flex-1');
+        } else {
+            lineBtn.classList.add('hidden');
+            lineBtn.classList.remove('flex-1');
+        }
+    }
+} 
+// 🌟 新增：打包車主與乘客名單，並傳送到 LINE
+function sendCarpoolToLine() {
+    const selects = document.querySelectorAll('.carpool-select');
+    const driverMap = {}; // 用來整理 { "車主A": ["乘客1", "乘客2"] }
+
+    // 1. 整理名單
+    selects.forEach(sel => {
+        const pName = sel.getAttribute('data-passenger');
+        const dName = sel.value;
+        if (!dName) return; // 安全機制：未分配不列入
+        
+        if (!driverMap[dName]) driverMap[dName] = [];
+        driverMap[dName].push(pName);
+    });
+
+    // 2. 組合 LINE 訊息文字
+    const eventName = document.getElementById('eventSelector').value;
+    let msg = `🚗 【${eventName}】共乘分配表 🚗\n`;
+    msg += `----------------------\n`;
+    
+    for (const [driver, passengers] of Object.entries(driverMap)) {
+        msg += `👤 車主：${driver}\n`;
+        msg += `👥 乘客：${passengers.join("、")}\n\n`;
+    }
+    msg += `✅ 已全數分配完畢`;
+
+    // 3. 確認與傳送
+    if (confirm(`確定發送以下分配結果至群組嗎？\n\n${msg}`)) {
+        const sessionKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+        if (!sessionKey) return alert("❌ 權限驗證失效：請重新登入。");
+
+        showLoading(true, "LINE 傳送中...");
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'send_line', // 呼叫您既有的 GAS 廣播功能
+                key: sessionKey,
+                message: msg
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.result === "SUCCESS") {
+                showToast("🚀 LINE 傳送成功");
+            } else {
+                alert("發送失敗: " + (res.message || "未知錯誤"));
+            }
+        })
+        .catch(err => {
+            alert("網路連線錯誤，無法傳送。");
+        })
+        .finally(() => {
+            showLoading(false);
+        });
+    }
+}        
+    </script>
+</body>    
+</html>

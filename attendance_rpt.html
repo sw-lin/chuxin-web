@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出席統計 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(2px);
+        }
+        .loading-card {
+            background: white; padding: 40px; border-radius: 32px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid #065F46; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
+    </style>
+</head>
+<body class="min-h-screen pb-32">
+
+    <div id="toast"></div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold text-lg">讀取中...</div></div></div>
+
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">出席狀況統計</h1>
+        
+        <button id="editBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20">開啟編輯</button>
+    </nav>
+
+    <main class="p-4 max-w-2xl mx-auto space-y-4">
+        
+        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50">
+            <div class="flex justify-between items-end mb-2 px-1">
+                <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Select Activity</label>
+                <button onclick="fetchRank()" class="text-xs font-black text-amber-600 flex items-center bg-amber-50 px-3 py-1 rounded-full border border-amber-100 active:scale-95 transition">
+                    <i class="fas fa-crown mr-1"></i> 參與度排行
+                </button>
+            </div>
+            <div class="relative">
+                <select id="eventSelector" onchange="fetchReport()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
+                    <option value="">-- 請選擇活動項目 --</option>
+                </select>
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+        </div>
+
+        <div id="statsSection" class="hidden bg-white p-6 rounded-[2.5rem] shadow-md border border-emerald-100 flex items-center justify-between">
+            <div class="space-y-1" id="statsInfo">
+                <span class="text-xs font-bold text-gray-400 block ml-1" id="statsLabel">目前進度</span>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-sm font-bold text-emerald-800" id="statsSubLabel">已出席</span>
+                    <span id="presentCount" class="text-4xl font-black text-emerald-900">0</span>
+                    <span class="text-gray-300 font-bold">/</span>
+                    <span id="totalCount" class="text-xl font-bold text-gray-400">0 位</span>
+                </div>
+            </div>
+            <button id="lineBtn" onclick="sendLineReport()" class="bg-[#06C755] text-white px-4 py-3 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
+                <i class="fab fa-line text-2xl mb-1"></i>
+                <span class="text-[10px]">發送名單</span>
+            </button>
+        </div>
+
+        <div id="reportList" class="space-y-3">
+            <div class="text-center py-20 text-gray-400 italic">請先選取活動以查看報表</div>
+        </div>
+    </main>
+
+    <div id="manualModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-emerald-900 mb-2 text-center">確認補登</h3>
+            <div id="manualMemberInfo" class="bg-emerald-50 p-4 rounded-2xl text-center my-6 text-emerald-900 font-black"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeManualModal()" class="py-4 text-gray-400 font-bold">取消</button>
+                <button onclick="submitManualCheckin()" class="py-4 bg-[#064E3B] text-white rounded-2xl font-black shadow-md">確認補登</button>
+            </div>
+        </div>
+    </div>
+<script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec';
+    const STAFF_KEY = sessionStorage.getItem('staffKey');
+    
+    let currentReport = [];
+    let isEditMode = false;
+    let pendingCheckin = { phone: '', name: '' }; 
+    // --- 權限控管初始化 ---
+    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+    
+    window.onload = async () => {
+        if (!STAFF_KEY) { location.href = "index.html"; return; }
+        // 檢查編輯權限
+        const editBtn = document.getElementById('editBtn');
+        const hasEditPermission = userPermissions.includes("all") || userPermissions.includes("view_attendance");
+        
+        if (!hasEditPermission && editBtn) {
+            // 無權限則隱藏按鈕，保持標題置中
+            editBtn.style.visibility = 'hidden';
+        }        
+        await loadFinishedEvents();
+    };
+
+    function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.style.opacity = '1';
+        setTimeout(() => { t.style.opacity = '0'; }, 3000);
+    }
+
+    // 載入活動清單並填充下拉選單
+    async function loadFinishedEvents() {
+        toggleLoading(true);
+        try {
+            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
+            const data = await res.json();
+            const selector = document.getElementById('eventSelector');
+            
+            if (data && data.calendar) {
+                const now = new Date();
+                const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+                // 過濾與排序：需要 QR 且日期 <= 今天，依日期降冪排序 (新的在前)
+                const validEvents = data.calendar
+                    .filter(ev => ev.needQR === true && new Date(ev.dateText.replace(/\//g, '-')) <= todayEnd)
+                    .sort((a, b) => b.dateText.localeCompare(a.dateText));
+                
+                let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+                validEvents.forEach(ev => {
+                    const safeDate = ev.dateText.toString().replace(/\//g, '-');
+                    // 重要：將日期存入 data-date 屬性，value 只存標題
+                    optionsHtml += `<option value="${ev.title}" data-date="${safeDate}">${safeDate} | ${ev.title}</option>`;
+                });
+                selector.innerHTML = optionsHtml;
+            }
+        } catch(e) { 
+            console.error(e);
+            showToast("⚠️ 活動清單載入失敗"); 
+        }
+        toggleLoading(false);
+    }
+
+    // 獲取報表資料 (已加入電話號碼自動校正機制)
+    async function fetchReport() {
+        const selector = document.getElementById('eventSelector');
+        const title = selector.value;
+        const date = selector.options[selector.selectedIndex].getAttribute('data-date');
+
+        if (!title || !date) { 
+            document.getElementById('statsSection').classList.add('hidden'); 
+            return; 
+        }
+
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    type: 'get_attendance_data', 
+                    key: STAFF_KEY, 
+                    eventTitle: `EVENT:${date}|${title}` // 使用統一格式查詢
+                })
+            });
+            const result = await res.json();
+            
+            if (result.result === "SUCCESS") {
+                // 🎯 核心修正：在這裡直接攔截並清洗電話號碼
+                currentReport = result.report.map(r => {
+                    let cleanPhone = String(r.phone || "").trim();
+                    // 如果是 8869 開頭，替換成 09
+                    if (cleanPhone.startsWith("8869")) {
+                        cleanPhone = "09" + cleanPhone.substring(4);
+                    } 
+                    // 如果剛好是 9 碼且 9 開頭 (例如 912345678)，補 0
+                    else if (cleanPhone.length === 9 && cleanPhone.startsWith("9")) {
+                        cleanPhone = "0" + cleanPhone;
+                    }
+
+                    return {
+                        ...r,           // 保留原本的 name, status 等屬性
+                        phone: cleanPhone // 覆寫為清洗後的電話
+                    };
+                });
+
+                document.getElementById('statsLabel').innerText = "目前進度";
+                document.getElementById('statsSubLabel').innerText = "已出席";
+                document.getElementById('lineBtn').classList.remove('hidden');
+                
+                renderReport(); // 這裡算出來的畫面就會是 09 開頭了
+                
+                document.getElementById('statsSection').classList.remove('hidden');
+            }
+        } catch (e) { 
+            showToast("❌ 讀取報表錯誤"); 
+        }
+        toggleLoading(false);
+    }    
+    // 補登執行函數 (修正名稱與邏輯)
+// 補登執行函數 (加入發送前的最終電話號碼清洗防線)
+    async function submitManualCheckin() {
+        if (!pendingCheckin.phone) return;
+
+        const selector = document.getElementById('eventSelector');
+        const title = selector.value;
+        const date = selector.options[selector.selectedIndex].getAttribute('data-date');
+
+        if (!date || !title) {
+            showToast("❌ 請先選擇活動項目");
+            return;
+        }
+
+        const eventMark = `EVENT:${date}|${title}`;
+
+        // 🎯 核心修正：在送出給後端之前，再次強制清洗電話格式，當作最後一道防線
+        let finalPhone = String(pendingCheckin.phone).trim();
+        if (finalPhone.startsWith("8869")) {
+            finalPhone = "09" + finalPhone.substring(4);
+        } else if (finalPhone.length === 9 && finalPhone.startsWith("9")) {
+            finalPhone = "0" + finalPhone;
+        }
+
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    type: 'manual_checkin', 
+                    key: STAFF_KEY, 
+                    phone: finalPhone, // 👈 這裡替換為強制清洗後的最終號碼
+                    name: pendingCheckin.name, 
+                    eventTitle: eventMark 
+                })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") {
+                showToast("✅ 補登成功");
+                closeManualModal();
+                fetchReport(); // 刷新清單
+            }
+        } catch(e) { 
+            showToast("❌ 補登失敗"); 
+        }
+        toggleLoading(false);
+    }
+    
+    // 其他輔助函數
+    function renderReport() {
+        const list = document.getElementById('reportList');
+        const presentCount = currentReport.filter(r => r.status === "出席").length;
+        document.getElementById('presentCount').innerText = presentCount;
+        document.getElementById('totalCount').innerText = currentReport.length + " 位";
+
+        const sortedReport = [...currentReport].sort((a, b) => {
+            if (a.status === "出席" && b.status !== "出席") return -1;
+            if (a.status !== "出席" && b.status === "出席") return 1;
+            return 0;
+        });
+
+        list.innerHTML = sortedReport.map(r => {
+            const isAttended = r.status === "出席";
+            return `
+                <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-gray-100 ${isAttended ? 'bg-emerald-50/50 border-emerald-200' : ''}">
+                    <div>
+                        <div class="font-black text-base ${isAttended ? 'text-emerald-900' : 'text-gray-400'}">${r.name}</div>
+                        <div class="text-[11px] text-gray-300 font-mono">${r.phone}</div>
+                    </div>
+                    <div>
+                        ${isAttended 
+                            ? '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>' 
+                            : (isEditMode 
+                                ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="bg-orange-500 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-md active:scale-95">補登</button>`
+                                : '<i class="far fa-circle text-gray-200 text-2xl"></i>'
+                              )
+                        }
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function toggleEditMode() {
+        // 安全檢查：防止透過控制台強行觸發
+        if (!userPermissions.includes("all") && !userPermissions.includes("view_attendance")) {
+            showToast("⚠️ 您沒有編輯出席狀況的權限");
+            return;
+        }        
+        isEditMode = !isEditMode;
+        const btn = document.getElementById('editBtn');
+        btn.innerText = isEditMode ? "關閉編輯" : "開啟編輯";
+        btn.classList.toggle('bg-red-500');
+        if(!document.getElementById('lineBtn').classList.contains('hidden')) renderReport();
+    }
+
+    function openManualModal(phone, name) {
+        pendingCheckin = { phone, name };
+        document.getElementById('manualMemberInfo').innerText = `${name} (${phone})`;
+        document.getElementById('manualModal').style.display = 'flex';
+    }
+
+    function closeManualModal() {
+        document.getElementById('manualModal').style.display = 'none';
+    }
+
+    async function fetchRank() {
+        document.getElementById('eventSelector').value = "";
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: 'get_attendance_data', key: STAFF_KEY, isRank: true })
+            });
+            const result = await res.json();
+            if (result.result === "SUCCESS") displayRank(result.report);
+        } catch(e) { showToast("❌ 排行榜載入失敗"); }
+        toggleLoading(false);
+    }
+
+    function displayRank(rankData) {
+        const list = document.getElementById('reportList');
+        const stats = document.getElementById('statsSection');
+        stats.classList.remove('hidden');
+        document.getElementById('statsLabel').innerText = "榮譽排行";
+        document.getElementById('statsSubLabel').innerText = "上榜人數";
+        document.getElementById('presentCount').innerText = rankData.length;
+        document.getElementById('totalCount').innerText = "人";
+        document.getElementById('lineBtn').classList.add('hidden');
+
+        list.innerHTML = rankData.map((r, i) => `
+            <div class="bg-white p-5 rounded-[1.5rem] flex justify-between items-center shadow-sm border border-amber-100 bg-gradient-to-r from-amber-50/30 to-transparent">
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-sm">${i+1}</div>
+                    <div class="font-black text-lg text-amber-900">${r.name}</div>
+                </div>
+                <div class="bg-amber-100 px-4 py-1 rounded-full text-amber-700 font-black text-sm">參與 ${r.count} 次</div>
+            </div>
+        `).join('');
+    }
+
+    async function sendLineReport() {
+        const selector = document.getElementById('eventSelector');
+        const eventText = selector.options[selector.selectedIndex].text;
+        const presentList = currentReport.filter(r => r.status === "出席").map(r => `▫️ ${r.name}`);
+        const reportMsg = `【築心 - 出席通報】\n活動：${eventText}\n──────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
+        if (!confirm(`確定將出席名單發送至 LINE 群組？`)) return;
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: reportMsg })
+            });
+            const result = await res.json();
+            showToast(result.result === "SUCCESS" ? "🚀 名單已發送" : "❌ 發送失敗");
+        } catch (e) { showToast("❌ 網路錯誤"); }
+        toggleLoading(false);
+    }
+</script>
+</body>
+</html>

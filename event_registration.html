@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動報名 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .input-group { @apply mb-4 bg-white p-5 rounded-2xl border border-emerald-50 shadow-sm; }
+        /* 加大標題字體 */
+        .label-text { @apply block text-xs font-black text-emerald-800 mb-2 ml-1; }
+        /* 加大輸入框文字至 text-base (16px) */
+        .input-field { @apply w-full px-4 py-4 bg-gray-50 rounded-xl outline-none text-base border-2 border-transparent focus:border-emerald-500 transition-all; }
+        .hidden { display: none !important; }
+        /* 1. 移除數字輸入框在手機上可能出現的內建擠壓 */
+input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+    appearance: textfield;
+}
+
+/* 移除 Chrome/Safari 的內建箭頭 (我們稍後用更大的 UI 代替) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}        
+        
+        /* Loading 遮罩樣式 */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(4px);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #065F46; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toast 樣式 */
+        #toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 99px; color: white; font-weight: bold;
+            z-index: 10000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body class="pb-32">
+
+<div id="loadingOverlay">
+    <div class="spinner mb-4"></div>
+    <div class="text-emerald-900 font-bold">處理中，請稍候...</div>
+</div>
+
+<div id="toast"></div>
+
+<nav class="emerald-gradient p-6 rounded-b-[2.5rem] shadow-lg mb-6">
+    <div class="flex items-center justify-between text-white mb-2">
+        <button onclick="location.href='member_zone.html'" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="text-center flex-1">
+            <span class="text-xs font-bold opacity-70 block mb-1">你正在報名</span>
+            <h1 id="displayEventTitle" class="text-2xl font-black tracking-tight leading-none">載入活動中...</h1>
+        </div>
+        <div class="w-10"></div>
+    </div>
+    <div class="flex justify-center mt-2">
+        <div id="priceBadge" class="text-xs font-bold bg-yellow-400 text-emerald-900 px-4 py-1.5 rounded-full shadow-inner">
+            讀取費用中...
+        </div>
+    </div>
+</nav>
+
+<main class="px-6">
+    <form id="regForm">
+        <section class="mb-8">
+            <div class="flex items-center gap-2 mb-4 px-2">
+                <div class="w-2 h-6 bg-emerald-600 rounded-full"></div>
+                <h3 class="font-black text-emerald-900 text-xl">主要報名者</h3>
+            </div>
+            
+            <div class="input-group">
+                <label class="label-text">姓名</label>
+                <input type="text" id="mainName" class="input-field bg-gray-100 font-bold" readonly>
+            </div>
+
+            <div id="mainIDSection" class="input-group hidden">
+               <label class="label-text">身分證字號 (保險使用)</label>
+               <input type="text" id="mainID" class="input-field" placeholder="請輸入身分證字號">
+             </div>
+
+             <div id="mainBirthdaySection" class="input-group hidden">
+               <label class="label-text">出生年月日 (例如：1990/01/01)</label>
+               <input type="date" id="mainBirthday" class="input-field">
+            </div>
+            
+            <div class="input-group">
+                <label class="label-text">餐食選擇</label>
+                <select id="mainDiet" class="input-field">              
+                    <option value="葷食">葷食</option>
+                    <option value="素食">素食</option>
+                    <option value="不拘">不拘</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label class="label-text">交通方式</label>
+                <select id="mainTransport" onchange="checkTransportLogic()" class="input-field"></select>
+            </div>
+          
+    <div id="seatsWrapper" class="input-group hidden">
+    <label class="label-text">可載人數 (不含自己)</label>
+      <div class="flex items-center gap-3 mt-2">
+        <button type="button" onclick="changeSeats(-1)" class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-2xl font-black active:bg-emerald-200">-</button>
+        
+        <input type="number" id="mainSeats" class="input-field text-center font-black !mb-0" value="0" min="0" max="4" readonly>
+        
+        <button type="button" onclick="changeSeats(1)" class="w-14 h-14 bg-emerald-700 text-white rounded-xl flex items-center justify-center text-2xl font-black active:scale-95">+</button>
+      </div>
+    </div>
+            
+        </section>
+
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-4 px-2">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-6 bg-orange-500 rounded-full"></div>
+            <h3 class="font-black text-emerald-900 text-xl">攜伴參加</h3>
+        </div>
+        <div class="flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-xl shadow-sm">
+            <span class="text-[10px] font-black text-emerald-700">攜伴人數</span>
+            <select id="partnerCountSelect" onchange="adjustPartnerFields()" class="bg-transparent font-black text-emerald-700 outline-none">
+                <option value="0">0 位</option>
+                <option value="1">1 位</option>
+                <option value="2">2 位</option>
+                <option value="3">3 位</option>
+            </select>
+        </div>
+    </div>
+    <div id="partnerContainer" class="space-y-4">
+        </div>
+</section>
+        <div class="px-2 mb-10">
+            <div class="flex items-center gap-2 mb-4">
+                <div class="w-2 h-6 bg-gray-400 rounded-full"></div>
+                <h3 class="font-black text-emerald-900 text-xl">特別需求備註</h3>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-emerald-50 shadow-sm">
+                <textarea id="regNote" rows="3" class="input-field w-full min-h-[120px] resize-y" placeholder="例如：過敏原、共乘需求說明..."></textarea>
+            </div>
+        </div>            
+    </form>
+</main>
+
+<div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 p-6 flex items-center justify-between z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <div>
+        <div class="text-xs text-gray-400 font-black uppercase tracking-wider">預計總金額</div>
+        <div class="text-3xl font-black text-emerald-900">$ <span id="totalAmount">0</span></div>
+    </div>
+    <button onclick="submitForm(event)" class="bg-emerald-700 text-white px-10 py-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-all">
+        確認送出報名
+    </button>
+</div>
+
+<script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
+    
+    let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+    let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false };
+    let partners = [];
+
+    // 自動轉半形函式
+    function toHalfWidth(str) {
+        if (!str) return "";
+        return str.replace(/[\uFF01-\uFF5E]/g, function(ch) {
+            return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+        }).replace(/\u3000/g, " ").replace(/\s+/g, ""); // 移除所有空白
+    }
+
+    // Toast 提示
+    function showToast(msg, type = "success") {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.backgroundColor = type === "success" ? "#059669" : "#DC2626";
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
+    }
+
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        const title = params.get('event');
+        
+        if (!currentUser.phone) {
+            location.href = "index.html";
+            return;
+        }
+
+        const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+        const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
+
+        const isTrue = (val) => {
+            if (!val) return false;
+            const s = String(val).trim().toUpperCase();
+            return s === 'Y' || s === '是' || s === 'TRUE';
+        };
+        
+        if (target) {
+            eventConfig = {
+                title: title || "未知活動",
+                memberFee: parseInt(target.memberFee) || 0,
+                guestFee: parseInt(target.guestFee) || 0,
+                needId: isTrue(target.needId),
+                isTourBus: isTrue(target.isTourBus)
+            };
+        }
+
+        document.getElementById('mainName').value = currentUser.name || "";
+        document.getElementById('displayEventTitle').innerText = eventConfig.title;
+        document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+        
+        initDynamicUI();
+        updateTotal();
+    };    
+    
+    function initDynamicUI() {
+        // 取得身分證與生日的區塊
+        const idSection = document.getElementById('mainIDSection');
+        const bdaySection = document.getElementById('mainBirthdaySection');
+        
+        // 根據活動設定決定是否顯示
+    if(eventConfig.needId) {
+        idSection.classList.remove('hidden');
+        bdaySection.classList.remove('hidden');
+    } else {
+        idSection.classList.add('hidden');
+        bdaySection.classList.add('hidden');
+    }
+
+        const transportSelect = document.getElementById('mainTransport');
+        if(eventConfig.isTourBus) {
+            transportSelect.innerHTML = `<option value="搭乘遊覽車">搭乘遊覽車 (統一安排)</option>`;
+            transportSelect.disabled = true;
+        } else {
+            transportSelect.innerHTML = `
+                <option value="自駕">自行開車</option>
+                <option value="共乘">共乘不開車</option>
+            `;
+            transportSelect.disabled = false;
+            transportSelect.value = "自駕"; // 🌟 手動強制指定為「自駕」
+        }
+        checkTransportLogic();
+    }
+    
+    function checkTransportLogic() {
+        const val = document.getElementById('mainTransport').value;
+        const showSeats = (!eventConfig.isTourBus && val === '自駕');
+        document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
+    }
+
+// 調整攜伴欄位數量
+function adjustPartnerFields() {
+    const count = parseInt(document.getElementById('partnerCountSelect').value);
+    const container = document.getElementById('partnerContainer');
+    
+    // 這裡使用一塊簡單的邏輯：如果當前欄位數跟選擇人數不同，才重新生成
+    // 這能確保使用者如果不小心點到選單但沒改數字，資料不會消失
+    const currentFields = container.querySelectorAll('.partner-card').length;
+    if (count === currentFields) return;
+
+    // 提醒使用者：如果縮減人數，資料會遺失
+    if (currentFields > count && currentFields > 0) {
+        if (!confirm("減少人數將會清除已填寫的訪客資料，確定要繼續嗎？")) {
+            document.getElementById('partnerCountSelect').value = currentFields;
+            return;
+        }
+    }
+
+    const idHtml = eventConfig.needId ? `
+        <input type="text" placeholder="身分證字號 (保險用)" class="partner-id input-field">
+        <div class="mt-2">
+            <label class="text-[10px] font-bold text-emerald-800 ml-1">出生年月日</label>
+            <input type="date" class="partner-birthday input-field">
+        </div>
+    ` : "";
+    
+    let newHtml = "";
+    for (let i = 0; i < count; i++) {
+        newHtml += `
+            <div class="partner-card bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative transition-all">
+                <div class="text-emerald-700 font-black text-sm mb-4">訪客 ${i + 1}</div>
+                <div class="space-y-4">
+                    <input type="text" placeholder="姓名" class="partner-name input-field">
+                    <input type="tel" placeholder="電話" class="partner-phone input-field">
+                    ${idHtml}
+                    <select class="partner-diet input-field">
+                        <option value="葷食">葷食</option>
+                        <option value="素食">素食</option>
+                        <option value="不拘">不拘</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = newHtml;
+    updateTotal(count);
+}
+
+// 修改 updateTotal 以適應新的選擇方式
+function updateTotal(manualCount = null) {
+    const count = manualCount !== null ? manualCount : parseInt(document.getElementById('partnerCountSelect').value || 0);
+    const total = eventConfig.memberFee + (count * eventConfig.guestFee);
+    document.getElementById('totalAmount').innerText = total;
+}
+function changeSeats(delta) {
+    const input = document.getElementById('mainSeats');
+    let val = parseInt(input.value) || 0;
+    val += delta;
+    
+    // 限制範圍在 0 ~ 4 之間
+    if (val < 0) val = 0;
+    if (val > 4) val = 4;
+    
+    input.value = val;
+}    
+async function submitForm(event) {
+    if (event && event.preventDefault) event.preventDefault();
+
+    const overlay = document.getElementById('loadingOverlay');
+    
+    try {
+        // --- 1. 主要報名者資料抓取與轉換 ---
+        const mainIDRaw = document.getElementById('mainID') ? document.getElementById('mainID').value.trim() : "";
+        const mainID = toHalfWidth(mainIDRaw);
+        const mainPhone = toHalfWidth(currentUser.phone || "");
+        const regNote = document.getElementById('regNote') ? document.getElementById('regNote').value : "";
+        // 🌟 新增：抓取主要報名者生日 (對應 HTML id="mainBirthday")
+        const mainBirthday = document.getElementById('mainBirthday') ? document.getElementById('mainBirthday').value : "";
+        
+        // --- 2. 主要報名者必填驗證 ---
+        if (!currentUser.name) {
+            showToast("主要報名者姓名遺失，請重新登入", "error");
+            return;
+        }
+        if (!mainPhone) {
+            showToast("主要報名者電話遺失，請重新登入", "error");
+            return;
+        }
+        if (eventConfig.needId && !mainID) {
+            showToast("請輸入主要報名者的身分證字號", "error");
+            return;
+        }
+
+        // 🌟 (可選) 驗證生日是否填寫
+        if (eventConfig.needId && !mainBirthday) {
+            showToast("請輸入主要報名者的生日", "error");
+            return;
+        }
+        // --- 3. 攜伴資料抓取與必填驗證 ---
+        const pNames = document.querySelectorAll('.partner-name');
+        const pPhones = document.querySelectorAll('.partner-phone');
+        const pIDs = document.querySelectorAll('.partner-id');
+        const pDiets = document.querySelectorAll('.partner-diet');
+        // 🌟 新增：選取所有訪客的生日欄位 (需在 adjustPartnerFields 中加入 class="partner-birthday")
+        const pBirthdays = document.querySelectorAll('.partner-birthday');
+        const partnerRegistrations = [];
+
+        for (let i = 0; i < pNames.length; i++) {
+            const name = pNames[i].value.trim();
+            const phone = toHalfWidth(pPhones[i] ? pPhones[i].value : "");
+            const idNumber = toHalfWidth(pIDs[i] ? pIDs[i].value : "");
+            // 🌟 新增：抓取訪客生日
+            const birthday = pBirthdays[i] ? pBirthdays[i].value : "";
+            
+            // 驗證姓名
+            if (!name) {
+                showToast(`請填寫訪客 ${i + 1} 的姓名`, "error");
+                return;
+            }
+            // 驗證電話
+            if (!phone) {
+                showToast(`請填寫訪客 ${i + 1} 的電話`, "error");
+                return;
+            }
+            // 驗證身分證 (若活動需要)
+            if (eventConfig.needId && !idNumber) {
+                showToast(`請填寫訪客 ${i + 1} 的身分證字號`, "error");
+                return;
+            }
+            // 🌟 (可選) 訪客生日驗證
+            if (eventConfig.needId && !birthday) {
+                showToast(`請填寫訪客 ${i + 1} 的生日`, "error");
+                return;
+            }
+            partnerRegistrations.push({
+                name: name,
+                phone: phone,
+                idNumber: idNumber,
+                birthday: birthday, // 🌟 放入訪客資料物件
+                diet: pDiets[i] ? pDiets[i].value : "不拘",
+                transport: "",
+                seats: 0,
+                isMember: false,
+                proxy: currentUser.name,
+                fee: eventConfig.guestFee,
+                note: ""
+            });
+        }
+
+        // --- 4. 封裝 Payload 並送出 ---
+        overlay.style.display = 'flex';
+
+        const payload = {
+            type: 'register',
+            eventTitle: eventConfig.title,
+            mainPhone: mainPhone,
+            registrations: [
+                {
+                    name: currentUser.name,
+                    phone: mainPhone,
+                    idNumber: mainID,
+                    birthday: mainBirthday, // 🌟 放入主要報名者資料
+                    diet: document.getElementById('mainDiet').value,
+                    transport: document.getElementById('mainTransport').value,
+                    seats: document.getElementById('mainSeats').value || 0,
+                    isMember: true,
+                    proxy: "本人",
+                    fee: eventConfig.memberFee,
+                    note: regNote
+                },
+                ...partnerRegistrations
+            ]
+        };
+
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (result.result === "SUCCESS") {
+            showToast("報名成功！即將跳轉...");
+            setTimeout(() => { location.href = "member_zone.html"; }, 1000);
+        } else if (result.result === "ALREADY_DONE") {
+            showToast("重複報名，如需修改請洽活動組！", "error");
+            setTimeout(() => { location.href = "member_zone.html"; }, 1500);
+        } else {
+            overlay.style.display = 'none';
+            showToast("錯誤：" + result.message, "error");
+        }
+
+    } catch (e) {
+        overlay.style.display = 'none';
+        showToast("執行出錯，請檢查網路", "error");
+        console.error(e);
+    }
+}
+   
+</script>
+</body>
+</html>

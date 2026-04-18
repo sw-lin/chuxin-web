@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首頁輪播圖管理 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        .input-disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb !important; }
+        .input-enabled { background-color: #ffffff; color: #064E3B; border: 2px solid #059669 !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .sub-label { letter-spacing: 0.05em; }
+    </style>
+</head>
+<body class="pb-20">
+
+    <nav class="emerald-gradient text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-4xl mx-auto grid grid-cols-3 items-center">
+            <div class="flex justify-start">
+               <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+            </div>
+            <div class="text-center">
+                <h1 class="font-black tracking-[0.2em] text-lg">首頁輪播圖管理</h1>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="toggleEditMode()" id="navEditBtn" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all hover:bg-white/20">
+                    <i class="fas fa-edit mr-1"></i>編輯模式
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto p-6 space-y-8">
+        
+        <section class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-emerald-100">
+            <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+                <i class="fas fa-calendar-alt text-orange-500"></i>活動期程
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">宣傳開始日期 (通常為學期初)</label>
+                    <input type="date" id="promo_start" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">宣傳結束日期 (通常為學期末)</label>
+                    <input type="date" id="promo_end" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled" readonly>
+                </div>
+            </div>
+            
+            <hr class="my-10 border-emerald-50">
+            
+            <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+                <i class="fas fa-images text-orange-500"></i>首頁輪播圖管理
+            </h2>
+            <div id="img_container" class="space-y-4"></div>
+            <hr class="my-10 border-emerald-50">
+
+            <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+            <i class="fas fa-address-card text-orange-500"></i> 關於我們 (文字介紹)
+            </h2>
+            <div class="p-2">
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">將直接顯示於首頁底部</label>
+            <textarea id="about_us_text" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-40" placeholder="請輸入介紹文字，支援換行..." readonly></textarea>
+           </div>            
+        </section>
+
+<section class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-orange-100">
+    <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2">
+        <i class="fas fa-user-clock text-orange-500"></i>訪客專區內容 (Guest Zone)
+    </h2>
+    
+    <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <div>
+            <label class="block text-[10px] font-bold text-orange-600 mb-1 ml-1">訪客輪播圖 1 (B欄)</label>
+            <input type="text" id="guest_slide1" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly>
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-orange-600 mb-1 ml-1">訪客輪播圖 2 (B欄)</label>
+            <input type="text" id="guest_slide2" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly>
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-orange-600 mb-1 ml-1">訪客輪播圖 3 (B欄)</label>
+            <input type="text" id="guest_slide3" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 1 (支援多行/星號列表)</label>
+            <textarea id="guest_content1" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-24" readonly></textarea>
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 2</label>
+            <textarea id="guest_content2" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-24" readonly></textarea>
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 3</label>
+            <textarea id="guest_content3" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled h-24" readonly></textarea>
+        </div>
+    </div>
+</section>        
+    </div>
+
+    <div id="saveActions" class="fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-md border-t border-emerald-100 p-4 hidden">
+        <div class="max-w-4xl mx-auto flex gap-4">
+            <button onclick="toggleEditMode()" class="flex-1 py-4 rounded-2xl font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">取消</button>
+            <button onclick="saveConfigs()" class="flex-[2] py-4 rounded-2xl font-bold text-white emerald-gradient shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">儲存變更</button>
+        </div>
+    </div>
+
+    <div id="loadingOverlay"><div class="flex flex-col items-center gap-4"><div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div><p class="text-emerald-900 font-bold">同步雲端資料中...</p></div></div>
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000]"></div>
+
+    <script>
+       const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
+       let isEditMode = false;
+
+    // --- 🌟 權限控管初始化 ---
+    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+    // 定義誰有權限修改：具備 all 或 manage_config 的人
+    const hasConfigPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");                
+
+// 1. 日期格式轉換
+function formatToDateInput(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 2. 初始化首頁輪播圖輸入框
+function initImageInputs() {
+    const container = document.getElementById('img_container');
+    let html = '';
+    
+    for(let i=1; i<=5; i++) {
+        html += `
+            <div class="p-5 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50 mb-4">
+                <span class="text-xs font-black text-emerald-800 mb-3 block italic tracking-widest">HOME SLIDE #${i}</span>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div><span class="sub-label text-orange-600 text-[10px] font-bold">宣傳圖 (B欄)</span><input type="text" id="slide_img${i}_promo" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                    <div><span class="sub-label text-gray-400 text-[10px] font-bold">常態圖 (C欄)</span><input type="text" id="slide_img${i}_normal" class="config-input w-full p-3 rounded-xl outline-none transition input-disabled" readonly></div>
+                </div>
+            </div>`;
+    }
+    container.innerHTML = html;
+}
+
+// 3. 讀取資料庫邏輯 (已修正變數範圍)
+async function loadCurrentConfigs() {
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL + "?t=" + Date.now());
+        const data = await res.json();
+        const config = data.config || {};
+
+        // A. 填入日期
+        document.getElementById('promo_start').value = formatToDateInput(config.promo_start?.promo || config.promo_start || '');
+        document.getElementById('promo_end').value = formatToDateInput(config.promo_end?.promo || config.promo_end || '');
+
+        // B. 填入首頁輪播圖 (slide_img1 ~ slide_img5)
+        for(let i=1; i<=5; i++) {
+            const item = config[`slide_img${i}`];
+            const promoEl = document.getElementById(`slide_img${i}_promo`);
+            const normalEl = document.getElementById(`slide_img${i}_normal`);
+            if (promoEl && normalEl) {
+                promoEl.value = (typeof item === 'object') ? (item?.promo || '') : '';
+                normalEl.value = (typeof item === 'object') ? (item?.normal || '') : (item || '');
+            }
+        }
+
+        // C. 填入訪客專區 (guest_slide & guest_content)
+        for(let i=1; i<=3; i++) {
+            const sEl = document.getElementById(`guest_slide${i}`);
+            const cEl = document.getElementById(`guest_content${i}`);
+            // 兼容資料庫中可能是純字串或 {promo: '', normal: ''} 物件的寫法
+            if(sEl) sEl.value = (typeof config[`guest_slide${i}`] === 'object') ? (config[`guest_slide${i}`]?.promo || config[`guest_slide${i}`]?.normal || '') : (config[`guest_slide${i}`] || '');
+            if(cEl) cEl.value = (typeof config[`guest_content${i}`] === 'object') ? (config[`guest_content${i}`]?.promo || config[`guest_content${i}`]?.normal || '') : (config[`guest_content${i}`] || '');
+        }
+
+        // D. 填入關於我們文字 (對應資料庫 Key: about_us_text)
+        const aboutVal = config.about_us_text;
+        const aboutBox = document.getElementById('about_us_text');
+
+        if (typeof aboutVal === 'object' && aboutVal !== null) {
+           // 如果是物件，取 normal 或 promo，若都沒值則給空字串
+           aboutBox.value = aboutVal.normal || aboutVal.promo || '';
+        } else {
+        // 如果是純字串，直接填入
+           aboutBox.value = aboutVal || '';
+        }
+        } catch (e) {
+          console.error("Load Error:", e);
+          showToast("❌ 無法獲取資料");
+       }
+          showLoading(false);
+    }
+
+// 4. 切換編輯模式 (優化版：保留原始 Tailwind 樣式)
+function toggleEditMode() {
+    // 雖然外層擋掉了，但這裡再加一道安全檢查
+    if (!hasConfigPermission) {
+            showToast("⚠️ 您不具備修改參數的權限");
+            return;
+        }
+    
+    isEditMode = !isEditMode;
+    const inputs = document.querySelectorAll('.config-input');
+    const navEditBtn = document.getElementById('navEditBtn');
+    const saveActions = document.getElementById('saveActions');
+
+    inputs.forEach(input => {
+        input.readOnly = !isEditMode;
+        // 使用 classList 切換，避免洗掉原本的寬度與圓角設定
+        if(isEditMode) {
+            input.classList.remove('input-disabled');
+            input.classList.add('input-enabled');
+        } else {
+            input.classList.remove('input-enabled');
+            input.classList.add('input-disabled');
+        }
+    });
+
+    navEditBtn.innerHTML = isEditMode ? '<i class="fas fa-times mr-1"></i>結束編輯' : '<i class="fas fa-edit mr-1"></i>編輯模式';
+    navEditBtn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
+    saveActions.classList.toggle('hidden', !isEditMode);
+}
+
+// 5. 儲存資料庫邏輯 (已還原您舊版能成功顯示 ✅ 儲存成功的寫法)
+async function saveConfigs() {
+    const staffKey = sessionStorage.getItem('staffKey');
+    if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
+
+    const configs = {
+        promo_start: document.getElementById('promo_start').value,
+        promo_end: document.getElementById('promo_end').value,
+        about_us_text: document.getElementById('about_us_text').value, // 儲存文字而非連結        
+    };
+
+    // 自動打包 5 組首頁圖
+    for(let i=1; i<=5; i++){
+        configs[`slide_img${i}`] = { 
+            promo: document.getElementById(`slide_img${i}_promo`).value, 
+            normal: document.getElementById(`slide_img${i}_normal`).value 
+        };
+    }
+
+    // 自動打包 3 組訪客資料
+    for(let i=1; i<=3; i++){
+        configs[`guest_slide${i}`] = document.getElementById(`guest_slide${i}`).value;
+        configs[`guest_content${i}`] = document.getElementById(`guest_content${i}`).value;
+    }
+
+    const payload = { type: 'update_config', key: staffKey, configs: configs };
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        const result = await res.json();
+        
+        if(result.result === "SUCCESS") {
+            showToast("✅ 設定已成功同步至雲端");
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast("❌ 儲存失敗：" + result.message);
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("❌ 連線異常");
+    }
+    showLoading(false);
+}
+
+// UI 輔助功能
+function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+function showToast(m) {
+    const t = document.getElementById('toast');
+    t.innerText = m; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 3000);
+}
+
+// 網頁載入時執行
+window.onload = () => { 
+    // A. 身份驗證
+    const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+    if (!staffKey) {
+        alert("請重新登入");
+        location.href = "index.html";
+        return;
+    }
+
+    // 2. 權限控管：如果沒有修改權限，直接隱藏「編輯模式」按鈕
+        const navEditBtn = document.getElementById('navEditBtn');
+        if (!hasConfigPermission && navEditBtn) {
+            navEditBtn.style.display = 'none'; // 讓按鈕直接消失
+        }
+    
+    initImageInputs(); 
+    loadCurrentConfigs(); 
+};
+        
+    </script>
+</body>
+</html>

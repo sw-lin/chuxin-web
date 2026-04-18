@@ -2,41 +2,44 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>AI 智慧管家</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>築心智慧管家</title>
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; height: 100%; background-color: #f7f7f7; }
-        #dify-iframe { width: 100%; height: 100vh; border: none; }
+        /* 讓對話框撐滿整個手機螢幕 */
+        #dify-chatbot-bubble-window { 
+            width: 100% !important; 
+            height: 100% !important; 
+            position: fixed !important; 
+            bottom: 0 !important; 
+            right: 0 !important; 
+            z-index: 999999 !important;
+        }
     </style>
 </head>
 <body>
 
-<iframe id="dify-iframe" allow="microphone"></iframe>
-
 <script>
-    (function() {
-        // 1. 從您的網址抓取 phone 參數 (例如 ?phone=0912345678)
-        const urlParams = new URLSearchParams(window.location.search);
-        const phoneValue = urlParams.get('phone') || "未提供電話";
-        const nameValue = urlParams.get('name') || "訪客";
+  // 1. 取得網址列的電話參數 (例如 ?phone=0912345)
+  const urlParams = new URLSearchParams(window.location.search);
+  const phoneFromUrl = urlParams.get('phone') || "";
+  const nameFromUrl = urlParams.get('name') || "訪客";
 
-        // 2. 這是最關鍵的一步：Dify 要求變數必須封裝在 inputs 物件中並轉為 JSON
-        // 這裡的 key (user_phone) 必須跟您 Dify START 節點定義的完全一致
-        const rawInputs = {
-            "user_phone": phoneValue,
-            "user_name": nameValue
-        };
-
-        // 3. 將物件轉為字串並進行網址編碼 (URL Encoding)
-        const encodedInputs = encodeURIComponent(JSON.stringify(rawInputs));
-
-        // 4. 組合最終的 Dify 連結
-        const appId = "ERNQLHGG3QKClfr7";
-        const finalUrl = `https://udify.app/chatbot/${appId}?inputs=${encodedInputs}`;
-
-        // 5. 載入 iframe
-        document.getElementById('dify-iframe').src = finalUrl;
-    })();
+  window.difyChatbotConfig = {
+    token: 'ERNQLHGG3QKClfr7', // 您的 App Token
+    baseUrl: 'https://udify.app',
+    container: 'body', // 直接嵌入在頁面主體
+    draggable: false,
+    inputs: {
+      // 2. 這裏是關鍵！直接將網址參數傳給 Dify 變數
+      "user_phone": phoneFromUrl,
+      "user_name": nameFromUrl
+    }
+  }
 </script>
-
+<script
+  src="https://udify.app/embed.min.js"
+  id="ERNQLHGG3QKClfr7"
+  defer>
+</script>
 </body>
 </html>

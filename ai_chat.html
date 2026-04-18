@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家 - 會員專屬服務</title>
-    <script src="https://lf-cdn.coze.com/obj/unpkg/flow-platform/chat-sdk/1.1.0-beta.0/index.js"></script>
+    <script src="https://sf-cdn.coze.com/obj/unpkg/flow-platform/chat-sdk/1.1.0-beta.0/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; font-family: sans-serif; overflow: hidden; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -15,20 +15,16 @@
 <div id="chat-container"></div>
 
 <script>
-    // 確保 SDK 載入後才執行
-    window.onload = function() {
+    function initCoze() {
         if (typeof CozeWebSDK === 'undefined') {
-            console.error('Coze SDK 載入失敗，請檢查網路連線或更換 CDN。');
-            alert('系統初始化失敗，請重新整理頁面。');
+            console.error('SDK 仍未載入');
             return;
         }
 
-        // 1. 從目前的網址中抓取會員資料
         const urlParams = new URLSearchParams(window.location.search);
         const userName = urlParams.get('user_name') || '訪客';
         const userPhone = urlParams.get('user_phone') || '未提供';
 
-        // 2. 初始化 Coze Web SDK
         new CozeWebSDK.WebChatClient({
             config: {
                 bot_id: '7620394792719499317', 
@@ -43,7 +39,14 @@
             },
             el: document.getElementById('chat-container'),
         });
-    };
+    }
+
+    // 確保文件與腳本都就緒後執行
+    if (document.readyState === 'complete') {
+        initCoze();
+    } else {
+        window.addEventListener('load', initCoze);
+    }
 </script>
 
 </body>

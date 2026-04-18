@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家</title>
-    <script src="https://cdn.jsdelivr.net/npm/@coze/api/dist/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -12,20 +11,15 @@
 </head>
 <body>
     <div id="chat-container"></div>
-    <script>
-        window.addEventListener('load', () => {
-            // 嘗試抓取 SDK 物件
-            const SDK = window.CozeWebSDK;
-            
-            if (!SDK) {
-                console.error("SDK 載入失敗，CDN 可能被阻擋");
-                document.body.innerHTML = "<h2 style='padding:20px;'>連線異常：無法從雲端取得聊天套件，請嘗試重新整理或檢查網路設定。</h2>";
-                return;
-            }
 
+    <script type="module">
+        // 改從模組化路徑載入
+        import { WebChatClient } from 'https://cdn.jsdelivr.net/npm/@coze/api/+esm';
+
+        try {
             const urlParams = new URLSearchParams(window.location.search);
             
-            new SDK.WebChatClient({
+            new WebChatClient({
                 config: { 
                     bot_id: '7620394792719499317' 
                 },
@@ -33,14 +27,17 @@
                     title: '築心智慧管家',
                     layout: 'window',
                     initial_variables: {
-                        // 這裡會正確抓取網址後的參數
                         user_name: urlParams.get('user_name') || '訪客',
                         user_phone: urlParams.get('user_phone') || ''
                     }
                 },
                 el: document.getElementById('chat-container'),
             });
-        });
+            console.log("Coze SDK 啟動成功");
+        } catch (error) {
+            console.error("啟動失敗:", error);
+            document.body.innerHTML = "<h2 style='padding:20px;'>載入器啟動失敗，請確認網路環境或 bot_id 是否正確。</h2>";
+        }
     </script>
 </body>
 </html>

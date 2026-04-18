@@ -2,35 +2,29 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>AI Chat</title>
     <style>
-        /* 修正部分手機瀏覽器可能看不到對話框的問題 */
-        #dify-chatbot-bubble-button { 
-            z-index: 9999 !important; 
-        }
+        #dify-chatbot-bubble-button { z-index: 9999 !important; }
     </style>
 </head>
 <body>
 
 <script>
-  // 1. 抓取並清洗電話號碼
-  var _uParam = new URLSearchParams(window.location.search);
-  var _uPhone = (_uParam.get('phone') || "anonymous").replace(/\D/g, '');
-
-  // 2. 設定 Dify 配置
-  window.difyChatbotConfig = {
-    token: 'ERNQLHGG3QKClfr7',
-    baseUrl: 'https://udify.app',
-    inputs: {
-      "user_phone": _uPhone
-    }
-  };
+    (function() {
+        var _uParam = new URLSearchParams(window.location.search);
+        var _uPhone = (_uParam.get('phone') || "anonymous").replace(/\D/g, '');
+        
+        window.difyChatbotConfig = {
+            token: 'ERNQLHGG3QKClfr7',
+            baseUrl: 'https://udify.app',
+            inputs: { "user_phone": _uPhone }
+        };
+    })();
 </script>
 
 <script
-  src="https://udify.app/embed.min.js"
-  id="ERNQLHGG3QKClfr7"
-  defer>
+    src="https://udify.app/embed.min.js"
+    id="ERNQLHGG3QKClfr7"
+    defer>
 </script>
 
 </body>

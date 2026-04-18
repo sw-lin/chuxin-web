@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家 - 會員專屬服務</title>
-    <script src="https://sf-cdn.coze.com/obj/unpkg/flow-platform/chat-sdk/1.1.0-beta.0/index.js"></script>
+    <script src="https://lf-cdn.coze.com/obj/unpkg/flow-platform/chat-sdk/1.0.1-beta.0/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; font-family: sans-serif; overflow: hidden; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -16,8 +16,11 @@
 
 <script>
     function initCoze() {
-        if (typeof CozeWebSDK === 'undefined') {
-            console.error('SDK 仍未載入');
+        // 增加一個防護判斷，看看 SDK 到底掛在哪個名稱下
+        const SDK = window.CozeWebSDK || (window.Coze && window.Coze.WebChatClient);
+        
+        if (!SDK) {
+            console.error('Coze SDK 尚未就緒');
             return;
         }
 
@@ -25,7 +28,7 @@
         const userName = urlParams.get('user_name') || '訪客';
         const userPhone = urlParams.get('user_phone') || '未提供';
 
-        new CozeWebSDK.WebChatClient({
+        new SDK.WebChatClient({
             config: {
                 bot_id: '7620394792719499317', 
             },
@@ -41,12 +44,7 @@
         });
     }
 
-    // 確保文件與腳本都就緒後執行
-    if (document.readyState === 'complete') {
-        initCoze();
-    } else {
-        window.addEventListener('load', initCoze);
-    }
+    window.addEventListener('load', initCoze);
 </script>
 
 </body>

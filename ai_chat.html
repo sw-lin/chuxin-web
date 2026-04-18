@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家</title>
+    <script src="https://cdn.jsdelivr.net/npm/@coze/api@1.0.21/dist/index.iife.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -12,39 +13,40 @@
 <body>
     <div id="chat-container"></div>
 
-    <script type="module">
-        import * as CozeModule from 'https://cdn.jsdelivr.net/npm/@coze/api/+esm';
+    <script>
+        window.addEventListener('load', () => {
+            // 在 iife 版本中，SDK 會掛載在 window.CozeWebSDK
+            const SDK = window.CozeWebSDK;
 
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            // 自動偵測正確的建構函式位置 (處理 ESM 的 default 封裝問題)
-            const Client = CozeModule.WebChatClient || 
-                           (CozeModule.default && CozeModule.default.WebChatClient);
-
-            if (!Client) {
-                throw new Error("無法在 SDK 中找到 WebChatClient 元件");
+            if (!SDK) {
+                console.error("SDK 未能載入");
+                document.body.innerHTML = "<h2 style='padding:20px;'>組件載入異常，請檢查網路連線。</h2>";
+                return;
             }
 
-            new Client({
-                config: { 
-                    bot_id: '7620394792719499317' 
-                },
-                componentProps: {
-                    title: '築心智慧管家',
-                    layout: 'window',
-                    initial_variables: {
-                        user_name: urlParams.get('user_name') || '訪客',
-                        user_phone: urlParams.get('user_phone') || ''
-                    }
-                },
-                el: document.getElementById('chat-container'),
-            });
-            console.log("築心智慧管家已成功啟動");
-        } catch (error) {
-            console.error("啟動失敗詳細原因:", error);
-            document.body.innerHTML = `<h2 style='padding:20px;'>載入失敗：${error.message}</h2>`;
-        }
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            try {
+                new SDK.WebChatClient({
+                    config: { 
+                        bot_id: '7620394792719499317' 
+                    },
+                    componentProps: {
+                        title: '築心智慧管家',
+                        layout: 'window',
+                        initial_variables: {
+                            // 這裡會抓取您的網址參數
+                            user_name: urlParams.get('user_name') || '訪客',
+                            user_phone: urlParams.get('user_phone') || ''
+                        }
+                    },
+                    el: document.getElementById('chat-container'),
+                });
+                console.log("築心智慧管家啟動成功！");
+            } catch (e) {
+                console.error("啟動錯誤:", e);
+            }
+        });
     </script>
 </body>
 </html>

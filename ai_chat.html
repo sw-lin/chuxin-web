@@ -4,31 +4,33 @@
     <meta charset="UTF-8">
     <title>AI Chat</title>
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; height: 100%; }
-        /* 讓 iframe 鋪滿整個頁面或指定區域 */
-        #chat-container {
-            width: 100%;
-            height: 100vh;
-            border: none;
-        }
+        body, html { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #ffffff; }
+        #chat-container { width: 100%; height: 100vh; border: none; }
     </style>
 </head>
 <body>
 
-<iframe
-    id="chat-container"
-    src="https://udify.app/chatbot/ERNQLHGG3QKClfr7?phone="
-    allow="microphone">
-</iframe>
+<iframe id="chat-container" allow="microphone"></iframe>
 
 <script>
-    // 這段腳本如果被擋，iframe 仍會顯示，只是電話號碼無法自動帶入
     (function() {
-        var phone = new URLSearchParams(window.location.search).get('phone') || "";
-        var iframe = document.getElementById('chat-container');
-        if (phone) {
-            iframe.src = "https://udify.app/chatbot/ERNQLHGG3QKClfr7?user_phone=" + encodeURIComponent(phone);
-        }
+        // 1. 取得網址上的 phone 參數
+        var params = new URLSearchParams(window.location.search);
+        var phone = params.get('phone') || "未知客戶";
+        
+        // 2. 建立 Dify 需要的 inputs 物件 (必須轉為 JSON 並編碼)
+        // 這裡對應您 START 節點的變數名: user_phone
+        var inputs = {
+            "user_phone": phone,
+            "user_name": "WebUser"
+        };
+        
+        var encodedInputs = encodeURIComponent(JSON.stringify(inputs));
+        
+        // 3. 組合最終網址
+        var finalUrl = "https://udify.app/chatbot/ERNQLHGG3QKClfr7?inputs=" + encodedInputs;
+        
+        document.getElementById('chat-container').src = finalUrl;
     })();
 </script>
 

@@ -3,18 +3,21 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
-  // 實驗：我們先不抓網址參數，直接寫死一個號碼測試
-  var testPhone = "0912345678"; 
+  // 1. 抓取電話
+  var _uParam = new URLSearchParams(window.location.search);
+  var _uPhone = _uParam.get('phone') || "anonymous_user";
 
+  // 2. 使用 ext_user 來傳遞電話
   window.difyChatbotConfig = {
     token: 'ERNQLHGG3QKClfr7',
     baseUrl: 'https://udify.app',
+    // 注意：我們把電話放在 ext_user，這在 Dify 裡是最高優先權
+    ext_user: _uPhone, 
     inputs: {
-      "user_phone": "0912345678" // 加上雙引號，並保持全小寫
+      "user_phone": _uPhone 
     }
   };
 </script>
-
 <script src="https://udify.app/embed.min.js" id="ERNQLHGG3QKClfr7"></script>
 
 <style>

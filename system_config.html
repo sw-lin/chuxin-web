@@ -234,17 +234,25 @@ function toggleEditMode() {
 }
 
 // 5. 儲存資料庫邏輯 (已還原您舊版能成功顯示 ✅ 儲存成功的寫法)
+//  (已修正讀寫位置不一致問題)
 async function saveConfigs() {
     const staffKey = sessionStorage.getItem('staffKey');
     if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
 
+    // 取得輸入框的值
+    const aboutUsVal = document.getElementById('about_us_text').value;
+
     const configs = {
         promo_start: document.getElementById('promo_start').value,
         promo_end: document.getElementById('promo_end').value,
-        about_us_text: document.getElementById('about_us_text').value, // 儲存文字而非連結        
+        // 🌟 修正點：將文字包裝成物件，確保同時寫入 B 欄(promo)與 C 欄(normal)
+        about_us_text: {
+            promo: aboutUsVal,
+            normal: aboutUsVal
+        }
     };
 
-    // 自動打包 5 組首頁圖
+    // 自動打包 5 組首頁圖 (原本的邏輯正確，保留)
     for(let i=1; i<=5; i++){
         configs[`slide_img${i}`] = { 
             promo: document.getElementById(`slide_img${i}_promo`).value, 
@@ -254,8 +262,12 @@ async function saveConfigs() {
 
     // 自動打包 3 組訪客資料
     for(let i=1; i<=3; i++){
-        configs[`guest_slide${i}`] = document.getElementById(`guest_slide${i}`).value;
-        configs[`guest_content${i}`] = document.getElementById(`guest_content${i}`).value;
+        const sVal = document.getElementById(`guest_slide${i}`).value;
+        const cVal = document.getElementById(`guest_content${i}`).value;
+        
+        // 🌟 修正點：訪客圖與訪客文字也採取「雙欄寫入」策略，確保同步
+        configs[`guest_slide${i}`] = { promo: sVal, normal: sVal };
+        configs[`guest_content${i}`] = { promo: cVal, normal: cVal };
     }
 
     const payload = { type: 'update_config', key: staffKey, configs: configs };
@@ -280,7 +292,6 @@ async function saveConfigs() {
     }
     showLoading(false);
 }
-
 // UI 輔助功能
 function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
 function showToast(m) {

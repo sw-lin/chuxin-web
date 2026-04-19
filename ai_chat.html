@@ -27,7 +27,6 @@
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // 智慧版本偵測：自動尋找正確的 SDK 啟動器
             let ChatClient = null;
             if (window.CozeWebChat && window.CozeWebChat.Client) {
                 ChatClient = window.CozeWebChat.Client;
@@ -37,7 +36,6 @@
                 ChatClient = window.CozeWebChatClient;
             }
 
-            // 如果成功抓到啟動器，就開始部署對話框
             if (ChatClient) {
                 new ChatClient({
                     config: { 
@@ -53,13 +51,13 @@
                     },
                     auth: {
                         type: "token",
-                        getAccessToken: fetchToken 
+                        // 🎯 關鍵修正：將原本的 getAccessToken 改為官方目前要求的 onRefreshToken
+                        onRefreshToken: fetchToken 
                     },
                     el: document.getElementById('chat-container'),
                 });
             } else {
                 document.body.innerHTML = "<h2 style='padding:20px;'>介面載入中，若持續無畫面請重新整理...</h2>";
-                console.error("未找到可用的 CozeWebChat 物件");
             }
         });
     </script>

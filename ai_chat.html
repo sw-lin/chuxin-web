@@ -2,12 +2,11 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>築心智慧管家</title>
+    <title>築心智慧管家 - 注入測試版</title>
     <script src="https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.17/libs/oversea/index.js"></script>
     <style>
-        body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
+        /* 💡 可選：隱藏第一條系統發出的訊息（如果 SDK 支援 DOM 操作） */
     </style>
 </head>
 <body>
@@ -15,58 +14,35 @@
 
     <script>
         async function fetchToken() {
-            try {
-                const response = await fetch("https://hello-world-broad-cake-8477.swearlin.workers.dev/get-token");
-                const data = await response.json();
-                return data.token;
-            } catch (error) {
-                console.error("領取 Token 失敗:", error);
-            }
+            const response = await fetch("https://hello-world-broad-cake-8477.swearlin.workers.dev/get-token");
+            const data = await response.json();
+            return data.token;
         }
 
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            
-            let ChatClient = null;
-            if (window.CozeWebChat && window.CozeWebChat.Client) {
-                ChatClient = window.CozeWebChat.Client;
-            } else if (window.CozeWebSDK && window.CozeWebSDK.WebChatClient) {
-                ChatClient = window.CozeWebSDK.WebChatClient;
-            } else if (window.CozeWebChatClient) {
-                ChatClient = window.CozeWebChatClient;
-            }
+            const ChatClient = window.CozeWebChat?.Client || window.CozeWebSDK?.WebChatClient;
 
             if (ChatClient) {
                 const client = new ChatClient({
-    config: { bot_id: '7620394792719499317' },
-    // 🎯 強制給一個完全不同的 User ID，讓它找不到「林士偉」的存檔
-    user: 'visitor_' + Math.random().toString(36).substr(2, 9), 
-    conversation_id: 'conv_' + Math.random().toString(36).substr(2, 9),
-    variables: {
-        user_name: urlParams.get('user_name') || '新客人',
-        user_phone: urlParams.get('user_phone') || '新電話'
-    },
-    auth: { type: "token", onRefreshToken: fetchToken },
-    el: document.getElementById('chat-container'),
-});
+                    config: { bot_id: '7620394792719499317' },
+                    // 🎯 使用隨機 ID 徹底切斷「林士偉」的舊記憶存檔
+                    user: 'visitor_' + Math.random().toString(36).substr(2, 9),
+                    auth: { type: "token", onRefreshToken: fetchToken },
+                    el: document.getElementById('chat-container'),
+                });
 
-// 🎯 核心補丁：當 SDK 載入完成後，強制寫入變數
-client.on('ready', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const name = urlParams.get('user_name');
-    const phone = urlParams.get('user_phone');
+                // 🚀 核心：SDK 準備好後立即「代客發言」
+                client.on('ready', () => {
+                    const name = urlParams.get('user_name');
+                    const phone = urlParams.get('user_phone');
 
-    if (name || phone) {
-        // 使用 SDK 內建方法強制同步變數到 Bot 後台
-        client.setVariable({
-            user_name: name || '',
-            user_phone: phone || ''
-        });
-        console.log("變數已物理注入:", { name, phone });
-    }
-});
-            } else {
-                document.body.innerHTML = "<h2 style='padding:20px;'>介面載入中，若持續無畫面請重新整理...</h2>";
+                    if (name || phone) {
+                        // 這裡不使用 variables 欄位，直接發送文字訊息
+                        client.send(`[系統注入] 我的姓名是：${name || '未知'}，電話是：${phone || '未知'}。請確認收到並以此開始對話。`);
+                        console.log("已執行指令注入：", { name, phone });
+                    }
+                });
             }
         });
     </script>

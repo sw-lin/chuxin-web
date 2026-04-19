@@ -38,24 +38,29 @@
 
             if (ChatClient) {
                 new ChatClient({
-                    config: { 
-                        bot_id: '7620394792719499317' 
-                    },
-                    componentProps: {
-                        title: '築心智慧管家',
-                        layout: 'pc',
-                        variables: {
-                            user_name: urlParams.get('user_name') || '訪客',
-                            user_phone: urlParams.get('user_phone') || ''
-                        }
-                    },
-                    auth: {
-                        type: "token",
-                        // 🎯 關鍵修正：將原本的 getAccessToken 改為官方目前要求的 onRefreshToken
-                        onRefreshToken: fetchToken 
-                    },
-                    el: document.getElementById('chat-container'),
-                });
+    config: { 
+        bot_id: '7620394792719499317', // 確認 ID 正確
+        // 🎯 關鍵修正 1：將變數放在 config 層級
+        variables: {
+            user_name: urlParams.get('user_name') || '訪客',
+            user_phone: urlParams.get('user_phone') || ''
+        }
+    },
+    // 🎯 關鍵修正 2：如果版本較新，variables 也可以放在這裡 (與 config 平級)
+    variables: {
+        user_name: urlParams.get('user_name') || '訪客',
+        user_phone: urlParams.get('user_phone') || ''
+    },
+    componentProps: {
+        title: '築心智慧管家',
+        layout: 'pc'
+    },
+    auth: {
+        type: "token",
+        onRefreshToken: fetchToken 
+    },
+    el: document.getElementById('chat-container'),
+});
             } else {
                 document.body.innerHTML = "<h2 style='padding:20px;'>介面載入中，若持續無畫面請重新整理...</h2>";
             }

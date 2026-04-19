@@ -10,64 +10,132 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        /* 隱藏卷軸但保留滑動功能 */
+        /* 隱藏卷軸 */
         ::-webkit-scrollbar { display: none; }
+        .chat-container { height: calc(100vh - 4rem - 5rem); }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .mic-active { animation: pulse-red 1.5s infinite; background-color: #ef4444 !important; color: white !important; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <nav class="emerald-gradient text-white px-4 h-16 shadow-md flex items-center justify-between shrink-0">
+    <nav class="emerald-gradient text-white px-4 h-16 shadow-md flex items-center justify-between shrink-0 z-10">
         <button onclick="window.location.href='member_zone.html'" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
             <i class="fas fa-chevron-left text-lg"></i>
         </button>
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <i class="fas fa-robot text-sm"></i>
+                <i class="fas fa-leaf text-sm text-emerald-200"></i>
             </div>
             <h1 class="text-lg font-black tracking-widest">築心智慧管家</h1>
         </div>
-        <div class="w-10"></div> </nav>
+        <div class="w-10"></div>
+    </nav>
 
-    <main id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+    <main id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
         </main>
 
-    <div class="fixed bottom-0 w-full bg-white border-t border-gray-100 p-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+    <div class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-gray-100 p-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-20">
         <div class="max-w-xl mx-auto flex items-end gap-2">
-            <div class="flex-1 bg-gray-50 rounded-3xl border border-emerald-100 px-4 py-2 flex items-center">
-                <textarea id="userInput" rows="1" placeholder="請輸入您的問題..." class="w-full bg-transparent outline-none resize-none text-sm text-emerald-900 py-1" oninput="autoResize(this)" onkeypress="handleEnter(event)"></textarea>
+            <button id="micBtn" onclick="toggleSpeech()" class="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm">
+                <i class="fas fa-microphone text-lg"></i>
+            </button>
+
+            <div class="flex-1 bg-gray-50 rounded-2xl border border-emerald-100 px-4 py-2.5 flex items-center">
+                <textarea id="userInput" rows="1" placeholder="請輸入或語音提問..." class="w-full bg-transparent outline-none resize-none text-base text-emerald-900 py-1" oninput="autoResize(this)" onkeypress="handleEnter(event)"></textarea>
             </div>
-            <button onclick="sendMessage()" id="sendBtn" class="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform shadow-md">
+
+            <button onclick="sendMessage()" id="sendBtn" class="w-12 h-12 emerald-gradient text-white rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform shadow-md">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
     </div>
 
 <script>
-    // 🎯 請將這裡換成您 Cloudflare Worker 的網址
+    // 🔗 您的 Worker 網址
     const WORKER_URL = "https://hello-world-broad-cake-8477.swearlin.workers.dev/";
 
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
+    const micBtn = document.getElementById('micBtn');
     let userName = "貴賓";
     let userPhone = "";
+    let isListening = false;
+    let recognition;
 
-    // 1. 初始化：抓取網址參數並打招呼
+    // 1. 初始化資料與歡迎詞
     window.onload = () => {
         const params = new URLSearchParams(window.location.search);
         userName = params.get('user_name') || "貴賓";
         userPhone = params.get('user_phone') || "未提供";
 
-        appendMessage("system", `您好，${userName}！我是築心會館的專屬管家。<br>請問今天有什麼我可以協助您的嗎？`);
+        appendMessage("system", `尊貴的 ${userName} 您好，我是您的築心管家。很高興為您服務，請問今天有什麼我可以幫您的嗎？`);
+        initSpeech();
     };
 
-    // 2. 自動調整輸入框高度
-    function autoResize(textarea) {
-        textarea.style.height = 'auto';
-        let newHeight = textarea.scrollHeight;
-        textarea.style.height = (newHeight > 100 ? 100 : newHeight) + 'px';
+    // 2. 語音辨識初始化
+    function initSpeech() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = (event) => {
+                const result = event.results[0][0].transcript;
+                userInput.value = result;
+                autoResize(userInput);
+                stopListening();
+                // 語音辨識完畢自動發送 (可依需求開啟)
+                // sendMessage(); 
+            };
+
+            recognition.onerror = (err) => {
+                console.error("語音辨識出錯:", err);
+                stopListening();
+            };
+
+            recognition.onend = () => stopListening();
+        } else {
+            micBtn.classList.add('hidden');
+        }
     }
 
-    // 3. 監聽 Enter 鍵發送 (Shift+Enter 換行)
+    function toggleSpeech() {
+        if (!recognition) return;
+        if (isListening) {
+            recognition.stop();
+        } else {
+            startListening();
+        }
+    }
+
+    function startListening() {
+        isListening = true;
+        recognition.start();
+        micBtn.classList.add('mic-active');
+        micBtn.innerHTML = '<i class="fas fa-stop text-lg"></i>';
+        userInput.placeholder = "聆聽中，請說話...";
+    }
+
+    function stopListening() {
+        isListening = false;
+        micBtn.classList.remove('mic-active');
+        micBtn.innerHTML = '<i class="fas fa-microphone text-lg"></i>';
+        userInput.placeholder = "請輸入或語音提問...";
+    }
+
+    // 3. UI 互動邏輯
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight > 120 ? 120 : textarea.scrollHeight) + 'px';
+    }
+
     function handleEnter(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -75,15 +143,15 @@
         }
     }
 
-    // 4. 新增訊息到畫面
     function appendMessage(sender, text) {
         const msgDiv = document.createElement('div');
         msgDiv.className = "flex w-full " + (sender === "user" ? "justify-end" : "justify-start");
         
         const innerHTML = sender === "user" 
-            ? `<div class="max-w-[80%] bg-emerald-600 text-white px-5 py-3 rounded-2xl rounded-tr-sm text-sm shadow-sm break-words">${text}</div>`
-            : `<div class="max-w-[85%] bg-white border border-emerald-50 text-emerald-900 px-5 py-3 rounded-2xl rounded-tl-sm text-sm shadow-sm leading-relaxed break-words">
-                 <i class="fas fa-leaf text-emerald-300 mr-1 text-xs"></i> ${text}
+            ? `<div class="max-w-[80%] bg-emerald-700 text-white px-5 py-3 rounded-2xl rounded-tr-none text-sm shadow-md break-words">${text}</div>`
+            : `<div class="max-w-[85%] bg-white border border-emerald-50 text-emerald-950 px-5 py-3 rounded-2xl rounded-tl-none text-sm shadow-sm leading-relaxed break-words relative">
+                 <div class="text-[10px] text-emerald-600 mb-1 font-bold uppercase tracking-tighter opacity-50">築心會館管家</div>
+                 ${text}
                </div>`;
                
         msgDiv.innerHTML = innerHTML;
@@ -91,63 +159,57 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // 5. 顯示載入動畫
     function showTyping() {
-        const typingId = "typing-" + Date.now();
+        const id = "typing-" + Date.now();
         const msgDiv = document.createElement('div');
-        msgDiv.id = typingId;
-        msgDiv.className = "flex w-full justify-start";
+        msgDiv.id = id;
+        msgDiv.className = "flex w-full justify-start animate-fade-in";
         msgDiv.innerHTML = `
-            <div class="bg-white border border-emerald-50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5">
-                <div class="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
-                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            <div class="bg-white border border-emerald-50 px-4 py-4 rounded-2xl shadow-sm flex gap-1">
+                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></div>
+                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
             </div>`;
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
-        return typingId;
+        return id;
     }
 
-    // 6. 發送訊息給 Google API
+    // 4. API 通訊
     async function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
 
-        // 顯示使用者對話
         appendMessage("user", text);
         userInput.value = "";
-        userInput.style.height = 'auto'; // 恢復高度
+        userInput.style.height = 'auto';
         userInput.disabled = true;
 
-        // 顯示管家思考中...
         const typingId = showTyping();
 
         try {
-            // 將姓名與電話附加在網址後方
             const fetchUrl = `${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`;
             
             const response = await fetch(fetchUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: text }) // 傳送真實文字
+                body: JSON.stringify({ message: text })
             });
 
             const data = await response.json();
-            
-            // 移除思考中動畫
             document.getElementById(typingId).remove();
 
-            // 解析並顯示 AI 回覆
             if (data.candidates && data.candidates[0].content.parts[0].text) {
-                // 將換行符號轉為 HTML 的 <br>
-                const aiReply = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                let aiReply = data.candidates[0].content.parts[0].text;
+                // 處理簡單的 Markdown 或 換行
+                aiReply = aiReply.replace(/\n/g, '<br>');
                 appendMessage("system", aiReply);
             } else {
-                appendMessage("system", "抱歉，管家目前有點分心，請再說一次好嗎？");
+                appendMessage("system", "抱歉，服務目前稍有延遲，請您再試一次。");
             }
         } catch (error) {
-            document.getElementById(typingId).remove();
-            appendMessage("system", "連線似乎有點不穩，請檢查網路後再試試。");
+            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
+            appendMessage("system", "系統連線中斷，請確認您的網路環境。");
             console.error(error);
         } finally {
             userInput.disabled = false;

@@ -19,32 +19,32 @@
             return data.token;
         }
 
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const ChatClient = window.CozeWebChat?.Client || window.CozeWebSDK?.WebChatClient;
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('user_name') || '訪客';
+    const phone = urlParams.get('user_phone') || '未提供';
 
-            if (ChatClient) {
-                const client = new ChatClient({
-                    config: { bot_id: '7620394792719499317' },
-                    // 🎯 使用隨機 ID 徹底切斷「林士偉」的舊記憶存檔
-                    user: 'visitor_' + Math.random().toString(36).substr(2, 9),
-                    auth: { type: "token", onRefreshToken: fetchToken },
-                    el: document.getElementById('chat-container'),
-                });
+    // 🎯 核心改動 1：將身分編碼進 User ID，徹底解決「林士偉」記憶殘留問題
+    // 這樣每換一個姓名/電話，對 Bot 來說都是一個全新的乾淨空間
+    const uniqueUserId = btoa(encodeURIComponent(`${name}_${phone}`)).substring(0, 15);
 
-                // 🚀 核心：SDK 準備好後立即「代客發言」
-                client.on('ready', () => {
-                    const name = urlParams.get('user_name');
-                    const phone = urlParams.get('user_phone');
+    const ChatClient = window.CozeWebChat?.Client || window.CozeWebSDK?.WebChatClient;
 
-                    if (name || phone) {
-                        // 這裡不使用 variables 欄位，直接發送文字訊息
-                        client.send(`[系統注入] 我的姓名是：${name || '未知'}，電話是：${phone || '未知'}。請確認收到並以此開始對話。`);
-                        console.log("已執行指令注入：", { name, phone });
-                    }
-                });
-            }
+    if (ChatClient) {
+        const client = new ChatClient({
+            config: { bot_id: '7620394792719499317' },
+            user: uniqueUserId, 
+            auth: { type: "token", onRefreshToken: fetchToken },
+            el: document.getElementById('chat-container'),
         });
+
+        // 🎯 核心改動 2：SDK 就緒後，自動替使用者發出第一聲招呼
+        client.on('ready', () => {
+            // 直接發送文字訊息，完全繞過 variables 欄位限制
+            client.send(`[系統自動初始化] 我是${name}，電話是${phone}。請以此身分開始服務。`);
+        });
+    }
+});
     </script>
 </body>
 </html>

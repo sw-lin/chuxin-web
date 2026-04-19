@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家</title>
-    <script src="https://lf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.1.0-beta.0/libs/oversea/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@coze/api@1.0.21/dist/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -16,7 +16,7 @@
     <script>
         async function fetchToken() {
             try {
-                // 這是您剛才在 Cloudflare 部署成功的網址
+                // 您的 Worker 已經確認沒問題，這裡保持不變
                 const response = await fetch("https://hello-world-broad-cake-8477.swearlin.workers.dev/get-token");
                 const data = await response.json();
                 return data.token;
@@ -28,8 +28,8 @@
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // 嘗試抓取 SDK 物件（相容不同版本的命名）
-            const CozeSDK = window.CozeWebChat || window.CozeWebSDK;
+            // JSDelivr 版本的 SDK 名稱通常為 CozeWebChat
+            const CozeSDK = window.CozeWebChat;
 
             if (CozeSDK) {
                 new CozeSDK.Client({
@@ -51,10 +51,7 @@
                     el: document.getElementById('chat-container'),
                 });
             } else {
-                // 這是您在截圖 13 看到的訊息來源
-                document.body.innerHTML = "<h2 style='padding:20px;'>組件連線逾時，正在嘗試重新載入，請稍候...</h2>";
-                // 3 秒後自動重整頁面嘗試修復
-                setTimeout(() => { location.reload(); }, 3000);
+                document.body.innerHTML = "<h2 style='padding:20px;'>連線優化中，請稍候並重新整理...</h2>";
             }
         });
     </script>

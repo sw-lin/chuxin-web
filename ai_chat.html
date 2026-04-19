@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>築心智慧管家</title>
-    <script src="https://cdn.jsdelivr.net/npm/@coze/api@1.0.21/dist/index.js"></script>
+    <script src="https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.17/libs/oversea/index.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #f4f7f9; }
         #chat-container { width: 100vw; height: 100vh; }
@@ -16,7 +16,6 @@
     <script>
         async function fetchToken() {
             try {
-                // 您的 Worker 已經確認沒問題，這裡保持不變
                 const response = await fetch("https://hello-world-broad-cake-8477.swearlin.workers.dev/get-token");
                 const data = await response.json();
                 return data.token;
@@ -28,11 +27,19 @@
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // JSDelivr 版本的 SDK 名稱通常為 CozeWebChat
-            const CozeSDK = window.CozeWebChat;
+            // 智慧版本偵測：自動尋找正確的 SDK 啟動器
+            let ChatClient = null;
+            if (window.CozeWebChat && window.CozeWebChat.Client) {
+                ChatClient = window.CozeWebChat.Client;
+            } else if (window.CozeWebSDK && window.CozeWebSDK.WebChatClient) {
+                ChatClient = window.CozeWebSDK.WebChatClient;
+            } else if (window.CozeWebChatClient) {
+                ChatClient = window.CozeWebChatClient;
+            }
 
-            if (CozeSDK) {
-                new CozeSDK.Client({
+            // 如果成功抓到啟動器，就開始部署對話框
+            if (ChatClient) {
+                new ChatClient({
                     config: { 
                         bot_id: '7620394792719499317' 
                     },
@@ -51,7 +58,8 @@
                     el: document.getElementById('chat-container'),
                 });
             } else {
-                document.body.innerHTML = "<h2 style='padding:20px;'>連線優化中，請稍候並重新整理...</h2>";
+                document.body.innerHTML = "<h2 style='padding:20px;'>介面載入中，若持續無畫面請重新整理...</h2>";
+                console.error("未找到可用的 CozeWebChat 物件");
             }
         });
     </script>

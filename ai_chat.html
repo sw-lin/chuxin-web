@@ -10,9 +10,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        /* 隱藏卷軸 */
         ::-webkit-scrollbar { display: none; }
-        .chat-container { height: calc(100vh - 4rem - 5rem); }
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
@@ -24,8 +22,8 @@
 <body class="h-screen flex flex-col overflow-hidden">
 
     <nav class="emerald-gradient text-white px-4 h-16 shadow-md flex items-center justify-between shrink-0 z-10">
-        <button onclick="goBack(event)" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
-          <i class="fas fa-chevron-left text-lg"></i>
+        <button onclick="window.location.href='member_zone.html'" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
+            <i class="fas fa-chevron-left text-lg"></i>
         </button>
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -57,7 +55,7 @@
 
 <script>
     const WORKER_URL = "https://hello-world-broad-cake-8477.swearlin.workers.dev/";
-    const MAX_HISTORY = 10; 
+    const MAX_HISTORY = 10; // 限制最近 10 筆對話
 
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
@@ -69,35 +67,13 @@
     let isListening = false;
     let recognition;
 
-    // --- 🎯 【新增】跳轉狀態監控 ---
-    let isNavigatingAway = false;
-
-    function goBack(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        isNavigatingAway = true; // 鎖定狀態，停止所有 AI 行為
-        
-        if (recognition) {
-            try { recognition.stop(); } catch(e) {}
-        }
-
-        console.log("執行跳轉至 member_zone.html");
-        window.location.replace('member_zone.html');
-        
-        setTimeout(() => {
-            window.location.href = 'member_zone.html';
-        }, 100);
-    }
-
-    // --- 🎯 1. 初始化與開場 ---
+    // 1. 初始化
     window.onload = async () => {
         const params = new URLSearchParams(window.location.search);
         userName = params.get('user_name') || "夥伴";
         userPhone = params.get('user_phone') || "guest";
 
-        // 載入本地記憶
+        // 🎯 載入本地記憶
         const savedHistory = localStorage.getItem(`chat_${userPhone}`);
         if (savedHistory) {
             chatHistory = JSON.parse(savedHistory);
@@ -107,9 +83,8 @@
         }
 
         const weatherResult = await getWeather();
-        const initMsg = weatherResult === "一般" ? "嘿！我上線了" : `系統通知：現在是${weatherResult}，請以此為背景跟我打招呼並給建議。`;
+        const initMsg = weatherResult === "一般" ? "嘿！我上線了" : `系統通知：現在是${weatherResult}`;
         
-        // 使用統一的通訊函數
         sendToWorker(initMsg, true);
         initSpeech();
     };
@@ -137,11 +112,8 @@
         });
     }
 
-    // --- 🎯 2. 核心通訊函數 (已整合跳轉攔截) ---
+    // 🚀 通訊邏輯
     async function sendToWorker(text, isSystemTrigger = false) {
-        // 🚀 如果正在跳轉頁面，直接中斷執行
-        if (isNavigatingAway) return;
-
         if (!isSystemTrigger) {
             appendMessage("user", text);
             chatHistory.push({ role: "user", content: text });
@@ -155,15 +127,12 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
                     message: text,
-                    history: chatHistory 
+                    history: chatHistory // 🎯 送出歷史紀錄
                 })
             });
 
-            // 🚀 再次檢查，防止在 fetch 期間用戶按了返回
-            if (isNavigatingAway) return;
-
             const data = await response.json();
-            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
+            document.getElementById(typingId).remove();
 
             if (data.candidates) {
                 const aiReply = data.candidates[0].content.parts[0].text;
@@ -175,15 +144,15 @@
             }
         } catch (e) {
             if (document.getElementById(typingId)) document.getElementById(typingId).remove();
-            if (!isSystemTrigger && !isNavigatingAway) appendMessage("system", "網路好像累了，稍等一下喔！");
+            if (!isSystemTrigger) appendMessage("system", "網路好像累了，稍等一下喔！");
         }
     }
 
-    // --- 3. UI 輔助功能 ---
+    // --- 以下為 UI 輔助功能 ---
     function sendMessage() {
         const val = userInput.value.trim();
         if (val) {
-            sendToWorker(val); // 呼叫統一後的函數
+            sendToWorker(val);
             userInput.value = "";
             autoResize(userInput);
         }

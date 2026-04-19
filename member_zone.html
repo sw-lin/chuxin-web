@@ -884,7 +884,7 @@ function goToAI() {
             const name = userInfo.name || "";   // 👈 新增：抓取姓名
             
             // 3. 偵錯斷點 (確認是否有從 Session 拿到資料)
-            alert("✅ Session 偵錯：成功拿到資料 -> " + name + " / " + phone);
+       //     alert("✅ Session 偵錯：成功拿到資料 -> " + name + " / " + phone);
 
             // 4. 帶著電話跳轉到 AI 頁面
             // 使用 encodeURIComponent 確保特殊字元傳遞正確
@@ -893,11 +893,11 @@ function goToAI() {
             
         } else {
             // 如果連 Session 都沒資料，說明可能是直接開網頁沒登入
-            alert("⚠️ 錯誤：找不到登入資訊 (Session)，將以訪客身分跳轉。");
+    //        alert("⚠️ 錯誤：找不到登入資訊 (Session)，將以訪客身分跳轉。");
             window.location.href = 'ai_chat.html';
         }
     } catch (e) {
-        console.error("解析 Session 失敗:", e);
+    //    console.error("解析 Session 失敗:", e);
         window.location.href = 'ai_chat.html';
     }
 }

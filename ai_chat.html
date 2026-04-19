@@ -57,200 +57,145 @@
 
 <script>
     const WORKER_URL = "https://hello-world-broad-cake-8477.swearlin.workers.dev/";
+    const MAX_HISTORY = 10; 
 
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
     const micBtn = document.getElementById('micBtn');
+    
     let userName = "夥伴";
     let userPhone = "";
+    let chatHistory = []; 
     let isListening = false;
     let recognition;
 
-    // 新增一個全域變數來監控是否正在跳轉
+    // --- 🎯 【新增】跳轉狀態監控 ---
     let isNavigatingAway = false;
 
     function goBack(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-    
-    isNavigatingAway = true; // 標記正在離開頁面
-    console.log("執行跳轉...");
-    
-    // 強制停止語音辨識（如果有開啟）
-    if (recognition) {
-        try { recognition.stop(); } catch(e) {}
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        isNavigatingAway = true; // 鎖定狀態，停止所有 AI 行為
+        
+        if (recognition) {
+            try { recognition.stop(); } catch(e) {}
+        }
+
+        console.log("執行跳轉至 member_zone.html");
+        window.location.replace('member_zone.html');
+        
+        setTimeout(() => {
+            window.location.href = 'member_zone.html';
+        }, 100);
     }
 
-    // 使用絕對路徑或確定的相對路徑跳轉
-    // 如果 member_zone.html 在同一個資料夾，使用 './member_zone.html'
-    window.location.replace('member_zone.html');
-    
-    // 保險機制：如果 replace 沒反應，0.1秒後強制使用 href
-    setTimeout(() => {
-        window.location.href = 'member_zone.html';
-      }, 100);
-    }
-    
-    // 🎯 1. 初始化資料與天氣開場邏輯
+    // --- 🎯 1. 初始化與開場 ---
     window.onload = async () => {
         const params = new URLSearchParams(window.location.search);
         userName = params.get('user_name') || "夥伴";
-        userPhone = params.get('user_phone') || "未提供";
+        userPhone = params.get('user_phone') || "guest";
 
-        // 去姓留名處理 (開場動畫用)
-        let displayName = userName;
-        if (userName.length >= 2) {
-            displayName = userName.substring(userName.length - 2);
-            if (userName.length === 2) displayName = userName.substring(1);
+        // 載入本地記憶
+        const savedHistory = localStorage.getItem(`chat_${userPhone}`);
+        if (savedHistory) {
+            chatHistory = JSON.parse(savedHistory);
+            chatHistory.forEach(msg => {
+                if (msg.role !== 'system') appendMessage(msg.role === 'user' ? 'user' : 'system', msg.content);
+            });
         }
 
-        // --- 🌦️ 天氣獲取與權限處理 ---
-        const getWeather = () => {
-            return new Promise((resolve) => {
-                // 若使用者 3 秒內沒按允許或拒絕，自動超時跳過
-                const timeout = setTimeout(() => resolve("一般"), 3000);
-                
-                if (!navigator.geolocation) {
-                    clearTimeout(timeout);
-                    resolve("一般");
-                }
-
-                navigator.geolocation.getCurrentPosition(
-                    async (pos) => {
-                        clearTimeout(timeout);
-                        try {
-                            const { latitude, longitude } = pos.coords;
-                            // 使用免費 Open-Meteo API 查詢天氣
-                            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
-                            const data = await res.json();
-                            const code = data.current_weather.weathercode;
-                            
-                            // 判斷晴天、雨天
-                            if (code === 0) resolve("晴天");
-                            else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
-                            else resolve("一般");
-                        } catch { resolve("一般"); }
-                    },
-                    () => { // 使用者按「拒絕」
-                        clearTimeout(timeout);
-                        resolve("一般");
-                    }
-                );
-            });
-        };
-
-        // 等待天氣結果 (或超時)
         const weatherResult = await getWeather();
+        const initMsg = weatherResult === "一般" ? "嘿！我上線了" : `系統通知：現在是${weatherResult}，請以此為背景跟我打招呼並給建議。`;
         
-        // 根據結果構造給 AI 的隱藏指令
-        const initialPrompt = weatherResult === "一般" 
-            ? `嘿！我上線了，跟我打個招呼吧！` 
-            : `系統通知：現在是${weatherResult}，請以此為背景跟我打招呼並給建議。`;
-
-        // 啟動首句對話
-        sendInitialMessage(initialPrompt);
+        // 使用統一的通訊函數
+        sendToWorker(initMsg, true);
         initSpeech();
     };
 
-    // 🎯 發送首句訊息 (自動觸發 AI 回覆)
-    async function sendInitialMessage(msg) {
+    // 🌤️ 天氣偵測
+    async function getWeather() {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve("一般"), 3000);
+            if (!navigator.geolocation) resolve("一般");
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    clearTimeout(timeout);
+                    try {
+                        const { latitude, longitude } = pos.coords;
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                        const data = await res.json();
+                        const code = data.current_weather.weathercode;
+                        if (code === 0) resolve("晴天");
+                        else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
+                        else resolve("一般");
+                    } catch { resolve("一般"); }
+                },
+                () => { clearTimeout(timeout); resolve("一般"); }
+            );
+        });
+    }
+
+    // --- 🎯 2. 核心通訊函數 (已整合跳轉攔截) ---
+    async function sendToWorker(text, isSystemTrigger = false) {
+        // 🚀 如果正在跳轉頁面，直接中斷執行
+        if (isNavigatingAway) return;
+
+        if (!isSystemTrigger) {
+            appendMessage("user", text);
+            chatHistory.push({ role: "user", content: text });
+        }
+
         const typingId = showTyping();
+
         try {
-            const fetchUrl = `${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`;
-            const response = await fetch(fetchUrl, {
+            const response = await fetch(`${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: msg })
+                body: JSON.stringify({ 
+                    message: text,
+                    history: chatHistory 
+                })
             });
 
+            // 🚀 再次檢查，防止在 fetch 期間用戶按了返回
+            if (isNavigatingAway) return;
+
             const data = await response.json();
-            document.getElementById(typingId).remove();
-
-            if (data.candidates && data.candidates[0].content.parts[0].text) {
-                let aiReply = data.candidates[0].content.parts[0].text;
-                aiReply = aiReply.replace(/\n/g, '<br>');
-                appendMessage("system", aiReply);
-            }
-        } catch (error) {
             if (document.getElementById(typingId)) document.getElementById(typingId).remove();
-            appendMessage("system", "嘿！好久不見，今天想聊點什麼嗎？");
+
+            if (data.candidates) {
+                const aiReply = data.candidates[0].content.parts[0].text;
+                appendMessage("system", aiReply.replace(/\n/g, '<br>'));
+                
+                chatHistory.push({ role: "model", content: aiReply });
+                if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+                localStorage.setItem(`chat_${userPhone}`, JSON.stringify(chatHistory));
+            }
+        } catch (e) {
+            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
+            if (!isSystemTrigger && !isNavigatingAway) appendMessage("system", "網路好像累了，稍等一下喔！");
         }
     }
 
-    // 2. 語音辨識初始化
-    function initSpeech() {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'zh-TW';
-            recognition.continuous = false;
-            recognition.interimResults = false;
-
-            recognition.onresult = (event) => {
-                const result = event.results[0][0].transcript;
-                userInput.value = result;
-                autoResize(userInput);
-                stopListening();
-            };
-
-            recognition.onerror = () => stopListening();
-            recognition.onend = () => stopListening();
-        } else {
-            micBtn.classList.add('hidden');
-        }
-    }
-
-    function toggleSpeech() {
-        if (!recognition) return;
-        if (isListening) {
-            recognition.stop();
-        } else {
-            startListening();
-        }
-    }
-
-    function startListening() {
-        isListening = true;
-        recognition.start();
-        micBtn.classList.add('mic-active');
-        micBtn.innerHTML = '<i class="fas fa-stop text-lg"></i>';
-        userInput.placeholder = "聆聽中，請說話...";
-    }
-
-    function stopListening() {
-        isListening = false;
-        micBtn.classList.remove('mic-active');
-        micBtn.innerHTML = '<i class="fas fa-microphone text-lg"></i>';
-        userInput.placeholder = "請輸入或語音提問...";
-    }
-
-    // 3. UI 互動
-    function autoResize(textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = (textarea.scrollHeight > 120 ? 120 : textarea.scrollHeight) + 'px';
-    }
-
-    function handleEnter(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
+    // --- 3. UI 輔助功能 ---
+    function sendMessage() {
+        const val = userInput.value.trim();
+        if (val) {
+            sendToWorker(val); // 呼叫統一後的函數
+            userInput.value = "";
+            autoResize(userInput);
         }
     }
 
     function appendMessage(sender, text) {
         const msgDiv = document.createElement('div');
         msgDiv.className = "flex w-full " + (sender === "user" ? "justify-end" : "justify-start");
-        
-        const innerHTML = sender === "user" 
-            ? `<div class="max-w-[80%] bg-emerald-700 text-white px-5 py-3 rounded-2xl rounded-tr-none text-sm shadow-md break-words">${text}</div>`
-            : `<div class="max-w-[85%] bg-white border border-emerald-50 text-emerald-950 px-5 py-3 rounded-2xl rounded-tl-none text-sm shadow-sm leading-relaxed break-words relative">
-                 <div class="text-[10px] text-emerald-600 mb-1 font-bold uppercase tracking-tighter opacity-50">築心會館夥伴</div>
-                 ${text}
-               </div>`;
-               
-        msgDiv.innerHTML = innerHTML;
+        msgDiv.innerHTML = sender === "user" 
+            ? `<div class="max-w-[80%] bg-emerald-700 text-white px-5 py-3 rounded-2xl rounded-tr-none text-sm shadow-md">${text}</div>`
+            : `<div class="max-w-[85%] bg-white border border-emerald-50 text-emerald-950 px-5 py-3 rounded-2xl rounded-tl-none text-sm shadow-sm relative">
+                 <div class="text-[10px] text-emerald-600 mb-1 font-bold opacity-50 uppercase">築心夥伴</div>${text}</div>`;
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -259,56 +204,31 @@
         const id = "typing-" + Date.now();
         const msgDiv = document.createElement('div');
         msgDiv.id = id;
-        msgDiv.className = "flex w-full justify-start animate-fade-in";
-        msgDiv.innerHTML = `
-            <div class="bg-white border border-emerald-50 px-4 py-4 rounded-2xl shadow-sm flex gap-1">
-                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></div>
-                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
-            </div>`;
+        msgDiv.className = "flex w-full justify-start";
+        msgDiv.innerHTML = `<div class="bg-white border border-emerald-50 px-4 py-4 rounded-2xl shadow-sm flex gap-1">
+            <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></div>
+            <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay:0.2s"></div>
+            <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay:0.4s"></div>
+        </div>`;
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
         return id;
     }
 
-    // 4. API 通訊 (使用者發送訊息)
-    async function sendMessage() {
-        const text = userInput.value.trim();
-        if (!text) return;
+    function autoResize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight > 120 ? 120 : t.scrollHeight) + 'px'; }
+    function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 
-        appendMessage("user", text);
-        userInput.value = "";
-        userInput.style.height = 'auto';
-        userInput.disabled = true;
-
-        const typingId = showTyping();
-
-        try {
-            const fetchUrl = `${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`;
-            const response = await fetch(fetchUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: text })
-            });
-
-            const data = await response.json();
-            document.getElementById(typingId).remove();
-
-            if (data.candidates && data.candidates[0].content.parts[0].text) {
-                let aiReply = data.candidates[0].content.parts[0].text;
-                aiReply = aiReply.replace(/\n/g, '<br>');
-                appendMessage("system", aiReply);
-            } else {
-                appendMessage("system", "抱歉，剛才開小差了，再跟我說一次好嗎？");
-            }
-        } catch (error) {
-            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
-            appendMessage("system", "網路好像有點問題，待會再試試看吧！");
-        } finally {
-            userInput.disabled = false;
-            userInput.focus();
-        }
+    function initSpeech() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.onresult = (e) => { userInput.value = e.results[0][0].transcript; autoResize(userInput); stopListening(); };
+            recognition.onend = () => stopListening();
+        } else { micBtn.style.display = 'none'; }
     }
+    function toggleSpeech() { if(isListening) recognition.stop(); else { isListening=true; recognition.start(); micBtn.classList.add('mic-active'); micBtn.innerHTML='<i class="fas fa-stop"></i>'; } }
+    function stopListening() { isListening=false; micBtn.classList.remove('mic-active'); micBtn.innerHTML='<i class="fas fa-microphone"></i>'; }
 </script>
 </body>
 </html>

@@ -24,8 +24,8 @@
 <body class="h-screen flex flex-col overflow-hidden">
 
     <nav class="emerald-gradient text-white px-4 h-16 shadow-md flex items-center justify-between shrink-0 z-10">
-        <button onclick="goBack()" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
-           <i class="fas fa-chevron-left text-lg"></i>
+        <button id="backBtn" onclick="goBack(event)" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
+          <i class="fas fa-chevron-left text-lg"></i>
         </button>
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -66,15 +66,31 @@
     let isListening = false;
     let recognition;
 
-    function goBack() {
-    // 優先嘗試直接跳轉
-    // 使用 location.replace 不會留下紀錄，讓返回更乾淨
+    // 新增一個全域變數來監控是否正在跳轉
+    let isNavigatingAway = false;
+
+    function goBack(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    isNavigatingAway = true; // 標記正在離開頁面
+    console.log("執行跳轉...");
+    
+    // 強制停止語音辨識（如果有開啟）
+    if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+    }
+
+    // 使用絕對路徑或確定的相對路徑跳轉
+    // 如果 member_zone.html 在同一個資料夾，使用 './member_zone.html'
     window.location.replace('member_zone.html');
     
-    // 如果 0.5 秒後還沒跳轉成功（保險機制）
+    // 保險機制：如果 replace 沒反應，0.1秒後強制使用 href
     setTimeout(() => {
-        window.location.href = './member_zone.html';
-    }, 500);
+        window.location.href = 'member_zone.html';
+      }, 100);
     }
     
     // 🎯 1. 初始化資料與天氣開場邏輯

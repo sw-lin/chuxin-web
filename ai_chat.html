@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>築心智慧管家</title>
+    <title>築心智慧夥伴</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -31,13 +31,13 @@
             <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                 <i class="fas fa-leaf text-sm text-emerald-200"></i>
             </div>
-            <h1 class="text-lg font-black tracking-widest">築心智慧管家</h1>
+            <h1 class="text-lg font-black tracking-widest">築心智慧夥伴</h1>
         </div>
         <div class="w-10"></div>
     </nav>
 
     <main id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
-        </main>
+    </main>
 
     <div class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-gray-100 p-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-20">
         <div class="max-w-xl mx-auto flex items-end gap-2">
@@ -56,26 +56,101 @@
     </div>
 
 <script>
-    // 🔗 您的 Worker 網址
     const WORKER_URL = "https://hello-world-broad-cake-8477.swearlin.workers.dev/";
 
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
     const micBtn = document.getElementById('micBtn');
-    let userName = "貴賓";
+    let userName = "夥伴";
     let userPhone = "";
     let isListening = false;
     let recognition;
 
-    // 1. 初始化資料與歡迎詞
-    window.onload = () => {
+    // 🎯 1. 初始化資料與天氣開場邏輯
+    window.onload = async () => {
         const params = new URLSearchParams(window.location.search);
-        userName = params.get('user_name') || "貴賓";
+        userName = params.get('user_name') || "夥伴";
         userPhone = params.get('user_phone') || "未提供";
 
-        appendMessage("system", `尊貴的 ${userName} 您好，我是您的築心管家。很高興為您服務，請問今天有什麼我可以幫您的嗎？`);
+        // 去姓留名處理 (開場動畫用)
+        let displayName = userName;
+        if (userName.length >= 2) {
+            displayName = userName.substring(userName.length - 2);
+            if (userName.length === 2) displayName = userName.substring(1);
+        }
+
+        // --- 🌦️ 天氣獲取與權限處理 ---
+        const getWeather = () => {
+            return new Promise((resolve) => {
+                // 若使用者 3 秒內沒按允許或拒絕，自動超時跳過
+                const timeout = setTimeout(() => resolve("一般"), 3000);
+                
+                if (!navigator.geolocation) {
+                    clearTimeout(timeout);
+                    resolve("一般");
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        clearTimeout(timeout);
+                        try {
+                            const { latitude, longitude } = pos.coords;
+                            // 使用免費 Open-Meteo API 查詢天氣
+                            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                            const data = await res.json();
+                            const code = data.current_weather.weathercode;
+                            
+                            // 判斷晴天、雨天
+                            if (code === 0) resolve("晴天");
+                            else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
+                            else resolve("一般");
+                        } catch { resolve("一般"); }
+                    },
+                    () => { // 使用者按「拒絕」
+                        clearTimeout(timeout);
+                        resolve("一般");
+                    }
+                );
+            });
+        };
+
+        // 等待天氣結果 (或超時)
+        const weatherResult = await getWeather();
+        
+        // 根據結果構造給 AI 的隱藏指令
+        const initialPrompt = weatherResult === "一般" 
+            ? `嘿！我上線了，跟我打個招呼吧！` 
+            : `系統通知：現在是${weatherResult}，請以此為背景跟我打招呼並給建議。`;
+
+        // 啟動首句對話
+        sendInitialMessage(initialPrompt);
         initSpeech();
     };
+
+    // 🎯 發送首句訊息 (自動觸發 AI 回覆)
+    async function sendInitialMessage(msg) {
+        const typingId = showTyping();
+        try {
+            const fetchUrl = `${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`;
+            const response = await fetch(fetchUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msg })
+            });
+
+            const data = await response.json();
+            document.getElementById(typingId).remove();
+
+            if (data.candidates && data.candidates[0].content.parts[0].text) {
+                let aiReply = data.candidates[0].content.parts[0].text;
+                aiReply = aiReply.replace(/\n/g, '<br>');
+                appendMessage("system", aiReply);
+            }
+        } catch (error) {
+            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
+            appendMessage("system", "嘿！好久不見，今天想聊點什麼嗎？");
+        }
+    }
 
     // 2. 語音辨識初始化
     function initSpeech() {
@@ -91,15 +166,9 @@
                 userInput.value = result;
                 autoResize(userInput);
                 stopListening();
-                // 語音辨識完畢自動發送 (可依需求開啟)
-                // sendMessage(); 
             };
 
-            recognition.onerror = (err) => {
-                console.error("語音辨識出錯:", err);
-                stopListening();
-            };
-
+            recognition.onerror = () => stopListening();
             recognition.onend = () => stopListening();
         } else {
             micBtn.classList.add('hidden');
@@ -130,7 +199,7 @@
         userInput.placeholder = "請輸入或語音提問...";
     }
 
-    // 3. UI 互動邏輯
+    // 3. UI 互動
     function autoResize(textarea) {
         textarea.style.height = 'auto';
         textarea.style.height = (textarea.scrollHeight > 120 ? 120 : textarea.scrollHeight) + 'px';
@@ -175,7 +244,7 @@
         return id;
     }
 
-    // 4. API 通訊
+    // 4. API 通訊 (使用者發送訊息)
     async function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
@@ -189,7 +258,6 @@
 
         try {
             const fetchUrl = `${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`;
-            
             const response = await fetch(fetchUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -201,16 +269,14 @@
 
             if (data.candidates && data.candidates[0].content.parts[0].text) {
                 let aiReply = data.candidates[0].content.parts[0].text;
-                // 處理簡單的 Markdown 或 換行
                 aiReply = aiReply.replace(/\n/g, '<br>');
                 appendMessage("system", aiReply);
             } else {
-                appendMessage("system", "抱歉，服務目前稍有延遲，請您再試一次。");
+                appendMessage("system", "抱歉，剛才開小差了，再跟我說一次好嗎？");
             }
         } catch (error) {
             if (document.getElementById(typingId)) document.getElementById(typingId).remove();
-            appendMessage("system", "系統連線中斷，請確認您的網路環境。");
-            console.error(error);
+            appendMessage("system", "網路好像有點問題，待會再試試看吧！");
         } finally {
             userInput.disabled = false;
             userInput.focus();

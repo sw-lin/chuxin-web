@@ -88,6 +88,11 @@
         </div>
     </div>
 
+    <div class="mb-8 p-6 bg-emerald-50/50 rounded-3xl border border-emerald-100">
+        <label class="block text-xs font-black text-emerald-800 mb-2 ml-1 italic tracking-widest">PHOTO SECTION DESCRIPTION (固定描述)</label>
+        <input type="text" id="guest_photo_desc" class="config-input w-full p-4 rounded-2xl outline-none transition input-disabled font-bold" placeholder="請輸入顯示在照片下方的文字..." readonly>
+    </div>
+    
     <div class="space-y-4">
         <div>
             <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1">訪客說明內容 1 (支援多行/星號列表)</label>
@@ -185,6 +190,9 @@ async function loadCurrentConfigs() {
             if(cEl) cEl.value = (typeof config[`guest_content${i}`] === 'object') ? (config[`guest_content${i}`]?.promo || config[`guest_content${i}`]?.normal || '') : (config[`guest_content${i}`] || '');
         }
 
+        const photoDesc = config.guest_photo_desc;
+        document.getElementById('guest_photo_desc').value = (typeof photoDesc === 'object') ? (photoDesc.normal || photoDesc.promo || '') : (photoDesc || '');
+        
         // D. 填入關於我們文字 (對應資料庫 Key: about_us_text)
         const aboutVal = config.about_us_text;
         const aboutBox = document.getElementById('about_us_text');
@@ -270,6 +278,9 @@ async function saveConfigs() {
         configs[`guest_content${i}`] = { promo: cVal, normal: cVal };
     }
 
+    const fixedDesc = document.getElementById('guest_photo_desc').value;
+    configs['guest_photo_desc'] = { promo: fixedDesc, normal: fixedDesc };
+    
     const payload = { type: 'update_config', key: staffKey, configs: configs };
 
     showLoading(true);

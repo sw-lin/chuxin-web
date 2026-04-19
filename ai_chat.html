@@ -24,8 +24,8 @@
 <body class="h-screen flex flex-col overflow-hidden">
 
     <nav class="emerald-gradient text-white px-4 h-16 shadow-md flex items-center justify-between shrink-0 z-10">
-        <button onclick="window.location.href='member_zone.html'" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
-            <i class="fas fa-chevron-left text-lg"></i>
+        <button onclick="goBack()" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
+           <i class="fas fa-chevron-left text-lg"></i>
         </button>
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -66,6 +66,17 @@
     let isListening = false;
     let recognition;
 
+    function goBack() {
+    // 優先嘗試直接跳轉
+    // 使用 location.replace 不會留下紀錄，讓返回更乾淨
+    window.location.replace('member_zone.html');
+    
+    // 如果 0.5 秒後還沒跳轉成功（保險機制）
+    setTimeout(() => {
+        window.location.href = './member_zone.html';
+    }, 500);
+    }
+    
     // 🎯 1. 初始化資料與天氣開場邏輯
     window.onload = async () => {
         const params = new URLSearchParams(window.location.search);

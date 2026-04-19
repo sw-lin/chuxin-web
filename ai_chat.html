@@ -24,7 +24,7 @@
 <body class="h-screen flex flex-col overflow-hidden">
 
     <nav class="emerald-gradient text-white px-4 h-16 shadow-md flex items-center justify-between shrink-0 z-10">
-        <button id="backBtn" onclick="goBack(event)" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
+        <button onclick="goBack(event)" class="w-10 h-10 flex items-center justify-center active:bg-white/20 rounded-full transition-colors">
           <i class="fas fa-chevron-left text-lg"></i>
         </button>
         <div class="flex items-center gap-2">
@@ -70,26 +70,34 @@
     let recognition;
 
     // --- 🎯 【新增】跳轉狀態監控 ---
-    let isNavigatingAway = false;
+// --- 🎯 【強效版】跳轉函數 ---
+let isNavigatingAway = false;
 
-    function goBack(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        isNavigatingAway = true; // 鎖定狀態，停止所有 AI 行為
-        
-        if (recognition) {
-            try { recognition.stop(); } catch(e) {}
-        }
-
-        console.log("執行跳轉至 member_zone.html");
-        window.location.replace('member_zone.html');
-        
-        setTimeout(() => {
-            window.location.href = 'member_zone.html';
-        }, 100);
+function goBack(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
+    
+    // 1. 立即鎖定狀態，這會讓 sendToWorker 停止任何 UI 更新
+    isNavigatingAway = true; 
+    
+    // 2. 停止語音
+    if (recognition) {
+        try { recognition.stop(); } catch(err) {}
+    }
+
+    // 3. 嘗試跳轉 (加上 ./ 確保在當前目錄尋找)
+    console.log("導航啟動...");
+    
+    // 先嘗試 replace (不會留下歷史紀錄，避免回跳)
+    window.location.replace('./member_zone.html');
+
+    // 如果 0.1 秒後還在原地，強制使用 href
+    setTimeout(() => {
+        window.location.href = './member_zone.html';
+    }, 100);
+}
 
     // --- 🎯 1. 初始化與開場 ---
     window.onload = async () => {
@@ -190,6 +198,9 @@
     }
 
     function appendMessage(sender, text) {
+        // 🚀 如果用戶已經要離開了，就不准再畫任何東西到畫面上
+      if (isNavigatingAway) return;
+        
         const msgDiv = document.createElement('div');
         msgDiv.className = "flex w-full " + (sender === "user" ? "justify-end" : "justify-start");
         msgDiv.innerHTML = sender === "user" 

@@ -37,24 +37,26 @@
             }
 
             if (ChatClient) {
-                new ChatClient({
-    config: { 
-        bot_id: '7620394792719499317',
-    },
-    // 🎯 關鍵修正：同時定義 variables 以確保不同 SDK 版本都能抓到
-    variables: {
-        user_name: "【我是測試成功的值】",
-        user_phone: "0912345678"
-    },
-    componentProps: {
-        title: '築心智慧管家',
-        layout: 'pc'
-    },
-    auth: {
-        type: "token",
-        onRefreshToken: fetchToken 
-    },
+                const client = new ChatClient({
+    config: { bot_id: '7620394792719499317' },
+    auth: { type: "token", onRefreshToken: fetchToken },
     el: document.getElementById('chat-container'),
+});
+
+// 🎯 核心補丁：當 SDK 載入完成後，強制寫入變數
+client.on('ready', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('user_name');
+    const phone = urlParams.get('user_phone');
+
+    if (name || phone) {
+        // 使用 SDK 內建方法強制同步變數到 Bot 後台
+        client.setVariable({
+            user_name: name || '',
+            user_phone: phone || ''
+        });
+        console.log("變數已物理注入:", { name, phone });
+    }
 });
             } else {
                 document.body.innerHTML = "<h2 style='padding:20px;'>介面載入中，若持續無畫面請重新整理...</h2>";

@@ -39,13 +39,13 @@
             if (ChatClient) {
                 const client = new ChatClient({
     config: { bot_id: '7620394792719499317' },
-// 🎯 每次載入都生成新的 ID，確保機器人「失憶」
-    conversation_id: 'test_' + Math.random().toString(36).substr(2, 9),
+    // 🎯 強制給一個完全不同的 User ID，讓它找不到「林士偉」的存檔
+    user: 'visitor_' + Math.random().toString(36).substr(2, 9), 
+    conversation_id: 'conv_' + Math.random().toString(36).substr(2, 9),
     variables: {
-        user_name: urlParams.get('user_name') || '測試名',
-        user_phone: urlParams.get('user_phone') || '測試電話'
+        user_name: urlParams.get('user_name') || '新客人',
+        user_phone: urlParams.get('user_phone') || '新電話'
     },
-                    
     auth: { type: "token", onRefreshToken: fetchToken },
     el: document.getElementById('chat-container'),
 });

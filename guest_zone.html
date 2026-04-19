@@ -39,16 +39,21 @@
             返回首頁
         </button>
     </nav>
-
+     
     <header class="relative w-full h-[500px] md:h-[600px] overflow-hidden bg-[#052e23]">
-        <div id="slideContainer" class="w-full h-full">
-            <div class="slide flex items-center justify-center text-white h-full">載入圖片中...</div>
-        </div>
-        <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center z-10 pointer-events-none">
-            <h1 class="text-4xl md:text-6xl text-white font-bold tracking-widest drop-shadow-lg"></h1>
-        </div>
-    </header>
+    <div id="slideContainer" class="w-full h-full">
+        <div class="slide flex items-center justify-center text-white h-full">載入圖片中...</div>
+    </div>
+    
+    <div class="absolute bottom-6 inset-x-0 z-20 text-center">
+        <p id="fixedPhotoDesc" class="text-white text-sm md:text-base bg-black/40 backdrop-blur-sm inline-block px-8 py-2 rounded-full tracking-widest font-medium border border-white/10"></p>
+    </div>
 
+    <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center z-10 pointer-events-none">
+        <h1 class="text-4xl md:text-6xl text-white font-bold tracking-widest drop-shadow-lg"></h1>
+    </div>
+    </header>
+    
     <section class="py-20 px-6 bg-[#FDFBF7]">
         <div class="max-w-7xl mx-auto">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -125,6 +130,9 @@ async function initData() {
             return (typeof item === 'object') ? (item.normal || item.promo || item.value) : item;
         };
 
+        // 🌟 1. 載入固定描述文字 (只執行一次)
+        document.getElementById('fixedPhotoDesc').innerText = getVal('guest_photo_desc') || "";
+        
         // 使用 replace 將 Google Sheet 的換行符號轉成 HTML 換行
         document.getElementById('content1').innerHTML = formatContent((getVal('guest_content1') || "建置中...").replace(/\n/g, '<br>'));
         document.getElementById('content2').innerHTML = formatContent((getVal('guest_content2') || "建置中...").replace(/\n/g, '<br>'));

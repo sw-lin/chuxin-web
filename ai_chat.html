@@ -217,6 +217,14 @@
     }
     function toggleSpeech() { if(isListening) recognition.stop(); else { isListening=true; recognition.start(); micBtn.classList.add('mic-active'); micBtn.innerHTML='<i class="fas fa-stop"></i>'; } }
     function stopListening() { isListening=false; micBtn.classList.remove('mic-active'); micBtn.innerHTML='<i class="fas fa-microphone"></i>'; }
+/* 修正手機版 vh 的問題 */
+    .h-screen {
+        height: 100dvh; /* 使用動態視窗高度 */
+    }
+    #chatBox {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動更順暢 */
+    }
 </script>
 </body>
 </html>

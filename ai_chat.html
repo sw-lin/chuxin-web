@@ -52,7 +52,6 @@
             </button>
         </div>
     </div>
-
 <script>
     const WORKER_URL = "https://hello-world-broad-cake-8477.swearlin.workers.dev/";
     const MAX_HISTORY = 10; 
@@ -66,28 +65,7 @@
     let chatHistory = []; 
     let isListening = false;
     let recognition;
-
-    // --- 🎯 【新增】跳轉狀態監控 ---
     let isNavigatingAway = false;
-
-    function goBack(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        isNavigatingAway = true; // 鎖定狀態，停止所有 AI 行為
-        
-        if (recognition) {
-            try { recognition.stop(); } catch(e) {}
-        }
-
-        console.log("執行跳轉至 member_zone.html");
-        window.location.replace('member_zone.html');
-        
-        setTimeout(() => {
-            window.location.href = 'member_zone.html';
-        }, 100);
-    }
 
     // --- 🎯 1. 初始化與開場 ---
     window.onload = async () => {
@@ -105,100 +83,73 @@
         }
 
         const weatherResult = await getWeather();
-        const initMsg = weatherResult === "一般" ? "嘿！我上線了" : `系統通知：現在是${weatherResult}，請以此為背景跟我打招呼並給建議。`;
+        const initMsg = weatherResult === "一般" ? "嘿！我上線了" : `現在是${weatherResult}，請以此背景跟我打招呼。`;
         
-        // 使用統一的通訊函數
         sendToWorker(initMsg, true);
         initSpeech();
     };
 
-    // 🌤️ 天氣偵測
-    async function getWeather() {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve("一般"), 3000);
-            if (!navigator.geolocation) resolve("一般");
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                    clearTimeout(timeout);
-                    try {
-                        const { latitude, longitude } = pos.coords;
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
-                        const data = await res.json();
-                        const code = data.current_weather.weathercode;
-                        if (code === 0) resolve("晴天");
-                        else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
-                        else resolve("一般");
-                    } catch { resolve("一般"); }
-                },
-                () => { clearTimeout(timeout); resolve("一般"); }
-            );
-        });
-    }
+    // --- 🎯 2. 核心通訊函數 (修正解析邏輯) ---
+    async function sendToWorker(text, isSystemTrigger = false) {
+        if (isNavigatingAway) return;
 
-    // --- 🎯 2. 核心通訊函數 (已整合跳轉攔截) ---
-// --- 核心通訊函數修正版 ---
-async function sendToWorker(text, isSystemTrigger = false) {
-    if (isNavigatingAway) return;
-
-    if (!isSystemTrigger) {
-        appendMessage("user", text);
-        chatHistory.push({ role: "user", content: text });
-    }
-
-    const typingId = showTyping();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 增加到10秒
-
-    try {
-        const response = await fetch(`${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-            body: JSON.stringify({ 
-                message: text,
-                history: chatHistory 
-            })
-        });
-
-        clearTimeout(timeout);
-        const data = await response.json();
-        
-        // 移除打字動畫
-        const typingElem = document.getElementById(typingId);
-        if (typingElem) typingElem.remove();
-
-        // 🎯 修正：更彈性的解析邏輯
-        let aiReply = "";
-        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-            aiReply = data.candidates[0].content.parts[0].text;
-        } else if (data.error_from_gemini) {
-            // 如果後端回報了具體錯誤（如模型找不到）
-            console.error("Gemini 錯誤:", data.error_from_gemini);
-            aiReply = "夥伴抱歉，我的大腦連結出了點小問題，請稍等我一下。";
+        if (!isSystemTrigger) {
+            appendMessage("user", text);
+            chatHistory.push({ role: "user", content: text });
         }
 
-        if (aiReply) {
-            appendMessage("system", aiReply.replace(/\n/g, '<br>'));
-            chatHistory.push({ role: "model", content: aiReply });
-            if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
-            localStorage.setItem(`chat_${userPhone}`, JSON.stringify(chatHistory));
-        } else {
-            throw new Error("無法解析回傳內容");
+        const typingId = showTyping();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000); // 增加超時時間到 15 秒
+
+        try {
+            const response = await fetch(`${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: controller.signal,
+                body: JSON.stringify({ 
+                    message: text,
+                    history: chatHistory 
+                })
+            });
+
+            const data = await response.json();
+            
+            // 移除打字動畫
+            const typingElem = document.getElementById(typingId);
+            if (typingElem) typingElem.remove();
+
+            // 🌟 關鍵修正：對接 Worker 的 data.reply
+            let aiReply = data.reply || "";
+
+            if (aiReply) {
+                appendMessage("system", aiReply.replace(/\n/g, '<br>'));
+                // 儲存歷史紀錄，角色用 assistant
+                chatHistory.push({ role: "assistant", content: aiReply });
+                if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+                localStorage.setItem(`chat_${userPhone}`, JSON.stringify(chatHistory));
+            } else {
+                throw new Error("回傳格式不正確");
+            }
+        } catch (e) {
+            clearTimeout(timeout);
+            const typingElem = document.getElementById(typingId);
+            if (typingElem) typingElem.remove();
+            
+            if (!isNavigatingAway) {
+                // 如果後端有傳錯誤訊息回味，就顯示出來，否則顯示預設失敗訊息
+                const errorMsg = (e.message.includes("Groq")) ? e.message : "哎呀，訊號好像被風吹散了，請再試一次？";
+                appendMessage("system", errorMsg);
+                console.error("Fetch Error:", e);
+            }
         }
-    } catch (e) {
-        clearTimeout(timeout);
-        const typingElem = document.getElementById(typingId);
-        if (typingElem) typingElem.remove();
-        if (!isNavigatingAway) {
-            appendMessage("system", "哎呀，訊號好像被風吹散了，請再試一次看看？");
-        }
-    }
-}    
+    }    
+
     // --- 3. UI 輔助功能 ---
     function sendMessage() {
         const val = userInput.value.trim();
         if (val) {
-            sendToWorker(val); // 呼叫統一後的函數
+            sendToWorker(val);
             userInput.value = "";
             autoResize(userInput);
         }
@@ -233,12 +184,34 @@ async function sendToWorker(text, isSystemTrigger = false) {
     function autoResize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight > 120 ? 120 : t.scrollHeight) + 'px'; }
     function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 
+    async function getWeather() {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve("一般"), 3000);
+            if (!navigator.geolocation) resolve("一般");
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    clearTimeout(timeout);
+                    try {
+                        const { latitude, longitude } = pos.coords;
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                        const data = await res.json();
+                        const code = data.current_weather.weathercode;
+                        if (code === 0) resolve("晴天");
+                        else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
+                        else resolve("一般");
+                    } catch { resolve("一般"); }
+                },
+                () => { clearTimeout(timeout); resolve("一般"); }
+            );
+        });
+    }
+
     function initSpeech() {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.lang = 'zh-TW';
-            recognition.onresult = (e) => { userInput.value = e.results[0][0].transcript; autoResize(userInput); stopListening(); };
+            recognition.onresult = (e) => { userInput.value = e.results[0][0].transcript; sendMessage(); stopListening(); };
             recognition.onend = () => stopListening();
         } else { micBtn.style.display = 'none'; }
     }

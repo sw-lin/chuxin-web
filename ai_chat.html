@@ -136,47 +136,62 @@
     }
 
     // --- 🎯 2. 核心通訊函數 (已整合跳轉攔截) ---
-    async function sendToWorker(text, isSystemTrigger = false) {
-        // 🚀 如果正在跳轉頁面，直接中斷執行
-        if (isNavigatingAway) return;
+async function sendToWorker(text, isSystemTrigger = false) {
+    if (isNavigatingAway) return;
 
-        if (!isSystemTrigger) {
-            appendMessage("user", text);
-            chatHistory.push({ role: "user", content: text });
-        }
-
-        const typingId = showTyping();
-
-        try {
-            const response = await fetch(`${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    message: text,
-                    history: chatHistory 
-                })
-            });
-
-            // 🚀 再次檢查，防止在 fetch 期間用戶按了返回
-            if (isNavigatingAway) return;
-
-            const data = await response.json();
-            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
-
-            if (data.candidates) {
-                const aiReply = data.candidates[0].content.parts[0].text;
-                appendMessage("system", aiReply.replace(/\n/g, '<br>'));
-                
-                chatHistory.push({ role: "model", content: aiReply });
-                if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
-                localStorage.setItem(`chat_${userPhone}`, JSON.stringify(chatHistory));
-            }
-        } catch (e) {
-            if (document.getElementById(typingId)) document.getElementById(typingId).remove();
-            if (!isSystemTrigger && !isNavigatingAway) appendMessage("system", "網路好像累了，稍等一下喔！");
-        }
+    if (!isSystemTrigger) {
+        appendMessage("user", text);
+        chatHistory.push({ role: "user", content: text });
     }
 
+    const typingId = showTyping();
+
+    // 增加一個 15 秒強制超時機制，避免無止盡等待
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    try {
+        const response = await fetch(`${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal, // 綁定超時訊號
+            body: JSON.stringify({ 
+                message: text,
+                history: chatHistory 
+            })
+        });
+
+        clearTimeout(timeout);
+        if (isNavigatingAway) return;
+
+        const data = await response.json();
+        
+        // 確保移除打字動畫
+        const typingElem = document.getElementById(typingId);
+        if (typingElem) typingElem.remove();
+
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const aiReply = data.candidates[0].content.parts[0].text;
+            appendMessage("system", aiReply.replace(/\n/g, '<br>'));
+            
+            chatHistory.push({ role: "model", content: aiReply });
+            if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
+            localStorage.setItem(`chat_${userPhone}`, JSON.stringify(chatHistory));
+        } else {
+            throw new Error("格式錯誤");
+        }
+    } catch (e) {
+        clearTimeout(timeout);
+        console.error("發送失敗:", e);
+        const typingElem = document.getElementById(typingId);
+        if (typingElem) typingElem.remove();
+        
+        // 如果不是系統自動發送的，才提示使用者
+        if (!isSystemTrigger && !isNavigatingAway) {
+            appendMessage("system", "哎呀，訊號好像被風吹散了，請再試一次看看？");
+        }
+    }
+}
     // --- 3. UI 輔助功能 ---
     function sendMessage() {
         const val = userInput.value.trim();

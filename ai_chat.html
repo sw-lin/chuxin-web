@@ -136,6 +136,7 @@
     }
 
     // --- 🎯 2. 核心通訊函數 (已整合跳轉攔截) ---
+// --- 核心通訊函數修正版 ---
 async function sendToWorker(text, isSystemTrigger = false) {
     if (isNavigatingAway) return;
 
@@ -145,16 +146,14 @@ async function sendToWorker(text, isSystemTrigger = false) {
     }
 
     const typingId = showTyping();
-
-    // 增加一個 15 秒強制超時機制，避免無止盡等待
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 10000); // 增加到10秒
 
     try {
         const response = await fetch(`${WORKER_URL}?user_name=${encodeURIComponent(userName)}&user_phone=${encodeURIComponent(userPhone)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: controller.signal, // 綁定超時訊號
+            signal: controller.signal,
             body: JSON.stringify({ 
                 message: text,
                 history: chatHistory 
@@ -162,36 +161,39 @@ async function sendToWorker(text, isSystemTrigger = false) {
         });
 
         clearTimeout(timeout);
-        if (isNavigatingAway) return;
-
         const data = await response.json();
         
-        // 確保移除打字動畫
+        // 移除打字動畫
         const typingElem = document.getElementById(typingId);
         if (typingElem) typingElem.remove();
 
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-            const aiReply = data.candidates[0].content.parts[0].text;
+        // 🎯 修正：更彈性的解析邏輯
+        let aiReply = "";
+        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+            aiReply = data.candidates[0].content.parts[0].text;
+        } else if (data.error_from_gemini) {
+            // 如果後端回報了具體錯誤（如模型找不到）
+            console.error("Gemini 錯誤:", data.error_from_gemini);
+            aiReply = "夥伴抱歉，我的大腦連結出了點小問題，請稍等我一下。";
+        }
+
+        if (aiReply) {
             appendMessage("system", aiReply.replace(/\n/g, '<br>'));
-            
             chatHistory.push({ role: "model", content: aiReply });
             if (chatHistory.length > MAX_HISTORY) chatHistory = chatHistory.slice(-MAX_HISTORY);
             localStorage.setItem(`chat_${userPhone}`, JSON.stringify(chatHistory));
         } else {
-            throw new Error("格式錯誤");
+            throw new Error("無法解析回傳內容");
         }
     } catch (e) {
         clearTimeout(timeout);
-        console.error("發送失敗:", e);
         const typingElem = document.getElementById(typingId);
         if (typingElem) typingElem.remove();
-        
-        // 如果不是系統自動發送的，才提示使用者
-        if (!isSystemTrigger && !isNavigatingAway) {
+        if (!isNavigatingAway) {
             appendMessage("system", "哎呀，訊號好像被風吹散了，請再試一次看看？");
         }
     }
-}
+}    
     // --- 3. UI 輔助功能 ---
     function sendMessage() {
         const val = userInput.value.trim();

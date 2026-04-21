@@ -515,17 +515,23 @@ function renderEventSection(events, registrations) {
     container.innerHTML = '';
 
     const now = new Date();
-    // 產生格式如 "2026-04-21" 的今天日期
+    // 取得今天日期 (YYYY-MM-DD)
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     // 過濾邏輯
     const activeEvents = (events || []).filter(ev => {
-        // 🌟 關鍵修正：將資料庫傳來的 "/" 全部取代為 "-"，確保格式一致
-        const start = (ev.startDate || "").replace(/\//g, '-'); 
-        const end = (ev.endDate || "").replace(/\//g, '-');
+        // 🌟 參考後端成功邏輯，對齊 Key 名稱
+        // 1. 抓取開始日 (對應 B 欄)
+        const rawStart = ev["開始展示日 (start_date)"] || ev.startDate || ev.start_date || "";
+        // 2. 抓取下架日 (對應 C 欄)
+        const rawEnd = ev["下架日期 (display_until)"] || ev.deadline || ev.display_until || "";
 
-        // 偵錯用（修正後若仍不對，請按 F12 看 Console）
-        console.log(`活動: ${ev.title}, 今天: ${todayStr}, 開始: ${start}, 結束: ${end}`);
+        // 統一格式化 (將斜線換成橫線)
+        const start = rawStart.replace(/\//g, '-');
+        const end = rawEnd.replace(/\//g, '-');
+
+        // 偵錯用 (若還是有問題，請看瀏覽器 F12 Console)
+        console.log(`[日期檢查] 活動:${ev.title || ev["標題"]}, 今天:${todayStr}, 開始:${start}, 結束:${end}`);
 
         const isStarted = !start || todayStr >= start;
         const isNotExpired = !end || todayStr <= end;
@@ -533,31 +539,37 @@ function renderEventSection(events, registrations) {
         return isStarted && isNotExpired;
     });
 
+    // 若無活動則隱藏
     if (activeEvents.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
         return;
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
+    // 渲染過濾後的活動
     activeEvents.forEach(ev => {
-        // ... 原有的渲染邏輯 (forEach 內容不變) ...
+        const title = ev["標題"] || ev.title || "";
+        
+        // 報名資訊比對
         const regInfo = (registrations || []).find(reg => {
             const rTitle = reg.title || reg.eventTitle || "";
-            return rTitle.toString().trim() === ev.title.toString().trim();
+            return rTitle.toString().trim() === title.toString().trim();
         });
         
         const isRegistered = !!regInfo;
         const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是"); 
         
-        const mFee = ev.memberFee || 0;
-        const gFee = ev.guestFee || 0;
-        const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
+        const mFee = ev["會員報名費"] || ev.memberFee || ev.member_fee || 0;
+        const gFee = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
+        
+        const rawPoster = ev["海報連結 (poster_url)"] || ev.poster_url || ev.poster || "";
+        const posterUrl = (rawPoster && rawPoster.includes('http')) ? getDirectImageUrl(rawPoster) : null;
 
         let actionBtn = isRegistered 
             ? `<button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
                 <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'} mr-2"></i>${isCheckedIn ? '已完成報到' : '已報名成功'}
                </button>`
-            : `<button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
+            : `<button onclick="goToRegistration('${encodeURIComponent(title)}')" 
                 class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
                 立即報名
                </button>`;
@@ -565,18 +577,18 @@ function renderEventSection(events, registrations) {
         const cardHtml = posterUrl 
             ? `<div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
                 <img src="${posterUrl}" class="w-full h-auto block">
-                <div class="p-6"><h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>${actionBtn}</div>
+                <div class="p-6"><h4 class="font-black text-emerald-900 text-lg mb-3">${title}</h4>${actionBtn}</div>
                </div>`
             : `<div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
                 <div class="flex justify-between items-start mb-4">
                     <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
-                    <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || '額滿為止'}</span>
+                    <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || ev["下架日期 (display_until)"] || '額滿為止'}</span>
                 </div>
-                <h4 class="font-black text-emerald-900 text-xl mb-3">${ev.title}</h4>
+                <h4 class="font-black text-emerald-900 text-xl mb-3">${title}</h4>
                 <div class="space-y-3 mb-5 text-gray-600 text-xs">
-                    <div><i class="far fa-calendar-alt text-emerald-600 mr-2"></i><b>日期：</b>${ev.eventDate || '另行通知'}</div>
+                    <div><i class="far fa-calendar-alt text-emerald-600 mr-2"></i><b>日期：</b>${ev["活動日期 (date)"] || ev.eventDate || ev.date || '另行通知'}</div>
                     <div><i class="fas fa-tag text-emerald-600 mr-2"></i><b>費用：</b>會員 $${mFee} / 非會員 $${gFee}</div>
-                    ${ev.desc ? `<p class="text-emerald-700/70 leading-relaxed bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">${ev.desc.replace(/\n/g, '<br>')}</p>` : ''}
+                    ${(ev["活動簡介 (desc)"] || ev.desc) ? `<p class="text-emerald-700/70 leading-relaxed bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">${(ev["活動簡介 (desc)"] || ev.desc).replace(/\n/g, '<br>')}</p>` : ''}
                 </div>
                 ${actionBtn}
                </div>`;

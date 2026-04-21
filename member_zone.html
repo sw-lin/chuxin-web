@@ -514,43 +514,38 @@ function renderEventSection(events, registrations) {
     
     container.innerHTML = '';
 
-    // --- 🌟 新增：日期判斷過濾邏輯 🌟 ---
     const now = new Date();
-    // 取得今天日期字串 (格式：2026-04-21)
+    // 產生格式如 "2026-04-21" 的今天日期
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    // 過濾掉不符合展示期的活動
+    // 過濾邏輯
     const activeEvents = (events || []).filter(ev => {
-        // 假設資料庫傳來的欄位名稱為 startDate (B欄) 與 endDate (C欄)
-        // 請確認您的 GAS 後端 JSON Key 是否為這兩個名稱
-        const start = ev.startDate || ""; 
-        const end = ev.endDate || "";
+        // 🌟 關鍵修正：將資料庫傳來的 "/" 全部取代為 "-"，確保格式一致
+        const start = (ev.startDate || "").replace(/\//g, '-'); 
+        const end = (ev.endDate || "").replace(/\//g, '-');
 
-        // 判斷邏輯：
-        // 1. 如果沒有設定開始日期，視為已開始
-        // 2. 如果沒有設定結束日期，視為不限時
+        // 偵錯用（修正後若仍不對，請按 F12 看 Console）
+        console.log(`活動: ${ev.title}, 今天: ${todayStr}, 開始: ${start}, 結束: ${end}`);
+
         const isStarted = !start || todayStr >= start;
         const isNotExpired = !end || todayStr <= end;
 
         return isStarted && isNotExpired;
     });
 
-    // 如果過濾後沒有活動，則隱藏整個區塊
     if (activeEvents.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
         return;
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
-    // 🌟 使用過濾後的 activeEvents 進行渲染
     activeEvents.forEach(ev => {
-        // --- 容錯比對：確保標題與已報名清單一致 ---
+        // ... 原有的渲染邏輯 (forEach 內容不變) ...
         const regInfo = (registrations || []).find(reg => {
             const rTitle = reg.title || reg.eventTitle || "";
             return rTitle.toString().trim() === ev.title.toString().trim();
         });
         
-        // ... 以下渲染 HTML 的邏輯維持不變 ...
         const isRegistered = !!regInfo;
         const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是"); 
         
@@ -558,55 +553,34 @@ function renderEventSection(events, registrations) {
         const gFee = ev.guestFee || 0;
         const posterUrl = (ev.poster && ev.poster.includes('http')) ? getDirectImageUrl(ev.poster) : null;
 
-        let actionBtn = '';
-        if (isRegistered) {
-            const btnText = isCheckedIn ? '已完成報到' : '已報名成功';
-            const btnIcon = isCheckedIn ? 'fa-user-check' : 'fa-check-circle';
-            actionBtn = `
-                <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
-                    <i class="fas ${btnIcon} mr-2"></i>${btnText}
-                </button>`;
-        } else {
-            actionBtn = `
-                <button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
-                        class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
-                    立即報名
-                </button>`;
-        }
+        let actionBtn = isRegistered 
+            ? `<button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
+                <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'} mr-2"></i>${isCheckedIn ? '已完成報到' : '已報名成功'}
+               </button>`
+            : `<button onclick="goToRegistration('${encodeURIComponent(ev.title)}')" 
+                class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
+                立即報名
+               </button>`;
 
-        let cardHtml = '';
-        if (posterUrl) {
-            cardHtml = `
-                <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
-                    <img src="${posterUrl}" class="w-full h-auto block" onerror="this.style.display='none'">
-                    <div class="p-6">
-                        <h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>
-                        ${actionBtn}
-                    </div>
-                </div>`;
-        } else {
-            cardHtml = `
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
-                        <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || '額滿為止'}</span>
-                    </div>
-                    <h4 class="font-black text-emerald-900 text-xl mb-3">${ev.title}</h4>
-                    
-                    <div class="space-y-3 mb-5 text-gray-600">
-                        <div class="flex items-center gap-3 text-xs">
-                            <i class="far fa-calendar-alt text-emerald-600"></i>
-                            <span class="font-bold">日期：</span>${ev.eventDate || '另行通知'}
-                        </div>
-                        <div class="flex items-center gap-3 text-xs">
-                            <i class="fas fa-tag text-emerald-600"></i>
-                            <span class="font-bold">費用：</span>會員 $${mFee} / 非會員 $${gFee}
-                        </div>
-                        ${ev.desc ? `<p class="text-xs text-emerald-700/70 leading-relaxed mb-4 bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">${ev.desc.replace(/\n/g, '<br>')}</p>` : ''}
-                    </div>
-                    ${actionBtn}
-                </div>`;
-        }
+        const cardHtml = posterUrl 
+            ? `<div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
+                <img src="${posterUrl}" class="w-full h-auto block">
+                <div class="p-6"><h4 class="font-black text-emerald-900 text-lg mb-3">${ev.title}</h4>${actionBtn}</div>
+               </div>`
+            : `<div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
+                    <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || '額滿為止'}</span>
+                </div>
+                <h4 class="font-black text-emerald-900 text-xl mb-3">${ev.title}</h4>
+                <div class="space-y-3 mb-5 text-gray-600 text-xs">
+                    <div><i class="far fa-calendar-alt text-emerald-600 mr-2"></i><b>日期：</b>${ev.eventDate || '另行通知'}</div>
+                    <div><i class="fas fa-tag text-emerald-600 mr-2"></i><b>費用：</b>會員 $${mFee} / 非會員 $${gFee}</div>
+                    ${ev.desc ? `<p class="text-emerald-700/70 leading-relaxed bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">${ev.desc.replace(/\n/g, '<br>')}</p>` : ''}
+                </div>
+                ${actionBtn}
+               </div>`;
+        
         container.insertAdjacentHTML('beforeend', cardHtml);
     });
 }    

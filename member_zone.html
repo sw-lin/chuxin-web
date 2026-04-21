@@ -514,19 +514,43 @@ function renderEventSection(events, registrations) {
     
     container.innerHTML = '';
 
-    if (!events || events.length === 0) {
+    // --- 🌟 新增：日期判斷過濾邏輯 🌟 ---
+    const now = new Date();
+    // 取得今天日期字串 (格式：2026-04-21)
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // 過濾掉不符合展示期的活動
+    const activeEvents = (events || []).filter(ev => {
+        // 假設資料庫傳來的欄位名稱為 startDate (B欄) 與 endDate (C欄)
+        // 請確認您的 GAS 後端 JSON Key 是否為這兩個名稱
+        const start = ev.startDate || ""; 
+        const end = ev.endDate || "";
+
+        // 判斷邏輯：
+        // 1. 如果沒有設定開始日期，視為已開始
+        // 2. 如果沒有設定結束日期，視為不限時
+        const isStarted = !start || todayStr >= start;
+        const isNotExpired = !end || todayStr <= end;
+
+        return isStarted && isNotExpired;
+    });
+
+    // 如果過濾後沒有活動，則隱藏整個區塊
+    if (activeEvents.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
         return;
     }
     if (wrapper) wrapper.classList.remove('hidden');
 
-    events.forEach(ev => {
+    // 🌟 使用過濾後的 activeEvents 進行渲染
+    activeEvents.forEach(ev => {
         // --- 容錯比對：確保標題與已報名清單一致 ---
         const regInfo = (registrations || []).find(reg => {
             const rTitle = reg.title || reg.eventTitle || "";
             return rTitle.toString().trim() === ev.title.toString().trim();
         });
-
+        
+        // ... 以下渲染 HTML 的邏輯維持不變 ...
         const isRegistered = !!regInfo;
         const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是"); 
         
@@ -578,18 +602,13 @@ function renderEventSection(events, registrations) {
                             <i class="fas fa-tag text-emerald-600"></i>
                             <span class="font-bold">費用：</span>會員 $${mFee} / 非會員 $${gFee}
                         </div>
-                        
-                ${ev.desc ? `
-                 <p class="text-xs text-emerald-700/70 leading-relaxed mb-4 bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">
-                ${ev.desc.replace(/\n/g, '<br>')}
-                </p>` : ''}
-                
+                        ${ev.desc ? `<p class="text-xs text-emerald-700/70 leading-relaxed mb-4 bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">${ev.desc.replace(/\n/g, '<br>')}</p>` : ''}
                     </div>
                     ${actionBtn}
                 </div>`;
         }
         container.insertAdjacentHTML('beforeend', cardHtml);
-    }); // <-- 就是這裡漏掉了閉合括號！
+    });
 }    
 // 獨立的跳轉函式 (保持單純)
 function goToRegistration(title) {

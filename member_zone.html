@@ -213,6 +213,42 @@
         </form>
     </div>
 </div>
+<div id="staffKeyModal" class="modal-overlay">
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div class="p-6 bg-emerald-800 text-white flex justify-between items-center">
+            <h3 class="font-black tracking-widest">幹部權限驗證</h3>
+            <button onclick="closeStaffKeyModal()" class="text-white/60 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form onsubmit="submitStaffKey(); return false;" class="p-8 space-y-6">
+            <input type="hidden" name="username" autocomplete="username" value="Chuxin_Staff_Key">
+            
+            <div>
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1 uppercase tracking-tighter">Staff Access Key</label>
+                <input type="password" 
+                       id="modalStaffKey" 
+                       name="password" 
+                       autocomplete="current-password" 
+                       required
+                       class="w-full px-5 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-600 outline-none text-center text-lg font-bold tracking-widest" 
+                       placeholder="••••••">
+            </div>
+
+            <div class="bg-emerald-50 p-4 rounded-2xl flex items-start gap-3">
+                <i class="fas fa-shield-alt text-emerald-600 mt-1"></i>
+                <p class="text-[10px] text-emerald-700 leading-relaxed font-medium">
+                    驗證成功後，系統將授權開啟管理後台。您可以讓手機記住此金鑰，下次即可透過指紋或臉部辨識快速登入。
+                </p>
+            </div>
+            
+            <button type="submit" id="staffSubmitBtn" class="w-full py-4 bg-emerald-800 text-white rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all">
+                確認驗證
+            </button>
+        </form>
+    </div>
+</div>    
 <script>
 // ==========================================
 // 1. 全域變數與基礎設定 (保留核心)
@@ -669,11 +705,33 @@ function getDirectImageUrl(url) {
     return url; // 若都失敗則回傳原始網址嘗試直接載入
 }    
 // 保留進入工作人員模式功能
-async function enterStaffMode() {   
-    const staffKey = prompt("請輸入幹部管理金鑰：");
+// 1. 改為開啟 Modal 而非 prompt
+function enterStaffMode() {
+    const modal = document.getElementById('staffKeyModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('modalStaffKey').focus();
+    }
+}
+
+// 2. 關閉 Modal
+function closeStaffKeyModal() {
+    document.getElementById('staffKeyModal').style.display = 'none';
+}
+
+// 3. 處理表單送出
+async function submitStaffKey() {
+    const keyInput = document.getElementById('modalStaffKey');
+    const submitBtn = document.getElementById('staffSubmitBtn');
+    const staffKey = keyInput.value.trim();
+
     if (!staffKey) return;
 
-    // 從當前登入的會員資料中抓取職稱 (C欄)
+    // UI 狀態回饋
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>驗證中...';
+
+    // 從當前登入的會員資料中抓取職稱
     const infoStr = sessionStorage.getItem('userInfo');
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
     const currentTitle = userInfo ? userInfo.title : "一般幹部";
@@ -683,34 +741,35 @@ async function enterStaffMode() {
             method: 'POST',
             body: JSON.stringify({
                 type: 'verify_staff_key',
-                staffKey: staffKey.trim(),
-                userTitle: currentTitle // 👈 把職稱傳給後端去查 Config
+                staffKey: staffKey,
+                userTitle: currentTitle
             })
         });
 
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-        // 關鍵：直接用一開始 prompt 拿到的那個變數 staffKey
-            const finalKey = staffKey.trim(); 
-            
-            console.log("準備存入的金鑰：", finalKey); // 偵錯用
-            
             // 存入 Session
-            sessionStorage.setItem('staffKey', finalKey); 
+            sessionStorage.setItem('staffKey', staffKey); 
             sessionStorage.setItem('userTitle', result.userTitle);
             sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
-
-            // 強制檢查一次，如果這裡印出來是空的，代表變數拿錯了
-     //       alert("驗證成功！\n職稱：" + result.userTitle + "\n權限清單：" + JSON.stringify(result.permissions));
             
-            window.location.href = 'staff_menu.html';
+            showToast("驗證成功，正在跳轉...", "success");
+            
+            // 延遲跳轉，讓瀏覽器有時間彈出「是否儲存密碼」的提示
+            setTimeout(() => {
+                window.location.href = 'staff_menu.html';
+            }, 500);
         } else {
-            alert(result.message || "金鑰不正確");
+            showToast(result.message || "金鑰不正確", "error");
+            keyInput.value = "";
         }
     } catch (e) {
         console.error(e);
-        alert("驗證出錯：" + e.message);
+        showToast("系統繁忙，請稍後再試", "error");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "確認驗證";
     }
 }    
     // 核心：控制載入中遮罩

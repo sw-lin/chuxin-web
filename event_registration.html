@@ -10,9 +10,15 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        .input-group { @apply mb-4 bg-white p-5 rounded-2xl border border-emerald-50 shadow-sm; }
-        .label-text { @apply block text-xs font-black text-emerald-800 mb-2 ml-1; }
-        .input-field { @apply w-full px-4 py-4 bg-gray-50 rounded-xl outline-none text-base border-2 border-transparent transition-all; }
+        /* 修改後的樣式定義 */
+        .input-group { @apply mb-6 bg-white p-6 rounded-[1.5rem] border border-emerald-100 shadow-sm; }
+        /* Label 調大到 14px 且加粗 */
+        .label-text { @apply block text-sm font-black text-emerald-900 mb-3 ml-1; }
+        /* Input 文字調大到 18px (text-lg) 並增加高度 */
+        .input-field { @apply w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none text-lg font-bold border-2 border-transparent transition-all; }        
+        /* 錯誤提示也調大一點 */
+        .error-hint { @apply text-xs text-red-500 mt-2 font-bold ml-1; }
+        
         /* 錯誤狀態樣式 */
         .input-error { border-color: #ef4444 !important; background-color: #fef2f2; }
         .hidden { display: none !important; }
@@ -77,13 +83,13 @@
             <div id="mainIDSection" class="input-group hidden">
                 <label class="label-text">身分證字號 (保險使用)</label>
                 <input type="text" id="mainID" class="input-field uppercase" placeholder="請輸入身分證字號" onblur="validateField(this)">
-                <p class="error-hint text-red-500 text-[10px] mt-1 font-bold hidden">身分證格式或邏輯錯誤</p>
+                <p class="error-hint hidden">⚠️ 身分證格式或邏輯錯誤</p>
             </div>
 
             <div id="mainBirthdaySection" class="input-group hidden">
-                <label class="label-text">出生年月日</label>
-                <input type="date" id="mainBirthday" class="input-field">
-            </div>
+               <label class="label-text">出生年月日</label>
+               <input type="date" id="mainBirthday" class="input-field text-lg">
+             </div>
             
             <div class="input-group">
                 <label class="label-text">餐食選擇</label>
@@ -115,14 +121,14 @@
                     <div class="w-2 h-6 bg-orange-500 rounded-full"></div>
                     <h3 class="font-black text-emerald-900 text-xl">攜伴參加</h3>
                 </div>
-                <div class="flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-xl shadow-sm">
-                    <span class="text-[10px] font-black text-emerald-700">攜伴人數</span>
-                    <select id="partnerCountSelect" onchange="adjustPartnerFields()" class="bg-transparent font-black text-emerald-700 outline-none">
-                        <option value="0">0 位</option>
-                        <option value="1">1 位</option>
-                        <option value="2">2 位</option>
-                        <option value="3">3 位</option>
-                    </select>
+                <div class="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl shadow-sm">
+                   <span class="text-sm font-black text-emerald-700">攜伴人數</span>
+                      <select id="partnerCountSelect" onchange="adjustPartnerFields()" class="bg-transparent font-black text-lg text-emerald-700 outline-none">
+                         <option value="0">0 位</option>
+                         <option value="1">1 位</option>
+                         <option value="2">2 位</option>
+                         <option value="3">3 位</option>
+                     </select>
                 </div>
             </div>
             <div id="partnerContainer" class="space-y-4"></div>
@@ -140,16 +146,16 @@
     </form>
 </main>
 
-<div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 p-6 flex items-center justify-between z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 p-6 flex items-center justify-between z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
     <div>
-        <div class="text-xs text-gray-400 font-black uppercase tracking-wider">預計總金額</div>
-        <div class="text-3xl font-black text-emerald-900">$ <span id="totalAmount">0</span></div>
+        <div class="text-sm text-gray-500 font-black uppercase tracking-wider">總金額</div>
+        <div class="text-4xl font-black text-emerald-900">$ <span id="totalAmount">0</span></div>
     </div>
-    <button onclick="submitForm(event)" class="bg-emerald-700 text-white px-10 py-5 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-all">
-        確認送出報名
+    <button onclick="submitForm(event)" class="bg-emerald-700 text-white px-8 py-5 rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all">
+        確認送出
     </button>
 </div>
-
+    
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
     
@@ -276,17 +282,18 @@
             }
         }
 
-        const idHtml = eventConfig.needId ? `
-            <div>
-                <label class="text-[10px] font-bold text-emerald-800 ml-1">身分證字號</label>
-                <input type="text" placeholder="身分證字號" class="partner-id input-field uppercase" onblur="validateField(this)">
-                <p class="error-hint text-red-500 text-[10px] mt-1 font-bold hidden">格式錯誤</p>
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-emerald-800 ml-1">出生年月日</label>
-                <input type="date" class="partner-birthday input-field">
-            </div>
-        ` : "";
+// 修改 adjustPartnerFields 內的 idHtml 變數
+  const idHtml = eventConfig.needId ? `
+    <div class="mt-2">
+        <label class="label-text">身分證字號</label>
+        <input type="text" placeholder="訪客身分證字號" class="partner-id input-field uppercase" onblur="validateField(this)">
+        <p class="error-hint hidden">⚠️ 格式錯誤</p>
+    </div>
+    <div class="mt-2">
+        <label class="label-text">出生年月日</label>
+        <input type="date" class="partner-birthday input-field">
+    </div>
+  ` : "";
         
         let newHtml = "";
         for (let i = 0; i < count; i++) {

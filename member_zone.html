@@ -818,6 +818,13 @@ function openProfileModal() {
     const modal = document.getElementById('profileModal');
     if (!modal) return;
     
+    // 關鍵新增：將電話號碼填入隱藏欄位，讓瀏覽器識別這是誰的帳號
+    // 假設您的 currentUser 物件裡存電話的屬性名稱是 phone (請根據實際情況調整)
+    const usernameInput = document.getElementById('editUsername');
+    if (usernameInput) {
+        usernameInput.value = currentUser.phone || ""; 
+    }
+    
     // 從當前登入資訊讀取 Email
     document.getElementById('editEmail').value = currentUser.email || "";
     document.getElementById('newPassword').value = ""; // 清空新密碼框
@@ -825,7 +832,6 @@ function openProfileModal() {
     
     modal.style.display = 'flex';
 }
-
 function closeProfileModal() {
     document.getElementById('profileModal').style.display = 'none';
 }

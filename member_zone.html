@@ -731,14 +731,19 @@ async function executeStaffVerify() {
     const keyInput = document.getElementById('finalStaffKeyInput');
     const staffKey = keyInput ? keyInput.value.trim() : "";
     
-    // --- 增加：空值阻擋 ---
+    // 1. 阻擋空值
     if (!staffKey) {
         alert("請輸入金鑰");
         return;
     }
 
-    // 顯示轉圈圈 (如果您頁面上有這個元件)
-    const loading = document.getElementById('loading');
+    // 2. 從當前登入的會員資料中抓取職稱 (C欄)
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    const currentTitle = userInfo ? userInfo.title : "一般幹部";
+
+    // 3. 顯示轉圈圈
+    const loading = document.getElementById('loadingOverlay');
     if (loading) loading.style.display = 'flex';
 
     try {
@@ -746,26 +751,32 @@ async function executeStaffVerify() {
             method: 'POST',
             body: JSON.stringify({
                 type: 'verify_staff_key',
-                staffKey: staffKey
+                staffKey: staffKey,
+                userTitle: currentTitle // 👈 把職稱傳給後端去查權限
             })
         });
 
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 驗證成功，存入 session 並跳轉
+            // 🌟 關鍵修復：把遺漏的「職稱」與「權限清單」存回 Session 中！
             sessionStorage.setItem('staffKey', staffKey); 
+            sessionStorage.setItem('userTitle', result.userTitle);
+            sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
+            
+            // 跳轉至後台
             window.location.href = 'staff_menu.html';
         } else {
-            // --- 核心修正：當金鑰錯誤時，給予明確提示 ---
+            // 金鑰錯誤提示
             alert("❌ 金鑰錯誤：請重新輸入，或聯繫管理員確認。");
-            keyInput.value = ""; // 清空輸入框
-            keyInput.focus();    // 重新聚焦，方便再次輸入
+            keyInput.value = ""; 
+            keyInput.focus();    
         }
     } catch (e) {
         console.error("驗證出錯：", e);
         alert("系統連線異常，請檢查網路後再試一次。");
     } finally {
+        // 關閉轉圈圈
         if (loading) loading.style.display = 'none';
     }
 }    

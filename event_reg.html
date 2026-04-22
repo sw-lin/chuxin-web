@@ -233,8 +233,12 @@
 
             <div id="reg_insurance_zone" class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
-                    <input type="text" id="reg_id" class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-none" placeholder="保險用">
+                  <label class="text-[10px] font-bold text-emerald-600 ml-2">身分證號</label>
+                  <input type="text" id="reg_id" 
+                      class="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border-2 border-transparent transition-all focus:ring-2 focus:ring-emerald-500 uppercase" 
+                      placeholder="保險用" 
+                      onblur="validateStaffIDField(this)">
+                  <p id="reg_id_error" class="text-[10px] text-red-500 font-bold ml-2 mt-1 hidden">身分證格式或邏輯錯誤</p>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-emerald-600 ml-2">出生年月日</label>
@@ -907,19 +911,31 @@ async function saveSingleReg() {
     const rawId = document.getElementById('reg_id').value;
     const idCard = toHalfWidth(rawId).toUpperCase().trim();
 
-    // 確保人數不小於 0
-let seatValue = parseInt(document.getElementById('reg_seats').value) || 0;
-if (seatValue < 0) seatValue = 0;
-    
+    // 1. 基本必填檢查
     if (!name || !phone) {
         return showToast("⚠️ 姓名與電話為必填");
     }
 
-    if (needId && !idCard) {
-        return showToast("⚠️ 此活動需要身分證字號，請務必輸入");
+    // 2. 身分證檢查邏輯 (關鍵修改)
+    if (needId) {
+        if (!idCard) {
+            return showToast("⚠️ 此活動需要身分證字號，請務必輸入");
+        }
+        if (!isValidTaiwanID(idCard)) {
+            // 強制標示錯誤紅框並聚焦
+            const idInput = document.getElementById('reg_id');
+            idInput.classList.add('border-red-500');
+            document.getElementById('reg_id_error').classList.remove('hidden');
+            idInput.focus();
+            return showToast("⚠️ 身分證字號格式或邏輯有誤，請重新檢查");
+        }
     }
 
-    // --- 🌟 修改重點：新增 regTime 欄位 ---
+    // 確保人數不小於 0
+    let seatValue = parseInt(document.getElementById('reg_seats').value) || 0;
+    if (seatValue < 0) seatValue = 0;
+    
+    // --- 封裝 Payload ---
     const payload = {
         type: 'save_single_registration',
         key: sessionStorage.getItem('staffKey'),
@@ -930,14 +946,15 @@ if (seatValue < 0) seatValue = 0;
         diet: document.getElementById('reg_diet').value,
         isMember: document.getElementById('reg_is_member').value,
         idCard: idCard,
-        birthday: document.getElementById('reg_birthday').value, // 🌟 新增這一行
+        birthday: document.getElementById('reg_birthday').value,
         note: document.getElementById('reg_note').value,
         transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
-        seats: isTourBus ? 0 : seatValue, // 使用處理過的 seatValue
+        seats: isTourBus ? 0 : seatValue,
         isPaid: "未繳",
-        regTime: new Date().toLocaleString('zh-TW', { hour12: false }) // 🌟 新增：帶入當前時間 (M欄)
+        regTime: new Date().toLocaleString('zh-TW', { hour12: false })
     };
 
+    // ... 後續 fetch 流程保持不變 ...
     showLoading(true);
     try {
         const res = await fetch(GAS_URL, { 
@@ -1553,6 +1570,50 @@ function sendCarpoolToLine() {
         .finally(() => {
             showLoading(false);
         });
+    }
+}  
+// 台灣身分證邏輯校驗
+function isValidTaiwanID(id) {
+    if (!id) return false;
+    id = id.trim().toUpperCase();
+    const regex = /^[A-Z][1289]\d{8}$/;
+    if (!regex.test(id)) return false;
+
+    const mapping = {
+        A:10, B:11, C:12, D:13, E:14, F:15, G:16, H:17, I:34, J:18, K:19, L:20, M:21,
+        N:22, O:35, P:23, Q:24, R:25, S:26, T:27, U:28, V:29, W:32, X:30, Y:31, Z:33
+    };
+    const val = mapping[id[0]];
+    let sum = Math.floor(val / 10) + (val % 10) * 9;
+    for (let i = 1; i <= 8; i++) {
+        sum += parseInt(id[i]) * (9 - i);
+    }
+    sum += parseInt(id[9]);
+    return sum % 10 === 0;
+}
+
+// UI 即時回饋函式
+function validateStaffIDField(input) {
+    const errorMsg = document.getElementById('reg_id_error');
+    const val = input.value.trim();
+    
+    if (!val) {
+        input.classList.remove('border-red-500');
+        errorMsg.classList.add('hidden');
+        return true;
+    }
+
+    if (isValidTaiwanID(val)) {
+        input.classList.remove('border-red-500');
+        input.classList.add('border-emerald-500');
+        errorMsg.classList.add('hidden');
+        input.value = val.toUpperCase();
+        return true;
+    } else {
+        input.classList.add('border-red-500');
+        input.classList.remove('border-emerald-500');
+        errorMsg.classList.remove('hidden');
+        return false;
     }
 }        
     </script>

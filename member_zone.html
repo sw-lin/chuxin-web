@@ -731,45 +731,44 @@ async function executeStaffVerify() {
     const keyInput = document.getElementById('finalStaffKeyInput');
     const staffKey = keyInput ? keyInput.value.trim() : "";
     
+    // --- 增加：空值阻擋 ---
     if (!staffKey) {
-        showToast("請輸入金鑰", "error");
+        alert("請輸入金鑰");
         return;
     }
 
-    const infoStr = sessionStorage.getItem('userInfo');
-    const userInfo = infoStr ? JSON.parse(infoStr) : null;
-    const currentTitle = userInfo ? userInfo.title : "一般幹部";
-
-    showLoading(true);
+    // 顯示轉圈圈 (如果您頁面上有這個元件)
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'flex';
 
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'verify_staff_key',
-                staffKey: staffKey,
-                userTitle: currentTitle
+                staffKey: staffKey
             })
         });
 
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
+            // 驗證成功，存入 session 並跳轉
             sessionStorage.setItem('staffKey', staffKey); 
-            sessionStorage.setItem('userTitle', result.userTitle);
-            sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
-            
-            showToast("驗證成功", "success");
-            setTimeout(() => { window.location.href = 'staff_menu.html'; }, 1000);
+            window.location.href = 'staff_menu.html';
         } else {
-            showToast(result.message || "金鑰不正確", "error");
+            // --- 核心修正：當金鑰錯誤時，給予明確提示 ---
+            alert("❌ 金鑰錯誤：請重新輸入，或聯繫管理員確認。");
+            keyInput.value = ""; // 清空輸入框
+            keyInput.focus();    // 重新聚焦，方便再次輸入
         }
     } catch (e) {
-        showToast("驗證出錯", "error");
+        console.error("驗證出錯：", e);
+        alert("系統連線異常，請檢查網路後再試一次。");
     } finally {
-        showLoading(false);
+        if (loading) loading.style.display = 'none';
     }
-}   
+}    
     // 核心：控制載入中遮罩
 function showLoading(show) {
     const overlay = document.getElementById('loadingOverlay');

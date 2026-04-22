@@ -99,29 +99,17 @@
                 <p class="text-amber-800 text-xs font-bold italic">歡迎訪客！輸入 <b>guest</b> 即可免密碼進入。</p>
             </div>
         </div>
-    <form onsubmit="handleLogin(); return false;" class="space-y-4">
-    <label for="userPhone" class="sr-only">帳號</label>
-    <input type="text" 
-           id="userPhone" 
-           name="username" 
-           autocomplete="username" 
-           spellcheck="false"
+<form onsubmit="handleLogin(); return false;" class="space-y-4">
+    <input type="text" id="userPhone" name="username" autocomplete="username" 
            placeholder="手機號碼 或 guest" 
            class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none font-bold">
     
-    <label for="userPass" class="sr-only">密碼</label>
-    <input type="password" 
-           id="userPass" 
-           name="password" 
-           autocomplete="current-password" 
+    <input type="password" id="userPass" name="password" autocomplete="current-password" 
            placeholder="登入密碼" 
            class="w-full px-6 py-4 bg-gray-50 rounded-2xl outline-none">
     
-    <button type="submit" id="loginBtn" 
-            class="w-full bg-emerald-800 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 shadow-xl transition-all active:scale-95">
-        確認進入
-    </button>
-    </form>        
+    <button type="submit" id="loginBtn" class="...">確認進入</button>
+</form>        
     </div>
 </div>
 <script>
@@ -304,33 +292,9 @@ async function handleLogin() {
         btn.innerText = "確認進入";
     }
 }
-    
-async function openLogin() { 
-    const modal = document.getElementById('loginModal');
-    modal.style.display = 'flex'; 
-
-    // --- 嘗試主動喚起系統密碼箱 ---
-    if (navigator.credentials && navigator.credentials.get) {
-        try {
-            // mediation: 'optional' 會嘗試靜默填入，若失敗則不動作
-            // 如果改用 'required'，會強制彈出系統選擇視窗
-            const cred = await navigator.credentials.get({
-                password: true,
-                mediation: 'optional' 
-            });
-            if (cred) {
-                document.getElementById('userPhone').value = cred.id;
-                document.getElementById('userPass').value = cred.password;
-                // 選完後自動聚焦到按鈕，引導使用者點擊
-                document.getElementById('loginBtn').focus();
-            }
-        } catch (e) {
-            console.log("憑證處理取消", e);
-        }
-    }
-}
-
-    
+function openLogin() { 
+    document.getElementById('loginModal').style.display = 'flex'; 
+}    
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
 window.onload = initData;        
 </script>

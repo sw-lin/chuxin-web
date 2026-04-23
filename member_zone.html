@@ -368,6 +368,8 @@ function showLearningHistory() {
     const container = document.getElementById('historyList');
     if (!modal || !container) return;
 
+    // 🌟 關鍵修正：從 sessionStorage 取得登入時存入的資料
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
     const logs = window.currentAttendedData || [];
 
     if (logs.length === 0) {

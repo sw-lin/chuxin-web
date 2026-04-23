@@ -329,62 +329,56 @@ async function syncData() {
 function updateUI(user, calendar, events, registrations) {
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. 計算數據
+    // 🌟 修正 1：直接使用我們從登入端帶來的 attendedLogs
+    const logs = user.attendedLogs || []; 
+    const attendCount = logs.length;
+
+    // 計算參與率 (維持原有邏輯，但使用新的 attendCount)
     const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
     const totalEvents = requiredPastEvents.length;
-    const attendCount = (user.attendLog || []).length;
     const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 2. 填入 HTML
+    // 2. 填入 HTML (保持不變)
     const percentElem = document.getElementById('attPercent');
     const countDisplayElem = document.getElementById('attCountDisplay');
-    
     if (percentElem) percentElem.innerText = attendanceRate + '%';
     if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
 
-    // --- 參與率超過 50% 放煙火 ---
+    // --- 煙火邏輯 ---
     if (attendanceRate >= 50 && typeof confetti === 'function') {
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#064E3B', '#059669', '#10B981']
-        });
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#059669', '#10B981'] });
     }
 
-    // 3. 儲存數據供學習歷程 Modal 使用
-    window.currentAttendedData = (calendar || []).filter(ev => 
-        (user.attendLog || []).some(log => String(log).includes(ev.title))
-    );
+    // 🌟 修正 3：【最關鍵】不要再用 filter 比對了，直接賦值
+    // 這樣 showLearningHistory 點開時，看到的就會是後端傳來的那三筆
+    window.currentAttendedData = logs; 
 
     renderCalendarActivity(calendar);
-    
-    // 【關鍵修正】直接使用傳入的參數，拿掉 data. 前綴
     renderEventSection(events || [], registrations || []);
 }    
 // 點擊卡片觸發的函式
 function showLearningHistory() {
-    const modal = document.getElementById('historyModal'); // 確保您的 HTML 有這個 Modal ID
+    const modal = document.getElementById('historyModal');
     const container = document.getElementById('historyList');
     if (!modal || !container) return;
 
-    // 🌟 關鍵修正：從 sessionStorage 取得登入時存入的資料
-    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    // 直接讀取剛才在 updateUI 中存入的資料
     const logs = window.currentAttendedData || [];
 
     if (logs.length === 0) {
         const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-        const debugMsg = userInfo.debug || "無偵錯資訊";
+        // 增加一個明確的提示，方便我們確認是哪裡空了
+        const debugMsg = (userInfo.attendedLogs && userInfo.attendedLogs.length > 0) ? "資料未成功傳遞至全域變數" : "登入時即無紀錄";
         
         container.innerHTML = `
             <div class="text-center py-10">
                 <i class="fas fa-calendar-check text-gray-200 text-5xl mb-3"></i>
                 <p class="text-gray-400">目前尚無出席紀錄</p>
-                <p class="text-[10px] text-red-400 mt-4 px-4 break-all font-mono">系統診斷：${debugMsg}</p>
+                <p class="text-[10px] text-red-400 mt-4 px-4 break-all font-mono">診斷：${debugMsg}</p>
             </div>`; 
-    }else {
+    } else {
         container.innerHTML = logs.map(log => `
-            <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+            <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 mb-3">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
                         <i class="fas fa-check-circle"></i>
@@ -401,8 +395,7 @@ function showLearningHistory() {
 
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
-}
-    
+}    
 window.onload = function() {
     const params = new URLSearchParams(window.location.search);
     const title = params.get('event');

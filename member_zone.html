@@ -267,7 +267,7 @@ async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'flex';
     
-    // 1. 從 Session 取得手機號碼 (修正變數名稱)
+    // 1. 從 Session 取得手機號碼
     const infoStr = sessionStorage.getItem('userInfo'); 
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
     
@@ -278,66 +278,97 @@ async function syncData() {
     }
 
     try {
-        // 2. 向 GAS 請求初始化資料
+        // 2. 向 GAS 請求初始化資料 (加上時間戳避免快取)
         const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.json();
         
         if (data.result === "SUCCESS") {
-            // 3. 同步資料到全域變數，供 Modal 使用
+            // --- A. 載入全域 Config (供客服/問卷連結使用) ---
+            globalConfig = data.config || {}; 
+            console.log("全域設定已載入:", globalConfig);
+
+            // --- B. 公告顯示邏輯 (時限控制) ---
+            const newsContent = data.news ? data.news.trim() : "";
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            // 判斷今天是否在公告開始與結束時間內
+            const isDateValid = (!data.startDate || todayStr >= data.startDate) && (!data.endDate || todayStr <= data.endDate);
+            
+            const newsContainer = document.getElementById('newsContainer');
+            if (newsContent && newsContent !== "NONE" && isDateValid) {
+                if (newsContainer) newsContainer.classList.remove('hidden');
+                const newsElem = document.getElementById('news');
+                if (newsElem) newsElem.innerText = newsContent;
+            } else {
+                if (newsContainer) newsContainer.classList.add('hidden');
+            }
+
+            // --- C. 同步使用者狀態與出席紀錄 ---
             currentUser = data.user;
             currentUser.phone = userInfo.phone;
             
-            // 🌟 這一行最關鍵：把出席紀錄塞進全域變數
+            // 🌟 重要：確保讀取 GAS 回傳的 attendedLogs (複數)
             window.currentAttendedData = data.user.attendedLogs || [];
 
-            // 4. 更新 UI 畫面與其它配置
-            globalConfig = data.config || {}; 
+            // --- D. 幹部模式按鈕開關 ---
+            const staffBtn = document.getElementById('staffBtn');
+            if (staffBtn) {
+                if (data.user.role && data.user.role !== "學員") {
+                    staffBtn.classList.remove('hidden');
+                    staffBtn.onclick = enterStaffMode; // 確保你有定義這個 function
+                } else {
+                    staffBtn.classList.add('hidden');
+                }
+            }
+
+            // --- E. 存入活動快取並更新 UI ---
             if (data.events) {
                 localStorage.setItem('allEvents', JSON.stringify(data.events));
             }
+            
             updateUI(data.user, data.calendar, data.events, data.registrations);
         }
     } catch (e) {
         console.error("同步失敗:", e);
+        if (typeof showToast === 'function') showToast("同步失敗: " + e.message, "error");
     } finally {
         if (overlay) overlay.style.display = 'none';
     }
 }    
-// 增加 registrations 作為第四個參數
 function updateUI(user, calendar, events, registrations) {
     const today = new Date().toISOString().split('T')[0];
     
-    // 🛑 除錯點 D：確認傳入 updateUI 的 user 物件長什麼樣
-    console.log("updateUI 接收到的 user 物件:", user);
-    
-    // 🌟 修正 1：直接使用我們從登入端帶來的 attendedLogs
+    // 1. 抓取出席紀錄 (確保對應 GAS 修正後的欄位)
     const logs = user.attendedLogs || []; 
     const attendCount = logs.length;
 
-    // 計算參與率 (維持原有邏輯，但使用新的 attendCount)
+    // 2. 計算參與率
     const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
     const totalEvents = requiredPastEvents.length;
     const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 2. 填入 HTML (保持不變)
+    // 3. 填入畫面上方的卡片數據
     const percentElem = document.getElementById('attPercent');
     const countDisplayElem = document.getElementById('attCountDisplay');
+    const nameElem = document.getElementById('userName');
+
     if (percentElem) percentElem.innerText = attendanceRate + '%';
     if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
+    if (nameElem) nameElem.innerText = user.name || "會員";
 
-    // --- 煙火邏輯 ---
+    // --- 煙火慶祝 ---
     if (attendanceRate >= 50 && typeof confetti === 'function') {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#059669', '#10B981'] });
     }
 
-    // 🌟 修正 3：【最關鍵】不要再用 filter 比對了，直接賦值
-    // 這樣 showLearningHistory 點開時，看到的就會是後端傳來的那三筆
+    // --- 儲存全域變數供學習歷程 Modal 使用 ---
     window.currentAttendedData = logs; 
 
-    renderCalendarActivity(calendar);
-    renderEventSection(events || [], registrations || []);
-}    
+    // 4. 渲染下方各個區塊
+    if (typeof renderCalendarActivity === 'function') renderCalendarActivity(calendar);
+    if (typeof renderEventSection === 'function') renderEventSection(events || [], registrations || []);
+}
 // 點擊卡片觸發的函式
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');

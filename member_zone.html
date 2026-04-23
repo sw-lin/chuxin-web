@@ -371,7 +371,6 @@ function showLearningHistory() {
     const logs = window.currentAttendedData || [];
 
     if (logs.length === 0) {
-      // 從 sessionStorage 抓出剛才存進去的 debug 訊息
         const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
         const debugMsg = userInfo.debug || "無偵錯資訊";
         
@@ -379,8 +378,9 @@ function showLearningHistory() {
             <div class="text-center py-10">
                 <i class="fas fa-calendar-check text-gray-200 text-5xl mb-3"></i>
                 <p class="text-gray-400">目前尚無出席紀錄</p>
+                <p class="text-[10px] text-red-400 mt-4 px-4 break-all font-mono">系統診斷：${debugMsg}</p>
             </div>`; 
-    } else {
+    }else {
         container.innerHTML = logs.map(log => `
             <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
                 <div class="flex items-center gap-3">

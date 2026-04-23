@@ -282,10 +282,10 @@ async function handleLogin() {
                 // 🌟 關鍵新增：一定要把 GAS 回傳的出席紀錄存進 sessionStorage
                 attendedLogs: result.attendedLogs ||[],
                 // 🛑 除錯點 B：新增一個診斷訊息存入緩存
-                debug: `Login時紀錄數: ${result.attendedLogs ? result.attendedLogs.length : 0}`,
-                // 加上這一行，彈出視窗會卡住畫面
-                alert("請檢查 Console 資料後再按確定跳轉");
+                debug: `Login時紀錄數: ${result.attendedLogs ? result.attendedLogs.length : 0}`                
         };
+            // 加上這一行，彈出視窗會卡住畫面
+                alert("請檢查 Console 資料後再按確定跳轉");
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
             // 判斷跳轉目標

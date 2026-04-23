@@ -266,6 +266,11 @@ async function handleLogin() {
             // 現在：強制設定為 true，讓判斷邏輯暫時失效
             // const isPaidStatus = true;
 
+            // 🛑 除錯點 A：確認 GAS 到底有沒有給資料
+            console.log("GAS 回傳原始資料:", result);
+            if (!result.attendedLogs || result.attendedLogs.length === 0) {
+                alert("警告：登入成功但後端回傳的出席紀錄是空的！");
+            }
             const userStore = {
                 result: "SUCCESS",
                 name: result.name,
@@ -275,8 +280,10 @@ async function handleLogin() {
                 staffKey: result.staffKey || "",
                 isPaid: isPaidStatus,
                 // 🌟 關鍵新增：一定要把 GAS 回傳的出席紀錄存進 sessionStorage
-                attendedLogs: result.attendedLogs || []
-            };
+                attendedLogs: result.attendedLogs || ],
+                // 🛑 除錯點 B：新增一個診斷訊息存入緩存
+                debug: `Login時紀錄數: ${result.attendedLogs ? result.attendedLogs.length : 0}`
+        };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
             // 判斷跳轉目標

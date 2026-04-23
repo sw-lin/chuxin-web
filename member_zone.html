@@ -267,43 +267,39 @@ async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'flex';
     
-    // 1. 取得當前手機號碼
-    const infoStr = sessionStorage.getItem('userInfo'); // 這裡定義為 infoStr
-    
-    // 🛑 修正點：確保 log 裡的變數名跟上面定義的一樣
-    console.log("DEBUG: SessionStorage 原始字串:", infoStr); 
-    
+    // 1. 從 Session 取得手機號碼 (修正變數名稱)
+    const infoStr = sessionStorage.getItem('userInfo'); 
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
     
     if (!userInfo || !userInfo.phone) {
-        console.error("錯誤：找不到手機號碼");
         if (overlay) overlay.style.display = 'none';
-        // window.location.href = 'index.html'; // 除錯期間可以先註解掉，避免一直跳轉
+        window.location.href = 'index.html'; 
         return;
     }
 
     try {
+        // 2. 向 GAS 請求初始化資料
         const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
-        console.log("DEBUG: 發送請求 URL:", url);
-        
         const res = await fetch(url);
         const data = await res.json();
         
-        console.log("=== GAS 回傳資料紀錄 ===");
-        console.log("Result:", data.result);
-        console.log("User Object:", data.user);
-        
         if (data.result === "SUCCESS") {
-            // 🌟 關鍵修正：將紀錄同步到全域變數與 currentUser
+            // 3. 同步資料到全域變數，供 Modal 使用
             currentUser = data.user;
             currentUser.phone = userInfo.phone;
+            
+            // 🌟 這一行最關鍵：把出席紀錄塞進全域變數
             window.currentAttendedData = data.user.attendedLogs || [];
 
-            // 更新 UI
+            // 4. 更新 UI 畫面與其它配置
+            globalConfig = data.config || {}; 
+            if (data.events) {
+                localStorage.setItem('allEvents', JSON.stringify(data.events));
+            }
             updateUI(data.user, data.calendar, data.events, data.registrations);
         }
     } catch (e) {
-        console.error("同步過程發生錯誤:", e);
+        console.error("同步失敗:", e);
     } finally {
         if (overlay) overlay.style.display = 'none';
     }

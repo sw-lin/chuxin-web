@@ -264,6 +264,7 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgN
 // 2. 資料同步核心：確保公告、權限、行事曆一個不漏
 // ==========================================
 async function syncData() {
+    console.log("=== 1. syncData 開始執行 ==="); // 👈 測試有沒有進門
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'flex';
     
@@ -272,80 +273,73 @@ async function syncData() {
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
     
     if (!userInfo || !userInfo.phone) {
+        console.error("❌ 找不到用戶電話，導回登入頁");
         if (overlay) overlay.style.display = 'none';
         window.location.href = 'index.html'; 
         return;
     }
 
     try {
-        // 2. 向 GAS 請求初始化資料 (加上時間戳避免快取)
+        console.log("=== 2. 向 GAS 請求資料中... ===");
         const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.json();
         
+        console.log("=== 3. 收到後端資料 ===", data); // 👈 看看後端到底傳了什麼
+
         if (data.result === "SUCCESS") {
-            // --- A. 載入全域 Config (供客服/問卷連結使用) ---
+            // --- A. Config ---
             globalConfig = data.config || {}; 
-            console.log("全域設定已載入:", globalConfig);
 
-            // --- B. 公告顯示邏輯 (加強格式相容性) ---
+            // --- B. 公告顯示邏輯 ---
             const newsContent = data.news ? data.news.trim() : "";
+            const isDateValid = true; // 🌟 暫時強制過關
             
-            // 取得今天的 YYYY-MM-DD
-            const now = new Date();
-            const todayStr = now.getFullYear() + '-' + 
-                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                           String(now.getDate()).padStart(2, '0');
-            
-            // 格式化後端傳來的日期，確保是 YYYY-MM-DD
-            const startLimit = data.startDate ? data.startDate.split('T')[0] : "";
-            const endLimit = data.endDate ? data.endDate.split('T')[0] : "";
-
-            // 判斷是否在有效期內：沒有設定時間視為有效，有設定則比對字串大小
-            const isAfterStart = !startLimit || todayStr >= startLimit;
-            const isBeforeEnd = !endLimit || todayStr <= endLimit;
-            // const isDateValid = isAfterStart && isBeforeEnd;
-            const isDateValid = true;
-            
-            console.log("公告比對:", { today: todayStr, start: startLimit, end: endLimit, valid: isDateValid });
+            console.log("公告內容檢查:", { newsContent, isDateValid });
 
             const newsContainer = document.getElementById('newsContainer');
             const newsElem = document.getElementById('news');
 
             if (newsContent && newsContent !== "NONE" && isDateValid) {
                 if (newsContainer) newsContainer.classList.remove('hidden');
-                if (newsElem) newsElem.innerText = newsContent; // 👈 確保這行有執行
+                if (newsElem) {
+                    newsElem.innerText = newsContent;
+                    console.log("✅ 公告已寫入 UI:", newsContent);
+                }
             } else {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
-            // --- C. 同步使用者狀態與出席紀錄 ---
-            currentUser = data.user;
-            currentUser.phone = userInfo.phone;
-            
-            // 🌟 重要：確保讀取 GAS 回傳的 attendedLogs (複數)
-            window.currentAttendedData = data.user.attendedLogs || [];
 
-            // --- D. 幹部模式按鈕開關 ---
+            // --- C. 同步使用者與出席紀錄 ---
+            currentUser = data.user || {};
+            currentUser.phone = userInfo.phone;
+            window.currentAttendedData = data.user ? (data.user.attendedLogs || []) : [];
+
+            // --- D. 幹部模式 ---
             const staffBtn = document.getElementById('staffBtn');
             if (staffBtn) {
-                if (data.user.role && data.user.role !== "學員") {
+                if (data.user && data.user.role !== "學員") {
                     staffBtn.classList.remove('hidden');
-                    staffBtn.onclick = enterStaffMode; // 確保你有定義這個 function
+                    staffBtn.onclick = enterStaffMode;
                 } else {
                     staffBtn.classList.add('hidden');
                 }
             }
 
-            // --- E. 存入活動快取並更新 UI ---
+            // --- E. 活動快取與更新 UI ---
             if (data.events) {
                 localStorage.setItem('allEvents', JSON.stringify(data.events));
             }
             
+            console.log("=== 4. 準備執行 updateUI ===");
             updateUI(data.user, data.calendar, data.events, data.registrations);
+            console.log("=== 5. syncData 流程全數完成 ===");
+
+        } else {
+            console.warn("後端回傳失敗:", data.error);
         }
     } catch (e) {
-        console.error("同步失敗:", e);
-        if (typeof showToast === 'function') showToast("同步失敗: " + e.message, "error");
+        console.error("❌ syncData 執行異常:", e);
     } finally {
         if (overlay) overlay.style.display = 'none';
     }
@@ -437,31 +431,49 @@ function showLearningHistory() {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }    
-// 修改 window.onload 確保 syncData 會跑
-window.onload = async function() {
-    console.log("網頁載入完成，開始執行初始化...");
+// 刪除原本重複的 window.onload 或 addEventListener，統一用這段
+window.addEventListener('load', async () => {
+    console.log("🚀 系統啟動：開始初始化資料...");
     
-    // 1. 先執行同步資料 (這會跑公告、出席率、更新 UI)
-    await syncData();
+    // 1. 檢查 Session 狀態
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) { 
+        console.warn("未偵測到登入資訊，導回首頁");
+        location.href = 'index.html'; 
+        return; 
+    }
     
-    // 2. 處理從報名頁面傳來的參數 (你原本的邏輯)
+    // 2. 先用快取的資料顯示姓名（優化視覺體驗）
+    const tempUser = JSON.parse(userStr);
+    const nameElem = document.getElementById('userName');
+    if(nameElem) nameElem.innerText = tempUser.name || "載入中...";
+    
+    // 3. 執行非同步同步 (內部會更新公告、出席率、全域變數)
+    try {
+        await syncData();
+        console.log("✅ syncData 執行完成");
+    } catch (err) {
+        console.error("❌ syncData 執行出錯:", err);
+    }
+
+    // 4. 處理報名頁面跳轉過來的參數
     const params = new URLSearchParams(window.location.search);
     const title = params.get('event');
-    const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-    const target = allEvents.find(e => e.title === title);
-
-    if (target) {
-        eventConfig = {
-            title: title,
-            memberFee: parseInt(target.memberFee) || 0,
-            guestFee: parseInt(target.guestFee) || 0,
-            needID: (target.needID === "是" || target.needID === "Y"), 
-            isTourBus: (target.isTourBus === "是" || target.isTourBus === "Y")
-        };
-        console.log("報名頁面參數已載入:", eventConfig);
+    if (title) {
+        const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+        const target = allEvents.find(e => e.title === title);
+        if (target) {
+            window.eventConfig = {
+                title: title,
+                memberFee: parseInt(target.memberFee) || 0,
+                guestFee: parseInt(target.guestFee) || 0,
+                needID: (target.needID === "是" || target.needID === "Y"), 
+                isTourBus: (target.isTourBus === "是" || target.isTourBus === "Y")
+            };
+        }
     }
-};
-// 關閉彈窗
+});
+    // 關閉彈窗
 function closeHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) {
@@ -705,17 +717,6 @@ function handleJumpToReg(title) {
 // ==========================================
 // 5. 頁面初始化與原本功能保留
 // ==========================================
-window.addEventListener('load', () => {
-    const userStr = sessionStorage.getItem('userInfo');
-    if (!userStr) { location.href = 'index.html'; return; }
-    currentUser = JSON.parse(userStr);
-    
-    // 初始化顯示姓名
-    const nameElem = document.getElementById('userName');
-    if(nameElem) nameElem.innerText = currentUser.name;
-    
-    syncData();
-});
 
 // 保留原本的圖片網址處理工具
 function getDirectImageUrl(url) {

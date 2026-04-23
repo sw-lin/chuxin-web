@@ -349,27 +349,41 @@ async function syncData() {
         if (overlay) overlay.style.display = 'none';
     }
 }    
-function updateUI(user, totalRequiredFromGAS) {
-    // 1. 顯示姓名
-    if (user && user.name) {
-        document.getElementById('userName').innerText = user.name;
+function updateUI(user, totalRequired) {
+    console.log("=== updateUI 執行中 ===");
+    console.log("收到用戶資料:", user);
+    console.log("收到分母數字:", totalRequired);
+
+    // 1. 更新姓名
+    const nameElem = document.getElementById('userName');
+    if (nameElem && user && user.name) {
+        nameElem.innerText = user.name;
     }
 
-    // 2. 取得分母與分子 (預設值 0 防止報錯)
-    const totalEvents = totalRequiredFromGAS || 0;
-    const attendCount = user ? (user.attendedCount || 0) : 0;
+    // 2. 取得分子 (優先用 GAS 算好的 attendedCount，沒有就看有沒有 attendLog)
+    let attendCount = 0;
+    if (user) {
+        attendCount = user.attendedCount || (user.attendLog ? user.attendLog.length : 0);
+    }
 
-    // 3. 計算參與率
+    // 3. 取得分母 (來自 System!B7)
+    const totalEvents = totalRequired || 0;
+
+    // 4. 計算百分比
     const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 4. 更新介面
+    // 5. 更新 DOM 元素
     const countDisplay = document.getElementById('attCountDisplay');
     const percentDisplay = document.getElementById('attPercent');
 
-    if (countDisplay) countDisplay.innerText = `${attendCount} / ${totalEvents}`;
-    if (percentDisplay) percentDisplay.innerText = rate + '%';
+    if (countDisplay) {
+        countDisplay.innerText = `${attendCount} / ${totalEvents}`;
+    }
+    if (percentDisplay) {
+        percentDisplay.innerText = rate + '%';
+    }
 
-    // 5. 超過 50% 放煙火
+    // 6. 參與率達標煙火 (50%)
     if (rate >= 50 && typeof confetti === 'function') {
         confetti({
             particleCount: 150,

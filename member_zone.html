@@ -332,7 +332,15 @@ async function syncData() {
             }
             
             console.log("=== 4. 準備執行 updateUI ===");
-            updateUI(data.user, data.calendar, data.events, data.registrations);
+            
+            // 如果 data.user 是空的，就不要傳入，以免蓋掉 Login 存好的資料
+          if (data.user) {
+               updateUI(data.user, data.calendar, data.events, data.registrations);
+          } else {
+               // 只更新公告，不觸發 updateUI 的資料覆蓋
+               console.log("保持 Login 時的會員資料，僅更新公告");
+          }
+            
             console.log("=== 5. syncData 流程全數完成 ===");
 
         } else {

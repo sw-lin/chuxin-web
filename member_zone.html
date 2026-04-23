@@ -350,37 +350,55 @@ async function syncData() {
     }
 }    
 function updateUI(user, calendar, events, registrations) {
+    // 取得今天日期 (YYYY-MM-DD 格式，與 calendar 的 dateText 對齊)
     const today = new Date().toISOString().split('T')[0];
-    
-    // 1. 抓取出席紀錄 (確保對應 GAS 修正後的欄位)
-    const logs = user.attendedLogs || []; 
-    const attendCount = logs.length;
 
-    // 2. 計算參與率
-    const requiredPastEvents = (calendar || []).filter(ev => ev && ev.dateText && ev.dateText <= today && ev.needQR === true);
+    // --- 1. 計算數據 ---
+    // 分母：Calendar 裡「今天以前 (含今日)」且「需要 QR Code (needQR === true)」的活動
+    const requiredPastEvents = (calendar || []).filter(ev => {
+        return ev && ev.dateText && ev.dateText <= today && ev.needQR === true;
+    });
     const totalEvents = requiredPastEvents.length;
+
+    // 分子：從 Login 或 syncData 傳進來的出席紀錄
+    // 自動相容 attendLog 或 attendedLogs 兩種寫法
+    const myLogs = user.attendedLogs || user.attendLog || [];
+    const attendCount = myLogs.length;
+
+    // 出席率計算 (四捨五入)
     const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 3. 填入畫面上方的卡片數據
+    // --- 2. 填入 HTML ---
     const percentElem = document.getElementById('attPercent');
     const countDisplayElem = document.getElementById('attCountDisplay');
-    const nameElem = document.getElementById('userName');
-
+    
     if (percentElem) percentElem.innerText = attendanceRate + '%';
     if (countDisplayElem) countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
-    if (nameElem) nameElem.innerText = user.name || "會員";
 
-    // --- 煙火慶祝 ---
+    // --- 3. 參與率超過 50% 放煙火 ---
+    // 綠色系煙火：象徵成長與築心精神
     if (attendanceRate >= 50 && typeof confetti === 'function') {
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#059669', '#10B981'] });
+        console.log("🎉 參與率達標！發射煙火！");
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#064E3B', '#059669', '#10B981', '#FCD34D'] // 加入一點點金色更亮眼
+        });
     }
 
-    // --- 儲存全域變數供學習歷程 Modal 使用 ---
-    window.currentAttendedData = logs; 
+    // --- 4. 準備學習歷程 Modal 用的詳細清單 ---
+    // 這裡我們把「實際有出席的活動詳細資訊」存起來
+    window.currentAttendedData = myLogs; 
 
-    // 4. 渲染下方各個區塊
-    if (typeof renderCalendarActivity === 'function') renderCalendarActivity(calendar);
-    if (typeof renderEventSection === 'function') renderEventSection(events || [], registrations || []);
+    // --- 5. 渲染其他區塊 ---
+    // 渲染行事曆 (Calendar)
+    renderCalendarActivity(calendar);
+    
+    // 渲染活動卡片 (Events) - 確保這兩個 Section 都能正確顯示
+    renderEventSection(events || [], registrations || []);
+    
+    console.log(`📊 參與率計算完成: ${attendCount}/${totalEvents} = ${attendanceRate}%`);
 }
 // 點擊卡片觸發的函式
 function showLearningHistory() {

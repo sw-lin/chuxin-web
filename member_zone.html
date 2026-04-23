@@ -349,44 +349,28 @@ async function syncData() {
         if (overlay) overlay.style.display = 'none';
     }
 }    
-function updateUI(user, calendar, events, registrations) {
-    console.log("=== updateUI 開始更新介面 ===", { user, calendar });
-    const today = new Date().toISOString().split('T')[0];
-
-    // --- A. 更新姓名 ---
-    const nameElem = document.getElementById('userName');
-    if (nameElem && user && user.name) {
-        nameElem.innerText = user.name;
+function updateUI(user, totalRequiredFromGAS) {
+    // 1. 顯示姓名
+    if (user && user.name) {
+        document.getElementById('userName').innerText = user.name;
     }
 
-    // --- B. 計算數據 ---
-    // 分母：計算今天以前且需要 QR 的活動
-    const requiredPastEvents = (calendar || []).filter(ev => {
-        // 這裡要很小心：確保 needQR 是布林值 true，或是字串 "true" 或 "是"
-        const isNeedQR = ev.needQR === true || ev.needQR === "true" || ev.needQR === "是";
-        return ev && ev.dateText && ev.dateText <= today && isNeedQR;
-    });
-    
-    const totalEvents = requiredPastEvents.length;
+    // 2. 取得分母與分子 (預設值 0 防止報錯)
+    const totalEvents = totalRequiredFromGAS || 0;
+    const attendCount = user ? (user.attendedCount || 0) : 0;
 
-    // 分子：相容多種可能的名稱 (attendLog 或 attendedLogs)
-    const myLogs = user.attendedLogs || user.attendLog || [];
-    const attendCount = myLogs.length;
+    // 3. 計算參與率
+    const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 計算百分比
-    const attendanceRate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
+    // 4. 更新介面
+    const countDisplay = document.getElementById('attCountDisplay');
+    const percentDisplay = document.getElementById('attPercent');
 
-    // --- C. 填入 HTML ---
-    const percentElem = document.getElementById('attPercent');
-    const countDisplayElem = document.getElementById('attCountDisplay');
-    
-    if (percentElem) percentElem.innerText = attendanceRate + '%';
-    if (countDisplayElem) {
-        countDisplayElem.innerText = `${attendCount} / ${totalEvents}`;
-    }
+    if (countDisplay) countDisplay.innerText = `${attendCount} / ${totalEvents}`;
+    if (percentDisplay) percentDisplay.innerText = rate + '%';
 
-    // --- D. 煙火特效 ---
-    if (attendanceRate >= 50 && typeof confetti === 'function') {
+    // 5. 超過 50% 放煙火
+    if (rate >= 50 && typeof confetti === 'function') {
         confetti({
             particleCount: 150,
             spread: 70,
@@ -394,14 +378,7 @@ function updateUI(user, calendar, events, registrations) {
             colors: ['#064E3B', '#059669', '#10B981']
         });
     }
-
-    // --- E. 儲存全域變數供 Modal 使用 ---
-    window.currentAttendedData = myLogs;
-
-    // --- F. 渲染其他區塊 ---
-    if (typeof renderCalendarActivity === 'function') renderCalendarActivity(calendar);
-    if (typeof renderEventSection === 'function') renderEventSection(events || [], registrations || []);
-}
+}    
 // 點擊卡片觸發的函式
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');

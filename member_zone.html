@@ -354,9 +354,9 @@ function showLearningHistory() {
     
     if (!modal || !container) return;
 
-    // 直接讀取剛才在 updateUI 中存入的資料
-    const logs = window.currentAttendedData || [];
-
+    // 🌟 同時讀取兩個名稱做為緩衝 (萬一沒改乾淨也不會掛掉)
+    const logs = (user && (user.attendedLogs || user.attendLog)) ? (user.attendedLogs || user.attendLog) : [];
+    
     if (logs.length === 0) {
         const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
         // 增加一個明確的提示，方便我們確認是哪裡空了

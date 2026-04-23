@@ -289,7 +289,7 @@ async function syncData() {
             currentUser.phone = userInfo.phone;
             
             // 🌟 這一行最關鍵：把出席紀錄塞進全域變數
-            window.currentAttendedData = data.user.attendedLog || [];
+            window.currentAttendedData = data.user.attendedLogs || [];
 
             // 4. 更新 UI 畫面與其它配置
             globalConfig = data.config || {}; 
@@ -311,8 +311,8 @@ function updateUI(user, calendar, events, registrations) {
     // 🛑 除錯點 D：確認傳入 updateUI 的 user 物件長什麼樣
     console.log("updateUI 接收到的 user 物件:", user);
     
-    // 🌟 修正 1：直接使用我們從登入端帶來的 attendedLog
-    const logs = user.attendedLog || []; 
+    // 🌟 修正 1：直接使用我們從登入端帶來的 attendedLogs
+    const logs = user.attendedLogs || []; 
     const attendCount = logs.length;
 
     // 計算參與率 (維持原有邏輯，但使用新的 attendCount)
@@ -360,7 +360,7 @@ function showLearningHistory() {
     if (logs.length === 0) {
         const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
         // 增加一個明確的提示，方便我們確認是哪裡空了
-        const debugMsg = (userInfo.attendedLog && userInfo.attendedLog.length > 0) ? "資料未成功傳遞至全域變數" : "登入時即無紀錄";
+        const debugMsg = (userInfo.attendedLogs && userInfo.attendedLogs.length > 0) ? "資料未成功傳遞至全域變數" : "登入時即無紀錄";
         
         container.innerHTML = `
             <div class="text-center py-10">

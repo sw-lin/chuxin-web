@@ -330,13 +330,13 @@ async function syncData() {
             }
 
             // --- E. 更新 UI (執行計算參與率與顯示歷程) ---
-            console.log("=== 3. 執行 updateUI ===");
+            console.log("=== 3. 準備執行 updateUI ===");
             updateUI(
-                displayUser, 
-                data.calendar || [], 
-                data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"), 
-                data.registrations || []
-            );
+              displayUser,           // 參數 1: 用戶物件
+              data.totalRequired,    // 參數 2: 這裡改傳 GAS 的 B7 數字 (取代原本的 data.calendar)
+              data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"), 
+              data.registrations || []
+           );
         }
     } catch (e) {
         console.error("❌ syncData 執行異常:", e);
@@ -349,39 +349,37 @@ async function syncData() {
         if (overlay) overlay.style.display = 'none';
     }
 }    
-function updateUI(user, totalRequired) {
-    console.log("=== updateUI 執行中 ===");
-    console.log("收到用戶資料:", user);
-    console.log("收到分母數字:", totalRequired);
+function updateUI(user, totalRequiredFromGAS, events, registrations) {
+    console.log("=== updateUI 開始更新 ===");
+    console.log("分子數據源:", user);
+    console.log("分母數據源:", totalRequiredFromGAS);
 
-    // 1. 更新姓名
+    // 1. 顯示姓名
     const nameElem = document.getElementById('userName');
     if (nameElem && user && user.name) {
         nameElem.innerText = user.name;
     }
 
-    // 2. 取得分子 (優先用 GAS 算好的 attendedCount，沒有就看有沒有 attendLog)
+    // 2. 提取分子 (出席次數)
+    // 優先從 GAS 的 attendedCount 拿，沒有的話算陣列長度
     let attendCount = 0;
     if (user) {
-        attendCount = user.attendedCount || (user.attendLog ? user.attendLog.length : 0);
+        attendCount = user.attendedCount !== undefined ? user.attendedCount : (user.attendedLogs ? user.attendedLogs.length : 0);
     }
 
-    // 3. 取得分母 (來自 System!B7)
-    const totalEvents = totalRequired || 0;
+    // 3. 提取分母 (應到次數)
+    // 確保這裡收到的是數字 4 而不是空陣列 []
+    const totalEvents = Number(totalRequiredFromGAS) || 0;
 
-    // 4. 計算百分比
+    // 4. 計算參與率
     const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 5. 更新 DOM 元素
+    // 5. 更新介面顯示
     const countDisplay = document.getElementById('attCountDisplay');
     const percentDisplay = document.getElementById('attPercent');
 
-    if (countDisplay) {
-        countDisplay.innerText = `${attendCount} / ${totalEvents}`;
-    }
-    if (percentDisplay) {
-        percentDisplay.innerText = rate + '%';
-    }
+    if (countDisplay) countDisplay.innerText = `${attendCount} / ${totalEvents}`;
+    if (percentDisplay) percentDisplay.innerText = rate + '%';
 
     // 6. 參與率達標煙火 (50%)
     if (rate >= 50 && typeof confetti === 'function') {
@@ -392,7 +390,12 @@ function updateUI(user, totalRequired) {
             colors: ['#064E3B', '#059669', '#10B981']
         });
     }
-}    
+
+    // 7. 渲染其他區塊
+    if (typeof renderEventSection === 'function') {
+        renderEventSection(events || [], registrations || []);
+    }
+}
 // 點擊卡片觸發的函式
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');

@@ -273,7 +273,7 @@ async function handleLogin() {
                 title: result.title, // 👈 關鍵新增：把 GAS 回傳的職稱接住
                 phone: u,
                 staffKey: result.staffKey || "",
-                isPaid: isPaidStatus
+                isPaid: isPaidStatus,
                 // 🌟 關鍵新增：一定要把 GAS 回傳的出席紀錄存進 sessionStorage
                 attendedLogs: result.attendedLogs
             };

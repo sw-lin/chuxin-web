@@ -288,7 +288,6 @@ async function syncData() {
             globalConfig = data.config || {}; 
             console.log("全域設定已載入:", globalConfig);
 
-            // --- B. 公告顯示邏輯 (時限控制) ---
             // --- B. 公告顯示邏輯 (加強格式相容性) ---
             const newsContent = data.news ? data.news.trim() : "";
             

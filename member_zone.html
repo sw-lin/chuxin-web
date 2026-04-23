@@ -391,6 +391,7 @@ function showLearningHistory() {
     // 🛑 修復關鍵：獲取正確的 user 資料來源
     const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
     // 如果全域變數 currentUser 有資料就用它的，不然就用 Session 的
+    // 確保即使 syncData 失敗，也不會讓整個頁面當掉
     const activeUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : userInfo;
 
     if (!modal || !container) return;
@@ -436,28 +437,30 @@ function showLearningHistory() {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }    
-window.onload = function() {
+// 修改 window.onload 確保 syncData 會跑
+window.onload = async function() {
+    console.log("網頁載入完成，開始執行初始化...");
+    
+    // 1. 先執行同步資料 (這會跑公告、出席率、更新 UI)
+    await syncData();
+    
+    // 2. 處理從報名頁面傳來的參數 (你原本的邏輯)
     const params = new URLSearchParams(window.location.search);
     const title = params.get('event');
-    
-    // 1. 抓取剛剛存入的 allEvents
     const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-    
-    // 2. 尋找匹配標題的活動
     const target = allEvents.find(e => e.title === title);
 
     if (target) {
         eventConfig = {
             title: title,
-            // 注意：這裡的屬性名必須對應你 GAS 回傳的 Json Key
             memberFee: parseInt(target.memberFee) || 0,
             guestFee: parseInt(target.guestFee) || 0,
             needID: (target.needID === "是" || target.needID === "Y"), 
             isTourBus: (target.isTourBus === "是" || target.isTourBus === "Y")
         };
+        console.log("報名頁面參數已載入:", eventConfig);
     }
-};   
-
+};
 // 關閉彈窗
 function closeHistoryModal() {
     const modal = document.getElementById('historyModal');

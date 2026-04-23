@@ -280,7 +280,7 @@ async function handleLogin() {
                 staffKey: result.staffKey || "",
                 isPaid: isPaidStatus,
                 // 🌟 關鍵新增：一定要把 GAS 回傳的出席紀錄存進 sessionStorage
-                attendedLogs: result.attendedLogs || ],
+                attendedLogs: result.attendedLogs ||[],
                 // 🛑 除錯點 B：新增一個診斷訊息存入緩存
                 debug: `Login時紀錄數: ${result.attendedLogs ? result.attendedLogs.length : 0}`
         };

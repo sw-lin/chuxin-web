@@ -265,30 +265,38 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgN
 // ==========================================
 async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = 'flex';
+    if (overlay) overlay.style.display = 'flex';
     
-    // 取得當前手機號碼
-    const infoStr = sessionStorage.getItem('userInfo');
+    // 1. 取得當前手機號碼
+    const infoStr = sessionStorage.getItem('userInfo'); // 這裡是 infoStr
+    console.log("DEBUG: SessionStorage 原始字串:", infoStr); // 🛑 修正變數名為 infoStr
+    
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
-    console.log("SessionStorage 讀取測試:", userInfoRaw); // 🛑 除錯點 C
     
     if (!userInfo || !userInfo.phone) {
+        console.error("錯誤：Session 中找不到手機號碼，跳回登入頁");
         window.location.href = 'index.html';
         return;
     }
 
     try {
-        // 使用輕量化的 member_init 介面
         const url = `${GAS_URL}?type=member_init&phone=${userInfo.phone}&t=${Date.now()}`;
+        console.log("DEBUG: 發送請求 URL:", url);
+        
         const res = await fetch(url);
         const data = await res.json();
         
+        // 🛑 核心監控：在控制台列印出整份回傳資料，這最重要！
+        console.log("=== GAS 回傳資料全紀錄 ===");
+        console.log("結果狀態:", data.result);
+        console.log("使用者資料 (user):", data.user);
+        console.log("出席紀錄檢查:", data.user ? data.user.attendedLogs : "無 user 資料");
+        console.log("========================");
+        
         if (data.result === "SUCCESS") {
-            // 【關鍵修正】賦值給全域變數，這樣 openService 才能讀到網址
             globalConfig = data.config || {}; 
-            console.log("全域設定已載入:", globalConfig);
 
-            // 1. 存入保險箱供報名頁面使用
+            // 1. 存入保險箱
             if (data.events) {
                 localStorage.setItem('allEvents', JSON.stringify(data.events));
             }
@@ -302,14 +310,18 @@ async function syncData() {
             const newsContainer = document.getElementById('newsContainer');
             if (newsContent && newsContent !== "NONE" && isDateValid) {
                 if (newsContainer) newsContainer.classList.remove('hidden');
-                document.getElementById('news').innerText = newsContent;
+                const newsElem = document.getElementById('news');
+                if (newsElem) newsElem.innerText = newsContent;
             } else {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
 
-            // 3. 更新當前使用者狀態與幹部開關
+            // 3. 更新當前使用者狀態與全域變數
             currentUser = data.user; 
-            currentUser.phone = userInfo.phone; // 確保手機號碼存在
+            currentUser.phone = userInfo.phone;
+            
+            // 🌟 將紀錄同步到全域變數，確保 Modal 點開時有東西
+            window.currentAttendedData = data.user.attendedLogs || [];
             
             const staffBtn = document.getElementById('staffBtn');
             if (staffBtn && data.user.role !== "學員") {
@@ -319,12 +331,14 @@ async function syncData() {
 
             // 4. 更新 UI 畫面
             updateUI(data.user, data.calendar, data.events, data.registrations);
+            
+        } else {
+            console.warn("GAS 回傳不成功:", data.message);
         }
     } catch (e) {
-        console.error("同步失敗:", e);
-        showToast("同步失敗: " + e.message, "error");
+        console.error("同步失敗原因:", e);
     } finally {
-        overlay.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
     }
 }    
 // 增加 registrations 作為第四個參數

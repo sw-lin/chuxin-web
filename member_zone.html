@@ -311,9 +311,21 @@ async function syncData() {
             }
 
             // --- C. 同步使用者與出席紀錄 ---
-            currentUser = data.user || {};
-            currentUser.phone = userInfo.phone;
-            window.currentAttendedData = data.user ? (data.user.attendedLogs || []) : [];
+            
+   // 這裡做一個保護邏輯：只有當 API 真的有回傳 user 資料時才更新
+if (data.user && data.user.attendLog) {
+    console.log("從 member_init 獲取到最新出席紀錄:", data.user.attendLog);
+    currentUser = data.user;
+    window.currentAttendedData = data.user.attendLog; // 或者是 data.user.attendedLogs，視你 GAS 回傳名稱而定
+} else {
+    // 🌟 關鍵：如果 API 沒傳，就從 sessionStorage 拿回登入時存的那份
+    console.log("使用登入時快取的出席紀錄");
+    const infoStr = sessionStorage.getItem('userInfo');
+    const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    if (userInfo && userInfo.attendedLogs) {
+        window.currentAttendedData = userInfo.attendedLogs;
+    }
+}
 
             // --- D. 幹部模式 ---
             const staffBtn = document.getElementById('staffBtn');
@@ -325,32 +337,16 @@ async function syncData() {
                     staffBtn.classList.add('hidden');
                 }
             }
-
             // --- E. 活動快取與更新 UI ---
-            if (data.events) {
-                localStorage.setItem('allEvents', JSON.stringify(data.events));
-            }
-            
-            console.log("=== 4. 準備執行 updateUI ===");
-            
-            // 如果 data.user 是空的，就不要傳入，以免蓋掉 Login 存好的資料
-          if (data.user) {
-               updateUI(data.user, data.calendar, data.events, data.registrations);
-          } else {
-               // 只更新公告，不觸發 updateUI 的資料覆蓋
-               console.log("保持 Login 時的會員資料，僅更新公告");
-          }
-            
-            console.log("=== 5. syncData 流程全數完成 ===");
+            // 確保傳入的資料不會是空的
+  const displayUser = (data.user && data.user.name) ? data.user : JSON.parse(sessionStorage.getItem('userInfo'));
 
-        } else {
-            console.warn("後端回傳失敗:", data.error);
-        }
-    } catch (e) {
-        console.error("❌ syncData 執行異常:", e);
-    } finally {
-        if (overlay) overlay.style.display = 'none';
-    }
+  updateUI(
+    displayUser, 
+    data.calendar || [], 
+    data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"), 
+    data.registrations || []
+  );            
 }    
 function updateUI(user, calendar, events, registrations) {
     const today = new Date().toISOString().split('T')[0];

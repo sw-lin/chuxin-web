@@ -342,25 +342,28 @@ function updateUI(user, calendar, events, registrations) {
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');
     const container = document.getElementById('historyList');
+    
+    // 🛑 修復關鍵：獲取正確的 user 資料來源
     const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-    
-    // 🛑 終極診斷邏輯
-    let debugInfo = userInfo.debug || "Session中完全無debug資訊";
-    if (window.currentAttendedData && window.currentAttendedData.length > 0) {
-        debugInfo += ` | 全域變數有資料: ${window.currentAttendedData.length} 筆`;
-    } else {
-        debugInfo += " | ❌ 全域變數目前是空的";
-    }
-    
+    // 如果全域變數 currentUser 有資料就用它的，不然就用 Session 的
+    const activeUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : userInfo;
+
     if (!modal || !container) return;
 
-    // 🌟 同時讀取兩個名稱做為緩衝 (萬一沒改乾淨也不會掛掉)
-    const logs = (user && (user.attendedLogs || user.attendLog)) ? (user.attendedLogs || user.attendLog) : [];
+    // 🌟 修正：從 activeUser 或是全域陣列抓取紀錄
+    // 這樣就不會再發生 "user is not defined" 的錯誤
+    let logs = [];
+    if (window.currentAttendedData && window.currentAttendedData.length > 0) {
+        logs = window.currentAttendedData;
+    } else if (activeUser && (activeUser.attendedLogs || activeUser.attendLog)) {
+        logs = activeUser.attendedLogs || activeUser.attendLog || [];
+    }
     
     if (logs.length === 0) {
-        const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-        // 增加一個明確的提示，方便我們確認是哪裡空了
-        const debugMsg = (userInfo.attendedLogs && userInfo.attendedLogs.length > 0) ? "資料未成功傳遞至全域變數" : "登入時即無紀錄";
+        // 診斷邏輯
+        const debugMsg = (userInfo.attendedLogs && userInfo.attendedLogs.length > 0) 
+            ? "資料未成功傳遞至全域變數" 
+            : "登入時即無紀錄";
         
         container.innerHTML = `
             <div class="text-center py-10">

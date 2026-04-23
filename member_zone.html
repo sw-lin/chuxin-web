@@ -270,6 +270,8 @@ async function syncData() {
     // 取得當前手機號碼
     const infoStr = sessionStorage.getItem('userInfo');
     const userInfo = infoStr ? JSON.parse(infoStr) : null;
+    console.log("SessionStorage 讀取測試:", userInfoRaw); // 🛑 除錯點 C
+    
     if (!userInfo || !userInfo.phone) {
         window.location.href = 'index.html';
         return;
@@ -328,7 +330,10 @@ async function syncData() {
 // 增加 registrations 作為第四個參數
 function updateUI(user, calendar, events, registrations) {
     const today = new Date().toISOString().split('T')[0];
-
+    
+    // 🛑 除錯點 D：確認傳入 updateUI 的 user 物件長什麼樣
+    console.log("updateUI 接收到的 user 物件:", user);
+    
     // 🌟 修正 1：直接使用我們從登入端帶來的 attendedLogs
     const logs = user.attendedLogs || []; 
     const attendCount = logs.length;
@@ -360,6 +365,16 @@ function updateUI(user, calendar, events, registrations) {
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');
     const container = document.getElementById('historyList');
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    
+    // 🛑 終極診斷邏輯
+    let debugInfo = userInfo.debug || "Session中完全無debug資訊";
+    if (window.currentAttendedData && window.currentAttendedData.length > 0) {
+        debugInfo += ` | 全域變數有資料: ${window.currentAttendedData.length} 筆`;
+    } else {
+        debugInfo += " | ❌ 全域變數目前是空的";
+    }
+    
     if (!modal || !container) return;
 
     // 直接讀取剛才在 updateUI 中存入的資料

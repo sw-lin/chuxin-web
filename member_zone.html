@@ -289,21 +289,35 @@ async function syncData() {
             console.log("全域設定已載入:", globalConfig);
 
             // --- B. 公告顯示邏輯 (時限控制) ---
+            // --- B. 公告顯示邏輯 (加強格式相容性) ---
             const newsContent = data.news ? data.news.trim() : "";
-            const now = new Date();
-            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            // 判斷今天是否在公告開始與結束時間內
-            const isDateValid = (!data.startDate || todayStr >= data.startDate) && (!data.endDate || todayStr <= data.endDate);
             
+            // 取得今天的 YYYY-MM-DD
+            const now = new Date();
+            const todayStr = now.getFullYear() + '-' + 
+                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(now.getDate()).padStart(2, '0');
+            
+            // 格式化後端傳來的日期，確保是 YYYY-MM-DD
+            const startLimit = data.startDate ? data.startDate.split('T')[0] : "";
+            const endLimit = data.endDate ? data.endDate.split('T')[0] : "";
+
+            // 判斷是否在有效期內：沒有設定時間視為有效，有設定則比對字串大小
+            const isAfterStart = !startLimit || todayStr >= startLimit;
+            const isBeforeEnd = !endLimit || todayStr <= endLimit;
+            const isDateValid = isAfterStart && isBeforeEnd;
+
+            console.log("公告比對:", { today: todayStr, start: startLimit, end: endLimit, valid: isDateValid });
+
             const newsContainer = document.getElementById('newsContainer');
+            const newsElem = document.getElementById('news');
+
             if (newsContent && newsContent !== "NONE" && isDateValid) {
                 if (newsContainer) newsContainer.classList.remove('hidden');
-                const newsElem = document.getElementById('news');
-                if (newsElem) newsElem.innerText = newsContent;
+                if (newsElem) newsElem.innerText = newsContent; // 👈 確保這行有執行
             } else {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
-
             // --- C. 同步使用者狀態與出席紀錄 ---
             currentUser = data.user;
             currentUser.phone = userInfo.phone;

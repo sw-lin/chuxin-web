@@ -305,8 +305,9 @@ async function syncData() {
             // 判斷是否在有效期內：沒有設定時間視為有效，有設定則比對字串大小
             const isAfterStart = !startLimit || todayStr >= startLimit;
             const isBeforeEnd = !endLimit || todayStr <= endLimit;
-            const isDateValid = isAfterStart && isBeforeEnd;
-
+            // const isDateValid = isAfterStart && isBeforeEnd;
+            const isDateValid = true;
+            
             console.log("公告比對:", { today: todayStr, start: startLimit, end: endLimit, valid: isDateValid });
 
             const newsContainer = document.getElementById('newsContainer');

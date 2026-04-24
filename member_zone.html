@@ -937,30 +937,17 @@ function openRemoteLink(type) {
 } 
 // 開啟彈窗並填入舊資料
 function openProfileModal() {
-    const modal = document.getElementById('profileModal');
+    // 確保 currentUser 存在且已有 email
+    const userEmail = currentUser.email || ""; 
     
-    // 1. 取得當前使用者的資料 (確保 currentUser 已包含從資料庫解密後的 email)
-    // 如果您的 email 還是加密狀態，請記得先解密
-    const currentEmail = currentUser.email || ""; 
-
-    // 2. 填入資料
+    // 填入 Email 欄位
     const emailInput = document.getElementById('editEmail');
     if (emailInput) {
-        emailInput.value = currentEmail;
+        emailInput.value = userEmail;
     }
-
-    // 3. 顯示 Modal
-    modal.style.display = 'flex';
-
-    // 4. 🌟 額外保險：延遲 100 毫秒再次強制填入
-    // 這是為了對抗某些瀏覽器在 Modal 彈出後強制覆蓋欄位的行為
-    setTimeout(() => {
-        if (emailInput) emailInput.value = currentEmail;
-        
-        // 同時確保密碼欄位是空的，不要讓瀏覽器幫你填舊密碼進去
-        document.getElementById('newPassword').value = "";
-        document.getElementById('oldPassword').value = "";
-    }, 100);
+    
+    // 顯示 Modal
+    document.getElementById('profileModal').style.display = 'flex';
 }    
 function closeProfileModal() {
     document.getElementById('profileModal').style.display = 'none';

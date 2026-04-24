@@ -287,80 +287,84 @@ async function syncData() {
         console.log("=== 2. 收到後端資料 ===", data);
 
         if (data.result === "SUCCESS") {
-            // --- A. Config ---
+            // --- A. Config 設定 ---
             if (data.config) globalConfig = data.config;
 
-            // --- B. 公告顯示與海報解析 ---
-const rawNews = data.news ? data.news.trim() : "";
-const newsContainer = document.getElementById('newsContainer');
-const newsElem = document.getElementById('news');
-const posterImgElem = document.getElementById('eventPoster'); // 假設你有個放海報的 <img>
+            // --- B. 頂部跑馬燈公告 (System!B2) ---
+            const newsElem = document.getElementById('news');
+            const newsContainer = document.getElementById('newsContainer');
+            if (data.news && data.news !== "NONE") {
+                if (newsContainer) newsContainer.classList.remove('hidden');
+                if (newsElem) newsElem.innerText = data.news;
+            } else {
+                if (newsContainer) newsContainer.classList.add('hidden');
+            }
 
-if (rawNews && rawNews !== "NONE") {
-    // 1. 挖出海報網址
-    const posterMatch = rawNews.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-    const posterUrl = posterMatch ? posterMatch[1] : null;
-    
-    // 2. 清除標籤後的純文字（給 UI 顯示用）
-    const cleanNewsText = rawNews.replace(/\[POSTER\].*?\[\/POSTER\]/g, "");
+            // --- C. 近期活動預告與海報解析 (System!B5) ---
+            const upcomingRaw = data.upcoming || "";
+            const upcomingContainer = document.getElementById('upcomingContainer');
+            const upcomingTextElem = document.getElementById('upcomingText');
+            const posterImgElem = document.getElementById('eventPoster');
 
-    if (newsContainer) newsContainer.classList.remove('hidden');
-    if (newsElem) newsElem.innerText = cleanNewsText;
+            if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
+                // 1. 解析海報網址 [POSTER]url[/POSTER]
+                const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+                const posterUrl = posterMatch ? posterMatch[1] : null;
+                
+                // 2. 取得純文字內容
+                const cleanUpcomingText = upcomingRaw.replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
 
-    // 3. 海報邏輯：如果有圖就顯圖，沒圖就隱藏圖片框（或顯示預設圖）
-    if (posterImgElem) {
-        if (posterUrl) {
-            posterImgElem.src = posterUrl;
-            posterImgElem.style.display = 'block';
-        } else {
-            posterImgElem.style.display = 'none'; // 沒海報時隱藏圖片元件
-        }
-    }
-} else {
-    if (newsContainer) newsContainer.classList.add('hidden');
-}
-            // --- C. 關鍵點：合併與保護資料 ---
-            // 決定要顯示的用戶資料 (優先用後端傳回的，沒有就用快取的)
+                if (upcomingContainer) upcomingContainer.classList.remove('hidden');
+                if (upcomingTextElem) upcomingTextElem.innerText = cleanUpcomingText;
+
+                // 3. 處理海報顯示
+                if (posterImgElem) {
+                    if (posterUrl) {
+                        posterImgElem.src = posterUrl;
+                        posterImgElem.style.display = 'block';
+                    } else {
+                        posterImgElem.style.display = 'none';
+                    }
+                }
+            } else {
+                if (upcomingContainer) upcomingContainer.classList.add('hidden');
+            }
+
+            // --- D. 用戶資料合併與保護 ---
             let displayUser = null;
-            
             if (data.user && data.user.name) {
                 console.log("✅ 使用後端即時資料更新");
                 displayUser = data.user;
-                // 統一屬性名稱，確保 updateUI 能讀到
+                // 統一出席紀錄存放位置，供 Modal 使用
                 window.currentAttendedData = data.user.attendedLogs || data.user.attendLog || [];
             } else {
-                console.log("⚠️ 後端未傳回會員詳情，套用快取備份");
+                console.log("⚠️ 套用快取備份");
                 displayUser = cachedUserInfo;
                 window.currentAttendedData = cachedUserInfo.attendedLogs || [];
             }
-            
-            // 全域 currentUser 也要更新
-            currentUser = displayUser;
+            currentUser = displayUser; // 更新全域變數
 
-            // --- D. 幹部模式按鈕 ---
+            // --- E. 幹部模式按鈕 ---
             const staffBtn = document.getElementById('staffBtn');
             if (staffBtn) {
-                // 如果快取中是幹部，或者後端確認是幹部
                 const isStaff = (displayUser.role && displayUser.role !== "學員");
                 staffBtn.classList.toggle('hidden', !isStaff);
                 if (isStaff) staffBtn.onclick = enterStaffMode;
             }
 
-            // --- E. 更新 UI (執行計算參與率與顯示歷程) ---
-            console.log("=== 3. 準備執行 updateUI ===");
+            // --- F. 更新 UI (參與率與活動列表) ---
+            console.log("=== 3. 執行 updateUI ===");
             updateUI(
-              displayUser,           // 參數 1: 用戶物件
-              data.totalRequired,    // 參數 2: 這裡改傳 GAS 的 B7 數字 (取代原本的 data.calendar)
-              data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"), 
-              data.registrations || []
-           );
+                displayUser,           // 分子與姓名
+                data.totalRequired,    // 分母 (System!B7)
+                data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"), 
+                data.registrations || []
+            );
         }
     } catch (e) {
         console.error("❌ syncData 執行異常:", e);
-        // 如果 API 壞了，至少嘗試用舊資料把畫面撐起來
         if (cachedUserInfo) {
-            window.currentAttendedData = cachedUserInfo.attendedLogs || [];
-            updateUI(cachedUserInfo, [], JSON.parse(localStorage.getItem('allEvents') || "[]"), []);
+            updateUI(cachedUserInfo, 0, JSON.parse(localStorage.getItem('allEvents') || "[]"), []);
         }
     } finally {
         if (overlay) overlay.style.display = 'none';

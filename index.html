@@ -294,7 +294,7 @@ async function handleLogin() {
             // 判斷跳轉目標
             let targetPage = (result.role === "Admin" || isPaidStatus === true) ? 'member_zone.html' : 'guest_zone.html';
             // 加上這一行，彈出視窗會卡住畫面
-                alert("請檢查 Console 資料後再按確定跳轉");
+            //    alert("請檢查 Console 資料後再按確定跳轉");
             
             // 🌟 移除 setTimeout 的延遲，實現秒跳轉
             window.location.href = targetPage;

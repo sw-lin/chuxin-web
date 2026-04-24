@@ -778,10 +778,20 @@ async function executeStaffVerify() {
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 🌟 關鍵修復：把遺漏的「職稱」與「權限清單」存回 Session 中！
+            // 1. 先把原本的大箱子拿出來
+            const infoStr = sessionStorage.getItem('userInfo');
+            let userInfo = infoStr ? JSON.parse(infoStr) : {};
+
+            // 2. 🌟 重點：把新的金鑰與職稱更新進去這個大箱子
+            userInfo.staffKey = staffKey; 
+            userInfo.userTitle = result.userTitle;
+            userInfo.userPermissions = result.permissions || [];
+
+            // 3. 存回 SessionStorage 的「大箱子」
+            sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+            
+            // 4. (選配) 如果您的大聲公頁面還是習慣抓小盒子，也可以留著這行
             sessionStorage.setItem('staffKey', staffKey); 
-            sessionStorage.setItem('userTitle', result.userTitle);
-            sessionStorage.setItem('userPermissions', JSON.stringify(result.permissions || []));
             
             // 跳轉至後台
             window.location.href = 'staff_menu.html';

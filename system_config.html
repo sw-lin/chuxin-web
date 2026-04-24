@@ -129,9 +129,26 @@
     <script>
        const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
        let isEditMode = false;
+        
+       // 📦 1. 統一提取資料 (auth 包)
+    const auth = (function() {
+        try {
+            const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+            const loneKey = sessionStorage.getItem('staffKey'); 
+            return {
+                key: info.staffKey || loneKey || "",
+                permissions: info.userPermissions || [],
+                isValid: !!(info.staffKey || loneKey)
+            };
+        } catch (e) {
+            return { key: "", permissions: [], isValid: false };
+        }
+    })();
 
-    // --- 🌟 權限控管初始化 ---
-    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+    // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
+    var STAFF_KEY = auth.key;
+    const userPermissions = auth.permissions;           
+
     // 定義誰有權限修改：具備 all 或 manage_config 的人
     const hasConfigPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");                
 
@@ -320,7 +337,7 @@ function showToast(m) {
 // 網頁載入時執行
 window.onload = () => { 
     // A. 身份驗證
-    const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+
     if (!staffKey) {
         alert("請重新登入");
         location.href = "index.html";

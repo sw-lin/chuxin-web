@@ -130,7 +130,7 @@
 
     
     window.onload = () => {
-        if (!STAFF_KEY) { location.href="member_zone.html"; return; }
+        if (!STAFF_KEY) { location.href="index.html"; return; }
         // --- 修正後的權限檢查 ---
         const editToggleBtn = document.getElementById('editToggleBtn');
         if (!userPermissions.includes("all") && !userPermissions.includes("edit_calendar")) {

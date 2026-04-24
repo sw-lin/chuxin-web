@@ -100,19 +100,26 @@
         </div>
 
         <form onsubmit="handleLogin(); return false;" class="space-y-6">
-            <input type="text" id="userPhone" name="username" autocomplete="username" 
-                   placeholder="手機號碼 或 guest" 
-                   class="w-full px-6 py-4 bg-blue-50/50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-600 transition-all text-center">
-            
-            <input type="password" id="userPass" name="password" autocomplete="current-password" 
-                   placeholder="登入密碼" 
-                   class="w-full px-6 py-4 bg-blue-50/50 rounded-2xl outline-none border-2 border-transparent focus:border-emerald-600 transition-all text-center">
-            
-            <button type="submit" id="loginBtn" 
-                    class="w-full py-4 bg-emerald-800 text-white rounded-2xl font-black text-lg shadow-lg hover:bg-emerald-900 active:scale-95 transition-all">
-                確認進入
-            </button>
-        </form>        
+    <input type="text" 
+           id="userPhone" 
+           name="username" 
+           autocomplete="username" 
+           placeholder="手機號碼 或 guest" 
+           class="w-full px-6 py-4 bg-blue-50/50 rounded-2xl outline-none font-bold border-2 border-transparent focus:border-emerald-600 transition-all text-center">
+    
+    <input type="password" 
+           id="userPass" 
+           name="password" 
+           autocomplete="current-password" 
+           placeholder="登入密碼" 
+           class="w-full px-6 py-4 bg-blue-50/50 rounded-2xl outline-none border-2 border-transparent focus:border-emerald-600 transition-all text-center">
+    
+    <button type="submit" 
+            id="loginBtn" 
+            class="w-full py-4 bg-emerald-800 text-white rounded-2xl font-black text-lg shadow-lg hover:bg-emerald-900 active:scale-95 transition-all">
+        確認進入
+    </button>
+</form>
     </div>
 </div>
 <script>

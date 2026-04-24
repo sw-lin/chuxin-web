@@ -87,19 +87,44 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
         
-        var STAFF_KEY = (function() {
-         try {
-            const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-            return userInfo ? userInfo.staffKey : ""; 
-          } catch (e) {
-            return "";
-         }
-       })();    
+        // --- 大聲公管理頁面：金鑰讀取終極版 ---
+var STAFF_KEY = (function() {
+    try {
+        // 1. 先嘗試從 userInfo 大箱子拿
+        const infoStr = sessionStorage.getItem('userInfo');
+        if (infoStr) {
+            const userInfo = JSON.parse(infoStr);
+            if (userInfo.staffKey) {
+                console.log("✅ 金鑰來源：userInfo 物件");
+                return userInfo.staffKey;
+            }
+        }
 
-        window.onload = function() {
-            if (!STAFF_KEY) { window.location.href = "index.html"; return; }
-            fetchCurrentNews();
-        };
+        // 2. 如果大箱子沒有，嘗試拿獨立的小盒子 (對應您 executeStaffVerify 的存法)
+        const loneKey = sessionStorage.getItem('staffKey');
+        if (loneKey) {
+            console.log("✅ 金鑰來源：獨立 staffKey 欄位");
+            return loneKey;
+        }
+
+        return ""; // 真的都沒有
+    } catch (e) {
+        console.error("❌ 金鑰讀取失敗:", e);
+        return "";
+    }
+})();
+
+// 頁面載入後的安全檢查
+window.onload = function() {
+    console.log("🔑 當前使用金鑰:", STAFF_KEY);
+
+    if (!STAFF_KEY) {
+        alert("管理權限無效，請重新進行幹部驗證");
+        window.location.href = "member_zone.html"; // 踢回會員區重新驗證
+        return;
+    }
+    fetchCurrentNews(); // 金鑰正常，開始抓資料
+};
 
         function showLoading(show, text) {
             document.getElementById('loadingText').innerText = text || "同步中...";

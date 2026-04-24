@@ -170,12 +170,17 @@ async function initData() {
             aboutText = rawAbout;
         }
         
-        if (aboutText) {
-     // 🌟 將文字中的 \n 換行符號轉為網頁的 <br> 標籤
-    contentDiv.innerHTML = aboutText.replace(/\n/g, '<br>'); 
-     } else {
-      contentDiv.innerHTML = "歡迎來到築心讀書會。";
-     }
+       if (aboutText) {
+    // 🌟 強化版替換：同時處理 \n 與 \r，並將連續換行正確轉為 <br>
+    const formattedText = aboutText
+        .replace(/\r\n/g, '<br>') // 處理 Windows 換行
+        .replace(/\n/g, '<br>')   // 處理 Linux/Mac 換行
+        .replace(/\r/g, '<br>');  // 處理舊式 Mac 換行
+    
+    contentDiv.innerHTML = formattedText; 
+    } else {
+    contentDiv.innerHTML = "歡迎來到築心讀書會。";
+    }
         // --- 2. 判斷是否為宣傳期 ---
         const now = new Date();
         let isPromoTime = false;

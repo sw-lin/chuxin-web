@@ -87,7 +87,14 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
         
-        var STAFF_KEY = sessionStorage.getItem('staffKey');
+        var STAFF_KEY = (function() {
+         try {
+            const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
+            return userInfo ? userInfo.staffKey : ""; 
+          } catch (e) {
+            return "";
+         }
+       })();    
 
         window.onload = function() {
             if (!STAFF_KEY) { window.location.href = "index.html"; return; }

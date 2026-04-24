@@ -935,18 +935,25 @@ function openProfileModal() {
     const modal = document.getElementById('profileModal');
     if (!modal) return;
     
-    // 關鍵新增：將電話號碼填入隱藏欄位，讓瀏覽器識別這是誰的帳號
-    // 假設您的 currentUser 物件裡存電話的屬性名稱是 phone (請根據實際情況調整)
+    // 1. 處理隱藏的帳號辨識 (電話)
     const usernameInput = document.getElementById('editUsername');
     if (usernameInput) {
-        usernameInput.value = currentUser.phone || ""; 
+        // 使用加密電話或明碼電話作為標識
+        usernameInput.value = currentUser.encryptedPhone || currentUser.phone || ""; 
     }
     
-    // 從當前登入資訊讀取 Email
-    document.getElementById('editEmail').value = currentUser.email || "";
-    document.getElementById('newPassword').value = ""; // 清空新密碼框
-    document.getElementById('oldPassword').value = ""; // 清空驗證框
+    // 2. 🌟 關鍵修改：預先顯示舊的 Email
+    const emailInput = document.getElementById('editEmail');
+    if (emailInput) {
+        // 將目前登入者的 email 填入框內
+        emailInput.value = currentUser.email || ""; 
+    }
     
+    // 3. 清空密碼欄位 (安全起見，每次開啟都要是空的)
+    document.getElementById('newPassword').value = ""; 
+    document.getElementById('oldPassword').value = ""; 
+    
+    // 4. 顯示彈窗
     modal.style.display = 'flex';
 }
 function closeProfileModal() {
@@ -956,61 +963,43 @@ function closeProfileModal() {
 // 送出修改
 // 請在 member_zone.html 中找到並更新此函式
 async function submitProfileUpdate() {
-    // 1. 現場抓取輸入框的值 (請確認 ID 與您 HTML 中的一致)
-    const oldPasswordInput = document.getElementById('oldPassword'); // 假設 ID 是這個
-    const newPasswordInput = document.getElementById('newPassword');
-    const newEmailInput = document.getElementById('editEmail');
+    const email = document.getElementById('editEmail').value.trim();
+    const newPassword = document.getElementById('newPassword').value.trim();
+    const oldPassword = document.getElementById('oldPassword').value.trim();
 
-    const oldPassword = oldPasswordInput ? oldPasswordInput.value.trim() : "";
-    const newPassword = newPasswordInput ? newPasswordInput.value.trim() : "";
-    const newEmail = newEmailInput ? newEmailInput.value.trim() : "";
-
-    // 2. 基本檢查
     if (!oldPassword) {
-        alert("請輸入舊密碼以進行驗證");
+        showToast("請輸入舊密碼以進行驗證", "error");
         return;
     }
 
-    // 3. 從 Session 拿手機號碼
-    const infoStr = sessionStorage.getItem('userInfo');
-    const userInfo = infoStr ? JSON.parse(infoStr) : null;
-    const phone = userInfo ? userInfo.phone : null;
-
-    if (!phone) {
-        alert("登入逾時，請重新登入");
-        return;
-    }
-    // --- 【開始處理轉圈圈】 ---
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) loading.style.display = 'flex'; // 強制顯示為 flex 居中 顯示轉圈圈
-    
-    const payload = {
-        type: 'updateProfile',
-        phone: phone,
-        oldPassword: oldPassword, // 這次絕對不會是空的了
-        newPassword: newPassword,
-        email: newEmail
-    };
+    showToast("正在更新資料...", "info");
 
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                type: 'updateProfile',
+                // 重要：使用加密後的電話作為 ID 供後端搜尋
+                encryptedPhone: currentUser.encryptedPhone, 
+                newEmail: email,
+                newPassword: newPassword, // 若為空字串則後端不更新密碼
+                oldPassword: oldPassword  // 用於後端驗證身分
+            })
         });
+
         const result = await response.json();
-        
+
         if (result.result === "SUCCESS") {
-            alert("修改成功！");
-            location.reload();
+            showToast("資料修改成功！請重新登入", "success");
+            closeProfileModal();
+            // 更新成功後建議登出或刷新頁面快取
+            setTimeout(() => location.reload(), 1500);
         } else {
-            alert(result.message);
+            showToast(result.message || "更新失敗", "error");
         }
     } catch (e) {
-        alert("系統繁忙，請稍後再試");
-    } finally {
-        // --- 【關閉轉圈圈】 ---
-        // 無論成功或失敗，最後一定要隱藏轉圈圈，否則頁面會被鎖死
-        if (loading) loading.style.display = 'none'; // 隱藏
+        console.error("Update Error:", e);
+        showToast("連線異常，請稍後再試", "error");
     }
 }   
 function goToAI() {

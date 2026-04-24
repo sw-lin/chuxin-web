@@ -300,16 +300,31 @@ async function syncData() {
             // --- A. Config 設定 ---
             if (data.config) globalConfig = data.config;
 
-            // --- B. 頂部跑馬燈公告 (System!B2) ---
-            const newsElem = document.getElementById('news');
-            const newsContainer = document.getElementById('newsContainer');
-            if (data.news && data.news !== "NONE") {
-                if (newsContainer) newsContainer.classList.remove('hidden');
-                if (newsElem) newsElem.innerText = data.news;
-            } else {
-                if (newsContainer) newsContainer.classList.add('hidden');
-            }
+            // --- B. 頂部跑馬燈公告 (System 頁面 A, B, C, D 欄位整合) ---
+const newsElem = document.getElementById('news');
+const newsContainer = document.getElementById('newsContainer');
 
+// 1. 取得公告內容並清理
+const newsContent = data.news ? data.news.trim() : "";
+
+// 2. 取得今日日期字串 (格式: YYYY-MM-DD)
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+// 3. 判斷日期是否有效 (若沒填日期則視為不限制)
+// data.startDate 來自 C 欄，data.endDate 來自 D 欄
+const isDateValid = (!data.startDate || todayStr >= data.startDate) && 
+                    (!data.endDate || todayStr <= data.endDate);
+
+// 4. 最終執行顯示或隱藏
+if (newsContent && newsContent !== "NONE" && isDateValid) {
+    if (newsContainer) newsContainer.classList.remove('hidden');
+    if (newsElem) newsElem.innerText = newsContent;
+} else {
+    // 如果內容為 NONE、或是時間不在範圍內，則徹底隱藏
+    if (newsContainer) newsContainer.classList.add('hidden');
+}
+            
             // --- C. 近期活動預告解析 (System!B5) ---
             const upcomingRaw = data.upcoming || "";
             if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {

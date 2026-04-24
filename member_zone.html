@@ -300,34 +300,40 @@ async function syncData() {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
 
-            // --- C. 近期活動預告與海報解析 (整合後呼叫 render) ---
+// --- C. 近期活動預告與海報解析 (整合後呼叫 render) ---
 const upcomingRaw = data.upcoming || "";
 if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
-    // 解析字串：【近期預告】2026/04/13 活動名稱 (簡介：內容...) [POSTER]url[/POSTER]
-    const dateMatch = upcomingRaw.match(/(\d{4}\/\d{2}\/\d{2})/);
-    const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-    const descMatch = upcomingRaw.match(/\(簡介：(.*?)\)/);
-    
-    // 取得標題 (去掉日期、簡介跟海報標籤後的剩餘文字)
+    console.log("=== 解析前原始字串 ===", upcomingRaw);
+
+    // 1. 強健的正則表達式
+    const dateMatch = upcomingRaw.match(/(\d{4}\/\d{2}\/\d{2})/); // 抓取日期
+    const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/); // 抓取海報網址
+    const descMatch = upcomingRaw.match(/\(簡介：(.*?)\)/); // 抓取簡介內容
+
+    // 2. 取得標題 (去掉日期、海報標籤、簡介標籤後的剩餘文字)
     let title = upcomingRaw.replace(/【近期預告】/, "")
                            .replace(/\d{4}\/\d{2}\/\d{2}/, "")
-                           .replace(/\(簡介：.*?\)/, "")
                            .replace(/\[POSTER\].*?\[\/POSTER\]/, "")
+                           .replace(/\(簡介：.*?\)/, "")
                            .trim();
 
-    // 組合成 renderCalendarActivity 需要的物件格式
-    const fakeEventObj = {
-        dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "", // 轉成 2026-04-13
+    // 3. 組合成 render 函式需要的 Fake 陣列
+    const fakeCalendarArray = [{
+        dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "", // 轉成 2026-04-24
         title: title || "近期活動",
-        poster: posterMatch ? posterMatch[1] : "",
-        desc: descMatch ? descMatch[1] : "歡迎踴躍參加！"
-    };
+        poster: posterMatch ? posterMatch[1].trim() : "", // 確保網址沒空白
+        desc: (descMatch && descMatch[1].trim()) ? descMatch[1].trim() : "歡迎永躍參加！" // 🌟 修改邏輯：如果沒簡介，直接變更文字
+    }];
 
-    // 呼叫渲染函式 (傳入單一物件組成的陣列)
-    renderCalendarActivity([fakeEventObj]);
+    console.log("=== 解析後的 Fake 活動物件 ===", fakeCalendarArray[0]);
+
+    // 4. 呼叫渲染函式
+    renderCalendarActivity(fakeCalendarArray);
+
 } else {
-    renderCalendarActivity([]); // 顯示暫無活動
+    renderCalendarActivity([]); // 顯示「目前暫無活動」
 }
+
             
             // --- D. 用戶資料合併與保護 ---
             let displayUser = null;
@@ -878,48 +884,63 @@ function renderCalendarActivity(calendar) {
     const container = document.getElementById('calendarActivitySection');
     if (!container) return;
     
-    const nextEvent = (calendar || [])[0]; // 直接取第一筆
+    // 直接取第一筆 Fake 物件
+    const nextEvent = (calendar || [])[0];
 
     if (!nextEvent) {
-        container.innerHTML = '<p class="text-center text-gray-400 py-10 text-xs font-bold">目前暫無近期活動預告</p>';
+        container.innerHTML = `<div class="bg-white/50 p-6 rounded-2xl text-center border border-emerald-100 shadow-inner">
+                                    <p class="text-sm text-gray-400 font-bold">目前暫無近期活動預告</p>
+                               </div>`;
         return;
     }
 
-    // 解析日期 (支援 2026-04-13 或 2026/04/13)
+    // 1. 解析日期 (月份 與 日期)
     let month = "--";
     let day = "--";
-    const dateStr = nextEvent.dateText || "";
-    const separator = dateStr.includes('-') ? '-' : '/';
-    
-    if (dateStr.includes(separator)) {
-        const parts = dateStr.split(separator);
+    if (nextEvent.dateText && nextEvent.dateText.includes('-')) {
+        const parts = nextEvent.dateText.split('-');
         if (parts.length >= 3) {
-            month = parseInt(parts[1]); 
+            month = parseInt(parts[1]); // 去除前導零
             day = parseInt(parts[2]);
         }
     }
 
-    // 渲染 HTML ... (後面接你之前的卡片模板)
+    // 2. 🌟 解決海報連結問題：進行海報轉址檢查 (如果有你的 getDirectImageUrl 函式)
+    const posterUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(nextEvent.poster) : nextEvent.poster;
+    console.log("=== 海報最終渲染網址 ===", posterUrl);
+
+    // 3. 判斷是否需要顯示綠色「簡介」標籤
+    const hasDesc = nextEvent.desc && nextEvent.desc !== "歡迎永躍參加！";
+
+    // 4. 渲染 HTML (純展示卡片)
     container.innerHTML = `
         <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
-            ${nextEvent.poster ? `<img src="${nextEvent.poster}" class="w-full h-auto object-cover max-h-48" onerror="this.style.display='none'">` : ''}
+            ${posterUrl ? 
+                `<img src="${posterUrl}" 
+                      alt="活動海報" 
+                      class="w-full h-auto object-cover max-h-48 border-b border-emerald-50"
+                      onerror="this.style.display='none'">` : ''}
+            
             <div class="p-4 flex gap-4">
                 <div class="flex-shrink-0 w-16 h-16 bg-emerald-50 rounded-xl flex flex-col items-center justify-center border border-emerald-100">
                     <span class="text-xs font-bold text-emerald-600">${month}月</span>
                     <span class="text-2xl font-black text-emerald-800">${day}</span>
                 </div>
+
                 <div class="flex-grow">
                     <h4 class="text-lg font-bold text-emerald-950 mb-1.5">${nextEvent.title}</h4>
                     <div class="flex items-start gap-2">
-                        <span class="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded flex-shrink-0 mt-1">簡介</span>
-                        <p class="text-sm text-emerald-800/80 leading-snug">${nextEvent.desc}</p>
+                        ${hasDesc ? `<span class="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded flex-shrink-0 mt-1">簡介</span>` : ''}
+                        
+                        <p class="text-sm text-emerald-800/80 leading-snug">
+                            ${nextEvent.desc}
+                        </p>
                     </div>
                 </div>
             </div>
-        </div>`;
+        </div>
+    `;
 }
-    
-
 // 純文字顯示模式
 function renderTextActivity(container, ev) {
     // --- 新增：日期格式化邏輯 ---

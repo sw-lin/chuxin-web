@@ -326,20 +326,31 @@ async function syncData() {
 
             // --- D. 報名活動區解析 (System!B6) ---
             // 在 syncData 內部解析 B6 (registrations_promo) 的地方：
-const promoRaw = data.registrations_promo || "";
+            const promoRaw = data.registrations_promo || "";
+console.log("=== B6 原始資料檢查 ===", promoRaw);
+
 if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
+    // 修正：使用 [ITEM] 標記精準切割
     const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
+    
     window.currentActivePromos = itemStrings.map(itemStr => {
         const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-        const cleanText = itemStr.replace(/\[ITEM\]/g, "").replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+        const cleanText = itemStr.replace(/\[ITEM\]/g, "")
+                                 .replace(/\[POSTER\].*?\[\/POSTER\]/g, "")
+                                 .trim();
+        // 抓取截止日
         const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
+        
         return {
             fullText: cleanText,
             poster: pMatch ? pMatch[1].trim() : "",
-            deadline: dMatch ? dMatch[1] : "近期"
+            deadline: dMatch ? dMatch[1] : "額滿為止"
         };
     });
+} else {
+    window.currentActivePromos = [];
 }
+            
             // --- E. 用戶資料合併與保護 ---
             let displayUser = null;
             if (data.user && data.user.name) {
@@ -825,57 +836,59 @@ ${posterUrl ?
 window.currentActivePromos = [];
 
 function renderRegistrationCards(promoEvents, userRegistrations) {
-    const container = document.getElementById('registrationSection');
+    const container = document.getElementById('eventSection');
+    const wrapper = document.getElementById('registrationWrapper');
     if (!container) return;
 
     if (!promoEvents || promoEvents.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-center py-10">目前尚無開放報名活動</p>`;
+        if (wrapper) wrapper.classList.add('hidden');
         return;
     }
 
-    container.innerHTML = promoEvents.map(ev => {
-        // 1. 從文字中提取活動標題（用於比對報名狀態）
-        // 假設標題格式為：【近期報名活動：活動名稱】
-        const titleMatch = ev.fullText.match(/【近期報名活動：(.*?)】/);
-        const title = titleMatch ? titleMatch[1].trim() : "未知活動";
+    if (wrapper) wrapper.classList.remove('hidden');
+    container.innerHTML = ''; // 清空舊內容
 
-        // 2. 比對報名狀態
-        const regInfo = (userRegistrations || []).find(reg => 
-            (reg.title || reg.eventTitle || "").trim() === title
-        );
+    promoEvents.forEach(ev => {
+        // 1. 提取標題用於狀態比對
+        const titleMatch = ev.fullText.match(/【近期報名活動：(.*?)】/);
+        const title = titleMatch ? titleMatch[1].trim() : "活動";
+
+        // 2. 比對報名狀態 (從 userRegistrations 找)
+        const regInfo = (userRegistrations || []).find(reg => {
+            const rTitle = reg.title || reg.eventTitle || "";
+            return rTitle.toString().trim() === title;
+        });
+        
         const isRegistered = !!regInfo;
         const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是");
 
-        // 3. 處理海報
-        const finalPoster = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(ev.poster) : ev.poster;
+        // 3. 處理海報 (不裁切模式)
+        const finalPoster = (ev.poster && typeof getDirectImageUrl === 'function') 
+                            ? getDirectImageUrl(ev.poster) 
+                            : ev.poster;
 
-        // 4. 生成按鈕
-        let actionBtn = "";
-        if (isRegistered) {
-            actionBtn = `
-                <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
-                    <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'} mr-2"></i>
-                    ${isCheckedIn ? '已完成報到' : '已報名成功'}
-                </button>`;
-        } else {
-            // 🌟 點擊後跳轉到 event_registration.html 並帶參數
-            actionBtn = `
-                <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
-                        class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
-                    立即報名
-                </button>`;
-        }
+        // 4. 按鈕邏輯
+        let actionBtn = isRegistered 
+            ? `<button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'}"></i>
+                ${isCheckedIn ? '已完成報到' : '已報名成功'}
+               </button>`
+            : `<button onclick="goToRegistration('${encodeURIComponent(title)}')" 
+                class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-transform">
+                立即報名
+               </button>`;
 
-        return `
-            <div class="bg-white rounded-3xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
+        // 5. 組合 HTML
+        const cardHtml = `
+            <div class="bg-white rounded-3xl shadow-sm border border-emerald-50 overflow-hidden mb-2">
                 ${finalPoster ? `
-                    <div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">
+                    <div class="w-full bg-gray-50 flex justify-center items-center border-b border-emerald-50">
                         <img src="${finalPoster}" class="w-full h-auto object-contain max-h-[400px]" onerror="this.style.display='none'">
                     </div>
                 ` : ''}
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
-                        <span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold">活動公告</span>
+                        <span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold">活動預約</span>
                         <span class="text-red-500 text-xs font-medium">截止：${ev.deadline}</span>
                     </div>
                     <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6">${ev.fullText}</div>
@@ -883,9 +896,9 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
                 </div>
             </div>
         `;
-    }).join('');
+        container.insertAdjacentHTML('beforeend', cardHtml);
+    });
 }
-
 // 獨立的跳轉函式
 function goToRegistration(title) {
     if (!currentUser?.phone) {

@@ -105,15 +105,41 @@
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
-    const STAFF_KEY = sessionStorage.getItem('staffKey');
+    
     let allEvents = [];
     let isEditMode = false;
     let currentEditData = null;
     // 從 Session 抓取權限清單
     const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+
+    var STAFF_KEY = (function() {
+    try {
+        // 1. 先嘗試從 userInfo 大箱子拿
+        const infoStr = sessionStorage.getItem('userInfo');
+        if (infoStr) {
+            const userInfo = JSON.parse(infoStr);
+            if (userInfo.staffKey) {
+                console.log("✅ 金鑰來源：userInfo 物件");
+                return userInfo.staffKey;
+            }
+        }
+
+        // 2. 如果大箱子沒有，嘗試拿獨立的小盒子 (對應您 executeStaffVerify 的存法)
+        const loneKey = sessionStorage.getItem('staffKey');
+        if (loneKey) {
+            console.log("✅ 金鑰來源：獨立 staffKey 欄位");
+            return loneKey;
+        }
+
+        return ""; // 真的都沒有
+    } catch (e) {
+        console.error("❌ 金鑰讀取失敗:", e);
+        return "";
+    }
+})();
     
     window.onload = () => {
-        if (!STAFF_KEY) { location.href="index.html"; return; }
+        if (!STAFF_KEY) { location.href="member_zone.html"; return; }
         // --- 修正後的權限檢查 ---
         const editToggleBtn = document.getElementById('editToggleBtn');
         if (!userPermissions.includes("all") && !userPermissions.includes("edit_calendar")) {

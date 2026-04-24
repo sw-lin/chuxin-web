@@ -267,9 +267,8 @@ function toggleEditMode() {
 // 5. 儲存資料庫邏輯 (已還原您舊版能成功顯示 ✅ 儲存成功的寫法)
 //  (已修正讀寫位置不一致問題)
 async function saveConfigs() {
-    const staffKey = sessionStorage.getItem('staffKey');
-    if(!staffKey) return showToast("❌ 權限錯誤，請重新登入");
-
+    
+    if(!STAFF_KEY) return showToast("❌ 權限錯誤，請重新登入");
     // 取得輸入框的值
     const aboutUsVal = document.getElementById('about_us_text').value;
 
@@ -304,7 +303,7 @@ async function saveConfigs() {
     const fixedDesc = document.getElementById('guest_photo_desc').value;
     configs['guest_photo_desc'] = { promo: fixedDesc, normal: fixedDesc };
     
-    const payload = { type: 'update_config', key: staffKey, configs: configs };
+    const payload = { type: 'update_config', key: STAFF_KEY, configs: configs };
 
     showLoading(true);
     try {
@@ -338,7 +337,7 @@ function showToast(m) {
 window.onload = () => { 
     // A. 身份驗證
 
-    if (!staffKey) {
+    if (!STAFF_KEY) {
         alert("請重新登入");
         location.href = "index.html";
         return;

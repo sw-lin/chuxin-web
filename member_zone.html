@@ -915,11 +915,15 @@ function renderCalendarActivity(calendar) {
     // 4. 渲染 HTML (純展示卡片)
     container.innerHTML = `
         <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
-            ${posterUrl ? 
-                `<img src="${posterUrl}" 
-                      alt="活動海報" 
-                      class="w-full h-auto object-cover max-h-48 border-b border-emerald-50"
-                      onerror="this.style.display='none'">` : ''}
+            // 🌟 修正後的海報渲染代碼
+            
+${posterUrl ? 
+    `<div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">
+        <img src="${posterUrl}" 
+              alt="活動海報" 
+              class="w-full h-auto object-contain max-h-[400px]" 
+              onerror="this.style.display='none'">
+    </div>` : ''}  
             
             <div class="p-4 flex gap-4">
                 <div class="flex-shrink-0 w-16 h-16 bg-emerald-50 rounded-xl flex flex-col items-center justify-center border border-emerald-100">

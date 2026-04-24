@@ -290,18 +290,35 @@ async function syncData() {
             // --- A. Config ---
             if (data.config) globalConfig = data.config;
 
-            // --- B. 公告顯示 ---
-            const newsContent = data.news ? data.news.trim() : "";
-            const newsContainer = document.getElementById('newsContainer');
-            const newsElem = document.getElementById('news');
+            // --- B. 公告顯示與海報解析 ---
+const rawNews = data.news ? data.news.trim() : "";
+const newsContainer = document.getElementById('newsContainer');
+const newsElem = document.getElementById('news');
+const posterImgElem = document.getElementById('eventPoster'); // 假設你有個放海報的 <img>
 
-            if (newsContent && newsContent !== "NONE") {
-                if (newsContainer) newsContainer.classList.remove('hidden');
-                if (newsElem) newsElem.innerText = newsContent;
-            } else {
-                if (newsContainer) newsContainer.classList.add('hidden');
-            }
+if (rawNews && rawNews !== "NONE") {
+    // 1. 挖出海報網址
+    const posterMatch = rawNews.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+    const posterUrl = posterMatch ? posterMatch[1] : null;
+    
+    // 2. 清除標籤後的純文字（給 UI 顯示用）
+    const cleanNewsText = rawNews.replace(/\[POSTER\].*?\[\/POSTER\]/g, "");
 
+    if (newsContainer) newsContainer.classList.remove('hidden');
+    if (newsElem) newsElem.innerText = cleanNewsText;
+
+    // 3. 海報邏輯：如果有圖就顯圖，沒圖就隱藏圖片框（或顯示預設圖）
+    if (posterImgElem) {
+        if (posterUrl) {
+            posterImgElem.src = posterUrl;
+            posterImgElem.style.display = 'block';
+        } else {
+            posterImgElem.style.display = 'none'; // 沒海報時隱藏圖片元件
+        }
+    }
+} else {
+    if (newsContainer) newsContainer.classList.add('hidden');
+}
             // --- C. 關鍵點：合併與保護資料 ---
             // 決定要顯示的用戶資料 (優先用後端傳回的，沒有就用快取的)
             let displayUser = null;

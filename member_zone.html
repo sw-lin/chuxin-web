@@ -267,15 +267,15 @@ async function syncData() {
     console.log("=== 1. syncData 開始執行 ===");
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'flex';
-    
+
     // 從 Session 取得快取的用戶資訊
-    const infoStr = sessionStorage.getItem('userInfo'); 
+    const infoStr = sessionStorage.getItem('userInfo');
     const cachedUserInfo = infoStr ? JSON.parse(infoStr) : null;
-    
+
     if (!cachedUserInfo || !cachedUserInfo.phone) {
         console.error("❌ 找不到用戶電話，導回登入頁");
         if (overlay) overlay.style.display = 'none';
-        window.location.href = 'index.html'; 
+        window.location.href = 'index.html';
         return;
     }
 
@@ -283,7 +283,7 @@ async function syncData() {
         const url = `${GAS_URL}?type=member_init&phone=${cachedUserInfo.phone}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.json();
-        
+
         console.log("=== 2. 收到後端資料 ===", data);
 
         if (data.result === "SUCCESS") {
@@ -300,56 +300,64 @@ async function syncData() {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
 
-// --- C. 近期活動預告與海報解析 (整合後呼叫 render) ---
-const upcomingRaw = data.upcoming || "";
-if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
-    console.log("=== 解析前原始字串 ===", upcomingRaw);
+            // --- C. 近期活動預告解析 (System!B5) ---
+            const upcomingRaw = data.upcoming || "";
+            if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
+                const dateMatch = upcomingRaw.match(/(\d{4}\/\d{2}\/\d{2})/);
+                const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+                const descMatch = upcomingRaw.match(/\(簡介：(.*?)\)/);
 
-    // 1. 強健的正則表達式
-    const dateMatch = upcomingRaw.match(/(\d{4}\/\d{2}\/\d{2})/); // 抓取日期
-    const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/); // 抓取海報網址
-    const descMatch = upcomingRaw.match(/\(簡介：(.*?)\)/); // 抓取簡介內容
+                let upTitle = upcomingRaw.replace(/【近期預告】/, "")
+                    .replace(/\d{4}\/\d{2}\/\d{2}/, "")
+                    .replace(/\[POSTER\].*?\[\/POSTER\]/, "")
+                    .replace(/\(簡介：.*?\)/, "")
+                    .trim();
 
-    // 2. 取得標題 (去掉日期、海報標籤、簡介標籤後的剩餘文字)
-    let title = upcomingRaw.replace(/【近期預告】/, "")
-                           .replace(/\d{4}\/\d{2}\/\d{2}/, "")
-                           .replace(/\[POSTER\].*?\[\/POSTER\]/, "")
-                           .replace(/\(簡介：.*?\)/, "")
-                           .trim();
+                const fakeCalendarArray = [{
+                    dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "",
+                    title: upTitle || "近期活動",
+                    poster: posterMatch ? posterMatch[1].trim() : "",
+                    desc: (descMatch && descMatch[1].trim()) ? descMatch[1].trim() : "歡迎踴躍參加！"
+                }];
+                renderCalendarActivity(fakeCalendarArray);
+            } else {
+                renderCalendarActivity([]);
+            }
 
-    // 3. 組合成 render 函式需要的 Fake 陣列
-    const fakeCalendarArray = [{
-        dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "", // 轉成 2026-04-24
-        title: title || "近期活動",
-        poster: posterMatch ? posterMatch[1].trim() : "", // 確保網址沒空白
-        desc: (descMatch && descMatch[1].trim()) ? descMatch[1].trim() : "歡迎踴躍參加！" // 🌟 修改邏輯：如果沒簡介，直接變更文字
-    }];
+            // --- D. 報名活動區解析 (System!B6) ---
+            const promoRaw = data.registrations_promo || "";
+            if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
+                // 分割多個 [ITEM]
+                const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
+                const activeRegistrations = itemStrings.map(itemStr => {
+                    const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+                    const cleanText = itemStr.replace(/\[ITEM\]/g, "")
+                                             .replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+                    const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
+                    return {
+                        fullText: cleanText,
+                        poster: pMatch ? pMatch[1].trim() : "",
+                        deadline: dMatch ? dMatch[1] : "近期"
+                    };
+                });
+                // 渲染多筆報名卡片
+                if (typeof renderRegistrationCards === 'function') {
+                    renderRegistrationCards(activeRegistrations);
+                }
+            }
 
-    console.log("=== 解析後的 Fake 活動物件 ===", fakeCalendarArray[0]);
-
-    // 4. 呼叫渲染函式
-    renderCalendarActivity(fakeCalendarArray);
-
-} else {
-    renderCalendarActivity([]); // 顯示「目前暫無活動」
-}
-
-            
-            // --- D. 用戶資料合併與保護 ---
+            // --- E. 用戶資料合併與保護 ---
             let displayUser = null;
             if (data.user && data.user.name) {
-                console.log("✅ 使用後端即時資料更新");
                 displayUser = data.user;
-                // 統一出席紀錄存放位置，供 Modal 使用
                 window.currentAttendedData = data.user.attendedLogs || data.user.attendLog || [];
             } else {
-                console.log("⚠️ 套用快取備份");
                 displayUser = cachedUserInfo;
                 window.currentAttendedData = cachedUserInfo.attendedLogs || [];
             }
-            currentUser = displayUser; // 更新全域變數
+            currentUser = displayUser;
 
-            // --- E. 幹部模式按鈕 ---
+            // --- F. 幹部模式按鈕 ---
             const staffBtn = document.getElementById('staffBtn');
             if (staffBtn) {
                 const isStaff = (displayUser.role && displayUser.role !== "學員");
@@ -357,12 +365,12 @@ if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
                 if (isStaff) staffBtn.onclick = enterStaffMode;
             }
 
-            // --- F. 更新 UI (參與率與活動列表) ---
+            // --- G. 更新 UI (參與率與原本的活動報名邏輯備援) ---
             console.log("=== 3. 執行 updateUI ===");
             updateUI(
-                displayUser,           // 分子與姓名
-                data.totalRequired,    // 分母 (System!B7)
-                data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"), 
+                displayUser,
+                data.totalRequired,
+                data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"),
                 data.registrations || []
             );
         }
@@ -374,7 +382,8 @@ if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
     } finally {
         if (overlay) overlay.style.display = 'none';
     }
-}    
+}
+    
 function updateUI(user, totalRequiredFromGAS, events, registrations) {
     console.log("=== updateUI 開始更新 ===");
     console.log("分子數據源:", user);
@@ -526,8 +535,7 @@ function closeHistoryModal() {
         modal.style.display = 'none';
     }
 } 
-// 掃碼成功處理
-// 掃碼成功處理 (2026 修復版)
+
 // 掃碼成功處理 - 格式對齊補登系統版本 (2026-04-07 修復)
 async function onScanSuccess(decodedText) {
     let rawText = decodedText.trim();
@@ -632,11 +640,6 @@ function closeScanner() {
 // 全域變數預期在 syncData 之後會被填充
 let globalConfig = {}; 
 
-// 在您的 syncData 成功回傳處，請記得賦值：
-// .then(data => {
-//    globalConfig = data.config; 
-//    ... 其他渲染
-// })
 
 function openService(key) {
     // 當 key 傳入 'reading_folder_url' 時，
@@ -944,6 +947,46 @@ ${posterUrl ?
         </div>
     `;
 }
+function renderRegistrationCards(events) {
+    const container = document.getElementById('registrationSection'); // 請確認你的 HTML ID
+    if (!container) return;
+
+    if (events.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-center py-4">目前尚無開放報名活動</p>`;
+        return;
+    }
+
+    // 跑迴圈生成每一張卡片
+    container.innerHTML = events.map(ev => {
+        // 海報轉址處理
+        const finalPoster = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(ev.poster) : ev.poster;
+        
+        return `
+            <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
+                ${finalPoster ? `
+                    <div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">
+                        <img src="${finalPoster}" class="w-full h-auto object-contain max-h-[400px]" onerror="this.style.display='none'">
+                    </div>
+                ` : ''}
+
+                <div class="p-5">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold">活動公告</span>
+                        <span class="text-red-500 text-xs font-medium">截止：${ev.deadline}</span>
+                    </div>
+
+                    <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6">
+                        ${ev.fullText}
+                    </div>
+
+                    <button class="w-full bg-emerald-800 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-900/20">
+                        立即報名
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join(''); // 將陣列合併為字串
+}    
   
 function showToast(msg, type) {
     const container = document.getElementById('toastContainer');

@@ -300,41 +300,50 @@ async function syncData() {
             // --- A. Config 設定 ---
             if (data.config) globalConfig = data.config;
 
-// --- B. 頂部跑馬燈公告 (精準日期比對版) ---
+            // --- B. 頂部跑馬燈公告 (終極防護 + 偵錯版) ---
 const newsElem = document.getElementById('news');
 const newsContainer = document.getElementById('newsContainer');
 
-// 1. 取得公告內容
+// 1. 先從 data 中提取資料，並印出來檢查 (請按 F12 看 Console)
+console.log("公告原始資料:", {
+  content: data.news,
+  start: data.startDate,
+  end: data.endDate
+});
+
 const newsContent = data.news ? data.news.trim() : "";
 
-/**
- * 輔助函式：將各種格式的日期轉換為 YYYYMMDD 的數字進行比對
- * 支援格式： "2026-04-22" 或 Google 回傳的 Date 物件
- */
-function getDateVal(dateInput) {
-    if (!dateInput) return null;
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return null; // 無效日期
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return parseInt(`${y}${m}${day}`); // 回傳如 20260422 的數字
+// 2. 建立精準比對數值 (YYYYMMDD)
+function getNumericDate(input) {
+    if (!input) return null;
+    const d = new Date(input);
+    if (isNaN(d.getTime())) return null;
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
-// 2. 計算比對數值
-const todayVal = getDateVal(new Date());
-const startVal = getDateVal(data.startDate); // C 欄
-const endVal = getDateVal(data.endDate);     // D 欄
+const todayVal = getNumericDate(new Date()); // 今天是 20260424
+const startVal = getNumericDate(data.startDate);
+const endVal = getNumericDate(data.endDate);
 
-// 3. 判斷有效期 (排除 NONE 且 需在時間範圍內)
-const isWithinRange = (!startVal || todayVal >= startVal) && 
-                      (!endVal || todayVal <= endVal);
+// 3. 嚴謹的範圍判斷：如果有設定日期，就必須符合；沒設定則視為通過
+const isStarted = !startVal || todayVal >= startVal;
+const isNotEnded = !endVal || todayVal <= endVal;
+const isWithinRange = isStarted && isNotEnded;
 
+console.log("日期比對結果:", { todayVal, startVal, endVal, isWithinRange });
+
+// 4. 執行渲染邏輯
 if (newsContent && newsContent !== "NONE" && isWithinRange) {
+    // 只有在「有內容」且「在時間內」才顯示
     if (newsContainer) newsContainer.classList.remove('hidden');
     if (newsElem) newsElem.innerText = newsContent;
 } else {
-    if (newsContainer) newsContainer.classList.add('hidden');
+    // 否則一律隱藏
+    if (newsContainer) {
+        newsContainer.classList.add('hidden');
+        // 額外保險：強制設定 CSS display
+        newsContainer.style.display = 'none'; 
+    }
 }            
             // --- C. 近期活動預告解析 (System!B5) ---
             const upcomingRaw = data.upcoming || "";

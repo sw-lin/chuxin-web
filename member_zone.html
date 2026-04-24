@@ -301,34 +301,37 @@ async function syncData() {
             }
 
             // --- C. 近期活動預告與海報解析 (System!B5) ---
-            const upcomingRaw = data.upcoming || "";
-            const upcomingContainer = document.getElementById('upcomingContainer');
-            const upcomingTextElem = document.getElementById('upcomingText');
-            const posterImgElem = document.getElementById('eventPoster');
+            // --- C. 近期活動預告與海報解析 (對準你的 HTML 結構) ---
+const upcomingRaw = data.upcoming || "";
+const activitySection = document.getElementById('calendarActivitySection');
 
-            if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
-                // 1. 解析海報網址 [POSTER]url[/POSTER]
-                const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-                const posterUrl = posterMatch ? posterMatch[1] : null;
-                
-                // 2. 取得純文字內容
-                const cleanUpcomingText = upcomingRaw.replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
+    // 1. 解析海報網址 [POSTER]url[/POSTER]
+    const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+    const posterUrl = posterMatch ? posterMatch[1] : null;
+    
+    // 2. 取得純文字內容
+    const cleanText = upcomingRaw.replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
 
-                if (upcomingContainer) upcomingContainer.classList.remove('hidden');
-                if (upcomingTextElem) upcomingTextElem.innerText = cleanUpcomingText;
-
-                // 3. 處理海報顯示
-                if (posterImgElem) {
-                    if (posterUrl) {
-                        posterImgElem.src = posterUrl;
-                        posterImgElem.style.display = 'block';
-                    } else {
-                        posterImgElem.style.display = 'none';
-                    }
-                }
-            } else {
-                if (upcomingContainer) upcomingContainer.classList.add('hidden');
-            }
+    // 3. 動態組合 HTML 內容
+    if (activitySection) {
+        let htmlContent = "";
+        
+        // 如果有海報就加上 <img>，沒海報就省略
+        if (posterUrl) {
+            htmlContent += `<img src="${posterUrl}" alt="活動海報" class="w-full h-auto rounded-xl shadow-md mb-3">`;
+        }
+        
+        // 加上活動文字描述
+        htmlContent += `<p class="text-emerald-900 leading-relaxed font-medium bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">${cleanText}</p>`;
+        
+        activitySection.innerHTML = htmlContent;
+    }
+} else {
+    if (activitySection) {
+        activitySection.innerHTML = `<p class="text-gray-400 text-center py-4">目前暫無預定活動</p>`;
+    }
+}
 
             // --- D. 用戶資料合併與保護 ---
             let displayUser = null;

@@ -275,15 +275,18 @@ async function handleLogin() {
                 result: "SUCCESS",
                 name: result.name,
                 role: result.role,
-                title: result.title, // 👈 關鍵新增：把 GAS 回傳的職稱接住
+                title: result.title,
                 phone: u,
+                
+                // 🌟 關鍵修正：補上這兩行，將 GAS 的資料存入 Session
+                email: result.email || "",               // 解密後的 Email
+                encryptedPhone: result.encryptedPhone || "", // 加密後的手機 (後端修改 Key)
+                
                 staffKey: result.staffKey || "",
                 isPaid: isPaidStatus,
-                // 🌟 關鍵新增：一定要把 GAS 回傳的出席紀錄存進 sessionStorage
-                attendedLogs: result.attendedLogs ||[],
-                // 🛑 除錯點 B：新增一個診斷訊息存入緩存
+                attendedLogs: result.attendedLogs || [],
                 debug: `Login時紀錄數: ${result.attendedLogs ? result.attendedLogs.length : 0}`                
-        };
+            };
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
             // 判斷跳轉目標

@@ -105,38 +105,29 @@
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
-    
+
+    // 📦 1. 統一提取資料 (auth 包)
+    const auth = (function() {
+        try {
+            const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+            const loneKey = sessionStorage.getItem('staffKey'); 
+            return {
+                key: info.staffKey || loneKey || "",
+                permissions: info.userPermissions || [],
+                isValid: !!(info.staffKey || loneKey)
+            };
+        } catch (e) {
+            return { key: "", permissions: [], isValid: false };
+        }
+    })();
+
+    // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
+    var STAFF_KEY = auth.key;
+    const userPermissions = auth.permissions;    
     let allEvents = [];
     let isEditMode = false;
     let currentEditData = null;
-    // 從 Session 抓取權限清單
-    const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
 
-    var STAFF_KEY = (function() {
-    try {
-        // 1. 先嘗試從 userInfo 大箱子拿
-        const infoStr = sessionStorage.getItem('userInfo');
-        if (infoStr) {
-            const userInfo = JSON.parse(infoStr);
-            if (userInfo.staffKey) {
-                console.log("✅ 金鑰來源：userInfo 物件");
-                return userInfo.staffKey;
-            }
-        }
-
-        // 2. 如果大箱子沒有，嘗試拿獨立的小盒子 (對應您 executeStaffVerify 的存法)
-        const loneKey = sessionStorage.getItem('staffKey');
-        if (loneKey) {
-            console.log("✅ 金鑰來源：獨立 staffKey 欄位");
-            return loneKey;
-        }
-
-        return ""; // 真的都沒有
-    } catch (e) {
-        console.error("❌ 金鑰讀取失敗:", e);
-        return "";
-    }
-})();
     
     window.onload = () => {
         if (!STAFF_KEY) { location.href="member_zone.html"; return; }

@@ -234,7 +234,9 @@ function startSlides() {
 
 async function handleLogin() {
     const rawU = document.getElementById('userPhone').value.trim();
-    const u = toHalfWidth(rawU).toLowerCase();
+    
+    // 🌟 修正重點：加上 .replace(/[^0-9]/g, "") 徹底移除單引號、橫槓、空格
+    const u = toHalfWidth(rawU).replace(/[^0-9]/g, "").toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
 
     // 1. 訪客模式：直接跳轉，不再彈窗

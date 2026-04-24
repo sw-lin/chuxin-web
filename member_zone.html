@@ -177,7 +177,7 @@
     </div>
 </div>
 
-<div id="profileModal" class="modal-overlay">
+<div id="profileModal" class="modal-overlay" style="display:none;">
     <div class="bg-white w-[90%] max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl">
         <div class="p-6 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
             <h3 class="font-black text-emerald-900">修改個人資料</h3>
@@ -192,26 +192,31 @@
 
             <div>
                 <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">電子郵件 EMAIL</label>
-                <input type="email" id="editEmail" name="email" class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm font-medium" placeholder="請輸入 Email">
+                <input type="email" id="editEmail" name="email" 
+                       autocomplete="email" 
+                       class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm font-medium" 
+                       placeholder="請輸入 Email">
             </div>
 
             <hr class="border-gray-100">
 
             <div>
-    <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">新密碼 (若不修改請留空)</label>
-    <input type="password" id="newPassword" 
-           name="new-password" 
-           autocomplete="new-password" 
-           class="..." placeholder="請輸入新密碼">
-</div>
+                <label class="block text-[10px] font-bold text-emerald-800 mb-2 ml-1">新密碼 (若不修改請留空)</label>
+                <input type="password" id="newPassword" 
+                       name="new-password" 
+                       autocomplete="new-password" 
+                       class="w-full px-5 py-3 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 outline-none text-sm font-medium" 
+                       placeholder="請輸入新密碼">
+            </div>
 
-<div class="bg-amber-50 p-4 rounded-2xl">
-    <label class="block text-[10px] font-bold text-amber-800 mb-2 ml-1">請輸入「舊密碼」進行確認</label>
-    <input type="password" id="oldPassword" 
-           name="verify-password" 
-           autocomplete="current-password" 
-           class="..." placeholder="安全性驗證">
-</div>
+            <div class="bg-amber-50 p-4 rounded-2xl">
+                <label class="block text-[10px] font-bold text-amber-800 mb-2 ml-1">請輸入「舊密碼」進行確認</label>
+                <input type="password" id="oldPassword" 
+                       name="verify-password" 
+                       autocomplete="current-password" 
+                       class="w-full px-5 py-3 bg-white rounded-xl border-2 border-transparent focus:border-amber-500 outline-none text-sm font-medium" 
+                       placeholder="安全性驗證">
+            </div>
             
             <button type="submit" class="w-full py-4 bg-emerald-700 text-white rounded-[1.5rem] font-black text-sm shadow-lg shadow-emerald-100 active:scale-95 transition-all">
                 確認儲存修改
@@ -933,29 +938,30 @@ function openRemoteLink(type) {
 // 開啟彈窗並填入舊資料
 function openProfileModal() {
     const modal = document.getElementById('profileModal');
-    if (!modal) return;
     
-    // 1. 處理隱藏的帳號辨識 (電話)
-    const usernameInput = document.getElementById('editUsername');
-    if (usernameInput) {
-        // 使用加密電話或明碼電話作為標識
-        usernameInput.value = currentUser.encryptedPhone || currentUser.phone || ""; 
-    }
-    
-    // 2. 🌟 關鍵修改：預先顯示舊的 Email
+    // 1. 取得當前使用者的資料 (確保 currentUser 已包含從資料庫解密後的 email)
+    // 如果您的 email 還是加密狀態，請記得先解密
+    const currentEmail = currentUser.email || ""; 
+
+    // 2. 填入資料
     const emailInput = document.getElementById('editEmail');
     if (emailInput) {
-        // 將目前登入者的 email 填入框內
-        emailInput.value = currentUser.email || ""; 
+        emailInput.value = currentEmail;
     }
-    
-    // 3. 清空密碼欄位 (安全起見，每次開啟都要是空的)
-    document.getElementById('newPassword').value = ""; 
-    document.getElementById('oldPassword').value = ""; 
-    
-    // 4. 顯示彈窗
+
+    // 3. 顯示 Modal
     modal.style.display = 'flex';
-}
+
+    // 4. 🌟 額外保險：延遲 100 毫秒再次強制填入
+    // 這是為了對抗某些瀏覽器在 Modal 彈出後強制覆蓋欄位的行為
+    setTimeout(() => {
+        if (emailInput) emailInput.value = currentEmail;
+        
+        // 同時確保密碼欄位是空的，不要讓瀏覽器幫你填舊密碼進去
+        document.getElementById('newPassword').value = "";
+        document.getElementById('oldPassword').value = "";
+    }, 100);
+}    
 function closeProfileModal() {
     document.getElementById('profileModal').style.display = 'none';
 }

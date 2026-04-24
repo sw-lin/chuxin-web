@@ -322,7 +322,7 @@ if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
         dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "", // 轉成 2026-04-24
         title: title || "近期活動",
         poster: posterMatch ? posterMatch[1].trim() : "", // 確保網址沒空白
-        desc: (descMatch && descMatch[1].trim()) ? descMatch[1].trim() : "歡迎永躍參加！" // 🌟 修改邏輯：如果沒簡介，直接變更文字
+        desc: (descMatch && descMatch[1].trim()) ? descMatch[1].trim() : "歡迎踴躍參加！" // 🌟 修改邏輯：如果沒簡介，直接變更文字
     }];
 
     console.log("=== 解析後的 Fake 活動物件 ===", fakeCalendarArray[0]);
@@ -914,8 +914,7 @@ function renderCalendarActivity(calendar) {
 
     // 4. 渲染 HTML (純展示卡片)
     container.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
-            // 🌟 修正後的海報渲染代碼
+        <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6"
             
 ${posterUrl ? 
     `<div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">

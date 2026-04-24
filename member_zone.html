@@ -300,39 +300,35 @@ async function syncData() {
                 if (newsContainer) newsContainer.classList.add('hidden');
             }
 
-            // --- C. 近期活動預告與海報解析 (System!B5) ---
-            // --- C. 近期活動預告與海報解析 (對準你的 HTML 結構) ---
+            // --- C. 近期活動預告與海報解析 (整合後呼叫 render) ---
 const upcomingRaw = data.upcoming || "";
-const activitySection = document.getElementById('calendarActivitySection');
-
 if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
-    // 1. 解析海報網址 [POSTER]url[/POSTER]
+    // 解析字串：【近期預告】2026/04/13 活動名稱 (簡介：內容...) [POSTER]url[/POSTER]
+    const dateMatch = upcomingRaw.match(/(\d{4}\/\d{2}\/\d{2})/);
     const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-    const posterUrl = posterMatch ? posterMatch[1] : null;
+    const descMatch = upcomingRaw.match(/\(簡介：(.*?)\)/);
     
-    // 2. 取得純文字內容
-    const cleanText = upcomingRaw.replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+    // 取得標題 (去掉日期、簡介跟海報標籤後的剩餘文字)
+    let title = upcomingRaw.replace(/【近期預告】/, "")
+                           .replace(/\d{4}\/\d{2}\/\d{2}/, "")
+                           .replace(/\(簡介：.*?\)/, "")
+                           .replace(/\[POSTER\].*?\[\/POSTER\]/, "")
+                           .trim();
 
-    // 3. 動態組合 HTML 內容
-    if (activitySection) {
-        let htmlContent = "";
-        
-        // 如果有海報就加上 <img>，沒海報就省略
-        if (posterUrl) {
-            htmlContent += `<img src="${posterUrl}" alt="活動海報" class="w-full h-auto rounded-xl shadow-md mb-3">`;
-        }
-        
-        // 加上活動文字描述
-        htmlContent += `<p class="text-emerald-900 leading-relaxed font-medium bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">${cleanText}</p>`;
-        
-        activitySection.innerHTML = htmlContent;
-    }
+    // 組合成 renderCalendarActivity 需要的物件格式
+    const fakeEventObj = {
+        dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "", // 轉成 2026-04-13
+        title: title || "近期活動",
+        poster: posterMatch ? posterMatch[1] : "",
+        desc: descMatch ? descMatch[1] : "歡迎踴躍參加！"
+    };
+
+    // 呼叫渲染函式 (傳入單一物件組成的陣列)
+    renderCalendarActivity([fakeEventObj]);
 } else {
-    if (activitySection) {
-        activitySection.innerHTML = `<p class="text-gray-400 text-center py-4">目前暫無預定活動</p>`;
-    }
+    renderCalendarActivity([]); // 顯示暫無活動
 }
-
+            
             // --- D. 用戶資料合併與保護 ---
             let displayUser = null;
             if (data.user && data.user.name) {
@@ -882,47 +878,47 @@ function renderCalendarActivity(calendar) {
     const container = document.getElementById('calendarActivitySection');
     if (!container) return;
     
-    const today = new Date().toISOString().split('T')[0];
-    const nextEvent = (calendar || []).find(ev => ev.dateText >= today);
+    const nextEvent = (calendar || [])[0]; // 直接取第一筆
 
     if (!nextEvent) {
         container.innerHTML = '<p class="text-center text-gray-400 py-10 text-xs font-bold">目前暫無近期活動預告</p>';
         return;
     }
 
-    // 取得轉換後的網址
-    const posterUrl = getDirectImageUrl(nextEvent.poster);
-    console.log("海報解析網址:", posterUrl); // 您可以在控制台確認網址是否正確
-
-    // --- 新增：日期格式化邏輯 ---
-    let displayDate = nextEvent.dateText; // 預設值
-    if (nextEvent.dateText && nextEvent.dateText.includes('-')) {
-        const parts = nextEvent.dateText.split('-');
+    // 解析日期 (支援 2026-04-13 或 2026/04/13)
+    let month = "--";
+    let day = "--";
+    const dateStr = nextEvent.dateText || "";
+    const separator = dateStr.includes('-') ? '-' : '/';
+    
+    if (dateStr.includes(separator)) {
+        const parts = dateStr.split(separator);
         if (parts.length >= 3) {
-            displayDate = `${parts[1]}/${parts[2]}`; // 變成 04/13
+            month = parseInt(parts[1]); 
+            day = parseInt(parts[2]);
         }
     }
-    if (posterUrl) {
-        container.innerHTML = `
-            <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-emerald-50 mb-6">
-                <div class="p-6">
-                    <div class="flex items-center gap-2">
-                        <span class="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">${displayDate}</span>
-                        <h4 class="font-black text-emerald-900">${nextEvent.title}</h4>
+
+    // 渲染 HTML ... (後面接你之前的卡片模板)
+    container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
+            ${nextEvent.poster ? `<img src="${nextEvent.poster}" class="w-full h-auto object-cover max-h-48" onerror="this.style.display='none'">` : ''}
+            <div class="p-4 flex gap-4">
+                <div class="flex-shrink-0 w-16 h-16 bg-emerald-50 rounded-xl flex flex-col items-center justify-center border border-emerald-100">
+                    <span class="text-xs font-bold text-emerald-600">${month}月</span>
+                    <span class="text-2xl font-black text-emerald-800">${day}</span>
+                </div>
+                <div class="flex-grow">
+                    <h4 class="text-lg font-bold text-emerald-950 mb-1.5">${nextEvent.title}</h4>
+                    <div class="flex items-start gap-2">
+                        <span class="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded flex-shrink-0 mt-1">簡介</span>
+                        <p class="text-sm text-emerald-800/80 leading-snug">${nextEvent.desc}</p>
                     </div>
                 </div>
-            </div>`;
-    } else {
-        renderTextActivity(container, nextEvent);
-    }
+            </div>
+        </div>`;
 }
-
-// 圖片載入失敗時的備案函式
-function handleImageError(img, title, date, desc) {
-    console.error("海報圖片載入失敗，網址可能無效或權限未開啟");
-    const container = img.closest('#calendarActivitySection');
-    renderTextActivity(container, { title, dateText: date, desc });
-}
+    
 
 // 純文字顯示模式
 function renderTextActivity(container, ev) {

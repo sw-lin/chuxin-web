@@ -117,6 +117,24 @@
     </main>
 
     <script>
+          // 📦 1. 統一提取資料 (auth 包)
+    const auth = (function() {
+        try {
+            const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+            const loneKey = sessionStorage.getItem('staffKey'); 
+            return {
+                key: info.staffKey || loneKey || "",
+                permissions: info.userPermissions || [],
+                isValid: !!(info.staffKey || loneKey)
+            };
+        } catch (e) {
+            return { key: "", permissions: [], isValid: false };
+        }
+    })();
+
+    // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
+    const userPermissions = auth.permissions;  
+        
         // 初始化權限檢查
         window.onload = function() {
             var key = sessionStorage.getItem('staffKey');
@@ -132,11 +150,9 @@
             } else {
                 // 確保 sessionStorage 存有金鑰供子頁面使用
                 sessionStorage.setItem('staffKey', key);
-            }
-            // 2. 🌟 權限檢查：是否顯示「權限管理」按鈕
-            const permissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]");
+            }            
             // 只有擁有 'all' 權限（會長/總管）的人可以看到
-            if (permissions.includes('all')) {
+            if (userPermissions.includes('all')) {
                 document.getElementById('permissionBtn').classList.remove('hidden');
             }            
         };

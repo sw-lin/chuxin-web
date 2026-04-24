@@ -526,29 +526,26 @@ function closeHistoryModal() {
 } 
 
 // 掃碼成功處理 - 格式對齊補登系統版本 (2026-04-07 修復)
+// 掃碼成功處理 - 支援加密資料傳送版本
 async function onScanSuccess(decodedText) {
     let rawText = decodedText.trim();
-    let finalEventString = ""; // 準備寫入資料庫的最終字串
+    let finalEventString = ""; 
 
-    // 1. 解析與重組格式 (將 CHECKIN:YYYY-MM-DD:Title 轉為 EVENT:YYYY-MM-DD|Title)
+    // 1. 解析與重組格式
     if (rawText.startsWith("CHECKIN:")) {
         const parts = rawText.split(':');
         if (parts.length >= 3) {
-            const datePart = parts[1]; // 2026-03-13
-            // 取得第二個冒號之後的所有內容，避免活動名稱內有冒號被切斷
+            const datePart = parts[1]; 
             const titlePart = rawText.substring(rawText.indexOf(':', 8) + 1).trim(); 
-            
-            // 組合為您要求的格式：EVENT:日期|名稱
             finalEventString = `EVENT:${datePart}|${titlePart}`;
         } else {
-            finalEventString = rawText; // 格式異常時退回原文字
+            finalEventString = rawText; 
         }
     } else {
-        // 如果 QR Code 本身就已經是 EVENT: 開頭，直接使用
         finalEventString = rawText;
     }
 
-    // 2. 檢查前端快取是否已報到 (比對轉換後的完整字串)
+    // 2. 檢查前端快取是否已報到
     const alreadyAttended = (currentUser.attendLog || []).some(log => String(log) === finalEventString);
     if (alreadyAttended) {
         showToast("此活動已完成報到", "info");
@@ -560,14 +557,15 @@ async function onScanSuccess(decodedText) {
     showToast("報到傳送中...", "info");
 
     try {
-        // 3. 發送至 GAS 進行寫入
+        // 3. 發送至 GAS 進行寫入 (修改此處)
         const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'checkin',
-                phone: currentUser.phone,
-                name: currentUser.name,
-                eventTitle: finalEventString // 傳送對齊後的格式：EVENT:2026-03-13|築心演講...
+                // 使用加密的電話與姓名屬性
+                phone: currentUser.encryptedPhone, 
+                name: currentUser.encryptedName,   
+                eventTitle: finalEventString 
             })
         });
         

@@ -325,27 +325,21 @@ async function syncData() {
             }
 
             // --- D. 報名活動區解析 (System!B6) ---
-            const promoRaw = data.registrations_promo || "";
-            if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
-                // 分割多個 [ITEM]
-                const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
-                const activeRegistrations = itemStrings.map(itemStr => {
-                    const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-                    const cleanText = itemStr.replace(/\[ITEM\]/g, "")
-                                             .replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
-                    const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
-                    return {
-                        fullText: cleanText,
-                        poster: pMatch ? pMatch[1].trim() : "",
-                        deadline: dMatch ? dMatch[1] : "近期"
-                    };
-                });
-                // 渲染多筆報名卡片
-                if (typeof renderRegistrationCards === 'function') {
-                    renderRegistrationCards(activeRegistrations);
-                }
-            }
-
+            // 在 syncData 內部解析 B6 (registrations_promo) 的地方：
+const promoRaw = data.registrations_promo || "";
+if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
+    const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
+    window.currentActivePromos = itemStrings.map(itemStr => {
+        const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+        const cleanText = itemStr.replace(/\[ITEM\]/g, "").replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+        const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
+        return {
+            fullText: cleanText,
+            poster: pMatch ? pMatch[1].trim() : "",
+            deadline: dMatch ? dMatch[1] : "近期"
+        };
+    });
+}
             // --- E. 用戶資料合併與保護 ---
             let displayUser = null;
             if (data.user && data.user.name) {
@@ -386,51 +380,35 @@ async function syncData() {
     
 function updateUI(user, totalRequiredFromGAS, events, registrations) {
     console.log("=== updateUI 開始更新 ===");
-    console.log("分子數據源:", user);
-    console.log("分母數據源:", totalRequiredFromGAS);
 
     // 1. 顯示姓名
     const nameElem = document.getElementById('userName');
-    if (nameElem && user && user.name) {
-        nameElem.innerText = user.name;
-    }
+    if (nameElem && user?.name) nameElem.innerText = user.name;
 
-    // 2. 提取分子 (出席次數)
-    // 優先從 GAS 的 attendedCount 拿，沒有的話算陣列長度
-    let attendCount = 0;
-    if (user) {
-        attendCount = user.attendedCount !== undefined ? user.attendedCount : (user.attendedLogs ? user.attendedLogs.length : 0);
-    }
-
-    // 3. 提取分母 (應到次數)
-    // 確保這裡收到的是數字 4 而不是空陣列 []
+    // 2. 參與率計算 (分子/分母)
+    const attendCount = user?.attendedCount ?? (user?.attendedLogs?.length || 0);
     const totalEvents = Number(totalRequiredFromGAS) || 0;
-
-    // 4. 計算參與率
     const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 5. 更新介面顯示
+    // 3. 更新介面數字
     const countDisplay = document.getElementById('attCountDisplay');
     const percentDisplay = document.getElementById('attPercent');
-
     if (countDisplay) countDisplay.innerText = `${attendCount} / ${totalEvents}`;
     if (percentDisplay) percentDisplay.innerText = rate + '%';
 
-    // 6. 參與率達標煙火 (50%)
+    // 4. 達標煙火 (50%)
     if (rate >= 50 && typeof confetti === 'function') {
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#064E3B', '#059669', '#10B981']
-        });
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#059669', '#10B981'] });
     }
 
-    // 7. 渲染其他區塊
-    if (typeof renderEventSection === 'function') {
-        renderEventSection(events || [], registrations || []);
+    // 5. 🌟 關鍵渲染：呼叫新版的報名區域渲染
+    // 我們將從 GAS 拿到的原始 events 與 registrations 丟進去比對狀態
+    if (typeof renderRegistrationCards === 'function') {
+        // 這邊的邏輯在 syncData 已經處理過一次「宣傳字串」，
+        // 我們讓 renderRegistrationCards 接收 registrations 陣列來判斷「已報名」狀態。
+        renderRegistrationCards(window.currentActivePromos, registrations);
     }
-}
+}    
 // 點擊卡片觸發的函式
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');
@@ -656,111 +634,7 @@ function openService(key) {
         showToast("服務連結尚未設定", "info");
         console.error(`請檢查 Config 試算表 A 欄是否為: ${key}`);    }
 }
-    
-// ==========================================
-// 4. 報名區渲染：將按鈕指向「新頁面」
-// ==========================================
-// --- 完善：活動報名區塊渲染 (若無活動則全區塊隱藏) ---
-function renderEventSection(events, registrations) {
-    const wrapper = document.getElementById('registrationWrapper');
-    const container = document.getElementById('eventSection');
-    if (!container) return;
-    
-    container.innerHTML = '';
-
-    const now = new Date();
-    // 取得今天日期 (YYYY-MM-DD)
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-    // 過濾邏輯
-    const activeEvents = (events || []).filter(ev => {
-        // 🌟 參考後端成功邏輯，對齊 Key 名稱
-        // 1. 抓取開始日 (對應 B 欄)
-        const rawStart = ev["開始展示日 (start_date)"] || ev.startDate || ev.start_date || "";
-        // 2. 抓取下架日 (對應 C 欄)
-        const rawEnd = ev["下架日期 (display_until)"] || ev.deadline || ev.display_until || "";
-
-        // 統一格式化 (將斜線換成橫線)
-        const start = rawStart.replace(/\//g, '-');
-        const end = rawEnd.replace(/\//g, '-');
-
-        // 偵錯用 (若還是有問題，請看瀏覽器 F12 Console)
-        console.log(`[日期檢查] 活動:${ev.title || ev["標題"]}, 今天:${todayStr}, 開始:${start}, 結束:${end}`);
-
-        const isStarted = !start || todayStr >= start;
-        const isNotExpired = !end || todayStr <= end;
-
-        return isStarted && isNotExpired;
-    });
-
-    // 若無活動則隱藏
-    if (activeEvents.length === 0) {
-        if (wrapper) wrapper.classList.add('hidden');
-        return;
-    }
-    if (wrapper) wrapper.classList.remove('hidden');
-
-    // 渲染過濾後的活動
-    activeEvents.forEach(ev => {
-        const title = ev["標題"] || ev.title || "";
-        
-        // 報名資訊比對
-        const regInfo = (registrations || []).find(reg => {
-            const rTitle = reg.title || reg.eventTitle || "";
-            return rTitle.toString().trim() === title.toString().trim();
-        });
-        
-        const isRegistered = !!regInfo;
-        const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是"); 
-        
-        const mFee = ev["會員報名費"] || ev.memberFee || ev.member_fee || 0;
-        const gFee = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
-        
-        const rawPoster = ev["海報連結 (poster_url)"] || ev.poster_url || ev.poster || "";
-        const posterUrl = (rawPoster && rawPoster.includes('http')) ? getDirectImageUrl(rawPoster) : null;
-
-        let actionBtn = isRegistered 
-            ? `<button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
-                <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'} mr-2"></i>${isCheckedIn ? '已完成報到' : '已報名成功'}
-               </button>`
-            : `<button onclick="goToRegistration('${encodeURIComponent(title)}')" 
-                class="w-full py-3 emerald-gradient text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
-                立即報名
-               </button>`;
-
-        const cardHtml = posterUrl 
-            ? `<div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-emerald-50 mb-6">
-                <img src="${posterUrl}" class="w-full h-auto block">
-                <div class="p-6"><h4 class="font-black text-emerald-900 text-lg mb-3">${title}</h4>${actionBtn}</div>
-               </div>`
-            : `<div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 mb-6">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">活動公告</span>
-                    <span class="text-[10px] text-red-500 font-bold">截止：${ev.deadline || ev["下架日期 (display_until)"] || '額滿為止'}</span>
-                </div>
-                <h4 class="font-black text-emerald-900 text-xl mb-3">${title}</h4>
-                <div class="space-y-3 mb-5 text-gray-600 text-xs">
-                    <div><i class="far fa-calendar-alt text-emerald-600 mr-2"></i><b>日期：</b>${ev["活動日期 (date)"] || ev.eventDate || ev.date || '另行通知'}</div>
-                    <div><i class="fas fa-tag text-emerald-600 mr-2"></i><b>費用：</b>會員 $${mFee} / 非會員 $${gFee}</div>
-                    ${(ev["活動簡介 (desc)"] || ev.desc) ? `<p class="text-emerald-700/70 leading-relaxed bg-emerald-50/30 p-3 rounded-xl border-l-4 border-emerald-200">${(ev["活動簡介 (desc)"] || ev.desc).replace(/\n/g, '<br>')}</p>` : ''}
-                </div>
-                ${actionBtn}
-               </div>`;
-        
-        container.insertAdjacentHTML('beforeend', cardHtml);
-    });
-}    
-// 獨立的跳轉函式 (保持單純)
-function goToRegistration(title) {
-    location.href = `event_registration.html?event=${title}&phone=${currentUser.phone}`;
-}
-   
-// 跳轉處理
-function handleJumpToReg(title) {
-    // 帶著參數跳轉，讓新頁面知道是誰要報名哪個活動
-    const url = `${GAS_URL}?page=registration&event=${encodeURIComponent(title)}&phone=${currentUser.phone}&name=${encodeURIComponent(currentUser.name)}`;
-    window.top.location.href = url;
-}
+       
 
 // ==========================================
 // 5. 頁面初始化與原本功能保留
@@ -947,46 +821,80 @@ ${posterUrl ?
         </div>
     `;
 }
-function renderRegistrationCards(events) {
-    const container = document.getElementById('registrationSection'); // 請確認你的 HTML ID
+// 全域變數，用來暫存從 syncData 解析出來的活動資訊
+window.currentActivePromos = [];
+
+function renderRegistrationCards(promoEvents, userRegistrations) {
+    const container = document.getElementById('registrationSection');
     if (!container) return;
 
-    if (events.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-center py-4">目前尚無開放報名活動</p>`;
+    if (!promoEvents || promoEvents.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-center py-10">目前尚無開放報名活動</p>`;
         return;
     }
 
-    // 跑迴圈生成每一張卡片
-    container.innerHTML = events.map(ev => {
-        // 海報轉址處理
+    container.innerHTML = promoEvents.map(ev => {
+        // 1. 從文字中提取活動標題（用於比對報名狀態）
+        // 假設標題格式為：【近期報名活動：活動名稱】
+        const titleMatch = ev.fullText.match(/【近期報名活動：(.*?)】/);
+        const title = titleMatch ? titleMatch[1].trim() : "未知活動";
+
+        // 2. 比對報名狀態
+        const regInfo = (userRegistrations || []).find(reg => 
+            (reg.title || reg.eventTitle || "").trim() === title
+        );
+        const isRegistered = !!regInfo;
+        const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是");
+
+        // 3. 處理海報
         const finalPoster = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(ev.poster) : ev.poster;
-        
+
+        // 4. 生成按鈕
+        let actionBtn = "";
+        if (isRegistered) {
+            actionBtn = `
+                <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
+                    <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'} mr-2"></i>
+                    ${isCheckedIn ? '已完成報到' : '已報名成功'}
+                </button>`;
+        } else {
+            // 🌟 點擊後跳轉到 event_registration.html 並帶參數
+            actionBtn = `
+                <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
+                        class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-transform">
+                    立即報名
+                </button>`;
+        }
+
         return `
-            <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
+            <div class="bg-white rounded-3xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
                 ${finalPoster ? `
                     <div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">
                         <img src="${finalPoster}" class="w-full h-auto object-contain max-h-[400px]" onerror="this.style.display='none'">
                     </div>
                 ` : ''}
-
-                <div class="p-5">
+                <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
                         <span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold">活動公告</span>
                         <span class="text-red-500 text-xs font-medium">截止：${ev.deadline}</span>
                     </div>
-
-                    <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6">
-                        ${ev.fullText}
-                    </div>
-
-                    <button class="w-full bg-emerald-800 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-900/20">
-                        立即報名
-                    </button>
+                    <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6">${ev.fullText}</div>
+                    ${actionBtn}
                 </div>
             </div>
         `;
-    }).join(''); // 將陣列合併為字串
-}    
+    }).join('');
+}
+
+// 獨立的跳轉函式
+function goToRegistration(title) {
+    if (!currentUser?.phone) {
+        alert("找不到用戶資訊，請重新登入");
+        return;
+    }
+    // 跳轉到對應的報名頁面
+    window.location.href = `event_registration.html?event=${title}&phone=${currentUser.phone}`;
+}
   
 function showToast(msg, type) {
     const container = document.getElementById('toastContainer');

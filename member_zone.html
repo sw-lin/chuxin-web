@@ -324,33 +324,33 @@ async function syncData() {
                 renderCalendarActivity([]);
             }
 
-            // --- D. 報名活動區解析 (System!B6) ---
-            // 在 syncData 內部解析 B6 (registrations_promo) 的地方：
-            const promoRaw = data.registrations_promo || "";
-console.log("=== B6 原始資料檢查 ===", promoRaw);
-
-if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
-    // 修正：使用 [ITEM] 標記精準切割
-    const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
-    
-    window.currentActivePromos = itemStrings.map(itemStr => {
-        const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-        const cleanText = itemStr.replace(/\[ITEM\]/g, "")
-                                 .replace(/\[POSTER\].*?\[\/POSTER\]/g, "")
-                                 .trim();
-        // 抓取截止日
-        const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
-        
-        return {
-            fullText: cleanText,
-            poster: pMatch ? pMatch[1].trim() : "",
-            deadline: dMatch ? dMatch[1] : "額滿為止"
-        };
-    });
-} else {
-    window.currentActivePromos = [];
-}
             
+            // 在 syncData 內部解析 B6 (registrations_promo) 的地方：
+            // 修正：從 data.promo 讀取資料 (如果以後有改名，加上 data.registrations_promo 當備用)
+            const promoRaw = data.promo || data.registrations_promo || "";
+            console.log("=== B6 原始資料檢查 ===", promoRaw);
+
+            if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
+                // 修正：使用 [ITEM] 標記精準切割
+                const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
+                
+                window.currentActivePromos = itemStrings.map(itemStr => {
+                    const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+                    const cleanText = itemStr.replace(/\[ITEM\]/g, "")
+                                             .replace(/\[POSTER\].*?\[\/POSTER\]/g, "")
+                                             .trim();
+                    // 抓取截止日
+                    const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
+                    
+                    return {
+                        fullText: cleanText,
+                        poster: pMatch ? pMatch[1].trim() : "",
+                        deadline: dMatch ? dMatch[1] : "額滿為止"
+                    };
+                });
+            } else {
+                window.currentActivePromos = [];
+            }            
             // --- E. 用戶資料合併與保護 ---
             let displayUser = null;
             if (data.user && data.user.name) {

@@ -942,17 +942,23 @@ function openRemoteLink(type) {
 } 
 // 開啟彈窗並填入舊資料
 function openProfileModal() {
-    // 確保 currentUser 存在且已有 email
-    const userEmail = currentUser.email || ""; 
-    
-    // 填入 Email 欄位
+    const modal = document.getElementById('profileModal');
     const emailInput = document.getElementById('editEmail');
-    if (emailInput) {
-        emailInput.value = userEmail;
+    const oldPwdInput = document.getElementById('oldPassword');
+    const newPwdInput = document.getElementById('newPassword');
+
+    // 1. 先清空所有欄位，防止上次殘留
+    emailInput.value = "";
+    oldPwdInput.value = "";
+    newPwdInput.value = "";
+
+    // 2. 從當前登入資料 (currentUser) 填入 Email
+    // 這裡可以加一個 console.log 診斷：console.log("當前用戶：", currentUser);
+    if (currentUser && currentUser.email) {
+        emailInput.value = currentUser.email;
     }
-    
-    // 顯示 Modal
-    document.getElementById('profileModal').style.display = 'flex';
+
+    modal.style.display = 'flex';
 }    
 function closeProfileModal() {
     document.getElementById('profileModal').style.display = 'none';
@@ -961,9 +967,16 @@ function closeProfileModal() {
 // 送出修改
 // 請在 member_zone.html 中找到並更新此函式
 async function submitProfileUpdate() {
-    const email = document.getElementById('editEmail').value.trim();
+    // 1. 基本參數讀取
+    const emailValue = document.getElementById('editEmail').value.trim();
     const newPassword = document.getElementById('newPassword').value.trim();
     const oldPassword = document.getElementById('oldPassword').value.trim();
+
+    // 🌟 關鍵檢查：確保加密電話存在，否則後端找不到資料列
+    if (!currentUser || !currentUser.encryptedPhone) {
+        showToast("系統資料異常，請重新登入再試", "error");
+        return;
+    }
 
     if (!oldPassword) {
         showToast("請輸入舊密碼以進行驗證", "error");
@@ -976,22 +989,30 @@ async function submitProfileUpdate() {
         const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
-                type: 'updateProfile',
-                // 重要：使用加密後的電話作為 ID 供後端搜尋
+                type: 'updateProfile', // 對應 doPost 中的 case
                 encryptedPhone: currentUser.encryptedPhone, 
-                newEmail: email,
-                newPassword: newPassword, // 若為空字串則後端不更新密碼
-                oldPassword: oldPassword  // 用於後端驗證身分
+                email: emailValue,     // 🌟 修正：對齊後端用的參數名 'email' (原為 newEmail)
+                newPassword: newPassword,
+                oldPassword: oldPassword 
             })
         });
 
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            showToast("資料修改成功！請重新登入", "success");
+            // 🌟 優化：先同步本地快取，再提示重新整理
+            if (currentUser) {
+                currentUser.email = emailValue;
+                sessionStorage.setItem('userInfo', JSON.stringify(currentUser));
+            }
+            
+            showToast("資料修改成功！正在重新整理...", "success");
             closeProfileModal();
-            // 更新成功後建議登出或刷新頁面快取
-            setTimeout(() => location.reload(), 1500);
+            
+            // 延遲重整以顯示成功訊息
+            setTimeout(() => {
+                location.reload(); 
+            }, 1500);
         } else {
             showToast(result.message || "更新失敗", "error");
         }
@@ -999,7 +1020,7 @@ async function submitProfileUpdate() {
         console.error("Update Error:", e);
         showToast("連線異常，請稍後再試", "error");
     }
-}   
+}    
 function goToAI() {
     try {
         // 1. 從 sessionStorage 抓取首頁存進去的 userInfo 字串

@@ -166,11 +166,11 @@ async function initData() {
         }
         
         if (aboutText) {
-            // 使用 innerText 配合 CSS 的 whitespace-pre-line 完美呈現換行
-            contentDiv.innerText = aboutText; 
-        } else {
-            contentDiv.innerHTML = "歡迎來到築心讀書會。";
-        }
+     // 🌟 將文字中的 \n 換行符號轉為網頁的 <br> 標籤
+    contentDiv.innerHTML = aboutText.replace(/\n/g, '<br>'); 
+     } else {
+      contentDiv.innerHTML = "歡迎來到築心讀書會。";
+     }
         // --- 2. 判斷是否為宣傳期 ---
         const now = new Date();
         let isPromoTime = false;

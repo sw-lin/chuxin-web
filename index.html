@@ -262,9 +262,9 @@ async function handleLogin() {
         
         if (result.result === "SUCCESS") {
             // --- 應急修改：暫時忽略繳費狀態判斷 ---
-            const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
+          //  const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
             // 現在：強制設定為 true，讓判斷邏輯暫時失效
-            // const isPaidStatus = true;
+             const isPaidStatus = true;
 
             // 🛑 除錯點 A：確認 GAS 到底有沒有給資料
             console.log("GAS 回傳原始資料:", result);
@@ -292,19 +292,19 @@ async function handleLogin() {
             // 判斷跳轉目標
             let targetPage = (result.role === "Admin" || isPaidStatus === true) ? 'member_zone.html' : 'guest_zone.html';
             // 加上這一行，彈出視窗會卡住畫面
-            //    alert("請檢查 Console 資料後再按確定跳轉");
+                alert("請檢查 Console 資料後再按確定跳轉");
             
             // 🌟 移除 setTimeout 的延遲，實現秒跳轉
             window.location.href = targetPage;
 
         } else {
-     //       alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));
+            alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));
             btn.disabled = false;
             btn.innerText = "確認進入";
         }
     } catch (e) { 
-    //    console.error("發生錯誤:", e);
-   //     alert("連線異常"); 
+        console.error("發生錯誤:", e);
+        alert("連線異常"); 
         btn.disabled = false;
         btn.innerText = "確認進入";
     }

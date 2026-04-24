@@ -944,25 +944,7 @@ ${posterUrl ?
         </div>
     `;
 }
-// 純文字顯示模式
-function renderTextActivity(container, ev) {
-    // --- 新增：日期格式化邏輯 ---
-    let displayDate = ev.dateText;
-    if (ev.dateText && ev.dateText.includes('-')) {
-        const parts = ev.dateText.split('-');
-        if (parts.length >= 3) {
-            displayDate = `${parts[1]}/${parts[2]}`;
-        }
-    }    
-    container.innerHTML = `
-        <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-emerald-50 space-y-3 mb-6">
-            <div class="flex items-center gap-3">
-                <div class="bg-emerald-700 text-white px-3 py-1 rounded-xl text-[10px] font-bold">${displayDate}</div>
-                <h4 class="font-black text-emerald-900 text-lg">${ev.title}</h4>
-            </div>
-            <p class="text-xs text-gray-500 leading-relaxed pl-3 border-l-2 border-emerald-100">${ev.desc || "精彩活動，敬請期待"}</p>
-        </div>`;
-}    
+  
 function showToast(msg, type) {
     const container = document.getElementById('toastContainer');
     if(!container) return;

@@ -251,26 +251,27 @@ function startSlides() {
 
 async function handleLogin() {
     // 1. 先取得原始輸入，轉小寫並去空白
-    const rawInput = document.getElementById('userPhone').value.trim().toLowerCase();
+    const rawInput = document.getElementById('userPhone').value.trim();
+    const cleanInput = rawInput.toLowerCase(); // 用於判斷 guest
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
     
-    // 🌟 優先判斷：如果是訪客，直接過關！不進行數字清洗
-    if (rawInput === 'guest') {
+    // 🌟 優先判斷：如果是訪客，直接跳轉
+    if (cleanInput === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ 
             result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
         }));
         window.location.href = 'guest_zone.html'; 
         return;
     }    
+
     // 2. 如果不是 guest，才進行手機號碼清洗 (只留數字)
-    const u = toHalfWidth(rawU).replace(/[^0-9]/g, "").toLowerCase();
+    // 這裡我們直接對 rawInput 做清洗
+    const u = toHalfWidth(rawInput).replace(/[^0-9]/g, "");
 
     // 3. 檢查是否輸入完整
-    if(!u || !p) return alert("請輸入帳號密碼");    
-    const rawU = document.getElementById('userPhone').value.trim();
-    
-    // 🌟 修正重點：加上 .replace(/[^0-9]/g, "") 徹底移除單引號、橫槓、空格
-    if(!u || !p) return alert("請輸入帳號密碼"); // 這個保留，提醒使用者沒輸入
+    if(!u || !p) {
+        return alert("請輸入帳號密碼");
+    }
     
     const btn = document.getElementById('loginBtn');
     btn.disabled = true; 
@@ -285,40 +286,28 @@ async function handleLogin() {
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // --- 應急修改：暫時忽略繳費狀態判斷 ---
+            // 處理繳費狀態 (防呆轉換)
             const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
-            // 現在：強制設定為 true，讓判斷邏輯暫時失效
-          //   const isPaidStatus = true;
 
-            // 🛑 除錯點 A：確認 GAS 到底有沒有給資料
             console.log("GAS 回傳原始資料:", result);
-            if (!result.attendedLogs || result.attendedLogs.length === 0) {
-                alert("警告：登入成功但後端回傳的出席紀錄是空的！");
-            }
+            
             const userStore = {
                 result: "SUCCESS",
                 name: result.name,
                 role: result.role,
                 title: result.title,
                 phone: u,
-                
-                // 🌟 關鍵修正：補上這兩行，將 GAS 的資料存入 Session
-                email: result.email || "",               // 解密後的 Email
-                encryptedPhone: result.encryptedPhone || "", // 加密後的手機 (後端修改 Key)
-                
+                email: result.email || "", 
+                encryptedPhone: result.encryptedPhone || "",
                 staffKey: result.staffKey || "",
                 isPaid: isPaidStatus,
-                attendedLogs: result.attendedLogs || [],
-                debug: `Login時紀錄數: ${result.attendedLogs ? result.attendedLogs.length : 0}`                
+                attendedLogs: result.attendedLogs || []
             };
+            
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
-            // 判斷跳轉目標
+            // 判斷跳轉目標：Admin 或 已繳費會員去 member_zone，其餘去 guest_zone
             let targetPage = (result.role === "Admin" || isPaidStatus === true) ? 'member_zone.html' : 'guest_zone.html';
-            // 加上這一行，彈出視窗會卡住畫面
-            //    alert("請檢查 Console 資料後再按確定跳轉");
-            
-            // 🌟 移除 setTimeout 的延遲，實現秒跳轉
             window.location.href = targetPage;
 
         } else {

@@ -298,19 +298,36 @@
         currentPassengers: [] // 🌟 新增：存放篩選後的乘客
     };        
         const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
+        // 📦 1. 統一提取資料 (auth 包)
+    const auth = (function() {
+        try {
+            const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+            const loneKey = sessionStorage.getItem('staffKey'); 
+            return {
+                key: info.staffKey || loneKey || "",
+                permissions: info.userPermissions || [],
+                isValid: !!(info.staffKey || loneKey)
+            };
+        } catch (e) {
+            return { key: "", permissions: [], isValid: false };
+        }
+    })();
+
+    // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
+    var staffKey = auth.key;
+    const userPermissions = auth.permissions; 
         
         let isEditMode = false;
         let currentEventConfig = null; // 🌟 儲存目前選中活動的詳細規格（費用、日期等）
         let currentEventTitle = "";    // 🌟 儲存目前選中的活動名稱 
         // --- 權限控管初始化 ---
         // --- 🌟 權限控管初始化 ---
-        const userPermissions = JSON.parse(sessionStorage.getItem('userPermissions') || "[]"); 
+        
         const hasEventPermission = userPermissions.includes("all") || userPermissions.includes("edit_registration");
         
     // --- 改成以下這個包含權限檢查的流程 ---
     window.onload = () => {
         // 1. 基本防護：檢查是否有登入金鑰
-        const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
         if (!staffKey) { 
             alert("請重新登入");
             location.href = "index.html"; 

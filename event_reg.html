@@ -383,8 +383,9 @@ async function loadData() {
 async function fetchAPI(type, params = {}) {
     const url = new URL(GAS_URL);
     url.searchParams.append('type', type);
-    // 確保 staff_key 有帶入
-    url.searchParams.append('key', sessionStorage.getItem('staffKey') || '');
+    
+    // 🌟 修正：改用您在前面已經定義好的 staffKey 變數
+    url.searchParams.append('key', staffKey || '');
     
     // 🌟 修正：確保每個參數都被正確編碼
     Object.keys(params).forEach(key => {

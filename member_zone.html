@@ -570,31 +570,23 @@ function closeHistoryModal() {
     }
 } 
 
-// 掃碼成功處理 - 格式對齊補登系統版本 (2026-04-07 修復)
-// 掃碼成功處理 - 支援加密資料傳送版本
 async function onScanSuccess(decodedText) {
     let rawText = decodedText.trim();
     let finalEventString = ""; 
 
-    // 1. 解析與重組格式
+    // 1. 解析 QR Code 內容
     if (rawText.startsWith("CHECKIN:")) {
         const parts = rawText.split(':');
-        if (parts.length >= 3) {
-            const datePart = parts[1]; 
-            const titlePart = rawText.substring(rawText.indexOf(':', 8) + 1).trim(); 
-            finalEventString = `EVENT:${datePart}|${titlePart}`;
-        } else {
-            finalEventString = rawText; 
-        }
+        finalEventString = parts.length >= 3 ? `EVENT:${parts[1]}|${rawText.substring(rawText.indexOf(':', 8) + 1).trim()}` : rawText;
     } else {
         finalEventString = rawText;
     }
 
-    // 2. 檢查前端快取是否已報到
-    const alreadyAttended = (currentUser.attendLog || []).some(log => String(log) === finalEventString);
-    if (alreadyAttended) {
-        showToast("此活動已完成報到", "info");
-        closeScanner();
+    // 2. 從 Session 取得目前使用者資訊 (包含之前登入成功存下的加密字串)
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || "{}");
+    
+    if (!userInfo.phone) {
+        showToast("登入資訊失效，請重新登入", "error");
         return;
     }
 
@@ -602,14 +594,13 @@ async function onScanSuccess(decodedText) {
     showToast("報到傳送中...", "info");
 
     try {
-        // 3. 發送至 GAS 進行寫入 (修改此處)
+        // 3. 直接發送 Session 裡的資料，讓後端去煩惱解密/加密
         const response = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify({
                 type: 'checkin',
-                // 使用加密的電話與姓名屬性
-                phone: currentUser.encryptedPhone, 
-                name: currentUser.encryptedName,   
+                phone: userInfo.phone,           // 可能是明碼也可能是加密碼，後端會處理
+                name: userInfo.name || "未知",    // 傳姓名過去以便後端紀錄
                 eventTitle: finalEventString 
             })
         });
@@ -621,17 +612,15 @@ async function onScanSuccess(decodedText) {
             if (typeof confetti === 'function') {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
-            syncData(); // 刷新畫面與出席紀錄
-        } else if (result.result === "ALREADY_DONE") {
-            showToast("您已經簽到過囉", "info");
+            setTimeout(() => location.reload(), 1500); // 建議直接重刷頁面最保險
         } else {
             showToast(result.message || "報到失敗", "error");
         }
     } catch (e) {
         console.error("Fetch Error:", e);
-        showToast("連線異常，請檢查網路", "error");
+        showToast("網路異常，請檢查權限設定", "error");
     }
-}    
+}
 function startScanner() {
     const modal = document.getElementById('scanModal');
     if (!modal) {

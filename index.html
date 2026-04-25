@@ -250,21 +250,26 @@ function startSlides() {
 }
 
 async function handleLogin() {
-    const rawU = document.getElementById('userPhone').value.trim();
-    
-    // 🌟 修正重點：加上 .replace(/[^0-9]/g, "") 徹底移除單引號、橫槓、空格
-    const u = toHalfWidth(rawU).replace(/[^0-9]/g, "").toLowerCase();
+    // 1. 先取得原始輸入，轉小寫並去空白
+    const rawInput = document.getElementById('userPhone').value.trim().toLowerCase();
     const p = toHalfWidth(document.getElementById('userPass').value.trim());
-
-    // 1. 訪客模式：直接跳轉，不再彈窗
-    if (u === 'guest') {
+    
+    // 🌟 優先判斷：如果是訪客，直接過關！不進行數字清洗
+    if (rawInput === 'guest') {
         sessionStorage.setItem('userInfo', JSON.stringify({ 
             result: "SUCCESS", name: "訪客", phone: "guest", role: "Guest", isPaid: false 
         }));
         window.location.href = 'guest_zone.html'; 
         return;
-    }
+    }    
+    // 2. 如果不是 guest，才進行手機號碼清洗 (只留數字)
+    const u = toHalfWidth(rawU).replace(/[^0-9]/g, "").toLowerCase();
 
+    // 3. 檢查是否輸入完整
+    if(!u || !p) return alert("請輸入帳號密碼");    
+    const rawU = document.getElementById('userPhone').value.trim();
+    
+    // 🌟 修正重點：加上 .replace(/[^0-9]/g, "") 徹底移除單引號、橫槓、空格
     if(!u || !p) return alert("請輸入帳號密碼"); // 這個保留，提醒使用者沒輸入
     
     const btn = document.getElementById('loginBtn');

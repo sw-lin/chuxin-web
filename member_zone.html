@@ -604,7 +604,11 @@ async function onScanSuccess(decodedText) {
                 eventTitle: finalEventString 
             })
         });
-        
+
+        // 🌟 關鍵修正：先檢查 response 是否正常
+        if (!response.ok) {
+            throw new Error("Server Response Not OK");
+        }        
         const result = await response.json();
         
         if (result.result === "SUCCESS") {
@@ -614,11 +618,13 @@ async function onScanSuccess(decodedText) {
             }
             setTimeout(() => location.reload(), 1500); // 建議直接重刷頁面最保險
         } else {
-            showToast(result.message || "報到失敗", "error");
+            // 🌟 這裡會抓到 "ALREADY_DONE" 或其他錯誤，並顯示後端傳來的 message
+            showToast(result.message || "報到未完成", "info");
         }
     } catch (e) {
         console.error("Fetch Error:", e);
-        showToast("網路異常，請檢查權限設定", "error");
+        // 如果是因為「已經報到」導致後端回傳，但解析失敗，我們可以在這裡加個保險
+        showToast("通訊異常或您已報到過，請重新整理頁面確認", "error");
     }
 }
 function startScanner() {

@@ -820,7 +820,6 @@ function renderCalendarActivity(calendar) {
     const container = document.getElementById('calendarActivitySection');
     if (!container) return;
     
-    // 直接取第一筆 Fake 物件
     const nextEvent = (calendar || [])[0];
 
     if (!nextEvent) {
@@ -830,48 +829,46 @@ function renderCalendarActivity(calendar) {
         return;
     }
 
-    // 1. 解析日期 (月份 與 日期)
+    // 1. 解析日期
     let month = "--";
     let day = "--";
     if (nextEvent.dateText && nextEvent.dateText.includes('-')) {
         const parts = nextEvent.dateText.split('-');
         if (parts.length >= 3) {
-            month = parseInt(parts[1]); // 去除前導零
+            month = parseInt(parts[1]);
             day = parseInt(parts[2]);
         }
     }
 
-    // 2. 🌟 解決海報連結問題：進行海報轉址檢查 (如果有你的 getDirectImageUrl 函式)
     const posterUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(nextEvent.poster) : nextEvent.poster;
-    console.log("=== 海報最終渲染網址 ===", posterUrl);
-
-    // 3. 判斷是否需要顯示綠色「簡介」標籤
     const hasDesc = nextEvent.desc && nextEvent.desc !== "歡迎永躍參加！";
 
-    // 4. 渲染 HTML (純展示卡片)
+    // 4. 渲染 HTML (優化對齊結構)
     container.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6"
+        <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
             
-${posterUrl ? 
-    `<div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">
-        <img src="${posterUrl}" 
-              alt="活動海報" 
-              class="w-full h-auto object-contain max-h-[400px]" 
-              onerror="this.style.display='none'">
-    </div>` : ''}  
+            ${posterUrl ? 
+            `<div class="w-full bg-gray-50 flex justify-center items-center overflow-hidden border-b border-emerald-50">
+                <img src="${posterUrl}" 
+                     alt="活動海報" 
+                     class="w-full h-auto object-contain max-h-[400px]" 
+                     onerror="this.style.display='none'">
+            </div>` : ''}  
             
-            <div class="p-4 flex gap-4">
-                <div class="flex-shrink-0 w-16 h-16 bg-emerald-50 rounded-xl flex flex-col items-center justify-center border border-emerald-100">
-                    <span class="text-xs font-bold text-emerald-600">${month}月</span>
-                    <span class="text-2xl font-black text-emerald-800">${day}</span>
+            <div class="p-5 flex items-start gap-5">
+                <div class="flex-shrink-0 w-16 h-16 bg-emerald-50 rounded-2xl flex flex-col items-center justify-center border border-emerald-100 shadow-sm">
+                    <span class="text-[10px] font-bold text-emerald-600 tracking-tighter">${month}月</span>
+                    <span class="text-2xl font-black text-emerald-800 leading-none">${day}</span>
                 </div>
 
-                <div class="flex-grow">
-                    <h4 class="text-lg font-bold text-emerald-950 mb-1.5">${nextEvent.title}</h4>
+                <div class="flex-grow pt-0.5">
+                    <h4 class="text-xl font-black text-emerald-950 leading-tight mb-2 tracking-tight">
+                        ${nextEvent.title}
+                    </h4>
+                    
                     <div class="flex items-start gap-2">
-                        ${hasDesc ? `<span class="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded flex-shrink-0 mt-1">簡介</span>` : ''}
-                        
-                        <p class="text-sm text-emerald-800/80 leading-snug">
+                        ${hasDesc ? `<span class="text-[10px] font-bold text-white bg-emerald-500/80 px-1.5 py-0.5 rounded-md flex-shrink-0 mt-0.5">簡介</span>` : ''}
+                        <p class="text-sm text-emerald-800/70 leading-relaxed italic">
                             ${nextEvent.desc}
                         </p>
                     </div>

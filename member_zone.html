@@ -616,7 +616,7 @@ async function onScanSuccess(decodedText) {
             if (typeof confetti === 'function') {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
-            setTimeout(() => location.reload(), 2500); // 建議直接重刷頁面最保險
+            setTimeout(() => location.reload(), 3000); // 建議直接重刷頁面最保險
         } else {
             // 🌟 這裡會抓到 "ALREADY_DONE" 或其他錯誤，並顯示後端傳來的 message
             showToast(result.message || "報到未完成", "info");

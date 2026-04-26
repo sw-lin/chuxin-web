@@ -299,6 +299,12 @@ async function syncData() {
             // --- A. Config ---
             if (data.config) globalConfig = data.config;
 
+            // 🌟 新增：將完整的活動清單寫入 localStorage，供報名頁面使用
+            if (data.events && Array.isArray(data.events)) {
+               localStorage.setItem('allEvents', JSON.stringify(data.events));
+               console.log("✅ 已同步活動配置到快取，包含欄位：", Object.keys(data.events[0] || {}));
+            }         
+
             // --- B. 頂部跑馬燈公告 ---
             const newsElem = document.getElementById('news');
             const newsContainer = document.getElementById('newsContainer');

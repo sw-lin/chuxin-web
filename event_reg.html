@@ -611,7 +611,6 @@ function openEditModal() {
     const selector = document.getElementById('eventSelector');
     const title = selector.value;
     
-    // 1. 尋找對應活動，相容多種 Key 名稱
     const ev = allData.events.find(e => (e["標題"] || e.title) === title);
     
     if (!ev) {
@@ -619,11 +618,23 @@ function openEditModal() {
         return;
     }
 
-    console.log("正在讀取編輯資料:", ev); 
+    // --- 🌟 關鍵修改：鎖定標題 ---
+    const titleInput = document.getElementById('ev_title');
+    const oldTitleInput = document.getElementById('old_title');
+    
+    // 同時設定顯示的值與隱藏的舊標題值
+    const currentTitle = ev["標題"] || ev.title || "";
+    titleInput.value = currentTitle;
+    oldTitleInput.value = currentTitle;
 
-    // 2. 基本文字與隱藏欄位
+    // 實施鎖定協定
+    titleInput.readOnly = true; 
+    titleInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+    titleInput.title = "若需更名，請刪除活動後重新建立";
+
     document.getElementById('modalTitle').innerText = "修改活動";
     document.getElementById('old_title').value = ev["標題"] || ev.title || "";
+    
     document.getElementById('ev_title').value = ev["標題"] || ev.title || "";
     document.getElementById('ev_poster').value = ev["海報連結 (poster_url)"] || ev.poster_url || "";
     document.getElementById('ev_desc').value = ev["活動簡介 (desc)"] || ev.desc || "";
@@ -664,12 +675,36 @@ const rawBus = String(
 }
         
         function openAddModal() {
-            document.getElementById('modalTitle').innerText = "發布新活動";
-            document.getElementById('old_title').value = "";
-            document.querySelectorAll('#eventModal input, #eventModal textarea').forEach(i => i.value = "");
-            document.getElementById('deleteZone').classList.add('hidden');
-            document.getElementById('eventModal').classList.remove('hidden');
-        }
+    // 1. 設定 Modal 標題
+    document.getElementById('modalTitle').innerText = "發布新活動";
+    
+    // 2. 清除隱藏的舊標題 (確保後端判斷為「新增」而非「更新」)
+    document.getElementById('old_title').value = "";
+    
+    // 3. 🌟 關鍵修改：恢復標題欄位的「可編輯性」與「樣式」
+    const titleInput = document.getElementById('ev_title');
+    titleInput.readOnly = false; // 解除唯讀
+    titleInput.classList.remove('bg-gray-100', 'cursor-not-allowed'); // 移除灰色背景與禁用游標
+    titleInput.title = ""; // 移除懸停提示
+    
+    // 4. 清空所有文字輸入框與文字區域
+    document.querySelectorAll('#eventModal input, #eventModal textarea').forEach(i => i.value = "");
+    
+    // 5. 🌟 額外優化：重置 Select 選項 (避免殘留上一次修改的狀態)
+    const selects = document.querySelectorAll('#eventModal select');
+    selects.forEach(s => {
+        s.selectedIndex = 0; // 回到第一個預設選項 (通常是「否」)
+    });
+
+    // 6. 隱藏刪除按鈕區域 (新增時不應該出現刪除按鈕)
+    document.getElementById('deleteZone').classList.add('hidden');
+    
+    // 7. 顯示 Modal
+    document.getElementById('eventModal').classList.remove('hidden');
+    
+    // 8. 自動聚焦到標題欄位，讓管理員可以直接打字，超貼心哈
+    setTimeout(() => titleInput.focus(), 100);
+}
 
 function openRegModal(phone, name) {
     console.log("🚀 [Debug] 彈窗啟動，正在抓取資料...");

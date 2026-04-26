@@ -694,9 +694,18 @@ function getDirectImageUrl(url) {
 // 1. 改為開啟 Modal 而非 prompt
 // 點擊「幹部管理區」按鈕觸發
 function enterStaffMode() {   
+    // 1. 先看瀏覽器有沒有存過 Token
+    const savedToken = localStorage.getItem('築心管理授權');
+
+    if (savedToken) {
+        // 如果有存過，直接拿 Token 去後端驗證身分
+        executeStaffVerify(savedToken);
+        return;
+    }
+
+    // 2. 沒存過才開 Modal
     const modal = document.getElementById('staffKeyModal');
     if (modal) {
-        // 清空舊輸入
         document.getElementById('finalStaffKeyInput').value = "";
         modal.style.display = 'flex';
         modal.classList.remove('hidden');
@@ -710,22 +719,20 @@ function closeStaffKeyModal() {
         modal.classList.add('hidden');
     }
 }
-async function executeStaffVerify() {
+async function executeStaffVerify(autoKey) {
     const keyInput = document.getElementById('finalStaffKeyInput');
-    const staffKey = keyInput ? keyInput.value.trim() : "";
+    // 如果有傳入 autoKey 就用它，否則才抓 Input 的值
+    const staffKey = autoKey || (keyInput ? keyInput.value.trim() : "");
     
-    // 1. 阻擋空值
     if (!staffKey) {
         alert("請輸入金鑰");
         return;
     }
 
-    // 2. 從當前登入的會員資料中抓取職稱 (C欄)
     const infoStr = sessionStorage.getItem('userInfo');
-    const userInfo = infoStr ? JSON.parse(infoStr) : null;
-    const currentTitle = userInfo ? userInfo.title : "一般幹部";
+    const userInfoData = infoStr ? JSON.parse(infoStr) : null;
+    const userPhone = userInfoData ? userInfoData.phone : ""; // 👈 改傳電話，後端比對身分更安全
 
-    // 3. 顯示轉圈圈
     const loading = document.getElementById('loadingOverlay');
     if (loading) loading.style.display = 'flex';
 
@@ -735,44 +742,41 @@ async function executeStaffVerify() {
             body: JSON.stringify({
                 type: 'verify_staff_key',
                 staffKey: staffKey,
-                userTitle: currentTitle // 👈 把職稱傳給後端去查權限
+                phone: userPhone // 👈 讓後端同時檢查「這支電話」是不是「幹部」
             })
         });
 
         const result = await response.json();
 
         if (result.result === "SUCCESS") {
-            // 1. 先把原本的大箱子拿出來
-            const infoStr = sessionStorage.getItem('userInfo');
-            let userInfo = infoStr ? JSON.parse(infoStr) : {};
+            // 🌟 重點：驗證成功後，存入 localStorage (記在瀏覽器裡)
+            localStorage.setItem('築心管理授權', staffKey);
 
-            // 2. 🌟 重點：把新的金鑰與職稱更新進去這個大箱子
+            // 更新 SessionStorage 大箱子
+            let userInfo = userInfoData || {};
             userInfo.staffKey = staffKey; 
             userInfo.userTitle = result.userTitle;
             userInfo.userPermissions = result.permissions || [];
-
-            // 3. 存回 SessionStorage 的「大箱子」
             sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
             
-            // 4. (選配) 如果您的大聲公頁面還是習慣抓小盒子，也可以留著這行
-            sessionStorage.setItem('staffKey', staffKey); 
-            
-            // 跳轉至後台
+            // 跳轉
             window.location.href = 'staff_menu.html';
         } else {
-            // 金鑰錯誤提示
-            alert("❌ 金鑰錯誤：請重新輸入，或聯繫管理員確認。");
-            keyInput.value = ""; 
-            keyInput.focus();    
+            // 如果是自動驗證失敗（金鑰過期），就清除它並顯示 Modal
+            localStorage.removeItem('築心管理授權');
+            alert(result.message || "❌ 授權已失效，請重新輸入金鑰。");
+            if (keyInput) {
+                keyInput.value = ""; 
+                keyInput.focus();
+            }
         }
     } catch (e) {
         console.error("驗證出錯：", e);
-        alert("系統連線異常，請檢查網路後再試一次。");
+        alert("系統連線異常，請稍後再試。");
     } finally {
-        // 關閉轉圈圈
         if (loading) loading.style.display = 'none';
     }
-}    
+}   
     // 核心：控制載入中遮罩
 function showLoading(show) {
     const overlay = document.getElementById('loadingOverlay');

@@ -162,45 +162,63 @@
     let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
     let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false };
 
-    // --- 核心功能：身分證檢查邏輯 ---
-    function isValidTaiwanID(id) {
-        id = toHalfWidth(id).toUpperCase();
-        const regex = /^[A-Z][1289]\d{8}$/;
-        if (!regex.test(id)) return false;
+// --- 1. 電話格式檢查 (台灣手機：09 開頭且共 10 碼) ---
+function isValidTaiwanPhone(phone) {
+    phone = toHalfWidth(phone);
+    const regex = /^09\d{8}$/;
+    return regex.test(phone);
+}
 
-        const mapping = {
-            A:10, B:11, C:12, D:13, E:14, F:15, G:16, H:17, I:34, J:18, K:19, L:20, M:21,
-            N:22, O:35, P:23, Q:24, R:25, S:26, T:27, U:28, V:29, W:32, X:30, Y:31, Z:33
-        };
-        const val = mapping[id[0]];
-        let sum = Math.floor(val / 10) + (val % 10) * 9;
-        for (let i = 1; i <= 8; i++) sum += parseInt(id[i]) * (9 - i);
-        sum += parseInt(id[9]);
-        return sum % 10 === 0;
+// --- 2. 強化版身分證檢查 (確保傳入值已被清洗) ---
+function isValidTaiwanID(id) {
+    if (!id) return false;
+    id = toHalfWidth(id).toUpperCase();
+    const regex = /^[A-Z][1289]\d{8}$/;
+    if (!regex.test(id)) return false;
+
+    const mapping = {
+        A:10, B:11, C:12, D:13, E:14, F:15, G:16, H:17, I:34, J:18, K:19, L:20, M:21,
+        N:22, O:35, P:23, Q:24, R:25, S:26, T:27, U:28, V:29, W:32, X:30, Y:31, Z:33
+    };
+    const val = mapping[id[0]];
+    let sum = Math.floor(val / 10) + (val % 10) * 9;
+    for (let i = 1; i <= 8; i++) sum += parseInt(id[i]) * (9 - i);
+    sum += parseInt(id[9]);
+    return sum % 10 === 0;
+}    
+
+// --- 3. 整合型欄位驗證 UI (支援 ID 與 Phone) ---
+function validateField(input, type = 'ID') {
+    const hint = input.nextElementSibling;
+    const val = input.value.trim();
+    if (!val) {
+        input.classList.remove('input-error', 'border-emerald-500');
+        if (hint) hint.classList.add('hidden');
+        return true; 
     }
 
-    // 即時檢查 UI 變換
-    function validateField(input) {
-        const hint = input.nextElementSibling;
-        const val = input.value.trim();
-        if (!val) {
-            input.classList.remove('input-error', 'border-emerald-500');
-            if (hint) hint.classList.add('hidden');
-            return true;
-        }
-        const isValid = isValidTaiwanID(val);
-        if (isValid) {
-            input.classList.remove('input-error');
-            input.classList.add('border-emerald-500');
-            if (hint) hint.classList.add('hidden');
-            input.value = toHalfWidth(val).toUpperCase();
-        } else {
-            input.classList.add('input-error');
-            input.classList.remove('border-emerald-500');
-            if (hint) hint.classList.remove('hidden');
-        }
-        return isValid;
+    let isValid = false;
+    if (type === 'ID') {
+        isValid = isValidTaiwanID(val);
+        if (isValid) input.value = toHalfWidth(val).toUpperCase(); // 自動轉大寫半形
+    } else if (type === 'PHONE') {
+        isValid = isValidTaiwanPhone(val);
     }
+
+    if (isValid) {
+        input.classList.remove('input-error');
+        input.classList.add('border-emerald-500');
+        if (hint) hint.classList.add('hidden');
+    } else {
+        input.classList.add('input-error');
+        input.classList.remove('border-emerald-500');
+        if (hint) {
+            hint.innerText = type === 'ID' ? "⚠️ 身分證格式或邏輯錯誤" : "⚠️ 手機格式錯誤 (需為09開頭10碼)";
+            hint.classList.remove('hidden');
+        }
+    }
+    return isValid;
+}
 
     function toHalfWidth(str) {
         if (!str) return "";
@@ -286,18 +304,21 @@
             }
         }
 
-// 修改 adjustPartnerFields 內的 idHtml 變數
-  const idHtml = eventConfig.needId ? `
-    <div class="mt-2">
-        <label class="label-text">身分證字號</label>
-        <input type="text" placeholder="訪客身分證字號" class="partner-id input-field uppercase" onblur="validateField(this)">
-        <p class="error-hint hidden">⚠️ 格式錯誤</p>
+// 修改 adjustPartnerFields 內的 newHtml 生成部分
+newHtml += `
+    <div class="partner-card ...">
+        <div class="space-y-4">
+            <input type="text" placeholder="姓名" class="partner-name input-field">
+            
+            <input type="tel" placeholder="電話" class="partner-phone input-field" 
+                   onblur="validateField(this, 'PHONE')">
+            <p class="error-hint hidden"></p> 
+
+            ${idHtml} 
+            ...
+        </div>
     </div>
-    <div class="mt-2">
-        <label class="label-text">出生年月日</label>
-        <input type="date" class="partner-birthday input-field">
-    </div>
-  ` : "";
+`;
         
         let newHtml = "";
         for (let i = 0; i < count; i++) {
@@ -332,26 +353,30 @@
         input.value = Math.max(0, Math.min(4, val));
     }    
 
-    async function submitForm(event) {
+async function submitForm(event) {
         if (event && event.preventDefault) event.preventDefault();
         const overlay = document.getElementById('loadingOverlay');
         
         try {
-            // --- 1. 主要報名者資料與驗證 ---
+            // --- 1. 主要報名者資料驗證 ---
             const mainIDInput = document.getElementById('mainID');
             const mainID = mainIDInput ? toHalfWidth(mainIDInput.value).toUpperCase() : "";
             const mainBirthday = document.getElementById('mainBirthday')?.value || "";
             
+            // 檢查身分證 (若活動需要)
             if (eventConfig.needId) {
-                if (!mainID || !isValidTaiwanID(mainID)) {
+                if (!validateField(mainIDInput, 'ID')) { 
                     showToast("主要報名者身分證字號有誤", "error");
                     mainIDInput.focus();
                     return;
                 }
-                if (!mainBirthday) { showToast("請選擇主要報名者生日", "error"); return; }
+                if (!mainBirthday) { 
+                    showToast("請選擇主要報名者生日", "error"); 
+                    return; 
+                }
             }
 
-            // --- 2. 訪客資料與驗證 ---
+            // --- 2. 訪客資料與電話驗證 ---
             const pNames = document.querySelectorAll('.partner-name');
             const pPhones = document.querySelectorAll('.partner-phone');
             const pIDs = document.querySelectorAll('.partner-id');
@@ -361,20 +386,37 @@
 
             for (let i = 0; i < pNames.length; i++) {
                 const name = pNames[i].value.trim();
-                const phone = toHalfWidth(pPhones[i].value);
-                const idNum = pIDs[i] ? toHalfWidth(pIDs[i].value).toUpperCase() : "";
+                const phoneInput = pPhones[i];
+                const phone = toHalfWidth(phoneInput.value);
+                const idInput = pIDs[i];
+                const idNum = idInput ? toHalfWidth(idInput.value).toUpperCase() : "";
                 const bday = pBirthdays[i]?.value || "";
 
-                if (!name) { showToast(`請填寫訪客 ${i+1} 姓名`, "error"); return; }
-                if (!phone) { showToast(`請填寫訪客 ${i+1} 電話`, "error"); return; }
+                // 驗證姓名
+                if (!name) { 
+                    showToast(`請填寫訪客 ${i+1} 姓名`, "error"); 
+                    pNames[i].focus();
+                    return; 
+                }
                 
+                // 🌟 新增：驗證電話 (09開頭10碼)
+                if (!validateField(phoneInput, 'PHONE')) {
+                    showToast(`訪客 ${i+1} 電話格式有誤 (需09開頭10碼)`, "error");
+                    phoneInput.focus();
+                    return;
+                }
+                
+                // 驗證身分證與生日 (若活動需要)
                 if (eventConfig.needId) {
-                    if (!idNum || !isValidTaiwanID(idNum)) {
+                    if (!validateField(idInput, 'ID')) {
                         showToast(`訪客 ${i+1} 身分證字號有誤`, "error");
-                        pIDs[i].focus();
+                        idInput.focus();
                         return;
                     }
-                    if (!bday) { showToast(`請選擇訪客 ${i+1} 生日`, "error"); return; }
+                    if (!bday) { 
+                        showToast(`請選擇訪客 ${i+1} 生日`, "error"); 
+                        return; 
+                    }
                 }
 
                 partnerRegistrations.push({

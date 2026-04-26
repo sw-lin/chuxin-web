@@ -291,12 +291,15 @@ function validateField(input, type = 'ID') {
         document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
     }
 
-    function adjustPartnerFields() {
+function adjustPartnerFields() {
         const count = parseInt(document.getElementById('partnerCountSelect').value);
         const container = document.getElementById('partnerContainer');
         const currentFields = container.querySelectorAll('.partner-card').length;
+
+        // 1. 人數不變則不動作
         if (count === currentFields) return;
 
+        // 2. 減少人數時的防誤刪確認
         if (currentFields > count && currentFields > 0) {
             if (!confirm("減少人數將會清除資料，確定嗎？")) {
                 document.getElementById('partnerCountSelect').value = currentFields;
@@ -304,44 +307,60 @@ function validateField(input, type = 'ID') {
             }
         }
 
-// 修改 adjustPartnerFields 內的 newHtml 生成部分
-newHtml += `
-    <div class="partner-card ...">
-        <div class="space-y-4">
-            <input type="text" placeholder="姓名" class="partner-name input-field">
-            
-            <input type="tel" placeholder="電話" class="partner-phone input-field" 
-                   onblur="validateField(this, 'PHONE')">
-            <p class="error-hint hidden"></p> 
+        // 3. 根據活動需求定義身分證與生日的 HTML (解決未定義錯誤)
+        let idHtml = "";
+        if (eventConfig.needId) {
+            idHtml = `
+                <div class="space-y-4 pt-2 border-t border-dashed border-emerald-100">
+                    <label class="label-text !mb-1">訪客身分證字號</label>
+                    <input type="text" placeholder="例：A123456789" 
+                           class="partner-id input-field uppercase" 
+                           onblur="validateField(this, 'ID')">
+                    <p class="error-hint hidden">⚠️ 身分證格式錯誤</p>
 
-            ${idHtml} 
-            ...
-        </div>
-    </div>
-`;
-        
+                    <label class="label-text !mb-1">訪客出生年月日</label>
+                    <input type="date" class="partner-birthday input-field">
+                </div>
+            `;
+        }
+
+        // 4. 生成新的訪客欄位
         let newHtml = "";
         for (let i = 0; i < count; i++) {
             newHtml += `
-                <div class="partner-card bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative">
-                    <div class="text-emerald-700 font-black text-sm mb-4">訪客 ${i + 1}</div>
+                <div class="partner-card bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative mb-4">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-1.5 h-4 bg-orange-400 rounded-full"></div>
+                        <div class="text-emerald-700 font-black text-sm">訪客 ${i + 1} 資料</div>
+                    </div>
                     <div class="space-y-4">
-                        <input type="text" placeholder="姓名" class="partner-name input-field">
-                        <input type="tel" placeholder="電話" class="partner-phone input-field">
+                        <input type="text" placeholder="訪客姓名" class="partner-name input-field">
+                        
+                        <div>
+                            <input type="tel" placeholder="訪客電話 (09xxxxxxxx)" 
+                                   class="partner-phone input-field" 
+                                   onblur="validateField(this, 'PHONE')">
+                            <p class="error-hint hidden"></p>
+                        </div>
+
                         ${idHtml}
-                        <select class="partner-diet input-field">
-                            <option value="葷食">葷食</option>
-                            <option value="素食">素食</option>
-                            <option value="不拘">不拘</option>
-                        </select>
+
+                        <div>
+                            <label class="label-text !mb-1">餐食需求</label>
+                            <select class="partner-diet input-field">
+                                <option value="葷食">葷食</option>
+                                <option value="素食">素食</option>
+                                <option value="不拘">不拘</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             `;
         }
+
         container.innerHTML = newHtml;
         updateTotal(count);
     }
-
     function updateTotal(manualCount = null) {
         const count = manualCount !== null ? manualCount : parseInt(document.getElementById('partnerCountSelect').value || 0);
         document.getElementById('totalAmount').innerText = eventConfig.memberFee + (count * eventConfig.guestFee);

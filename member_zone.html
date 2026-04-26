@@ -864,20 +864,15 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
     container.innerHTML = ''; // 清空舊內容，準備重新渲染
 
     promoEvents.forEach(ev => {
-        // 1. 提取活動標題：用於與資料庫比對是否已報名
-        // 假設文字格式為：【近期報名活動：活動名稱】
-        const titleMatch = ev.fullText.match(/【近期報名活動：(.*?)】/);
-        const title = titleMatch ? titleMatch[1].trim() : "活動";
+        // 1. 提取活動標題
+    const titleMatch = ev.fullText.match(/【近期報名活動：(.*?)】/);
+    const title = titleMatch ? titleMatch[1].trim() : "活動";
 
-        // 2. 比對報名與報到狀態
-        // 支援多種欄位定義 (title/eventTitle) 與狀態判定 (已報到/是)
-        const regInfo = (userRegistrations || []).find(reg => {
-            const rTitle = reg.title || reg.eventTitle || "";
-            return rTitle.toString().trim() === title;
-        });
-        
-        const isRegistered = !!regInfo;
-        const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是");
+    // 🌟 2. 修正點：直接比對字串陣列 (因為 userRegistrations 是 ["五月夜遊", "六月健走"])
+    const isRegistered = (userRegistrations || []).includes(title);
+    
+    // (報到狀態暫時設為 false，因為目前 member_init 只回傳活動名稱，沒回傳狀態)
+    const isCheckedIn = false;
 
         // 3. 處理海報圖片路徑
         // 使用 getDirectImageUrl 將 Google Drive 連結轉換為可顯示的圖片網址

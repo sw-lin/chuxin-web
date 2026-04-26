@@ -116,48 +116,52 @@
         </div>
     </main>
 
-    <script>
-          // 📦 1. 統一提取資料 (auth 包)
-    const auth = (function() {
-        try {
-            const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
-            const loneKey = sessionStorage.getItem('staffKey'); 
-            return {
-                key: info.staffKey || loneKey || "",
-                permissions: info.userPermissions || [],
-                isValid: !!(info.staffKey || loneKey)
-            };
-        } catch (e) {
-            return { key: "", permissions: [], isValid: false };
-        }
-    })();
-
-    // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
-    const userPermissions = auth.permissions;  
-        
-        // 初始化權限檢查
-        window.onload = function() {
-            var key = sessionStorage.getItem('staffKey');
-            // 相容性處理：嘗試從網址抓取
-            if (!key) {
-                const urlParams = new URLSearchParams(window.location.search);
-                key = urlParams.get('key');
+<script>
+        // 📦 1. 統一提取資料 (升級版轉接頭)
+        const auth = (function() {
+            try {
+                // 從 SessionStorage 讀取所有可能存放的地方
+                const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+                const loneKey = sessionStorage.getItem('staffKey'); 
+                
+                return {
+                    // 只要有一個地方有 Key，我們就認定是有鑰匙的
+                    key: info.staffKey || loneKey || "",
+                    // 讀取權限，如果沒有權限(極簡測試)則暫時給一個預設或從 info 讀取
+                    permissions: info.userPermissions || [],
+                    isValid: !!(info.staffKey || loneKey)
+                };
+            } catch (e) {
+                return { key: "", permissions: [], isValid: false };
             }
-            
-            if (!key) {
+        })();
+
+        // 🔗 2. 重新對接變數
+        const userPermissions = auth.permissions;
+        const currentKey = auth.key;
+
+        // 🚀 3. 初始化檢查
+        window.onload = function() {
+            // 檢查是否真的有通過驗證
+            if (!auth.isValid) {
                 alert("非法進入！請先驗證金鑰。");
-                location.href = 'index.html';
-            } else {
-                // 確保 sessionStorage 存有金鑰供子頁面使用
-                sessionStorage.setItem('staffKey', key);
-            }            
-            // 只有擁有 'all' 權限（會長/總管）的人可以看到
-            if (userPermissions.includes('all')) {
-                document.getElementById('permissionBtn').classList.remove('hidden');
+                location.href = 'member_zone.html'; // 改回會員專區重新驗證
+                return;
+            }
+
+            // 確保舊有的代碼邏輯依然能運作 (存回單獨的 staffKey 供子頁面使用)
+            sessionStorage.setItem('staffKey', currentKey);
+            
+            console.log("當前職稱權限:", userPermissions);
+
+            // 只有擁有 'all' 或 'ALL' 權限的人可以看到權限管理
+            if (userPermissions.includes('all') || userPermissions.includes('ALL')) {
+                const btn = document.getElementById('permissionBtn');
+                if (btn) btn.classList.remove('hidden');
             }            
         };
 
-        // 跳轉功能：子頁面將自行抓取 sessionStorage 中的金鑰
+        // 跳轉功能
         function navTo(page) {
             location.href = page + '.html';
         }

@@ -224,10 +224,14 @@
         const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
         const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
         const isTrue = (val) => {
-            if (!val) return false;
-            const s = String(val).trim().toUpperCase();
-            return s === 'Y' || s === '是' || s === 'TRUE';
-        };
+    // 如果 val 本身就是布林值，直接回傳
+    if (typeof val === 'boolean') return val;
+    
+    // 如果是字串或其他，執行原本的文字判定
+    if (!val) return false;
+    const s = String(val).trim().toUpperCase();
+    return s === 'Y' || s === '是' || s === 'TRUE' || s === '1';
+    };
         
         if (target) {
             eventConfig = {

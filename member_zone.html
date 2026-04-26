@@ -278,7 +278,6 @@ async function syncData() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'flex';
 
-    // 從 Session 取得快取的用戶資訊
     const infoStr = sessionStorage.getItem('userInfo');
     const cachedUserInfo = infoStr ? JSON.parse(infoStr) : null;
 
@@ -297,97 +296,70 @@ async function syncData() {
         console.log("=== 2. 收到後端資料 ===", data);
 
         if (data.result === "SUCCESS") {
-            // --- A. Config 設定 ---
+            // --- A. Config ---
             if (data.config) globalConfig = data.config;
 
-            // --- B. 頂部跑馬燈公告 (終極防護 + 偵錯版) ---
-const newsElem = document.getElementById('news');
-const newsContainer = document.getElementById('newsContainer');
+            // --- B. 頂部跑馬燈公告 ---
+            const newsElem = document.getElementById('news');
+            const newsContainer = document.getElementById('newsContainer');
+            const newsContent = data.news ? data.news.trim() : "";
 
-// 1. 先從 data 中提取資料，並印出來檢查 (請按 F12 看 Console)
-console.log("公告原始資料:", {
-  content: data.news,
-  start: data.startDate,
-  end: data.endDate
-});
+            function getNumericDate(input) {
+                if (!input) return null;
+                const d = new Date(input);
+                if (isNaN(d.getTime())) return null;
+                return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+            }
 
-const newsContent = data.news ? data.news.trim() : "";
+            const todayVal = getNumericDate(new Date());
+            const startVal = getNumericDate(data.startDate);
+            const endVal = getNumericDate(data.endDate);
 
-// 2. 建立精準比對數值 (YYYYMMDD)
-function getNumericDate(input) {
-    if (!input) return null;
-    const d = new Date(input);
-    if (isNaN(d.getTime())) return null;
-    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-}
+            const isWithinRange = (!startVal || todayVal >= startVal) && (!endVal || todayVal <= endVal);
 
-const todayVal = getNumericDate(new Date()); // 今天是 20260424
-const startVal = getNumericDate(data.startDate);
-const endVal = getNumericDate(data.endDate);
+            if (newsContent && newsContent !== "NONE" && isWithinRange) {
+                if (newsContainer) {
+                    newsContainer.classList.remove('hidden');
+                    newsContainer.style.display = 'flex';
+                }
+                if (newsElem) newsElem.innerText = newsContent;
+            } else {
+                if (newsContainer) {
+                    newsContainer.classList.add('hidden');
+                    newsContainer.style.display = 'none';
+                }
+            }
 
-// 3. 嚴謹的範圍判斷：如果有設定日期，就必須符合；沒設定則視為通過
-const isStarted = !startVal || todayVal >= startVal;
-const isNotEnded = !endVal || todayVal <= endVal;
-const isWithinRange = isStarted && isNotEnded;
-
-console.log("日期比對結果:", { todayVal, startVal, endVal, isWithinRange });
-
-// 4. 執行渲染邏輯
-if (newsContent && newsContent !== "NONE" && isWithinRange) {
-    // 只有在「有內容」且「在時間內」才顯示
-    if (newsContainer) newsContainer.classList.remove('hidden');
-    if (newsElem) newsElem.innerText = newsContent;
-} else {
-    // 否則一律隱藏
-    if (newsContainer) {
-        newsContainer.classList.add('hidden');
-        // 額外保險：強制設定 CSS display
-        newsContainer.style.display = 'none'; 
-    }
-}            
-            // --- C. 近期活動預告解析 (System!B5) ---
+            // --- C. 近期活動預告 (System!B5) ---
             const upcomingRaw = data.upcoming || "";
             if (upcomingRaw && upcomingRaw !== "目前暫無預定活動") {
                 const dateMatch = upcomingRaw.match(/(\d{4}\/\d{2}\/\d{2})/);
                 const posterMatch = upcomingRaw.match(/\[POSTER\](.*?)\[\/POSTER\]/);
                 const descMatch = upcomingRaw.match(/\(簡介：(.*?)\)/);
 
-                let upTitle = upcomingRaw.replace(/【近期預告】/, "")
-                    .replace(/\d{4}\/\d{2}\/\d{2}/, "")
-                    .replace(/\[POSTER\].*?\[\/POSTER\]/, "")
-                    .replace(/\(簡介：.*?\)/, "")
-                    .trim();
+                let upTitle = upcomingRaw.replace(/【近期預告】/, "").replace(/\d{4}\/\d{2}\/\d{2}/, "").replace(/\[POSTER\].*?\[\/POSTER\]/, "").replace(/\(簡介：.*?\)/, "").trim();
 
-                const fakeCalendarArray = [{
+                renderCalendarActivity([{
                     dateText: dateMatch ? dateMatch[1].replace(/\//g, '-') : "",
                     title: upTitle || "近期活動",
                     poster: posterMatch ? posterMatch[1].trim() : "",
-                    desc: (descMatch && descMatch[1].trim()) ? descMatch[1].trim() : "歡迎踴躍參加！"
-                }];
-                renderCalendarActivity(fakeCalendarArray);
+                    desc: descMatch ? descMatch[1].trim() : "歡迎踴躍參加！"
+                }]);
             } else {
                 renderCalendarActivity([]);
             }
 
-            
-            // 在 syncData 內部解析 B6 (registrations_promo) 的地方：
-            // 修正：從 data.promo 讀取資料 (如果以後有改名，加上 data.registrations_promo 當備用)
+            // --- D. 解析 B6 宣傳活動 ---
             const promoRaw = data.promo || data.registrations_promo || "";
-            console.log("=== B6 原始資料檢查 ===", promoRaw);
-
             if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
-                // 修正：使用 [ITEM] 標記精準切割
                 const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
-                
                 window.currentActivePromos = itemStrings.map(itemStr => {
                     const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-                    const cleanText = itemStr.replace(/\[ITEM\]/g, "")
-                                             .replace(/\[POSTER\].*?\[\/POSTER\]/g, "")
-                                             .trim();
-                    // 抓取截止日
+                    const titleMatch = itemStr.match(/【近期報名活動：(.*?)】/);
+                    const cleanText = itemStr.replace(/\[ITEM\]/g, "").replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
                     const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
-                    
                     return {
+                        title: titleMatch ? titleMatch[1].trim() : "活動",
                         fullText: cleanText,
                         poster: pMatch ? pMatch[1].trim() : "",
                         deadline: dMatch ? dMatch[1] : "額滿為止"
@@ -395,19 +367,13 @@ if (newsContent && newsContent !== "NONE" && isWithinRange) {
                 });
             } else {
                 window.currentActivePromos = [];
-            }            
-            // --- E. 用戶資料合併與保護 ---
-            let displayUser = null;
-            if (data.user && data.user.name) {
-                displayUser = data.user;
-                window.currentAttendedData = data.user.attendedLogs || data.user.attendLog || [];
-            } else {
-                displayUser = cachedUserInfo;
-                window.currentAttendedData = cachedUserInfo.attendedLogs || [];
             }
+
+            // --- E. 用戶資料合併 ---
+            let displayUser = data.user && data.user.name ? data.user : cachedUserInfo;
             currentUser = displayUser;
 
-            // --- F. 幹部模式按鈕 ---
+            // --- F. 幹部模式 ---
             const staffBtn = document.getElementById('staffBtn');
             if (staffBtn) {
                 const isStaff = (displayUser.role && displayUser.role !== "學員");
@@ -415,25 +381,22 @@ if (newsContent && newsContent !== "NONE" && isWithinRange) {
                 if (isStaff) staffBtn.onclick = enterStaffMode;
             }
 
-            // --- G. 更新 UI (參與率與原本的活動報名邏輯備援) ---
+            // --- G. 更新 UI ---
             console.log("=== 3. 執行 updateUI ===");
+            // 🌟 這裡直接把 GAS 回傳的 registrations 傳下去
             updateUI(
                 displayUser,
                 data.totalRequired,
-                data.events || JSON.parse(localStorage.getItem('allEvents') || "[]"),
+                data.events || [],
                 data.registrations || []
             );
         }
     } catch (e) {
         console.error("❌ syncData 執行異常:", e);
-        if (cachedUserInfo) {
-            updateUI(cachedUserInfo, 0, JSON.parse(localStorage.getItem('allEvents') || "[]"), []);
-        }
     } finally {
         if (overlay) overlay.style.display = 'none';
     }
 }
-    
 function updateUI(user, totalRequiredFromGAS, events, registrations) {
     console.log("=== updateUI 開始更新 ===");
 
@@ -441,27 +404,23 @@ function updateUI(user, totalRequiredFromGAS, events, registrations) {
     const nameElem = document.getElementById('userName');
     if (nameElem && user?.name) nameElem.innerText = user.name;
 
-    // 2. 參與率計算 (分子/分母)
-    const attendCount = user?.attendedCount ?? (user?.attendedLogs?.length || 0);
+    // 2. 參與率計算
+    const attendCount = user?.attendedCount ?? 0;
     const totalEvents = Number(totalRequiredFromGAS) || 0;
     const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
-    // 3. 更新介面數字
     const countDisplay = document.getElementById('attCountDisplay');
     const percentDisplay = document.getElementById('attPercent');
     if (countDisplay) countDisplay.innerText = `${attendCount} / ${totalEvents}`;
     if (percentDisplay) percentDisplay.innerText = rate + '%';
 
-    // 4. 達標煙火 (50%)
+    // 3. 達標煙火 (50%)
     if (rate >= 50 && typeof confetti === 'function') {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#059669', '#10B981'] });
     }
 
-    // 5. 🌟 關鍵渲染：呼叫新版的報名區域渲染
-    // 我們將從 GAS 拿到的原始 events 與 registrations 丟進去比對狀態
+    // 4. 🌟 關鍵修正：確保參數名稱與函數定義一致 (registrations)
     if (typeof renderRegistrationCards === 'function') {
-        // 這邊的邏輯在 syncData 已經處理過一次「宣傳字串」，
-        // 我們讓 renderRegistrationCards 接收 registrations 陣列來判斷「已報名」狀態。
         renderRegistrationCards(window.currentActivePromos, registrations);
     }
 }    
@@ -885,20 +844,23 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
     const wrapper = document.getElementById('registrationWrapper');
     if (!container) return;
 
+    // 如果沒有活動，隱藏整個區域
     if (!promoEvents || promoEvents.length === 0) {
         if (wrapper) wrapper.classList.add('hidden');
         return;
     }
 
     if (wrapper) wrapper.classList.remove('hidden');
-    container.innerHTML = ''; // 清空舊內容
+    container.innerHTML = ''; // 清空舊內容，準備重新渲染
 
     promoEvents.forEach(ev => {
-        // 1. 提取標題用於狀態比對
+        // 1. 提取活動標題：用於與資料庫比對是否已報名
+        // 假設文字格式為：【近期報名活動：活動名稱】
         const titleMatch = ev.fullText.match(/【近期報名活動：(.*?)】/);
         const title = titleMatch ? titleMatch[1].trim() : "活動";
 
-        // 2. 比對報名狀態 (從 userRegistrations 找)
+        // 2. 比對報名與報到狀態
+        // 支援多種欄位定義 (title/eventTitle) 與狀態判定 (已報到/是)
         const regInfo = (userRegistrations || []).find(reg => {
             const rTitle = reg.title || reg.eventTitle || "";
             return rTitle.toString().trim() === title;
@@ -907,36 +869,50 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
         const isRegistered = !!regInfo;
         const isCheckedIn = regInfo && (regInfo.status === "已報到" || regInfo.status === "是");
 
-        // 3. 處理海報 (不裁切模式)
+        // 3. 處理海報圖片路徑
+        // 使用 getDirectImageUrl 將 Google Drive 連結轉換為可顯示的圖片網址
         const finalPoster = (ev.poster && typeof getDirectImageUrl === 'function') 
                             ? getDirectImageUrl(ev.poster) 
                             : ev.poster;
 
-        // 4. 按鈕邏輯
-        let actionBtn = isRegistered 
-            ? `<button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2" disabled>
-                <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'}"></i>
-                ${isCheckedIn ? '已完成報到' : '已報名成功'}
-               </button>`
-            : `<button onclick="goToRegistration('${encodeURIComponent(title)}')" 
-                class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-transform">
-                立即報名
-               </button>`;
+        // 4. 定義按鈕邏輯：根據報名狀態顯示不同外觀
+        let actionBtn = "";
+        if (isRegistered) {
+            // 已報名成功 (或已報到)：顯示灰色禁用按鈕
+            actionBtn = `
+                <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                    <i class="fas ${isCheckedIn ? 'fa-user-check' : 'fa-check-circle'}"></i>
+                    ${isCheckedIn ? '已完成報到' : '已報名成功'}
+                </button>`;
+        } else {
+            // 未報名：顯示綠色立即報名按鈕
+            actionBtn = `
+                <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
+                    class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-emerald-700">
+                    立即報名
+                </button>`;
+        }
 
-        // 5. 組合 HTML
+        // 5. 組合最終卡片 HTML
         const cardHtml = `
-            <div class="bg-white rounded-3xl shadow-sm border border-emerald-50 overflow-hidden mb-2">
+            <div class="bg-white rounded-3xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
                 ${finalPoster ? `
                     <div class="w-full bg-gray-50 flex justify-center items-center border-b border-emerald-50">
-                        <img src="${finalPoster}" class="w-full h-auto object-contain max-h-[400px]" onerror="this.style.display='none'">
+                        <img src="${finalPoster}" 
+                             class="w-full h-auto object-contain max-h-[400px]" 
+                             alt="活動海報"
+                             onerror="this.parentElement.style.display='none'">
                     </div>
                 ` : ''}
+                
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
                         <span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold">活動預約</span>
-                        <span class="text-red-500 text-xs font-medium">截止：${ev.deadline}</span>
+                        <span class="text-red-500 text-xs font-medium italic">截止：${ev.deadline}</span>
                     </div>
-                    <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6">${ev.fullText}</div>
+                    
+                    <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6 font-medium">${ev.fullText}</div>
+                    
                     ${actionBtn}
                 </div>
             </div>

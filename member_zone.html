@@ -404,26 +404,30 @@ function updateUI(user, totalRequiredFromGAS, events, registrations) {
     const nameElem = document.getElementById('userName');
     if (nameElem && user?.name) nameElem.innerText = user.name;
 
-    // 2. 參與率計算
-    const attendCount = user?.attendedCount ?? 0;
+    // 2. 參與率計算：優先使用後端算好的 attendedCount，備援方案是計算 Log 長度
+    // 註：這部分數據來自後端的「會員名單」工作表
+    const attendCount = (user?.attendedCount !== undefined) ? Number(user.attendedCount) : (user?.attendedLogs?.length || 0);
     const totalEvents = Number(totalRequiredFromGAS) || 0;
     const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 
+    // 3. 更新介面數字 (對應截圖中的 0 / 4 與 0%)
     const countDisplay = document.getElementById('attCountDisplay');
     const percentDisplay = document.getElementById('attPercent');
     if (countDisplay) countDisplay.innerText = `${attendCount} / ${totalEvents}`;
     if (percentDisplay) percentDisplay.innerText = rate + '%';
 
-    // 3. 達標煙火 (50%)
+    // 4. 達標煙火 (當大於 50% 時給予鼓勵)
     if (rate >= 50 && typeof confetti === 'function') {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#064E3B', '#059669', '#10B981'] });
     }
 
-    // 4. 🌟 關鍵修正：確保參數名稱與函數定義一致 (registrations)
+    // 5. 🌟 關鍵渲染：活動報名卡片
+    // 使用 window.currentActivePromos (由 syncData 從 B6 宣傳字串解析而來)
+    // 並傳入 registrations (由 GAS 從「報名表」過濾該會員加密電話後所得的活動清單)
     if (typeof renderRegistrationCards === 'function') {
         renderRegistrationCards(window.currentActivePromos, registrations);
     }
-}    
+}   
 // 點擊卡片觸發的函式
 function showLearningHistory() {
     const modal = document.getElementById('historyModal');

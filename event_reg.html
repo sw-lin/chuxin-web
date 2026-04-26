@@ -1318,12 +1318,24 @@ function updateAdminStats(list) {
 
     // --- 第四階段：控制按鈕顯示/隱藏 ---
     // --- UI 自動切換邏輯 ---
-    const isBus = (currentEventConfig?.["是遊覽車行"] === "是");
-    const needID = (currentEventConfig?.["是否需要身分證"] === "是");
+    // 🌟 修正：使用更寬鬆且與設定頁面一致的 Key 值判斷
+    const isBus = (
+        currentEventConfig?.["是遊覽車行"] === "是" || 
+        currentEventConfig?.isTourBus === "是" || 
+        currentEventConfig?.isTourBus === "Y"
+    );
 
-    // 1. 處理保險圖示
+    const needID = (
+        currentEventConfig?.["(需要身分證)"] === "是" || 
+        currentEventConfig?.["需要身分證"] === "是" || 
+        currentEventConfig?.needId === "是" ||
+        currentEventConfig?.needId === "Y"
+    );
+
+    // 1. 處理保險圖示 (保險名冊)
     const insBtn = document.getElementById('exportInsuranceBtn');
     if (insBtn) {
+        // 如果需要身分證，就顯示按鈕；否則隱藏
         insBtn.style.display = needID ? 'inline-block' : 'none';
     }
 

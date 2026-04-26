@@ -107,8 +107,6 @@
 
 // 頁面載入後的安全檢查
 window.onload = function() {
-    console.log("🔑 當前使用金鑰:", STAFF_KEY);
-
     if (!STAFF_KEY) {
         alert("管理權限無效，請重新進行幹部驗證");
         window.location.href = "index.html"; // 踢回會員區重新驗證

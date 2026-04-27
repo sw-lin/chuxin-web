@@ -129,7 +129,7 @@
         if (!STAFF_KEY) { location.href = "index.html"; return; }
         // 檢查編輯權限
         const editBtn = document.getElementById('editBtn');
-        const hasEditPermission = userPermissions.includes("all") || userPermissions.includes("view_attendance");
+        const hasEditPermission = userPermissions.includes("all") || userPermissions.includes("edit_attendance");
         
         if (!hasEditPermission && editBtn) {
             // 無權限則隱藏按鈕，保持標題置中

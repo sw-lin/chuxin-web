@@ -147,11 +147,18 @@
 
     // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
     var STAFF_KEY = auth.key;
-    const userPermissions = auth.permissions;           
-
-    // 定義誰有權限修改：具備 all 或 manage_config 的人
-    const hasConfigPermission = userPermissions.includes("all") || userPermissions.includes("manage_config");                
-
+    const userPermissions = auth.permissions;   
+        // 加上 console.log 檢查「班務」進來時，權限陣列到底長怎樣
+console.log("當前登入 Key:", STAFF_KEY);
+console.log("獲得的權限清單:", userPermissions);
+        
+    // 修正判斷邏輯：確保排除空格或大小寫干擾
+const hasConfigPermission = userPermissions.some(p => 
+    p.trim().toLowerCase() === "all" || 
+    p.trim().toLowerCase() === "manage_config"
+);
+        console.log("是否有權限修改配置:", hasConfigPermission);
+        
 // 1. 日期格式轉換
 function formatToDateInput(dateStr) {
     if (!dateStr) return '';
@@ -335,26 +342,30 @@ function showToast(m) {
 
 // 網頁載入時執行
 window.onload = () => { 
-    // A. 身份驗證
-
+    // 1. 身份驗證
     if (!STAFF_KEY) {
         alert("請重新登入");
         location.href = "index.html";
         return;
     }
 
-    // B. 權限控管：修正隱藏按鈕的邏輯
+    // 2. 初始化 UI 元素 (先生成輸入框)
+    initImageInputs(); 
+
+    // 3. 權限控管 (移動到初始化之後執行)
     const navEditBtn = document.getElementById('navEditBtn');
     if (!hasConfigPermission) {
+        console.log("偵測到無權限，正在隱藏按鈕...");
         if (navEditBtn) {
-            // 參考行事曆做法：改為隱藏但保留位置，或直接設為 none
-            navEditBtn.style.display = 'none'; 
+            navEditBtn.style.setProperty('display', 'none', 'important');
         }
+    } else {
+        console.log("權限確認通過，顯示編輯按鈕");
     }
     
-    initImageInputs(); 
+    // 4. 讀取資料
     loadCurrentConfigs(); 
-};
+};;
         
     </script>
 </body>

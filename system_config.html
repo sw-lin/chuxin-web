@@ -236,11 +236,11 @@ async function loadCurrentConfigs() {
 
 // 4. 切換編輯模式 (優化版：保留原始 Tailwind 樣式)
 function toggleEditMode() {
-    // 雖然外層擋掉了，但這裡再加一道安全檢查
+    // 安全檢查：若無權限，即便觸發 function 也不執行
     if (!hasConfigPermission) {
-            showToast("⚠️ 您不具備修改參數的權限");
-            return;
-        }
+        showToast("⚠️ 您不具備修改參數的權限");
+        return;
+    }
     
     isEditMode = !isEditMode;
     const inputs = document.querySelectorAll('.config-input');
@@ -249,7 +249,6 @@ function toggleEditMode() {
 
     inputs.forEach(input => {
         input.readOnly = !isEditMode;
-        // 使用 classList 切換，避免洗掉原本的寬度與圓角設定
         if(isEditMode) {
             input.classList.remove('input-disabled');
             input.classList.add('input-enabled');
@@ -260,6 +259,7 @@ function toggleEditMode() {
     });
 
     navEditBtn.innerHTML = isEditMode ? '<i class="fas fa-times mr-1"></i>結束編輯' : '<i class="fas fa-edit mr-1"></i>編輯模式';
+    // 修正 className 切換，確保與行事曆的樣式一致
     navEditBtn.className = isEditMode ? "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md" : "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20";
     saveActions.classList.toggle('hidden', !isEditMode);
 }
@@ -343,11 +343,14 @@ window.onload = () => {
         return;
     }
 
-    // 2. 權限控管：如果沒有修改權限，直接隱藏「編輯模式」按鈕
-        const navEditBtn = document.getElementById('navEditBtn');
-        if (!hasConfigPermission && navEditBtn) {
-            navEditBtn.style.display = 'none'; // 讓按鈕直接消失
+    // B. 權限控管：修正隱藏按鈕的邏輯
+    const navEditBtn = document.getElementById('navEditBtn');
+    if (!hasConfigPermission) {
+        if (navEditBtn) {
+            // 參考行事曆做法：改為隱藏但保留位置，或直接設為 none
+            navEditBtn.style.display = 'none'; 
         }
+    }
     
     initImageInputs(); 
     loadCurrentConfigs(); 

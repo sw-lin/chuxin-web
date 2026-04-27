@@ -154,33 +154,32 @@
        }
 async function saveAllSettings() {
     const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
-    if(!staffKey) return alert("驗證失效，請重新登入");
+    
+    // 初始化物件，確保每個職位都有一個空陣列
+    const rolePermissions = {
+        "副會長": [], "文書": [], "班務": [], "企劃": [], "活動": [], "財務": []
+    };
 
-    // 1. 改建立一個以「功能 Key」為鍵值的物件
-    const featurePermissions = {};
-    featureConfig.forEach(feat => {
-        featurePermissions[feat.key] = [];
-    });
+    // 抓取畫面上所有被勾選的 checkbox
+    const checkedBoxes = document.querySelectorAll('.permission-checkbox:checked');
+    
+    // 偵錯用：看看有沒有抓到勾選的東西
+    console.log("被勾選的數量:", checkedBoxes.length);
 
-    // 2. 遍歷所有勾選框，按「功能 Key」將「職稱」存入
-    document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
-        const role = cb.dataset.role;
-        const key = cb.dataset.key;
-        if (featurePermissions[key]) {
-            featurePermissions[key].push(role);
+    checkedBoxes.forEach(cb => {
+        const role = cb.dataset.role; // 必須對應 HTML 中的 data-role
+        const key = cb.dataset.key;   // 必須對應 HTML 中的 data-key
+        if (rolePermissions[role]) {
+            rolePermissions[role].push(key);
         }
     });
 
-    // 3. 轉換為 GAS 容易處理的格式：{ "edit_member": "副會長,文書,班務", ... }
-    const finalConfig = {};
-    for (const key in featurePermissions) {
-        finalConfig[key] = featurePermissions[key].join(",");
-    }
+    console.log("準備送出的權限資料:", rolePermissions);
 
     const payload = {
-        type: 'update_permissions_and_links', // 請確保 GAS 端有對應此 type 的處理
+        type: 'update_permissions_and_links',
         key: staffKey,
-        permissionsByKey: finalConfig, // 改送這個新結構
+        rolePermissions: rolePermissions, // 這裡要對應後端的 params.rolePermissions
         links: {
             reading_folder_url: document.getElementById('reading_folder_url').value,
             photo_gallery_url: document.getElementById('photo_gallery_url').value

@@ -156,21 +156,31 @@ async function saveAllSettings() {
     const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
     if(!staffKey) return alert("驗證失效，請重新登入");
 
-    // 建立一個以職稱為 Key 的物件
-    const rolePermissions = {};
-    roles.forEach(r => rolePermissions[r] = []);
+    // 1. 改建立一個以「功能 Key」為鍵值的物件
+    const featurePermissions = {};
+    featureConfig.forEach(feat => {
+        featurePermissions[feat.key] = [];
+    });
 
-    // 遍歷所有被勾選的框框，按職稱分類存入陣列
+    // 2. 遍歷所有勾選框，按「功能 Key」將「職稱」存入
     document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
         const role = cb.dataset.role;
         const key = cb.dataset.key;
-        rolePermissions[role].push(key);
+        if (featurePermissions[key]) {
+            featurePermissions[key].push(role);
+        }
     });
 
+    // 3. 轉換為 GAS 容易處理的格式：{ "edit_member": "副會長,文書,班務", ... }
+    const finalConfig = {};
+    for (const key in featurePermissions) {
+        finalConfig[key] = featurePermissions[key].join(",");
+    }
+
     const payload = {
-        type: 'update_permissions_and_links',
+        type: 'update_permissions_and_links', // 請確保 GAS 端有對應此 type 的處理
         key: staffKey,
-        rolePermissions: rolePermissions,
+        permissionsByKey: finalConfig, // 改送這個新結構
         links: {
             reading_folder_url: document.getElementById('reading_folder_url').value,
             photo_gallery_url: document.getElementById('photo_gallery_url').value

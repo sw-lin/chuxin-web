@@ -1184,16 +1184,68 @@ function closeVoteOverlay() {
         overlay.classList.add('hidden');
         overlay.style.display = 'none';
     }
-}    
+}  
+function renderVoteContent(voteData) {
+    const container = document.getElementById('voteContent');
+    if (!container) return;
+
+    // 選項解析
+    const optionsHtml = voteData.options.map((opt, idx) => `
+        <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
+            <input type="radio" name="voteOption" value="${opt}" class="hidden peer">
+            <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
+                <div class="w-2 h-2 bg-white rounded-full"></div>
+            </div>
+            <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
+        </label>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="max-w-md mx-auto">
+            ${voteData.posterUrl ? `
+                <div class="rounded-[2rem] overflow-hidden shadow-lg mb-6 aspect-video bg-gray-200">
+                    <img src="${voteData.posterUrl}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                </div>
+            ` : ''}
+
+            <div class="px-2 mb-8">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
+                    <span class="text-emerald-600 font-bold tracking-widest text-sm uppercase">Current Poll</span>
+                </div>
+                <h1 class="text-2xl font-black text-emerald-950 mb-3">${voteData.title}</h1>
+                <p class="text-gray-500 leading-relaxed">${voteData.desc || '請投下您神聖的一票。'}</p>
+            </div>
+
+            <div id="optionsContainer">
+                ${optionsHtml}
+            </div>
+
+            <div class="mt-10">
+                <button onclick="submitUserVote()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white text-xl font-black tracking-widest active:scale-95 transition-all hover:bg-orange-600">
+                    送出投票
+                </button>
+            </div>
+        </div>
+    `;
+}
 </script>
-<div id="voteOverlay" class="fixed inset-0 bg-white z-[9999] hidden flex-col transition-all duration-300">
-  <div class="p-6 flex justify-between items-center border-b shrink-0">
-    <button onclick="closeVoteOverlay()" class="text-gray-400 p-2"><i class="fas fa-times text-2xl"></i></button>
-    <span id="vote-modal-title" class="font-black text-emerald-900 text-lg">活動投票</span>
-    <div class="w-10"></div> 
-  </div>
-  <div id="vote-content-frame" class="flex-1 overflow-y-auto p-6 pb-24">
-    </div>
-</div>    
+<div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">
+    <nav class="bg-white px-6 py-5 flex items-center justify-between border-b border-gray-100 shrink-0 shadow-sm">
+        <button onclick="closeVoteOverlay()" class="flex items-center text-emerald-800 active:scale-90 transition-all">
+            <i class="fas fa-chevron-left text-xl"></i>
+            <span class="ml-2 font-bold">返回</span>
+        </button>
+
+        <div class="absolute left-1/2 -translate-x-1/2">
+            <h2 class="text-xl font-black text-emerald-950 tracking-widest">投票中心</h2>
+        </div>
+
+        <div class="w-12"></div>
+    </nav>
+
+    <div id="voteContent" class="flex-1 overflow-y-auto bg-gray-50 p-6 pb-20">
+        </div>
+</div> 
 </body>
 </html>

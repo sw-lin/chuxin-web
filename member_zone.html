@@ -1110,37 +1110,35 @@ function checkActiveVote() {
 }
 function renderVoteBanner(res) {
   const container = document.getElementById('vote-notice-container');
-  const isVoted = res.voted; // 由後端正確回傳布林值
+  const isVoted = res.voted;
   const title = res.data.title || "活動投票";
   
-  // 🎨 風格統一化設定
-  // 未投票：使用橘色系，與報到按鈕呼應
-  // 已投票：使用深綠色/灰色系，代表完成或低調
-  const bgColor = isVoted ? "bg-slate-500" : "bg-[#F97316]"; 
-  const icon = isVoted ? "fa-check-circle" : "fa-vote-yea";
-  const actionText = isVoted ? "已參與，點擊查看結果" : "限時投票，點擊參與";
+  // 🎨 完全同步「掃碼報到」的圓角與陰影
+  // 未投：使用與掃碼按鈕不同的「墨綠色」或「深藍」，既協調又能區分功能
+  // 已投：使用柔和的灰色
+  const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800"; 
+  const statusLabel = isVoted ? "SUCCESS" : "NEW";
 
   container.innerHTML = `
-    <div class="mt-6 mb-2"> 
+    <div class="mt-4"> 
       <button onclick="openVoteOverlay()" 
-        class="w-full ${bgColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-8 active:scale-95 transition-all hover:opacity-90">
+        class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all hover:opacity-90">
         
         <div class="flex items-center space-x-4">
-          <i class="fas ${icon} text-2xl"></i>
-          <div class="text-left">
-            <span class="block text-xs opacity-80 font-bold tracking-widest">${isVoted ? 'SUCCESS' : 'NEW VOTE'}</span>
-            <span class="text-lg font-black tracking-widest">${title}</span>
+          <div class="flex flex-col text-left">
+            <span class="text-[10px] font-bold tracking-[0.2em] opacity-70">${statusLabel}</span>
+            <span class="text-xl font-black tracking-widest">${title}</span>
           </div>
         </div>
         
-        <div class="flex items-center">
-          <span class="text-sm font-medium mr-2">${isVoted ? '查看結果' : '立即去'}</span>
-          <i class="fas fa-chevron-right text-xs opacity-50"></i>
+        <div class="flex items-center space-x-2 opacity-80">
+          <span class="text-sm font-bold">${isVoted ? '查看結果' : '立即參與'}</span>
+          <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'} text-sm"></i>
         </div>
       </button>
     </div>
   `;
-}   
+}  
 </script>
 <div id="vote-overlay" class="fixed inset-0 bg-white z-[9999] hidden flex-col transition-all duration-300">
   <div class="p-6 flex justify-between items-center border-b shrink-0">

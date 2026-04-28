@@ -301,7 +301,9 @@ async function syncData() {
     }
 
     try {
-        const url = `${GAS_URL}?type=member_init&phone=${cached.phone}&t=${Date.now()}`;
+        // 請將 cached.phone 改為 cachedUserInfo.phone
+        const url = `${GAS_URL}?type=member_init&phone=${cachedUserInfo.phone}&t=${Date.now()}`;
+        
         const res = await fetch(url);
         const data = await res.json();
 

@@ -1138,6 +1138,44 @@ function renderVoteBanner(res) {
     </div>
   `;
 }
+/**
+ * 開啟投票彈窗
+ */
+function openVoteOverlay() {
+    console.log("嘗試開啟投票 Overlay...");
+    
+    // 1. 檢查是否有進行中的投票資料
+    if (!window.currentVoteData || !window.currentVoteData.id) {
+        alert("目前沒有進行中的投票活動。");
+        return;
+    }
+
+    // 2. 顯示 Overlay 容器（假設您的彈窗 ID 是 voteOverlay）
+    const overlay = document.getElementById('voteOverlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+        
+        // 3. 呼叫渲染投票內容的函式 (如果還沒寫，這裡需要實作載入問題的邏輯)
+        if (typeof renderVoteContent === 'function') {
+            renderVoteContent(window.currentVoteData);
+        }
+    } else {
+        console.error("找不到 ID 為 voteOverlay 的元素");
+        alert("投票系統初始化中，請稍候再試。");
+    }
+}
+
+/**
+ * 關閉投票彈窗
+ */
+function closeVoteOverlay() {
+    const overlay = document.getElementById('voteOverlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+    }
+}    
 </script>
 <div id="vote-overlay" class="fixed inset-0 bg-white z-[9999] hidden flex-col transition-all duration-300">
   <div class="p-6 flex justify-between items-center border-b shrink-0">

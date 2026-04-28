@@ -17,7 +17,17 @@
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; display: none; }
-        
+         
+        #vote-overlay {
+            -webkit-overflow-scrolling: touch; /* 確保手機滑動流暢 */
+        }
+
+        /* 防止開啟投票時背景跟著捲動 */
+        .no-scroll {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }        
     </style>
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -83,6 +93,8 @@
         <i class="fas fa-qrcode text-2xl"></i>
         <span class="text-xl font-black tracking-widest">掃碼報到</span>
     </button>
+
+    <div id="vote-notice-container" class="w-full"></div>
     
     <!-- 4. 近期活動區 -->
     <div class="space-y-4">
@@ -509,6 +521,11 @@ window.addEventListener('load', async () => {
     try {
         await syncData();
         console.log("✅ syncData 執行完成");
+        // 🌟 建議放在這裡：等核心資料都穩定了，再檢查投票
+        if (typeof checkActiveVote === 'function') {
+            console.log("🗳️ 檢查是否有進行中的投票...");
+            checkActiveVote();
+        }        
     } catch (err) {
         console.error("❌ syncData 執行出錯:", err);
     }
@@ -1067,6 +1084,64 @@ function goToAI() {
         window.location.href = 'ai_chat.html';
     }
 }
-</script>   
+let activeVoteObj = null; // 用來儲存目前的活動資訊
+
+function checkActiveVote() {
+    // 從 Session 取得目前登入者的加密手機 (我們原本存好的)
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) return;
+    
+    const user = JSON.parse(userStr);
+    // 假設您的 SecurityUtils 已經在頁面上，我們將手機號碼加密後傳給後端比對
+    const encryptedPhone = SecurityUtils.encrypt(normalizePhone(user.phone));
+
+    const url = `${GAS_URL}?type=get_active_vote&phoneEnc=${encodeURIComponent(encryptedPhone)}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(res => {
+            if (res.hasVote) {
+                activeVoteObj = res; // 存入全域變數
+                renderVoteBanner(res);
+            }
+        })
+        .catch(err => console.error("投票模組偵測失敗:", err));
+}
+
+function renderVoteBanner(res) {
+  const container = document.getElementById('vote-notice-container');
+  const isVoted = res.voted;
+  const title = res.data.title;
+  
+  // 建立動態 Banner 的 HTML
+  // 未投票用暖色系，已投票用冷色系或低調顏色
+  const bgColor = isVoted ? "from-slate-500 to-slate-600" : "from-orange-400 to-rose-500";
+  const icon = isVoted ? "fa-chart-pie" : "fa-vote-yea";
+  const label = isVoted ? "已參與" : "限時調查";
+  const actionText = isVoted ? "查看結果" : "立即參與";
+
+  container.innerHTML = `
+    <div class="mx-6 my-4 bg-gradient-to-br ${bgColor} rounded-[2rem] p-5 text-white shadow-lg active:scale-95 transition-all cursor-pointer" onclick="openVoteOverlay()">
+      <div class="flex justify-between items-center">
+        <div>
+          <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">${label}</span>
+          <h3 class="text-lg font-black mt-1 leading-tight">${title}</h3>
+          <p class="text-xs opacity-80 mt-1">${actionText} <i class="fas fa-chevron-right ml-1"></i></p>
+        </div>
+        <i class="fas ${icon} text-4xl opacity-30"></i>
+      </div>
+    </div>
+  `;
+}    
+</script>
+<div id="vote-overlay" class="fixed inset-0 bg-white z-[9999] hidden flex-col transition-all duration-300">
+  <div class="p-6 flex justify-between items-center border-b shrink-0">
+    <button onclick="closeVoteOverlay()" class="text-gray-400 p-2"><i class="fas fa-times text-2xl"></i></button>
+    <span id="vote-modal-title" class="font-black text-emerald-900 text-lg">活動投票</span>
+    <div class="w-10"></div> 
+  </div>
+  <div id="vote-content-frame" class="flex-1 overflow-y-auto p-6 pb-24">
+    </div>
+</div>    
 </body>
 </html>

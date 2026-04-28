@@ -1189,8 +1189,27 @@ function renderVoteContent(voteData) {
     const container = document.getElementById('voteContent');
     if (!container) return;
 
-    // 選項解析
-    const optionsHtml = voteData.options.map((opt, idx) => `
+    // 🌟 新增解析邏輯：確保 options 是陣列且不為空
+    let optionsArray = [];
+    if (voteData.options) {
+        // 如果後端傳來的是字串，則用逗號切割；如果是陣列則直接使用
+        optionsArray = Array.isArray(voteData.options) 
+            ? voteData.options 
+            : voteData.options.split(',').map(opt => opt.trim());
+    }
+
+    // 如果完全沒有選項，顯示提示訊息
+    if (optionsArray.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-20">
+                <p class="text-gray-400">此投票活動尚未設定選項內容。</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 渲染選項 HTML
+    const optionsHtml = optionsArray.map((opt, idx) => `
         <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
             <input type="radio" name="voteOption" value="${opt}" class="hidden peer">
             <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
@@ -1200,29 +1219,16 @@ function renderVoteContent(voteData) {
         </label>
     `).join('');
 
+    // ... 其餘渲染 Header 與 Button 的代碼不變 ...
     container.innerHTML = `
         <div class="max-w-md mx-auto">
-            ${voteData.posterUrl ? `
-                <div class="rounded-[2rem] overflow-hidden shadow-lg mb-6 aspect-video bg-gray-200">
-                    <img src="${voteData.posterUrl}" class="w-full h-full object-cover" onerror="this.style.display='none'">
-                </div>
-            ` : ''}
-
             <div class="px-2 mb-8">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
-                    <span class="text-emerald-600 font-bold tracking-widest text-sm uppercase">Current Poll</span>
-                </div>
                 <h1 class="text-2xl font-black text-emerald-950 mb-3">${voteData.title}</h1>
-                <p class="text-gray-500 leading-relaxed">${voteData.desc || '請投下您神聖的一票。'}</p>
+                <p class="text-gray-500 leading-relaxed">${voteData.description || ''}</p>
             </div>
-
-            <div id="optionsContainer">
-                ${optionsHtml}
-            </div>
-
+            <div id="optionsContainer">${optionsHtml}</div>
             <div class="mt-10">
-                <button onclick="submitUserVote()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white text-xl font-black tracking-widest active:scale-95 transition-all hover:bg-orange-600">
+                <button onclick="submitUserVote()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white text-xl font-black tracking-widest active:scale-95 transition-all">
                     送出投票
                 </button>
             </div>

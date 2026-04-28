@@ -1186,6 +1186,7 @@ function closeVoteOverlay() {
     }
 }  
 function renderVoteContent(voteData) {
+    console.log("🗳️ 準備渲染的資料:", voteData); // 🌟 新增這行來檢查
     const container = document.getElementById('voteContent');
     if (!container) return;
 

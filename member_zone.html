@@ -1089,26 +1089,35 @@ function goToAI() {
 let activeVoteObj = null; // 用來儲存目前的活動資訊
 
 function checkActiveVote() {
-    // 1. 從 Session 直接取得當前用戶的手機 (明文)
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) return;
     
     const user = JSON.parse(userStr);
-    const phone = user.phone; // 這是使用者登入時的明文電話
+    const phone = user.phone;
 
-    // 2. 直接將明文傳給 API，讓 GAS 去煩惱加密比對
     const url = `${GAS_URL}?type=get_active_vote&phone=${encodeURIComponent(phone)}`;
 
-    console.log("🗳️ 正在請求投票狀態...");
+    console.log("🗳️ 正在同步投票活動資訊...");
+    
     fetch(url)
         .then(res => res.json())
         .then(res => {
-            if (res.hasVote) {
+            // 🌟 核心邏輯：只要後端說有活動 (hasVote 為 true)
+            if (res.hasVote && res.data) {
+                // 1. 將完整的活動內容存入全域變數，供後續彈窗使用
+                window.currentVoteData = res.data; 
+                
+                // 2. 存入另一個變數 activeVoteObj (相容您現有的代碼)
                 activeVoteObj = res; 
+                
+                // 3. 畫出 Banner
                 renderVoteBanner(res);
+                console.log("✅ 投票活動載入成功:", res.data.title);
+            } else {
+                console.log("ℹ️ 目前無進行中的投票活動");
             }
         })
-        .catch(err => console.error("投票模組偵測失敗:", err));
+        .catch(err => console.error("❌ 投票模組偵測失敗:", err));
 }
 function renderVoteBanner(res) {
   const container = document.getElementById('vote-notice-container');

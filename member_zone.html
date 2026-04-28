@@ -1091,68 +1091,44 @@ let activeVoteObj = null; // 用來儲存目前的活動資訊
 function checkActiveVote() {
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) return;
-    
     const user = JSON.parse(userStr);
-    const phone = user.phone;
+    const url = `${GAS_URL}?type=get_active_vote&phone=${encodeURIComponent(user.phone)}`;
 
-    const url = `${GAS_URL}?type=get_active_vote&phone=${encodeURIComponent(phone)}`;
-
-    console.log("🗳️ 正在同步投票活動資訊...");
-    
     fetch(url)
         .then(res => res.json())
         .then(res => {
-            // 🌟 核心邏輯：只要後端說有活動 (hasVote 為 true)
-            if (res.hasVote && res.data) {
-                // 1. 將完整的活動內容存入全域變數，供後續彈窗使用
-                window.currentVoteData = res.data; 
-                
-                // 2. 存入另一個變數 activeVoteObj (相容您現有的代碼)
+            // 🌟 關鍵修正：改為檢查 res.votes
+            if (res.hasVote && res.votes && res.votes.length > 0) {
                 activeVoteObj = res; 
-                
-                // 3. 畫出 Banner
-                renderVoteBanner(res);
-                console.log("✅ 投票活動載入成功:", res.data.title);
+                renderVoteBanner(res); // 將整個陣列傳去渲染
             } else {
-                console.log("ℹ️ 目前無進行中的投票活動");
+                document.getElementById('vote-notice-container').innerHTML = "";
             }
         })
-        .catch(err => console.error("❌ 投票模組偵測失敗:", err));
+        .catch(err => console.error("偵測失敗:", err));
 }
 function renderVoteBanner(res) {
-  const container = document.getElementById('vote-notice-container');
-  if (!res.votes || res.votes.length === 0) return;
+    const container = document.getElementById('vote-notice-container');
+    if (!container) return;
+    container.innerHTML = ""; // 先清空，避免重複顯示
 
-  // 清空容器，準備填入多個按鈕
-  container.innerHTML = "";
-
-  res.votes.forEach((item, index) => {
-    const isVoted = item.voted;
-    const voteData = item.data;
-    
-    const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800"; 
-    const statusLabel = isVoted ? "SUCCESS" : "NEW";
-
-    // 建立按鈕 HTML
-    const btnHtml = `
-      <div class="mt-4"> 
-        <button onclick="handleVoteClick('${voteData.id}')" 
-          class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all hover:opacity-90">
-          <div class="flex items-center space-x-4">
-            <div class="flex flex-col text-left">
-              <span class="text-[10px] font-bold tracking-[0.2em] opacity-70">${statusLabel}</span>
-              <span class="text-xl font-black tracking-widest">${voteData.title}</span>
-            </div>
-          </div>
-          <div class="flex items-center space-x-2 opacity-80">
-            <span class="text-sm font-bold">${isVoted ? '查看結果' : '立即參與'}</span>
-            <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'} text-sm"></i>
-          </div>
-        </button>
-      </div>
-    `;
-    container.innerHTML += btnHtml;
-  });
+    res.votes.forEach(item => {
+        const isVoted = item.voted;
+        const vote = item.data;
+        const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800";
+        
+        container.innerHTML += `
+            <div class="mt-4">
+                <button onclick="handleVoteClick('${vote.id}')" 
+                    class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all">
+                    <div class="flex flex-col text-left">
+                        <span class="text-[10px] font-bold tracking-widest opacity-70">${isVoted ? 'SUCCESS' : 'NEW'}</span>
+                        <span class="text-xl font-black tracking-widest">${vote.title}</span>
+                    </div>
+                    <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'}"></i>
+                </button>
+            </div>`;
+    });
 }
 /**
  * 開啟投票彈窗
@@ -1243,12 +1219,11 @@ function renderVoteContent(voteData) {
         </div>
     `;
 }
-// 🌟 新增：處理特定調查的點擊
+// 🌟 別忘了新增點擊處理函式
 function handleVoteClick(voteId) {
-    // 從清單中找出對應的調查資料
-    const targetVote = activeVoteObj.votes.find(v => v.data.id === voteId);
-    if (targetVote) {
-        window.currentVoteData = targetVote.data;
+    const target = activeVoteObj.votes.find(v => v.data.id === voteId);
+    if (target) {
+        window.currentVoteData = target.data;
         openVoteOverlay();
     }
 }    

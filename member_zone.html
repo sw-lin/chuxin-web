@@ -1087,21 +1087,22 @@ function goToAI() {
 let activeVoteObj = null; // 用來儲存目前的活動資訊
 
 function checkActiveVote() {
-    // 從 Session 取得目前登入者的加密手機 (我們原本存好的)
+    // 1. 從 Session 直接取得當前用戶的手機 (明文)
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) return;
     
     const user = JSON.parse(userStr);
-    // 假設您的 SecurityUtils 已經在頁面上，我們將手機號碼加密後傳給後端比對
-    const encryptedPhone = SecurityUtils.encrypt(normalizePhone(user.phone));
+    const phone = user.phone; // 這是使用者登入時的明文電話
 
-    const url = `${GAS_URL}?type=get_active_vote&phoneEnc=${encodeURIComponent(encryptedPhone)}`;
+    // 2. 直接將明文傳給 API，讓 GAS 去煩惱加密比對
+    const url = `${GAS_URL}?type=get_active_vote&phone=${encodeURIComponent(phone)}`;
 
+    console.log("🗳️ 正在請求投票狀態...");
     fetch(url)
         .then(res => res.json())
         .then(res => {
             if (res.hasVote) {
-                activeVoteObj = res; // 存入全域變數
+                activeVoteObj = res; 
                 renderVoteBanner(res);
             }
         })

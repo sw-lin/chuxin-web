@@ -1121,31 +1121,38 @@ function checkActiveVote() {
 }
 function renderVoteBanner(res) {
   const container = document.getElementById('vote-notice-container');
-  // 🌟 強制轉型為布林，確保安全
-  const isVoted = res.voted === true; 
-  const title = res.data.title || "活動投票";
-  
-  // 維持您滿意的 icon 與配色邏輯
-  const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800"; 
-  const statusLabel = isVoted ? "SUCCESS" : "NEW";
+  if (!res.votes || res.votes.length === 0) return;
 
-  container.innerHTML = `
-    <div class="mt-4"> 
-      <button onclick="openVoteOverlay()" 
-        class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all hover:opacity-90">
-        <div class="flex items-center space-x-4">
-          <div class="flex flex-col text-left">
-            <span class="text-[10px] font-bold tracking-[0.2em] opacity-70">${statusLabel}</span>
-            <span class="text-xl font-black tracking-widest">${title}</span>
+  // 清空容器，準備填入多個按鈕
+  container.innerHTML = "";
+
+  res.votes.forEach((item, index) => {
+    const isVoted = item.voted;
+    const voteData = item.data;
+    
+    const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800"; 
+    const statusLabel = isVoted ? "SUCCESS" : "NEW";
+
+    // 建立按鈕 HTML
+    const btnHtml = `
+      <div class="mt-4"> 
+        <button onclick="handleVoteClick('${voteData.id}')" 
+          class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all hover:opacity-90">
+          <div class="flex items-center space-x-4">
+            <div class="flex flex-col text-left">
+              <span class="text-[10px] font-bold tracking-[0.2em] opacity-70">${statusLabel}</span>
+              <span class="text-xl font-black tracking-widest">${voteData.title}</span>
+            </div>
           </div>
-        </div>
-        <div class="flex items-center space-x-2 opacity-80">
-          <span class="text-sm font-bold">${isVoted ? '查看結果' : '立即參與'}</span>
-          <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'} text-sm"></i>
-        </div>
-      </button>
-    </div>
-  `;
+          <div class="flex items-center space-x-2 opacity-80">
+            <span class="text-sm font-bold">${isVoted ? '查看結果' : '立即參與'}</span>
+            <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'} text-sm"></i>
+          </div>
+        </button>
+      </div>
+    `;
+    container.innerHTML += btnHtml;
+  });
 }
 /**
  * 開啟投票彈窗
@@ -1236,23 +1243,32 @@ function renderVoteContent(voteData) {
         </div>
     `;
 }
+// 🌟 新增：處理特定調查的點擊
+function handleVoteClick(voteId) {
+    // 從清單中找出對應的調查資料
+    const targetVote = activeVoteObj.votes.find(v => v.data.id === voteId);
+    if (targetVote) {
+        window.currentVoteData = targetVote.data;
+        openVoteOverlay();
+    }
+}    
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">
-    <nav class="bg-white px-6 py-5 flex items-center justify-between border-b border-gray-100 shrink-0 shadow-sm">
-        <button onclick="closeVoteOverlay()" class="flex items-center text-emerald-800 active:scale-90 transition-all">
+    <nav class="bg-[#064E3B] px-6 py-5 flex items-center justify-between shrink-0 shadow-md relative">
+        <button onclick="closeVoteOverlay()" class="flex items-center text-white active:scale-90 transition-all z-10">
             <i class="fas fa-chevron-left text-xl"></i>
-            <span class="ml-2 font-bold">返回</span>
+            <span class="ml-2 font-bold tracking-widest">返回</span>
         </button>
 
-        <div class="absolute left-1/2 -translate-x-1/2">
-            <h2 class="text-xl font-black text-emerald-950 tracking-widest">投票中心</h2>
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <h2 class="text-xl font-black text-white tracking-[0.3em]">投票中心</h2>
         </div>
 
         <div class="w-12"></div>
     </nav>
 
-    <div id="voteContent" class="flex-1 overflow-y-auto bg-gray-50 p-6 pb-20">
+    <div id="voteContent" class="flex-1 overflow-y-auto bg-gray-50 p-6 pb-24">
         </div>
-</div> 
+</div>
 </body>
 </html>

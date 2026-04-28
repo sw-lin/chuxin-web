@@ -1108,32 +1108,39 @@ function checkActiveVote() {
         })
         .catch(err => console.error("投票模組偵測失敗:", err));
 }
-
 function renderVoteBanner(res) {
   const container = document.getElementById('vote-notice-container');
-  const isVoted = res.voted;
-  const title = res.data.title;
+  const isVoted = res.voted; // 由後端正確回傳布林值
+  const title = res.data.title || "活動投票";
   
-  // 建立動態 Banner 的 HTML
-  // 未投票用暖色系，已投票用冷色系或低調顏色
-  const bgColor = isVoted ? "from-slate-500 to-slate-600" : "from-orange-400 to-rose-500";
-  const icon = isVoted ? "fa-chart-pie" : "fa-vote-yea";
-  const label = isVoted ? "已參與" : "限時調查";
-  const actionText = isVoted ? "查看結果" : "立即參與";
+  // 🎨 風格統一化設定
+  // 未投票：使用橘色系，與報到按鈕呼應
+  // 已投票：使用深綠色/灰色系，代表完成或低調
+  const bgColor = isVoted ? "bg-slate-500" : "bg-[#F97316]"; 
+  const icon = isVoted ? "fa-check-circle" : "fa-vote-yea";
+  const actionText = isVoted ? "已參與，點擊查看結果" : "限時投票，點擊參與";
 
   container.innerHTML = `
-    <div class="mx-6 my-4 bg-gradient-to-br ${bgColor} rounded-[2rem] p-5 text-white shadow-lg active:scale-95 transition-all cursor-pointer" onclick="openVoteOverlay()">
-      <div class="flex justify-between items-center">
-        <div>
-          <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">${label}</span>
-          <h3 class="text-lg font-black mt-1 leading-tight">${title}</h3>
-          <p class="text-xs opacity-80 mt-1">${actionText} <i class="fas fa-chevron-right ml-1"></i></p>
+    <div class="mt-6 mb-2"> 
+      <button onclick="openVoteOverlay()" 
+        class="w-full ${bgColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-8 active:scale-95 transition-all hover:opacity-90">
+        
+        <div class="flex items-center space-x-4">
+          <i class="fas ${icon} text-2xl"></i>
+          <div class="text-left">
+            <span class="block text-xs opacity-80 font-bold tracking-widest">${isVoted ? 'SUCCESS' : 'NEW VOTE'}</span>
+            <span class="text-lg font-black tracking-widest">${title}</span>
+          </div>
         </div>
-        <i class="fas ${icon} text-4xl opacity-30"></i>
-      </div>
+        
+        <div class="flex items-center">
+          <span class="text-sm font-medium mr-2">${isVoted ? '查看結果' : '立即去'}</span>
+          <i class="fas fa-chevron-right text-xs opacity-50"></i>
+        </div>
+      </button>
     </div>
   `;
-}    
+}   
 </script>
 <div id="vote-overlay" class="fixed inset-0 bg-white z-[9999] hidden flex-col transition-all duration-300">
   <div class="p-6 flex justify-between items-center border-b shrink-0">

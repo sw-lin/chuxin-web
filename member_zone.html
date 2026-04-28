@@ -301,7 +301,7 @@ async function syncData() {
     }
 
     try {
-        const url = `${GAS_URL}?type=member_init&phone=${cachedUserInfo.phone}&t=${Date.now()}`;
+        const url = `${GAS_URL}?type=member_init&phone=${cached.phone}&t=${Date.now()}`;
         const res = await fetch(url);
         const data = await res.json();
 
@@ -1110,12 +1110,11 @@ function checkActiveVote() {
 }
 function renderVoteBanner(res) {
   const container = document.getElementById('vote-notice-container');
-  const isVoted = res.voted;
+  // 🌟 強制轉型為布林，確保安全
+  const isVoted = res.voted === true; 
   const title = res.data.title || "活動投票";
   
-  // 🎨 完全同步「掃碼報到」的圓角與陰影
-  // 未投：使用與掃碼按鈕不同的「墨綠色」或「深藍」，既協調又能區分功能
-  // 已投：使用柔和的灰色
+  // 維持您滿意的 icon 與配色邏輯
   const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800"; 
   const statusLabel = isVoted ? "SUCCESS" : "NEW";
 
@@ -1123,14 +1122,12 @@ function renderVoteBanner(res) {
     <div class="mt-4"> 
       <button onclick="openVoteOverlay()" 
         class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all hover:opacity-90">
-        
         <div class="flex items-center space-x-4">
           <div class="flex flex-col text-left">
             <span class="text-[10px] font-bold tracking-[0.2em] opacity-70">${statusLabel}</span>
             <span class="text-xl font-black tracking-widest">${title}</span>
           </div>
         </div>
-        
         <div class="flex items-center space-x-2 opacity-80">
           <span class="text-sm font-bold">${isVoted ? '查看結果' : '立即參與'}</span>
           <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'} text-sm"></i>
@@ -1138,7 +1135,7 @@ function renderVoteBanner(res) {
       </button>
     </div>
   `;
-}  
+}
 </script>
 <div id="vote-overlay" class="fixed inset-0 bg-white z-[9999] hidden flex-col transition-all duration-300">
   <div class="p-6 flex justify-between items-center border-b shrink-0">

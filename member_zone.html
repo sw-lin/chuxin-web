@@ -1107,28 +1107,26 @@ function checkActiveVote() {
         })
         .catch(err => console.error("偵測失敗:", err));
 }
-function renderVoteBanner(res) {
-    const container = document.getElementById('vote-notice-container');
-    if (!container) return;
-    container.innerHTML = ""; // 先清空，避免重複顯示
+function checkActiveVote() {
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    
+    // 🌟 加入 _t 參數防止快取，確保投完票後抓到最新狀態
+    const url = `${GAS_URL}?type=get_active_vote&phone=${encodeURIComponent(user.phone)}&_t=${Date.now()}`;
 
-    res.votes.forEach(item => {
-        const isVoted = item.voted;
-        const vote = item.data;
-        const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800";
-        
-        container.innerHTML += `
-            <div class="mt-4">
-                <button onclick="handleVoteClick('${vote.id}')" 
-                    class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all">
-                    <div class="flex flex-col text-left">
-                        <span class="text-[10px] font-bold tracking-widest opacity-70">${isVoted ? 'SUCCESS' : 'NEW'}</span>
-                        <span class="text-xl font-black tracking-widest">${vote.title}</span>
-                    </div>
-                    <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'}"></i>
-                </button>
-            </div>`;
-    });
+    fetch(url)
+        .then(res => res.json())
+        .then(res => {
+            if (res.hasVote && res.votes && res.votes.length > 0) {
+                activeVoteObj = res; 
+                renderVoteBanner(res); 
+            } else {
+                const container = document.getElementById('vote-notice-container');
+                if (container) container.innerHTML = "";
+            }
+        })
+        .catch(err => console.error("偵測失敗:", err));
 }
 /**
  * 開啟投票彈窗
@@ -1312,11 +1310,22 @@ async function submitUserVote(event) {
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
-            alert("投票成功！感謝您的參與。");
-            closeVoteOverlay();
-            // 重新整理資料，讓首頁按鈕變灰色，並更新本地 activeVoteObj
-            if (typeof checkActiveVote === 'function') checkActiveVote(); 
-        } else {
+          alert("投票成功！感謝您的參與。");
+    
+          // 🌟 關鍵修正 1：手動標記當前活動為已投票
+          if (window.currentVoteData) {
+             window.currentVoteData.hasVoted = true;
+          }
+
+          // 🌟 關鍵修正 2：關閉視窗並重新偵測狀態
+          closeVoteOverlay();
+    
+          // 重新呼叫一次初始化投票的函式
+          // 這會去後端確認最新狀態，並把首頁按鈕變灰（SUCCESS）
+          if (typeof checkActiveVote === 'function') {
+            checkActiveVote(); 
+          }
+     } else {
             alert("投票失敗：" + (result.message || "未知錯誤"));
         }
     } catch (err) {
@@ -1328,7 +1337,38 @@ async function submitUserVote(event) {
             btn.innerText = originalText;
         }
     }
-}   
+}  
+function renderVoteBanner(res) {
+    const container = document.getElementById('vote-notice-container');
+    if (!container) return;
+    container.innerHTML = ""; 
+
+    res.votes.forEach(item => {
+        const isVoted = item.voted;
+        const vote = item.data;
+        
+        // 🌟 已投過變灰色 (slate-500)，未投用深綠色 (emerald-800)
+        const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800";
+        const statusLabel = isVoted ? "SUCCESS" : "NEW";
+        const actionText = isVoted ? "查看結果" : "立即參與";
+        const icon = isVoted ? "fa-chart-bar" : "fa-arrow-right";
+
+        container.innerHTML += `
+            <div class="mt-4">
+                <button onclick="handleVoteClick('${vote.id}')" 
+                    class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all">
+                    <div class="flex flex-col text-left">
+                        <span class="text-[10px] font-bold tracking-widest opacity-70">${statusLabel}</span>
+                        <span class="text-xl font-black tracking-widest">${vote.title}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-bold">${actionText}</span>
+                        <i class="fas ${icon}"></i>
+                    </div>
+                </button>
+            </div>`;
+    });
+}
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">
     <nav class="bg-[#064E3B] px-6 py-5 flex items-center justify-between shrink-0 shadow-md relative">

@@ -1270,51 +1270,65 @@ function handleVoteClick(voteId) {
     }
 } 
 async function submitUserVote(event) {
+    // 1. 取得選擇的選項
     const selectedOption = document.querySelector('input[name="voteOption"]:checked');
-    
     if (!selectedOption) {
         alert("請先選擇一個選項再送出喔！");
         return;
     }
 
+    // 2. 取得用戶資訊與投票資料
     const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-    const voteData = window.currentVoteData; // 這是我們昨天暫存的活動資料
+    const voteData = window.currentVoteData;
 
-    // 顯示 Loading
-    const btn = event.target;
-    const originalText = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = "投票傳送中...";
+    // 3. 抓取按鈕並顯示 Loading 狀態 (加入容錯)
+    const btn = event ? (event.currentTarget || event.target) : null;
+    let originalText = "送出投票";
+    
+    if (btn) {
+        originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "投票傳送中...";
+    }
 
+    // 4. 準備封包
     const payload = {
         type: 'submit_vote',
         voteId: voteData.id,
-        phone: userInfo.phone, // 傳明文，由後端 SecurityUtils 加密
+        phone: userInfo.phone,
         choice: selectedOption.value
     };
 
     try {
+        // 🌟 確保 GAS_URL 已經定義且正確
         const res = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
+        
+        // 檢查 HTTP 狀態碼
+        if (!res.ok) throw new Error('網路請求失敗');
+        
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
             alert("投票成功！感謝您的參與。");
             closeVoteOverlay();
-            checkActiveVote(); // 重新整理首頁 Banner 狀態
+            // 重新整理資料，讓首頁按鈕變灰色，並更新本地 activeVoteObj
+            if (typeof checkActiveVote === 'function') checkActiveVote(); 
         } else {
-            alert("投票失敗：" + result.message);
+            alert("投票失敗：" + (result.message || "未知錯誤"));
         }
     } catch (err) {
         console.error("投票通訊錯誤:", err);
-        alert("網路連線異常，請稍後再試。");
+        alert("網路連線異常，請確認伺服器設定。");
     } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
-}    
+}   
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">
     <nav class="bg-[#064E3B] px-6 py-5 flex items-center justify-between shrink-0 shadow-md relative">

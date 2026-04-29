@@ -1169,53 +1169,95 @@ function closeVoteOverlay() {
     }
 }  
 function renderVoteContent(voteData) {
-    console.log("🗳️ 準備渲染的資料:", voteData); // 🌟 新增這行來檢查
     const container = document.getElementById('voteContent');
     if (!container) return;
 
-    // 🌟 新增解析邏輯：確保 options 是陣列且不為空
+    // 1. 從全域變數找出此活動的「參與狀態」
+    const voteStatus = activeVoteObj.votes.find(v => v.data.id === voteData.id);
+    const isVoted = voteStatus ? voteStatus.voted : false;
+
+    // 2. 解析選項
     let optionsArray = [];
     if (voteData.options) {
-        // 如果後端傳來的是字串，則用逗號切割；如果是陣列則直接使用
         optionsArray = Array.isArray(voteData.options) 
             ? voteData.options 
             : voteData.options.split(',').map(opt => opt.trim());
     }
 
-    // 如果完全沒有選項，顯示提示訊息
-    if (optionsArray.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-20">
-                <p class="text-gray-400">此投票活動尚未設定選項內容。</p>
+    let mainContentHtml = "";
+
+    if (isVoted) {
+        // --- 📊 狀態 A：已投票，顯示統計結果 ---
+        // 假設後端回傳資料已包含 stats (我們稍後在 GAS 串接)
+        const stats = voteData.stats || { total: 0, details: {} };
+        
+        mainContentHtml = optionsArray.map(opt => {
+            const count = stats.details[opt] || 0;
+            const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+            return `
+                <div class="mb-6">
+                    <div class="flex justify-between items-end mb-2 px-1">
+                        <span class="font-bold text-emerald-900 text-lg">${opt}</span>
+                        <span class="text-emerald-600 font-black">${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                        <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // 底部按鈕改為「關閉」
+        mainContentHtml += `
+            <div class="mt-10">
+                <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
+                    關閉視窗
+                </button>
             </div>
         `;
-        return;
-    }
 
-    // 渲染選項 HTML
-    const optionsHtml = optionsArray.map((opt, idx) => `
-        <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
-            <input type="radio" name="voteOption" value="${opt}" class="hidden peer">
-            <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
-                <div class="w-2 h-2 bg-white rounded-full"></div>
-            </div>
-            <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
-        </label>
-    `).join('');
+    } else {
+        // --- 🗳️ 狀態 B：未投票，顯示選擇清單 ---
+        const optionsHtml = optionsArray.map((opt, idx) => `
+            <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
+                <input type="radio" name="voteOption" value="${opt}" class="hidden peer">
+                <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
+            </label>
+        `).join('');
 
-    // ... 其餘渲染 Header 與 Button 的代碼不變 ...
-    container.innerHTML = `
-        <div class="max-w-md mx-auto">
-            <div class="px-2 mb-8">
-                <h1 class="text-2xl font-black text-emerald-950 mb-3">${voteData.title}</h1>
-                <p class="text-gray-500 leading-relaxed">${voteData.description || ''}</p>
-            </div>
+        mainContentHtml = `
             <div id="optionsContainer">${optionsHtml}</div>
             <div class="mt-10">
                 <button onclick="submitUserVote()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white text-xl font-black tracking-widest active:scale-95 transition-all">
                     送出投票
                 </button>
             </div>
+        `;
+    }
+
+    // 3. 渲染整體容器
+    container.innerHTML = `
+        <div class="max-w-md mx-auto">
+            ${voteData.posterUrl ? `
+                <div class="rounded-[2rem] overflow-hidden shadow-md mb-8 aspect-video bg-gray-200">
+                    <img src="${voteData.posterUrl}" class="w-full h-full object-cover">
+                </div>
+            ` : ''}
+            
+            <div class="px-2 mb-8">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
+                        ${isVoted ? 'Results' : 'Active Poll'}
+                    </span>
+                </div>
+                <h1 class="text-2xl font-black text-emerald-950 mb-3">${voteData.title}</h1>
+                <p class="text-gray-500 leading-relaxed">${voteData.description || '請選擇一個選項參與投票。'}</p>
+            </div>
+
+            ${mainContentHtml}
         </div>
     `;
 }
@@ -1225,6 +1267,51 @@ function handleVoteClick(voteId) {
     if (target) {
         window.currentVoteData = target.data;
         openVoteOverlay();
+    }
+} 
+async function submitUserVote() {
+    const selectedOption = document.querySelector('input[name="voteOption"]:checked');
+    if (!selectedOption) {
+        alert("請先選擇一個選項再送出喔！");
+        return;
+    }
+
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
+    const voteData = window.currentVoteData; // 這是我們昨天暫存的活動資料
+
+    // 顯示 Loading
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "投票傳送中...";
+
+    const payload = {
+        type: 'submit_vote',
+        voteId: voteData.id,
+        phone: userInfo.phone, // 傳明文，由後端 SecurityUtils 加密
+        choice: selectedOption.value
+    };
+
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.result === "SUCCESS") {
+            alert("投票成功！感謝您的參與。");
+            closeVoteOverlay();
+            checkActiveVote(); // 重新整理首頁 Banner 狀態
+        } else {
+            alert("投票失敗：" + result.message);
+        }
+    } catch (err) {
+        console.error("投票通訊錯誤:", err);
+        alert("網路連線異常，請稍後再試。");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
     }
 }    
 </script>

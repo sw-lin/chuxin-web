@@ -112,17 +112,17 @@
                     </div>
 
                     <div>
-                        <label class="form-label">投票類型 (Type)</label>
-                        <select id="type" class="form-input h-[60px]">
-                            <option value="SINGLE">單選 (SINGLE)</option>
-                            <option value="MULTIPLE">多選 (MULTIPLE)</option>
-                        </select>
+                       <label class="form-label">投票類型 (Type)</label>
+                       <select id="type" class="form-input h-[60px]" onchange="handleTypeChange()">
+                       <option value="SINGLE">單選 (SINGLE)</option>
+                       <option value="MULTIPLE">多選 (MULTIPLE)</option>
+                    </select>
                     </div>
-                    
-                    <div>
-                        <label class="form-label">最多選幾項</label>
-                        <input type="number" id="maxChoices" class="form-input h-[60px]" value="1">
-                    </div>
+
+<div>
+    <label class="form-label">最多選幾項</label>
+    <input type="number" id="maxChoices" class="form-input h-[60px]" value="1" min="1">
+</div>
 
                     <div>
                         <label class="form-label">開始時間</label>
@@ -286,6 +286,7 @@
             document.getElementById('status').value = v.status;
             document.getElementById('showResult').value = v.showResult;
             document.getElementById('anonymous').value = v.anonymous;
+            handleTypeChange(); // 新增：填充完資料後執行一次，確保單選框狀態正確
             document.getElementById('deleteBtn').classList.remove('hidden');
         }
 
@@ -339,6 +340,10 @@
                 description: document.getElementById('description').value,
                 posterUrl: document.getElementById('posterUrl').value,
                 options: optValues.join(','),
+                // --- 補上以下兩行 ---
+                type: document.getElementById('type').value,
+                maxChoices: document.getElementById('maxChoices').value,
+                // ------------------                
                 startTime: document.getElementById('startTime').value.replace('T', ' '),
                 endTime: document.getElementById('endTime').value.replace('T', ' '),
                 status: document.getElementById('status').value,
@@ -394,6 +399,25 @@
             t.innerText = msg; t.style.opacity = '1';
             setTimeout(() => { t.style.opacity = '0'; }, 3000);
         }
+        // 新增此函式：處理單選/多選連動
+function handleTypeChange() {
+    const type = document.getElementById('type').value;
+    const maxInput = document.getElementById('maxChoices');
+    
+    if (type === 'SINGLE') {
+        // 如果是單選，強制設為 1 並禁用輸入
+        maxInput.value = 1;
+        maxInput.readOnly = true; 
+        maxInput.style.backgroundColor = "#F3F4F6"; // 變灰色提示不可點
+    } else {
+        // 如果是多選，開放輸入，並確保預設值至少為 2
+        maxInput.readOnly = false;
+        maxInput.style.backgroundColor = ""; 
+        if (parseInt(maxInput.value) <= 1) {
+            maxInput.value = 2;
+        }
+    }
+}
     </script>
 </body>
 </html>

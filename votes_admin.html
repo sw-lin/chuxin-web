@@ -97,14 +97,17 @@
                     <div class="col-span-2 bg-emerald-50/20 p-4 rounded-3xl border border-emerald-50/50 mb-4">
                         <div class="flex items-center justify-between mb-4">
                             <label class="form-label !mb-0">投票選項設定</label>
-                            <select id="optionCountSelector" onchange="generateOptionInputs(this.value)" class="bg-white border-2 border-emerald-100 rounded-xl px-2 py-1 text-sm font-bold outline-none focus:border-emerald-600">
-                                <option value="0">選擇數量</option>
-                                <option value="2">2 個選項</option>
-                                <option value="3">3 個選項</option>
-                                <option value="4">4 個選項</option>
-                                <option value="5">5 個選項</option>
-                                <option value="6">6 個選項</option>
-                            </select>
+                            <div class="flex items-center gap-2">
+    <input type="text" 
+           id="optionCountInput" 
+           placeholder="輸入數量 (如: 10)" 
+           oninput="handleOptionCountInput(this)"
+           class="w-24 bg-white border-2 border-emerald-100 rounded-xl px-3 py-1.5 text-sm font-bold outline-none focus:border-emerald-600 text-center">
+    <button onclick="applyOptionCount()" 
+            class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all">
+        生成欄位
+    </button>
+</div>
                         </div>
                         <div id="dynamicOptionsContainer" class="space-y-2">
                             </div>
@@ -294,6 +297,7 @@
             const inputs = document.querySelectorAll('.form-input');
             inputs.forEach(i => i.value = "");
             document.getElementById('voteId').value = "V" + Date.now();
+            document.getElementById('optionCountInput').value = ""; // 清空輸入框
             document.getElementById('dynamicOptionsContainer').innerHTML = '';
             document.getElementById('optionCountSelector').value = "0";
             document.getElementById('status').value = "OPEN";
@@ -417,6 +421,35 @@ function handleTypeChange() {
             maxInput.value = 2;
         }
     }
+}
+// 🌟 1. 自動將全形數字轉為半形，並限制只能輸入數字
+function handleOptionCountInput(input) {
+    // 全形數字轉半形邏輯
+    let value = input.value.replace(/[０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+    // 去除非數字字元
+    value = value.replace(/[^\d]/g, '');
+    input.value = value;
+}
+
+// 🌟 2. 執行生成欄位的動作
+function applyOptionCount() {
+    const input = document.getElementById('optionCountInput');
+    let count = parseInt(input.value);
+
+    if (isNaN(count) || count <= 0) {
+        alert("請輸入正確的選項數量！");
+        return;
+    }
+
+    if (count > 50) { // 設定一個保險上限，避免頁面崩潰
+        if(!confirm("產生的選項數量較多，確定要繼續嗎？")) return;
+    }
+
+    // 呼叫您原本就有的生成函式
+    generateOptionInputs(count);
+    showToast(`✅ 已生成 ${count} 個選項`);
 }
     </script>
 </body>

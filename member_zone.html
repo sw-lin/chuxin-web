@@ -1337,31 +1337,37 @@ function handleVoteClick(voteId) {
     }
 } 
 async function submitUserVote(event) {
-    
-    const maxAllowed = parseInt(voteData.maxChoices) || 1; // 取得上限
+    // 🌟 先取得基礎資料，才能進行後續判斷
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
+    const voteData = window.currentVoteData; // 必須先定義 voteData
+
+    if (!voteData) {
+        alert("找不到投票資料，請重新開啟。");
+        return;
+    }
+
+    // 🌟 現在才能安全地取得上限
+    const maxAllowed = parseInt(voteData.maxChoices) || 1; 
 
     // 1. 取得所有勾選的選項
     const checkedBoxes = document.querySelectorAll('.vote-checkbox:checked');
     const checkedCount = checkedBoxes.length;
 
-    // 🌟 核心邏輯：禁止超選或沒選
+    // 2. 核心邏輯驗證
     if (checkedCount === 0) {
         alert("請至少選擇一個選項喔！");
         return;
     }
     
     if (checkedCount > maxAllowed) {
-        alert(`這道題最多隻能選擇 ${maxAllowed} 項，請修改後再送出。`);
+        alert(`這道題最多只能選擇 ${maxAllowed} 項，請修改後再送出。`);
         return;
     }
 
-    // 2. 將複選結果轉換為字串
+    // 3. 將複選結果轉換為字串
     const selectedChoices = Array.from(checkedBoxes).map(cb => cb.value).join(',');
 
-    const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-    const voteData = window.currentVoteData;
-
-    // 3. 按鈕狀態處理
+    // 4. 按鈕狀態處理
     const btn = event ? (event.currentTarget || event.target) : null;
     const originalText = btn ? btn.innerText : "送出投票";
     
@@ -1389,14 +1395,9 @@ async function submitUserVote(event) {
 
         if (result.result === "SUCCESS") {
             alert("投票成功！感謝您的參與。");
-
-            // 🌟 關鍵修正：立即觸發重新抓取最新資料 (含最新統計數字)
-            // 這會更新全域的 activeVoteObj 並重新渲染 Banner
             if (typeof checkActiveVote === 'function') {
                 await checkActiveVote(); 
             }
-
-            // 關閉視窗
             closeVoteOverlay(); 
         } else {
             alert("投票失敗：" + (result.message || "未知錯誤"));
@@ -1410,7 +1411,7 @@ async function submitUserVote(event) {
             btn.innerText = originalText;
         }
     }
-} 
+}
 function renderVoteBanner(res) {
     const container = document.getElementById('vote-notice-container');
     if (!container) return;

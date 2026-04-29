@@ -1194,38 +1194,53 @@ function renderVoteContent(voteData) {
 
     if (isVoted) {
         if (shouldShowResult) {
-            // --- 📊 狀態 A：已投票，且符合顯示條件（時間到了或設定為公開） ---
-            const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
-            
-            mainContentHtml = optionsArray.map(opt => {
-                const count = stats.details[opt] || 0;
-                const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
-                const names = (stats.voterLists && stats.voterLists[opt]) 
-                    ? stats.voterLists[opt].join('、') 
-                    : "";
+            // --- 📊 狀態 A：已投票後的統計結果渲染 ---
+const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
 
-                return `
-                    <div class="mb-8">
-                        <div class="flex justify-between items-end mb-2 px-1">
-                            <span class="font-bold text-emerald-900 text-lg">${opt}</span>
-                            <span class="text-emerald-600 font-black">
-                                ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
-                            </span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
-                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
-                        </div>
-                        ${!voteData.isAnonymous && names ? `
-                            <div class="mt-2 px-1">
-                                <div class="flex items-start gap-1">
-                                    <i class="fas fa-users text-gray-300 mt-1 text-[10px]"></i>
-                                    <p class="text-[11px] text-gray-400 leading-relaxed italic">${names}</p>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
+mainContentHtml = optionsArray.map(opt => {
+    // 🌟 修正：計算包含該選項的所有票數
+    let count = 0;
+    Object.keys(stats.details).forEach(key => {
+        // 如果該筆紀錄包含此選項（例如 "選項A,選項B" 包含 "選項A"）
+        if (key.split(',').includes(opt)) {
+            count += stats.details[key];
+        }
+    });
+
+    const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+    
+    // 🌟 修正：整理所有選擇該選項的人員名單
+    let namesArray = [];
+    if (stats.voterLists) {
+        Object.keys(stats.voterLists).forEach(key => {
+            if (key.split(',').includes(opt)) {
+                namesArray = namesArray.concat(stats.voterLists[key]);
+            }
+        });
+    }
+    const names = [...new Set(namesArray)].join('、'); // 去重後合併
+
+    return `
+        <div class="mb-8">
+            <div class="flex justify-between items-end mb-2 px-1">
+                <span class="font-bold text-emerald-900 text-lg">${opt}</span>
+                <span class="text-emerald-600 font-black">
+                    ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
+                </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+            </div>
+            ${!voteData.isAnonymous && names ? `
+                <div class="mt-2 px-1">
+                    <p class="text-[11px] text-gray-400 leading-relaxed italic">
+                        <i class="fas fa-users text-[10px]"></i> ${names}
+                    </p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}).join('');
         } else {
             // --- ⏳ 狀態 B：已投票，但 HIDE 且時間還沒到 ---
             mainContentHtml = `

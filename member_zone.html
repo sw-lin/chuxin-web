@@ -1263,14 +1263,14 @@ function renderVoteContent(voteData) {
     } else {
         // --- 🗳️ 狀態 D：未投票且活動進行中，顯示選擇清單 ---
         const optionsHtml = optionsArray.map((opt) => `
-            <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
-                <input type="radio" name="voteOption" value="${opt}" class="hidden peer">
-                <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
-                    <div class="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
-            </label>
-        `).join('');
+    <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
+        <input type="checkbox" value="${opt}" class="vote-checkbox hidden peer">
+        <div class="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
+            <i class="fas fa-check text-white text-xs opacity-0 peer-checked:opacity-100"></i>
+        </div>
+        <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
+    </label>
+`).join('');
 
         mainContentHtml = `
             <div id="optionsContainer">${optionsHtml}</div>
@@ -1317,33 +1317,30 @@ function handleVoteClick(voteId) {
     }
 } 
 async function submitUserVote(event) {
-    // 1. 取得選擇的選項
-    const selectedOption = document.querySelector('input[name="voteOption"]:checked');
-    if (!selectedOption) {
-        alert("請先選擇一個選項再送出喔！");
+    // 1. 取得所有勾選的選項
+    const checkedBoxes = document.querySelectorAll('.vote-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        alert("請至少選擇一個選項再送出喔！");
         return;
     }
 
-    // 2. 取得用戶資訊與投票資料
+    // 2. 將複選結果轉換為字串 (例如: "選項A,選項B")
+    const selectedChoices = Array.from(checkedBoxes).map(cb => cb.value).join(',');
+
     const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
     const voteData = window.currentVoteData;
 
-    // 3. 抓取按鈕並顯示 Loading 狀態 (加入容錯)
     const btn = event ? (event.currentTarget || event.target) : null;
-    let originalText = "送出投票";
-    
     if (btn) {
-        originalText = btn.innerText;
         btn.disabled = true;
         btn.innerText = "投票傳送中...";
     }
 
-    // 4. 準備封包
     const payload = {
         type: 'submit_vote',
         voteId: voteData.id,
         phone: userInfo.phone,
-        choice: selectedOption.value
+        choice: selectedChoices // 🌟 這裡送出的是合併後的字串
     };
 
     try {

@@ -55,7 +55,7 @@
                         </tr>
                     </thead>
                     <tbody id="permissionBody" class="text-sm">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </section>
@@ -91,13 +91,14 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec";
         
-        // 1. 完全對齊您的資料庫 Key
+        // 新增了「民調中心管理」
         const featureConfig = [
             { name: "會員名冊管理", key: "edit_member" },
             { name: "行事曆排程", key: "edit_calendar" },
             { name: "出席紀錄查詢", key: "edit_attendance" },
             { name: "繳費財務管理", key: "edit_payments" },
             { name: "活動報名下載", key: "edit_registration" },
+            { name: "民調中心管理", key: "manage_votes" }, // 這是新加入的權限行
             { name: "首頁佈置與參數", key: "manage_config" }
         ];
 
@@ -123,87 +124,73 @@
         }
 
         async function loadSettings() {
-        showLoading(true);
-        try {
-        const res = await fetch(`${GAS_URL}?type=get_permission_settings&t=${Date.now()}`);
-        const data = await res.json();
-        const config = data.config || {};
-        
-        // 核心邏輯：GAS 現在傳回的是 rolePermissions: { "副會長": ["edit_member"], ... }
-        // 這是由 GAS 在後端 split(",") 處理好的，所以前端這段「比對並勾選」的邏輯可以維持：
-        const rolePerms = data.rolePermissions || {}; 
+            showLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_permission_settings&t=${Date.now()}`);
+                const data = await res.json();
+                const config = data.config || {};
+                const rolePerms = data.rolePermissions || {}; 
 
-        document.querySelectorAll('.permission-checkbox').forEach(cb => {
-            const k = cb.dataset.key;  // 功能 Key
-            const r = cb.dataset.role; // 職稱
-            
-            // 只要該職稱的權限清單中包含這個 Key，就勾起來
-            if (rolePerms[r] && rolePerms[r].includes(k)) {
-                cb.checked = true;
+                document.querySelectorAll('.permission-checkbox').forEach(cb => {
+                    const k = cb.dataset.key;
+                    const r = cb.dataset.role;
+                    if (rolePerms[r] && rolePerms[r].includes(k)) {
+                        cb.checked = true;
+                    }
+                });
+
+                document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
+                document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
+
+            } catch (e) {
+                showToast("❌ 無法連接資料庫");
             }
-        });
-
-        // 填入連結
-        document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
-        document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
-
-       } catch (e) {
-        showToast("❌ 無法連接資料庫");
-       }
-       showLoading(false);
-       }
-async function saveAllSettings() {
-    const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
-    
-    // 初始化物件，確保每個職位都有一個空陣列
-    const rolePermissions = {
-        "副會長": [], "文書": [], "班務": [], "企劃": [], "活動": [], "財務": []
-    };
-
-    // 抓取畫面上所有被勾選的 checkbox
-    const checkedBoxes = document.querySelectorAll('.permission-checkbox:checked');
-    
-    // 偵錯用：看看有沒有抓到勾選的東西
-    console.log("被勾選的數量:", checkedBoxes.length);
-
-    checkedBoxes.forEach(cb => {
-        const role = cb.dataset.role; // 必須對應 HTML 中的 data-role
-        const key = cb.dataset.key;   // 必須對應 HTML 中的 data-key
-        if (rolePermissions[role]) {
-            rolePermissions[role].push(key);
+            showLoading(false);
         }
-    });
 
-    console.log("準備送出的權限資料:", rolePermissions);
+        async function saveAllSettings() {
+            const staffKey = sessionStorage.getItem('staffKey') || sessionStorage.getItem('staff_key');
+            const rolePermissions = {
+                "副會長": [], "文書": [], "班務": [], "企劃": [], "活動": [], "財務": []
+            };
 
-    const payload = {
-        type: 'update_permissions_and_links',
-        key: staffKey,
-        rolePermissions: rolePermissions, // 這裡要對應後端的 params.rolePermissions
-        links: {
-            reading_folder_url: document.getElementById('reading_folder_url').value,
-            photo_gallery_url: document.getElementById('photo_gallery_url').value
+            const checkedBoxes = document.querySelectorAll('.permission-checkbox:checked');
+            checkedBoxes.forEach(cb => {
+                const role = cb.dataset.role;
+                const key = cb.dataset.key;
+                if (rolePermissions[role]) {
+                    rolePermissions[role].push(key);
+                }
+            });
+
+            const payload = {
+                type: 'update_permissions_and_links',
+                key: staffKey,
+                rolePermissions: rolePermissions,
+                links: {
+                    reading_folder_url: document.getElementById('reading_folder_url').value,
+                    photo_gallery_url: document.getElementById('photo_gallery_url').value
+                }
+            };
+
+            showLoading(true);
+            try {
+                const res = await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload) 
+                });
+                const result = await res.json();
+                if(result.result === "SUCCESS") {
+                    showToast("✅ 設定已成功同步至 B 欄");
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast("❌ 儲存失敗：" + result.message);
+                }
+            } catch (e) {
+                showToast("❌ 連線異常");
+            }
+            showLoading(false);
         }
-    };
-
-    showLoading(true);
-    try {
-        const res = await fetch(GAS_URL, { 
-            method: 'POST', 
-            body: JSON.stringify(payload) 
-        });
-        const result = await res.json();
-        if(result.result === "SUCCESS") {
-            showToast("✅ 設定已成功同步至 B 欄");
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showToast("❌ 儲存失敗：" + result.message);
-        }
-    } catch (e) {
-        showToast("❌ 連線異常");
-    }
-    showLoading(false);
-}
 
         function showLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
         function showToast(m) {

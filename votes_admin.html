@@ -296,31 +296,34 @@ async function fetchVoteList() {
         }
 
         async function saveVoteData() {
-            const data = {
-                type: 'save_vote_config',
-                key: STAFF_KEY,
-                voteId: document.getElementById('voteId').value,
-                title: document.getElementById('title').value.trim(),
-                description: document.getElementById('description').value,
-                posterUrl: document.getElementById('posterUrl').value,
-                options: document.getElementById('options').value,
-                voteType: document.getElementById('type').value,
-                maxChoices: document.getElementById('maxChoices').value,
-                startTime: document.getElementById('startTime').value,
-                endTime: document.getElementById('endTime').value,
-                status: document.getElementById('status').value,
-                showResult: document.getElementById('showResult').value,
-                anonymous: document.getElementById('anonymous').value
-            };
+            // 將資料包裝在 voteData 物件內
+    const voteData = {
+        id: document.getElementById('voteId').value, // 這裡要對應 GAS 裡的 vote.id
+        title: document.getElementById('title').value.trim(),
+        description: document.getElementById('description').value,
+        posterUrl: document.getElementById('posterUrl').value,
+        options: document.getElementById('options').value,
+        startTime: document.getElementById('startTime').value,
+        endTime: document.getElementById('endTime').value,
+        status: document.getElementById('status').value,
+        showResult: document.getElementById('showResult').value,
+        isAnonymous: document.getElementById('anonymous').value // 這裡要對應 GAS 裡的 vote.isAnonymous
+    };
 
-            if (!data.title || !data.options) { alert("標題與選項為必填！"); return; }
+    const payload = {
+        type: 'save_vote_config',
+        key: STAFF_KEY,
+        voteData: voteData // 👈 這裡必須包一層 voteData
+    };
 
-            toggleLoading(true);
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
+    if (!voteData.title || !voteData.options) { alert("標題與選項為必填！"); return; }
+
+    toggleLoading(true);
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
                     showToast("✅ 儲存成功");

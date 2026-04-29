@@ -1322,6 +1322,11 @@ mainContentHtml = optionsArray.map(opt => {
             ${mainContentHtml}
         </div>
     `;
+    // 🌟 關鍵位置：在 innerHTML 賦值之後，元素才真正出現在頁面上
+    // 只有在「未投票且活動進行中」的情況下才需要初始化限制邏輯
+    if (!isVoted && !isAfterEnd) {
+        setupCheckboxLimit(parseInt(voteData.maxChoices) || 1);
+    }
 }
 // 🌟 別忘了新增點擊處理函式
 function handleVoteClick(voteId) {
@@ -1332,10 +1337,21 @@ function handleVoteClick(voteId) {
     }
 } 
 async function submitUserVote(event) {
+    const voteData = window.currentVoteData;
+    const maxAllowed = parseInt(voteData.maxChoices) || 1; // 取得上限
+
     // 1. 取得所有勾選的選項
     const checkedBoxes = document.querySelectorAll('.vote-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-        alert("請至少選擇一個選項再送出喔！");
+    const checkedCount = checkedBoxes.length;
+
+    // 🌟 核心邏輯：禁止超選或沒選
+    if (checkedCount === 0) {
+        alert("請至少選擇一個選項喔！");
+        return;
+    }
+    
+    if (checkedCount > maxAllowed) {
+        alert(`這道題最多隻能選擇 ${maxAllowed} 項，請修改後再送出。`);
         return;
     }
 
@@ -1431,6 +1447,33 @@ function renderVoteBanner(res) {
             </div>`;
     });
 }
+function setupCheckboxLimit(maxAllowed) {
+    const checkboxes = document.querySelectorAll('.vote-checkbox');
+    
+    checkboxes.forEach(box => {
+        box.addEventListener('change', () => {
+            const checkedCount = document.querySelectorAll('.vote-checkbox:checked').length;
+            
+            if (checkedCount >= maxAllowed) {
+                // 選滿了：把沒選的都鎖住
+                checkboxes.forEach(innerBox => {
+                    if (!innerBox.checked) {
+                        innerBox.disabled = true;
+                        innerBox.parentElement.style.opacity = '0.5'; // 視覺提示：變淡
+                        innerBox.parentElement.style.cursor = 'not-allowed';
+                    }
+                });
+            } else {
+                // 沒選滿：全部解鎖
+                checkboxes.forEach(innerBox => {
+                    innerBox.disabled = false;
+                    innerBox.parentElement.style.opacity = '1';
+                    innerBox.parentElement.style.cursor = 'pointer';
+                });
+            }
+        });
+    });
+}    
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">
     <nav class="bg-[#064E3B] px-6 py-5 flex items-center justify-between shrink-0 shadow-md relative">

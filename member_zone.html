@@ -1171,7 +1171,7 @@ function renderVoteContent(voteData) {
     if (!container) return;
 
     // 1. 從全域變數找出此活動的「參與狀態」
-    const voteStatus = activeVoteObj.votes.find(v => v.data.id === voteData.id);
+    const voteStatus = activeVoteObj.votes.find(v => String(v.data.id) === String(voteData.id));
     const isVoted = voteStatus ? voteStatus.voted : false;
 
     // 2. 解析選項
@@ -1185,27 +1185,46 @@ function renderVoteContent(voteData) {
     let mainContentHtml = "";
 
     if (isVoted) {
-        // --- 📊 狀態 A：已投票，顯示統計結果 ---
-        // 假設後端回傳資料已包含 stats (我們稍後在 GAS 串接)
-        const stats = voteData.stats || { total: 0, details: {} };
+        // --- 📊 狀態 A：已投票，顯示統計結果與【名單】 ---
+        const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
         
         mainContentHtml = optionsArray.map(opt => {
             const count = stats.details[opt] || 0;
             const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+            
+            // 🌟 處理實名制名單
+            // 如果後端回傳了人名，就用逗號隔開；若無則顯示空字串
+            const names = (stats.voterLists && stats.voterLists[opt]) 
+                ? stats.voterLists[opt].join('、') 
+                : "";
+
             return `
-                <div class="mb-6">
+                <div class="mb-8">
                     <div class="flex justify-between items-end mb-2 px-1">
                         <span class="font-bold text-emerald-900 text-lg">${opt}</span>
-                        <span class="text-emerald-600 font-black">${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span></span>
+                        <span class="text-emerald-600 font-black">
+                            ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
+                        </span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
                         <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
                     </div>
+
+                    ${!voteData.isAnonymous && names ? `
+                        <div class="mt-2 px-1">
+                            <div class="flex items-start gap-1">
+                                <i class="fas fa-users text-gray-300 mt-1 text-[10px]"></i>
+                                <p class="text-[11px] text-gray-400 leading-relaxed italic">
+                                    ${names}
+                                </p>
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }).join('');
 
-        // 底部按鈕改為「關閉」
         mainContentHtml += `
             <div class="mt-10">
                 <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
@@ -1250,9 +1269,12 @@ function renderVoteContent(voteData) {
                     <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
                         ${isVoted ? 'Results' : 'Active Poll'}
                     </span>
+                    ${!voteData.isAnonymous && isVoted ? `
+                        <span class="text-[10px] text-gray-400 font-bold">● 實名投票</span>
+                    ` : ''}
                 </div>
                 <h1 class="text-2xl font-black text-emerald-950 mb-3">${voteData.title}</h1>
-                <p class="text-gray-500 leading-relaxed">${voteData.description || '請選擇一個選項參與投票。'}</p>
+                <p class="text-gray-500 leading-relaxed text-sm">${voteData.description || '請選擇一個選項參與投票。'}</p>
             </div>
 
             ${mainContentHtml}

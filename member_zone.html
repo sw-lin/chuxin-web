@@ -1310,21 +1310,20 @@ async function submitUserVote(event) {
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
-        alert("投票成功！感謝您的參與。");
-        
-        // 🌟 核心修正：找到目前正在投的那一項，把它的 voted 狀態改為 true
-        if (activeVoteObj && activeVoteObj.votes) {
-            activeVoteObj.votes.forEach(item => {
-                // 假設你目前投票的 ID 存在變數 currentVoteId 中
-                if (item.data.id === currentVoteId) { 
-                    item.voted = true; 
-                }
-            });
-        }
+    alert("投票成功！感謝您的參與。");
+    
+    if (activeVoteObj && activeVoteObj.votes) {
+        activeVoteObj.votes.forEach(item => {
+            // 🌟 修正處：改用 voteData.id
+            if (item.data.id === voteData.id) { 
+                item.voted = true; 
+            }
+        });
+    }
 
-        closeVoteOverlay(); // 關閉投票視窗
-        renderVoteBanner(activeVoteObj); // 🌟 立即重新渲染畫面，按鈕就會變色了
-    } else {
+    closeVoteOverlay(); 
+    renderVoteBanner(activeVoteObj); // 立即重新渲染按鈕外觀
+} else {
             alert("投票失敗：" + (result.message || "未知錯誤"));
         }
     } catch (err) {

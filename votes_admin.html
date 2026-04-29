@@ -40,6 +40,8 @@
             pointer-events: none;
             color: #064E3B;
         }
+        /* 隱藏原生 datetime-local 圖標 (可選) */
+        input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -51,16 +53,13 @@
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
             <i class="fas fa-chevron-left mr-1"></i>返回
         </button>
-        
         <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">民調中心</h1>
-        
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-4 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all active:scale-95">
             開啟編輯
         </button>
     </nav>
 
     <main class="p-4 max-w-2xl mx-auto">
-        
         <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 mb-6">
             <label class="form-label">Select Vote Project</label>
             <div class="relative">
@@ -77,12 +76,9 @@
         <div id="voteFormContainer" class="hidden space-y-6">
             <div id="mainForm" class="bg-white p-8 rounded-[2.5rem] shadow-md border border-emerald-100 read-only transition-all">
                 
+                <input type="hidden" id="voteId">
+
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="col-span-2">
-                        <label class="form-label">Vote ID (自動產生)</label>
-                        <input type="text" id="voteId" class="form-input" readonly>
-                    </div>
-                    
                     <div class="col-span-2">
                         <label class="form-label">投票標題 (Title)</label>
                         <input type="text" id="title" class="form-input" placeholder="例如：五月讀書會選書">
@@ -98,37 +94,49 @@
                         <input type="text" id="posterUrl" class="form-input" placeholder="https://...">
                     </div>
 
-                    <div class="col-span-2">
-                        <label class="form-label">投票選項 (以半形逗號隔開)</label>
-                        <input type="text" id="options" class="form-input" placeholder="選項A, 選項B, 選項C">
+                    <div class="col-span-2 bg-emerald-50/20 p-4 rounded-3xl border border-emerald-50/50 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <label class="form-label !mb-0">投票選項設定</label>
+                            <select id="optionCountSelector" onchange="generateOptionInputs(this.value)" class="bg-white border-2 border-emerald-100 rounded-xl px-2 py-1 text-sm font-bold outline-none focus:border-emerald-600">
+                                <option value="0">選擇數量</option>
+                                <option value="2">2 個選項</option>
+                                <option value="3">3 個選項</option>
+                                <option value="4">4 個選項</option>
+                                <option value="5">5 個選項</option>
+                                <option value="6">6 個選項</option>
+                            </select>
+                        </div>
+                        <div id="dynamicOptionsContainer" class="space-y-2">
+                            </div>
+                        <p class="text-[10px] text-emerald-600 mt-2 italic px-1">* 系統會自動刪除特殊符號並合併儲存</p>
                     </div>
 
                     <div>
                         <label class="form-label">投票類型 (Type)</label>
-                        <select id="type" class="form-input">
-                            <option value="SINGLE">SINGLE (單選)</option>
-                            <option value="MULTIPLE">MULTIPLE (多選)</option>
+                        <select id="type" class="form-input h-[60px]">
+                            <option value="SINGLE">單選 (SINGLE)</option>
+                            <option value="MULTIPLE">多選 (MULTIPLE)</option>
                         </select>
                     </div>
                     
                     <div>
                         <label class="form-label">最多選幾項</label>
-                        <input type="number" id="maxChoices" class="form-input" value="1">
+                        <input type="number" id="maxChoices" class="form-input h-[60px]" value="1">
                     </div>
 
                     <div>
                         <label class="form-label">開始時間</label>
-                        <input type="text" id="startTime" class="form-input" placeholder="2026-04-28 09:00">
+                        <input type="datetime-local" id="startTime" class="form-input h-[60px]">
                     </div>
 
                     <div>
                         <label class="form-label">結束時間</label>
-                        <input type="text" id="endTime" class="form-input" placeholder="2026-05-05 23:59">
+                        <input type="datetime-local" id="endTime" class="form-input h-[60px]">
                     </div>
 
                     <div>
                         <label class="form-label">活動開關 (Status)</label>
-                        <select id="status" class="form-input">
+                        <select id="status" class="form-input h-[60px]">
                             <option value="OPEN">OPEN (開啟)</option>
                             <option value="CLOSED">CLOSED (關閉)</option>
                         </select>
@@ -136,7 +144,7 @@
 
                     <div>
                         <label class="form-label">結果顯示 (Show Result)</label>
-                        <select id="showResult" class="form-input">
+                        <select id="showResult" class="form-input h-[60px]">
                             <option value="ALWAYS">ALWAYS (投完即看)</option>
                             <option value="HIDE">HIDE (結束才看)</option>
                         </select>
@@ -144,7 +152,7 @@
 
                     <div class="col-span-2">
                         <label class="form-label">實名制設定 (Anonymous)</label>
-                        <select id="anonymous" class="form-input">
+                        <select id="anonymous" class="form-input h-[60px]">
                             <option value="FALSE">FALSE (實名/記名投票)</option>
                             <option value="TRUE">TRUE (不記名投票)</option>
                         </select>
@@ -172,7 +180,6 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbymlOJwVkQKdFMMVc9tmLgNxraaSaG3fOksPQk7hpYybGC8p6Auzk6NpJffiDDcYrlq/exec"; 
         
-        // --- 權限與初始化 ---
         const auth = (function() {
             try {
                 const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
@@ -191,35 +198,47 @@
 
         window.onload = () => {
             if (!STAFF_KEY) { location.href = "index.html"; return; }
-            if (!hasPermission) {
-                document.getElementById('editToggleBtn').style.display = 'none';
-            }
+            if (!hasPermission) { document.getElementById('editToggleBtn').style.display = 'none'; }
             fetchVoteList();
         };
 
-        // --- 資料處理 ---
-        // --- 修正前的代碼 ---
-async function fetchVoteList() {
-    toggleLoading(true);
-    try {
-        const res = await fetch(`${GAS_URL}?type=get_admin_votes&key=${STAFF_KEY}`);
-        const data = await res.json();
-        // 原本這行是 allVotes = data.votes || []; 這會導致抓不到資料
-        allVotes = data.data || []; // 👈 修改為 data.data，對應您 GAS 的 return { result: "SUCCESS", data: votes }
-        renderSelector();
-    } finally { toggleLoading(false); }
-}
+        async function fetchVoteList() {
+            toggleLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_admin_votes&key=${STAFF_KEY}`);
+                const data = await res.json();
+                allVotes = data.data || [];
+                renderSelector();
+            } finally { toggleLoading(false); }
+        }
 
+        // 修改 1: 下拉選單只顯示 Title
         function renderSelector() {
             const selector = document.getElementById('voteSelector');
             const currentVal = selector.value;
             let html = '<option value="">-- 請選擇調查項目 --</option>';
             allVotes.forEach(v => {
-                html += `<option value="${v.voteId}">${v.title} (${v.voteId})</option>`;
+                html += `<option value="${v.voteId}">${v.title}</option>`;
             });
             html += '<option value="NEW" class="text-emerald-600 font-black">+ 新增投票項目</option>';
             selector.innerHTML = html;
             if (currentVal) selector.value = currentVal;
+        }
+
+        // 修改 2: 動態產生選項欄位
+        function generateOptionInputs(count, values = []) {
+            const container = document.getElementById('dynamicOptionsContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const val = values[i] ? values[i].trim() : '';
+                container.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-emerald-800/30 w-6">0${i+1}</span>
+                        <input type="text" class="option-field flex-1 p-3 bg-white border border-emerald-100 rounded-xl text-sm font-bold text-emerald-900 outline-none focus:border-emerald-600" 
+                               placeholder="請輸入選項內容" value="${val}">
+                    </div>
+                `;
+            }
         }
 
         function handleVoteSelect() {
@@ -238,23 +257,32 @@ async function fetchVoteList() {
 
             if (val === "NEW") {
                 clearForm();
-                if (!isEditMode) toggleEditMode(); // 新增時自動開啟編輯
+                if (!isEditMode) toggleEditMode();
             } else {
                 const vote = allVotes.find(v => v.voteId === val);
                 fillForm(vote);
             }
         }
 
+        // 修改 3: 格式化時間與選項填充
         function fillForm(v) {
             document.getElementById('voteId').value = v.voteId;
             document.getElementById('title').value = v.title;
             document.getElementById('description').value = v.description;
             document.getElementById('posterUrl').value = v.posterUrl;
-            document.getElementById('options').value = v.options;
+            
+            // 處理選項
+            const optList = v.options ? v.options.split(',') : [];
+            document.getElementById('optionCountSelector').value = optList.length;
+            generateOptionInputs(optList.length, optList);
+
             document.getElementById('type').value = v.type;
             document.getElementById('maxChoices').value = v.maxChoices;
-            document.getElementById('startTime').value = v.startTime;
-            document.getElementById('endTime').value = v.endTime;
+            
+            // 處理時間格式 (YYYY-MM-DDTHH:MM)
+            if(v.startTime) document.getElementById('startTime').value = v.startTime.replace(' ', 'T');
+            if(v.endTime) document.getElementById('endTime').value = v.endTime.replace(' ', 'T');
+            
             document.getElementById('status').value = v.status;
             document.getElementById('showResult').value = v.showResult;
             document.getElementById('anonymous').value = v.anonymous;
@@ -264,7 +292,9 @@ async function fetchVoteList() {
         function clearForm() {
             const inputs = document.querySelectorAll('.form-input');
             inputs.forEach(i => i.value = "");
-            document.getElementById('voteId').value = "系統自動分配";
+            document.getElementById('voteId').value = "V" + Date.now();
+            document.getElementById('dynamicOptionsContainer').innerHTML = '';
+            document.getElementById('optionCountSelector').value = "0";
             document.getElementById('status').value = "OPEN";
             document.getElementById('type').value = "SINGLE";
             document.getElementById('maxChoices').value = "1";
@@ -273,10 +303,8 @@ async function fetchVoteList() {
             document.getElementById('deleteBtn').classList.add('hidden');
         }
 
-        // --- UI 控制 ---
         function toggleEditMode() {
             if (!hasPermission) { showToast("⚠️ 您沒有管理權限"); return; }
-            
             isEditMode = !isEditMode;
             const btn = document.getElementById('editToggleBtn');
             const form = document.getElementById('mainForm');
@@ -295,42 +323,50 @@ async function fetchVoteList() {
             }
         }
 
+        // 修改 4: 儲存時清理選項與格式化時間
         async function saveVoteData() {
-            // 將資料包裝在 voteData 物件內
-    const voteData = {
-        id: document.getElementById('voteId').value, // 這裡要對應 GAS 裡的 vote.id
-        title: document.getElementById('title').value.trim(),
-        description: document.getElementById('description').value,
-        posterUrl: document.getElementById('posterUrl').value,
-        options: document.getElementById('options').value,
-        startTime: document.getElementById('startTime').value,
-        endTime: document.getElementById('endTime').value,
-        status: document.getElementById('status').value,
-        showResult: document.getElementById('showResult').value,
-        isAnonymous: document.getElementById('anonymous').value // 這裡要對應 GAS 裡的 vote.isAnonymous
-    };
+            // 清理並合併選項
+            const optInputs = document.querySelectorAll('.option-field');
+            const optValues = Array.from(optInputs)
+                                   .map(i => i.value.trim().replace(/[,]/g, '')) // 刪除逗號防錯
+                                   .filter(v => v !== "");
+            
+            if (optValues.length < 2) { alert("請至少填寫兩個有效選項！"); return; }
 
-    const payload = {
-        type: 'save_vote_config',
-        key: STAFF_KEY,
-        voteData: voteData // 👈 這裡必須包一層 voteData
-    };
+            const voteData = {
+                id: document.getElementById('voteId').value,
+                title: document.getElementById('title').value.trim(),
+                description: document.getElementById('description').value,
+                posterUrl: document.getElementById('posterUrl').value,
+                options: optValues.join(','),
+                startTime: document.getElementById('startTime').value.replace('T', ' '),
+                endTime: document.getElementById('endTime').value.replace('T', ' '),
+                status: document.getElementById('status').value,
+                showResult: document.getElementById('showResult').value,
+                isAnonymous: document.getElementById('anonymous').value
+            };
 
-    if (!voteData.title || !voteData.options) { alert("標題與選項為必填！"); return; }
+            const payload = {
+                type: 'save_vote_config',
+                key: STAFF_KEY,
+                voteData: voteData
+            };
 
-    toggleLoading(true);
-    try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+            if (!voteData.title) { alert("標題為必填！"); return; }
+
+            toggleLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
                 const result = await res.json();
                 if (result.result === "SUCCESS") {
                     showToast("✅ 儲存成功");
                     await fetchVoteList();
-                    document.getElementById('voteSelector').value = result.newId || data.voteId;
+                    document.getElementById('voteSelector').value = result.newId || voteData.id;
                     handleVoteSelect();
-                    toggleEditMode(); // 存完關閉編輯模式
+                    toggleEditMode();
                 }
             } catch (e) { showToast("❌ 儲存失敗"); }
             finally { toggleLoading(false); }
@@ -338,8 +374,7 @@ async function fetchVoteList() {
 
         async function deleteVote() {
             const vid = document.getElementById('voteId').value;
-            if (!confirm(`確定要永久刪除活動「${vid}」嗎？相關投票紀錄也會一併受影響。`)) return;
-
+            if (!confirm(`確定要永久刪除此活動嗎？`)) return;
             toggleLoading(true);
             try {
                 await fetch(GAS_URL, {

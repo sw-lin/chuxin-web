@@ -1310,22 +1310,21 @@ async function submitUserVote(event) {
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
-          alert("投票成功！感謝您的參與。");
-    
-          // 🌟 關鍵修正 1：手動標記當前活動為已投票
-          if (window.currentVoteData) {
-             window.currentVoteData.hasVoted = true;
-          }
+        alert("投票成功！感謝您的參與。");
+        
+        // 🌟 核心修正：找到目前正在投的那一項，把它的 voted 狀態改為 true
+        if (activeVoteObj && activeVoteObj.votes) {
+            activeVoteObj.votes.forEach(item => {
+                // 假設你目前投票的 ID 存在變數 currentVoteId 中
+                if (item.data.id === currentVoteId) { 
+                    item.voted = true; 
+                }
+            });
+        }
 
-          // 🌟 關鍵修正 2：關閉視窗並重新偵測狀態
-          closeVoteOverlay();
-    
-          // 重新呼叫一次初始化投票的函式
-          // 這會去後端確認最新狀態，並把首頁按鈕變灰（SUCCESS）
-          if (typeof checkActiveVote === 'function') {
-            checkActiveVote(); 
-          }
-     } else {
+        closeVoteOverlay(); // 關閉投票視窗
+        renderVoteBanner(activeVoteObj); // 🌟 立即重新渲染畫面，按鈕就會變色了
+    } else {
             alert("投票失敗：" + (result.message || "未知錯誤"));
         }
     } catch (err) {
@@ -1341,29 +1340,30 @@ async function submitUserVote(event) {
 function renderVoteBanner(res) {
     const container = document.getElementById('vote-notice-container');
     if (!container) return;
-    container.innerHTML = ""; 
+    container.innerHTML = "";
 
     res.votes.forEach(item => {
-        const isVoted = item.voted;
+        const isVoted = item.voted; // 這是後端回傳或我們手動更新的狀態
         const vote = item.data;
         
-        // 🌟 已投過變灰色 (slate-500)，未投用深綠色 (emerald-800)
-        const btnColor = isVoted ? "bg-slate-500" : "bg-emerald-800";
-        const statusLabel = isVoted ? "SUCCESS" : "NEW";
-        const actionText = isVoted ? "查看結果" : "立即參與";
-        const icon = isVoted ? "fa-chart-bar" : "fa-arrow-right";
+        // 🌟 根據是否投過，決定顏色與文字
+        const btnClass = isVoted 
+            ? "bg-gray-500 opacity-80 cursor-not-allowed" // 已投：灰色、不可點擊
+            : "bg-emerald-800 hover:bg-emerald-700";      // 未投：綠色
+
+        const actionText = isVoted ? "SUCCESS (已完成)" : "立即參與";
 
         container.innerHTML += `
             <div class="mt-4">
-                <button onclick="handleVoteClick('${vote.id}')" 
-                    class="w-full ${btnColor} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 active:scale-95 transition-all">
+                <button onclick="${isVoted ? "alert('您已完成此項投票！')" : `handleVoteClick('${vote.id}')`}" 
+                    class="w-full ${btnClass} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 transition-all">
                     <div class="flex flex-col text-left">
-                        <span class="text-[10px] font-bold tracking-widest opacity-70">${statusLabel}</span>
+                        <span class="text-[10px] font-bold tracking-widest opacity-70">${isVoted ? 'COMPLETED' : 'NEW'}</span>
                         <span class="text-xl font-black tracking-widest">${vote.title}</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm font-bold">${actionText}</span>
-                        <i class="fas ${icon}"></i>
+                        <i class="fas ${isVoted ? 'fa-check-circle' : 'fa-arrow-right'}"></i>
                     </div>
                 </button>
             </div>`;

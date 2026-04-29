@@ -1271,7 +1271,6 @@ function handleVoteClick(voteId) {
 } 
 async function submitUserVote(event) {
     const selectedOption = document.querySelector('input[name="voteOption"]:checked');
-    const btn = event.target;
     
     if (!selectedOption) {
         alert("請先選擇一個選項再送出喔！");

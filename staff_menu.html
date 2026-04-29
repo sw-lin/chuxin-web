@@ -46,8 +46,7 @@
         <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
             管理控制台
         </h1>
-        
-        </nav>
+    </nav>
 
     <main class="p-6 max-w-2xl mx-auto grid grid-cols-2 gap-5 mt-6">
         
@@ -107,6 +106,14 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">首頁與來賓區管理</span>
         </div>
 
+        <div onclick="navTo('votes_admin')" class="staff-card p-6 flex flex-col items-center text-center">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                <i class="fas fa-poll text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">民調中心</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">投票活動管理</span>
+        </div>
+
         <div id="permissionBtn" onclick="navTo('permission_mgr')" class="staff-card p-6 hidden flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-orange-700 !to-orange-900" style="background: linear-gradient(135deg, #7C2D12 0%, #431407 100%);">
                 <i class="fas fa-user-shield text-white text-2xl"></i>
@@ -120,14 +127,11 @@
         // 📦 1. 統一提取資料 (升級版轉接頭)
         const auth = (function() {
             try {
-                // 從 SessionStorage 讀取所有可能存放的地方
                 const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
                 const loneKey = sessionStorage.getItem('staffKey'); 
                 
                 return {
-                    // 只要有一個地方有 Key，我們就認定是有鑰匙的
                     key: info.staffKey || loneKey || "",
-                    // 讀取權限，如果沒有權限(極簡測試)則暫時給一個預設或從 info 讀取
                     permissions: info.userPermissions || [],
                     isValid: !!(info.staffKey || loneKey)
                 };
@@ -142,19 +146,16 @@
 
         // 🚀 3. 初始化檢查
         window.onload = function() {
-            // 檢查是否真的有通過驗證
             if (!auth.isValid) {
                 alert("非法進入！請先驗證金鑰。");
-                location.href = 'member_zone.html'; // 改回會員專區重新驗證
+                location.href = 'member_zone.html';
                 return;
             }
 
-            // 確保舊有的代碼邏輯依然能運作 (存回單獨的 staffKey 供子頁面使用)
             sessionStorage.setItem('staffKey', currentKey);
             
             console.log("當前職稱權限:", userPermissions);
 
-            // 只有擁有 'all' 或 'ALL' 權限的人可以看到權限管理
             if (userPermissions.includes('all') || userPermissions.includes('ALL')) {
                 const btn = document.getElementById('permissionBtn');
                 if (btn) btn.classList.remove('hidden');

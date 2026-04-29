@@ -1339,13 +1339,16 @@ async function submitUserVote(event) {
         return;
     }
 
-    // 2. 將複選結果轉換為字串 (例如: "選項A,選項B")
+    // 2. 將複選結果轉換為字串
     const selectedChoices = Array.from(checkedBoxes).map(cb => cb.value).join(',');
 
     const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
     const voteData = window.currentVoteData;
 
+    // 3. 按鈕狀態處理
     const btn = event ? (event.currentTarget || event.target) : null;
+    const originalText = btn ? btn.innerText : "送出投票";
+    
     if (btn) {
         btn.disabled = true;
         btn.innerText = "投票傳送中...";
@@ -1355,36 +1358,31 @@ async function submitUserVote(event) {
         type: 'submit_vote',
         voteId: voteData.id,
         phone: userInfo.phone,
-        choice: selectedChoices // 🌟 這裡送出的是合併後的字串
+        choice: selectedChoices
     };
 
     try {
-        // 🌟 確保 GAS_URL 已經定義且正確
         const res = await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
         
-        // 檢查 HTTP 狀態碼
         if (!res.ok) throw new Error('網路請求失敗');
         
         const result = await res.json();
 
         if (result.result === "SUCCESS") {
-    alert("投票成功！感謝您的參與。");
-    
-    if (activeVoteObj && activeVoteObj.votes) {
-        activeVoteObj.votes.forEach(item => {
-            // 🌟 修正處：強制轉成字串比對，確保型別一致
-            if (String(item.data.id) === String(voteData.id)) { 
-                item.voted = true; 
-            }
-        });
-    }
+            alert("投票成功！感謝您的參與。");
 
-    closeVoteOverlay(); 
-    renderVoteBanner(activeVoteObj); // 立即重新渲染按鈕外觀
-} else {
+            // 🌟 關鍵修正：立即觸發重新抓取最新資料 (含最新統計數字)
+            // 這會更新全域的 activeVoteObj 並重新渲染 Banner
+            if (typeof checkActiveVote === 'function') {
+                await checkActiveVote(); 
+            }
+
+            // 關閉視窗
+            closeVoteOverlay(); 
+        } else {
             alert("投票失敗：" + (result.message || "未知錯誤"));
         }
     } catch (err) {
@@ -1396,7 +1394,7 @@ async function submitUserVote(event) {
             btn.innerText = originalText;
         }
     }
-}  
+} 
 function renderVoteBanner(res) {
     const container = document.getElementById('vote-notice-container');
     if (!container) return;

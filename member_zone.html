@@ -1337,7 +1337,7 @@ function handleVoteClick(voteId) {
     }
 } 
 async function submitUserVote(event) {
-    const voteData = window.currentVoteData;
+    
     const maxAllowed = parseInt(voteData.maxChoices) || 1; // 取得上限
 
     // 1. 取得所有勾選的選項

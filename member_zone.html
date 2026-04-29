@@ -1287,8 +1287,8 @@ function renderVoteContent(voteData) {
         <div class="max-w-md mx-auto">
             ${voteData.posterUrl ? `
                 <div class="rounded-[2rem] overflow-hidden shadow-md mb-8 aspect-video bg-gray-200">
-                    <img src="${voteData.posterUrl}" class="w-full h-full object-cover">
-                </div>
+                <img src="${getDirectImageUrl(voteData.posterUrl)}" class="w-full h-full object-cover">
+            </div>
             ` : ''}
             
             <div class="px-2 mb-8">

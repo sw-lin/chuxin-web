@@ -1314,8 +1314,8 @@ async function submitUserVote(event) {
     
     if (activeVoteObj && activeVoteObj.votes) {
         activeVoteObj.votes.forEach(item => {
-            // 🌟 修正處：改用 voteData.id
-            if (item.data.id === voteData.id) { 
+            // 🌟 修正處：強制轉成字串比對，確保型別一致
+            if (String(item.data.id) === String(voteData.id)) { 
                 item.voted = true; 
             }
         });

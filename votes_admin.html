@@ -198,15 +198,17 @@
         };
 
         // --- 資料處理 ---
-        async function fetchVoteList() {
-            toggleLoading(true);
-            try {
-                const res = await fetch(`${GAS_URL}?type=get_admin_votes&key=${STAFF_KEY}`);
-                const data = await res.json();
-                allVotes = data.votes || [];
-                renderSelector();
-            } finally { toggleLoading(false); }
-        }
+        // --- 修正前的代碼 ---
+async function fetchVoteList() {
+    toggleLoading(true);
+    try {
+        const res = await fetch(`${GAS_URL}?type=get_admin_votes&key=${STAFF_KEY}`);
+        const data = await res.json();
+        // 原本這行是 allVotes = data.votes || []; 這會導致抓不到資料
+        allVotes = data.data || []; // 👈 修改為 data.data，對應您 GAS 的 return { result: "SUCCESS", data: votes }
+        renderSelector();
+    } finally { toggleLoading(false); }
+}
 
         function renderSelector() {
             const selector = document.getElementById('voteSelector');

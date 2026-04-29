@@ -1231,7 +1231,7 @@ function renderVoteContent(voteData) {
         mainContentHtml = `
             <div id="optionsContainer">${optionsHtml}</div>
             <div class="mt-10">
-                <button onclick="submitUserVote()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white text-xl font-black tracking-widest active:scale-95 transition-all">
+                <button onclick="submitUserVote(event)" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white text-xl font-black tracking-widest active:scale-95 transition-all">
                     送出投票
                 </button>
             </div>
@@ -1269,8 +1269,10 @@ function handleVoteClick(voteId) {
         openVoteOverlay();
     }
 } 
-async function submitUserVote() {
+async function submitUserVote(event) {
     const selectedOption = document.querySelector('input[name="voteOption"]:checked');
+    const btn = event.target;
+    
     if (!selectedOption) {
         alert("請先選擇一個選項再送出喔！");
         return;

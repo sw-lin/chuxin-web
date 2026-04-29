@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>民調中心管理 | 築心會館</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; backdrop-filter: blur(2px);
+        }
+        .loading-card {
+            background: white; padding: 40px; border-radius: 32px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid #065F46; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 10000; pointer-events: none; }
+        
+        .form-input { @apply w-full p-4 bg-emerald-50/30 border-2 border-transparent rounded-2xl font-bold text-emerald-900 outline-none focus:border-emerald-600 transition-all mb-4; }
+        .form-label { @apply text-[10px] text-emerald-800/50 font-black mb-1 px-1 uppercase tracking-widest block; }
+        
+        /* 唯讀模式樣式 */
+        .read-only input, .read-only textarea, .read-only select {
+            background-color: transparent !important;
+            border-color: transparent !important;
+            padding-left: 4px !important;
+            pointer-events: none;
+            color: #064E3B;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <div id="toast"></div>
+    <div id="loadingOverlay"><div class="loading-card"><div class="spinner"></div><div class="text-emerald-900 font-bold text-lg">處理中...</div></div></div>
+
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center">
+            <i class="fas fa-chevron-left mr-1"></i>返回
+        </button>
+        
+        <h1 class="absolute inset-x-0 text-center text-lg font-black tracking-widest pointer-events-none">民調中心</h1>
+        
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-4 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition-all active:scale-95">
+            開啟編輯
+        </button>
+    </nav>
+
+    <main class="p-4 max-w-2xl mx-auto">
+        
+        <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 mb-6">
+            <label class="form-label">Select Vote Project</label>
+            <div class="relative">
+                <select id="voteSelector" onchange="handleVoteSelect()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-base font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-emerald-600 transition-all">
+                    <option value="">-- 請選擇調查項目 --</option>
+                    <option value="NEW" class="text-emerald-600 font-black">+ 新增投票項目</option>
+                </select>
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-800/50">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+        </div>
+
+        <div id="voteFormContainer" class="hidden space-y-6">
+            <div id="mainForm" class="bg-white p-8 rounded-[2.5rem] shadow-md border border-emerald-100 read-only transition-all">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="form-label">Vote ID (自動產生)</label>
+                        <input type="text" id="voteId" class="form-input" readonly>
+                    </div>
+                    
+                    <div class="col-span-2">
+                        <label class="form-label">投票標題 (Title)</label>
+                        <input type="text" id="title" class="form-input" placeholder="例如：五月讀書會選書">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="form-label">詳細說明 (Description)</label>
+                        <textarea id="description" rows="3" class="form-input" placeholder="請輸入活動詳細說明..."></textarea>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="form-label">海報圖片網址 (Poster URL)</label>
+                        <input type="text" id="posterUrl" class="form-input" placeholder="https://...">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="form-label">投票選項 (以半形逗號隔開)</label>
+                        <input type="text" id="options" class="form-input" placeholder="選項A, 選項B, 選項C">
+                    </div>
+
+                    <div>
+                        <label class="form-label">投票類型 (Type)</label>
+                        <select id="type" class="form-input">
+                            <option value="SINGLE">SINGLE (單選)</option>
+                            <option value="MULTIPLE">MULTIPLE (多選)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">最多選幾項</label>
+                        <input type="number" id="maxChoices" class="form-input" value="1">
+                    </div>
+
+                    <div>
+                        <label class="form-label">開始時間</label>
+                        <input type="text" id="startTime" class="form-input" placeholder="2026-04-28 09:00">
+                    </div>
+
+                    <div>
+                        <label class="form-label">結束時間</label>
+                        <input type="text" id="endTime" class="form-input" placeholder="2026-05-05 23:59">
+                    </div>
+
+                    <div>
+                        <label class="form-label">活動開關 (Status)</label>
+                        <select id="status" class="form-input">
+                            <option value="OPEN">OPEN (開啟)</option>
+                            <option value="CLOSED">CLOSED (關閉)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label">結果顯示 (Show Result)</label>
+                        <select id="showResult" class="form-input">
+                            <option value="ALWAYS">ALWAYS (投完即看)</option>
+                            <option value="HIDE">HIDE (結束才看)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="form-label">實名制設定 (Anonymous)</label>
+                        <select id="anonymous" class="form-input">
+                            <option value="FALSE">FALSE (實名/記名投票)</option>
+                            <option value="TRUE">TRUE (不記名投票)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="saveAction" class="hidden mt-8">
+                    <button onclick="saveVoteData()" class="w-full bg-[#064E3B] text-white py-5 rounded-[2.5rem] font-black text-xl shadow-xl active:scale-95 transition-all">
+                        儲存變更
+                    </button>
+                    <button id="deleteBtn" onclick="deleteVote()" class="w-full mt-4 text-red-500 font-bold text-sm">
+                        刪除此投票活動
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="emptyHint" class="py-20 text-center text-gray-400 italic">
+            <i class="fas fa-poll-h text-4xl mb-4 block opacity-20"></i>
+            請由上方選單選取或建立投票項目
+        </div>
+
+    </main>
+
+    <script>
+        const GAS_URL = "您的_GAS_API_URL"; 
+        
+        // --- 權限與初始化 ---
+        const auth = (function() {
+            try {
+                const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+                const loneKey = sessionStorage.getItem('staffKey'); 
+                return {
+                    key: info.staffKey || loneKey || "",
+                    permissions: info.userPermissions || [],
+                };
+            } catch (e) { return { key: "", permissions: [] }; }
+        })();
+
+        let allVotes = [];
+        let isEditMode = false;
+        const STAFF_KEY = auth.key;
+        const hasPermission = auth.permissions.includes("all") || auth.permissions.includes("manage_votes");
+
+        window.onload = () => {
+            if (!STAFF_KEY) { location.href = "index.html"; return; }
+            if (!hasPermission) {
+                document.getElementById('editToggleBtn').style.display = 'none';
+            }
+            fetchVoteList();
+        };
+
+        // --- 資料處理 ---
+        async function fetchVoteList() {
+            toggleLoading(true);
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_admin_votes&key=${STAFF_KEY}`);
+                const data = await res.json();
+                allVotes = data.votes || [];
+                renderSelector();
+            } finally { toggleLoading(false); }
+        }
+
+        function renderSelector() {
+            const selector = document.getElementById('voteSelector');
+            const currentVal = selector.value;
+            let html = '<option value="">-- 請選擇調查項目 --</option>';
+            allVotes.forEach(v => {
+                html += `<option value="${v.voteId}">${v.title} (${v.voteId})</option>`;
+            });
+            html += '<option value="NEW" class="text-emerald-600 font-black">+ 新增投票項目</option>';
+            selector.innerHTML = html;
+            if (currentVal) selector.value = currentVal;
+        }
+
+        function handleVoteSelect() {
+            const val = document.getElementById('voteSelector').value;
+            const container = document.getElementById('voteFormContainer');
+            const hint = document.getElementById('emptyHint');
+            
+            if (!val) {
+                container.classList.add('hidden');
+                hint.classList.remove('hidden');
+                return;
+            }
+
+            hint.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            if (val === "NEW") {
+                clearForm();
+                if (!isEditMode) toggleEditMode(); // 新增時自動開啟編輯
+            } else {
+                const vote = allVotes.find(v => v.voteId === val);
+                fillForm(vote);
+            }
+        }
+
+        function fillForm(v) {
+            document.getElementById('voteId').value = v.voteId;
+            document.getElementById('title').value = v.title;
+            document.getElementById('description').value = v.description;
+            document.getElementById('posterUrl').value = v.posterUrl;
+            document.getElementById('options').value = v.options;
+            document.getElementById('type').value = v.type;
+            document.getElementById('maxChoices').value = v.maxChoices;
+            document.getElementById('startTime').value = v.startTime;
+            document.getElementById('endTime').value = v.endTime;
+            document.getElementById('status').value = v.status;
+            document.getElementById('showResult').value = v.showResult;
+            document.getElementById('anonymous').value = v.anonymous;
+            document.getElementById('deleteBtn').classList.remove('hidden');
+        }
+
+        function clearForm() {
+            const inputs = document.querySelectorAll('.form-input');
+            inputs.forEach(i => i.value = "");
+            document.getElementById('voteId').value = "系統自動分配";
+            document.getElementById('status').value = "OPEN";
+            document.getElementById('type').value = "SINGLE";
+            document.getElementById('maxChoices').value = "1";
+            document.getElementById('showResult').value = "ALWAYS";
+            document.getElementById('anonymous').value = "FALSE";
+            document.getElementById('deleteBtn').classList.add('hidden');
+        }
+
+        // --- UI 控制 ---
+        function toggleEditMode() {
+            if (!hasPermission) { showToast("⚠️ 您沒有管理權限"); return; }
+            
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            const form = document.getElementById('mainForm');
+            const saveBtn = document.getElementById('saveAction');
+
+            if (isEditMode) {
+                btn.innerText = "取消編輯";
+                btn.classList.replace('bg-white/10', 'bg-red-500');
+                form.classList.remove('read-only');
+                saveBtn.classList.remove('hidden');
+            } else {
+                btn.innerText = "開啟編輯";
+                btn.classList.replace('bg-red-500', 'bg-white/10');
+                form.classList.add('read-only');
+                saveBtn.classList.add('hidden');
+            }
+        }
+
+        async function saveVoteData() {
+            const data = {
+                type: 'save_vote_config',
+                key: STAFF_KEY,
+                voteId: document.getElementById('voteId').value,
+                title: document.getElementById('title').value.trim(),
+                description: document.getElementById('description').value,
+                posterUrl: document.getElementById('posterUrl').value,
+                options: document.getElementById('options').value,
+                voteType: document.getElementById('type').value,
+                maxChoices: document.getElementById('maxChoices').value,
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                status: document.getElementById('status').value,
+                showResult: document.getElementById('showResult').value,
+                anonymous: document.getElementById('anonymous').value
+            };
+
+            if (!data.title || !data.options) { alert("標題與選項為必填！"); return; }
+
+            toggleLoading(true);
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    showToast("✅ 儲存成功");
+                    await fetchVoteList();
+                    document.getElementById('voteSelector').value = result.newId || data.voteId;
+                    handleVoteSelect();
+                    toggleEditMode(); // 存完關閉編輯模式
+                }
+            } catch (e) { showToast("❌ 儲存失敗"); }
+            finally { toggleLoading(false); }
+        }
+
+        async function deleteVote() {
+            const vid = document.getElementById('voteId').value;
+            if (!confirm(`確定要永久刪除活動「${vid}」嗎？相關投票紀錄也會一併受影響。`)) return;
+
+            toggleLoading(true);
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'delete_vote', voteId: vid, key: STAFF_KEY })
+                });
+                showToast("🗑️ 已刪除");
+                await fetchVoteList();
+                document.getElementById('voteSelector').value = "";
+                handleVoteSelect();
+            } finally { toggleLoading(false); }
+        }
+
+        function toggleLoading(s) { document.getElementById('loadingOverlay').style.display = s ? 'flex' : 'none'; }
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.opacity = '1';
+            setTimeout(() => { t.style.opacity = '0'; }, 3000);
+        }
+    </script>
+</body>
+</html>

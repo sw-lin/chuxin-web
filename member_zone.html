@@ -1364,27 +1364,31 @@ function renderVoteBanner(res) {
     container.innerHTML = "";
 
     res.votes.forEach(item => {
-        const isVoted = item.voted; // 這是後端回傳或我們手動更新的狀態
+        const isVoted = item.voted; 
         const vote = item.data;
         
-        // 🌟 根據是否投過，決定顏色與文字
+        // 🌟 1. 決定顏色：未投是綠色，已投則是藍色 (代表看結果)
         const btnClass = isVoted 
-            ? "bg-gray-500 opacity-80 cursor-not-allowed" // 已投：灰色、不可點擊
-            : "bg-emerald-800 hover:bg-emerald-700";      // 未投：綠色
+            ? "bg-blue-600 hover:bg-blue-700 shadow-md" // 已投：藍色 (查看結果)
+            : "bg-emerald-800 hover:bg-emerald-700 shadow-xl"; // 未投：深綠 (立即參與)
 
-        const actionText = isVoted ? "SUCCESS (已完成)" : "立即參與";
+        // 🌟 2. 決定文字：根據 showResult 設定，讓會員知道點進去是看什麼
+        let actionText = "立即參與";
+        if (isVoted) {
+            actionText = (vote.showResult === 'ALWAYS') ? "查看統計結果 📊" : "SUCCESS (已完成)";
+        }
 
         container.innerHTML += `
             <div class="mt-4">
-                <button onclick="${isVoted ? "alert('您已完成此項投票！')" : `handleVoteClick('${vote.id}')`}" 
-                    class="w-full ${btnClass} py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-between px-10 transition-all">
+                <button onclick="handleVoteClick('${vote.id}')" 
+                    class="w-full ${btnClass} py-5 rounded-[2.5rem] text-white flex items-center justify-between px-10 transition-all active:scale-95">
                     <div class="flex flex-col text-left">
                         <span class="text-[10px] font-bold tracking-widest opacity-70">${isVoted ? 'COMPLETED' : 'NEW'}</span>
                         <span class="text-xl font-black tracking-widest">${vote.title}</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm font-bold">${actionText}</span>
-                        <i class="fas ${isVoted ? 'fa-check-circle' : 'fa-arrow-right'}"></i>
+                        <i class="fas ${isVoted ? 'fa-chart-bar' : 'fa-arrow-right'}"></i>
                     </div>
                 </button>
             </div>`;

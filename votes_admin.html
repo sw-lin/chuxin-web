@@ -276,7 +276,9 @@
             
             // 處理選項
             const optList = v.options ? v.options.split(',') : [];
-            document.getElementById('optionCountSelector').value = optList.length;
+            // 🌟 修正點：改為對應目前的輸入框 ID
+            const countInput = document.getElementById('optionCountInput');
+            if (countInput) countInput.value = optList.length;            
             generateOptionInputs(optList.length, optList);
 
             document.getElementById('type').value = v.type;
@@ -288,6 +290,7 @@
             
             document.getElementById('status').value = v.status;
             document.getElementById('showResult').value = v.showResult;
+            
             document.getElementById('anonymous').value = v.anonymous;
             handleTypeChange(); // 新增：填充完資料後執行一次，確保單選框狀態正確
             document.getElementById('deleteBtn').classList.remove('hidden');

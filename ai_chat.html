@@ -74,26 +74,36 @@
     let isNavigatingAway = false;
 
     // --- 🎯 1. 初始化與開場 ---
-    window.onload = async () => {
-        const params = new URLSearchParams(window.location.search);
-        userName = params.get('user_name') || "夥伴";
-        userPhone = params.get('user_phone') || "guest";
+window.onload = async () => {
+    const params = new URLSearchParams(window.location.search);
+    userName = params.get('user_name') || "夥伴";
+    userPhone = params.get('user_phone') || "guest";
 
-        // 載入本地記憶
-        const savedHistory = localStorage.getItem(`chat_${userPhone}`);
-        if (savedHistory) {
-            chatHistory = JSON.parse(savedHistory);
-            chatHistory.forEach(msg => {
-                if (msg.role !== 'system') appendMessage(msg.role === 'user' ? 'user' : 'system', msg.content);
-            });
-        }
+    // 載入本地記憶
+    const savedHistory = localStorage.getItem(`chat_${userPhone}`);
+    if (savedHistory) {
+        chatHistory = JSON.parse(savedHistory);
+        chatHistory.forEach(msg => {
+            if (msg.role !== 'system') appendMessage(msg.role === 'user' ? 'user' : 'system', msg.content);
+        });
+    }
 
-        const weatherResult = await getWeather();
-        const initMsg = weatherResult === "一般" ? "嘿！我上線了" : `現在是${weatherResult}，請以此背景跟我打招呼。`;
-        
-        sendToWorker(initMsg, true);
-        initSpeech();
-    };
+    const weatherResult = await getWeather();
+    
+    // 🌟 核心修正邏輯：
+    let initMsg;
+    if (weatherResult === "晴天") {
+        initMsg = "現在是晴天，請以此背景跟我打個招呼。";
+    } else if (weatherResult === "雨天") {
+        initMsg = "現在外頭正下著雨，請以此背景跟我打個招呼。";
+    } else {
+        // 如果不確定天氣（UNKNOWN），就直接用一般專業且熱情的開場
+        initMsg = "請以築心智慧夥伴的身分，熱情地跟我打聲招呼，並提醒我今天有什麼可以幫我的。";
+    }
+    
+    sendToWorker(initMsg, true);
+    initSpeech();
+};
 
     // --- 🎯 2. 核心通訊函數 (修正解析邏輯) ---
     async function sendToWorker(text, isSystemTrigger = false) {
@@ -191,25 +201,33 @@
     function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 
     async function getWeather() {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve("一般"), 3000);
-            if (!navigator.geolocation) resolve("一般");
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                    clearTimeout(timeout);
-                    try {
-                        const { latitude, longitude } = pos.coords;
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
-                        const data = await res.json();
-                        const code = data.current_weather.weathercode;
-                        if (code === 0) resolve("晴天");
-                        else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
-                        else resolve("一般");
-                    } catch { resolve("一般"); }
-                },
-                () => { clearTimeout(timeout); resolve("一般"); }
-            );
-        });
+    return new Promise((resolve) => {
+        // 縮短超時時間，不讓使用者等太久
+        const timeout = setTimeout(() => resolve("UNKNOWN"), 2000); 
+        
+        if (!navigator.geolocation) {
+            clearTimeout(timeout);
+            resolve("UNKNOWN");
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                clearTimeout(timeout);
+                try {
+                    const { latitude, longitude } = pos.coords;
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                    const data = await res.json();
+                    const code = data.current_weather.weathercode;
+
+                    // 只有極度確定的情況才回傳
+                    if (code === 0) resolve("晴天");
+                    else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) resolve("雨天");
+                    else resolve("UNKNOWN"); // 其餘（如陰天、霧、或是 API 異常）都視為未知
+                } catch { resolve("UNKNOWN"); }
+            },
+            () => { clearTimeout(timeout); resolve("UNKNOWN"); }
+        );
+      });
     }
 
     function initSpeech() {

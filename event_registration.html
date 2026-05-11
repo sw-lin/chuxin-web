@@ -244,40 +244,63 @@ function validateField(input, type = 'ID') {
         setTimeout(() => { toast.style.display = "none"; }, 3000);
     }
 
-    window.onload = function() {
-        const params = new URLSearchParams(window.location.search);
-        const title = params.get('event');
-        if (!currentUser.phone) { location.href = "index.html"; return; }
-
-        const allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-        const target = allEvents.find(e => String(e.title).trim() === String(title).trim());
-        const isTrue = (val) => {
-    // 如果 val 本身就是布林值，直接回傳
-    if (typeof val === 'boolean') return val;
+window.onload = async function() {
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('event');
     
-    // 如果是字串或其他，執行原本的文字判定
-    if (!val) return false;
-    const s = String(val).trim().toUpperCase();
-    return s === 'Y' || s === '是' || s === 'TRUE' || s === '1';
-    };
-        
-        if (target) {
-            eventConfig = {
-                title: title || "未知活動",
-                memberFee: parseInt(target.memberFee) || 0,
-                guestFee: parseInt(target.guestFee) || 0,
-                needId: isTrue(target.needId),
-                isTourBus: isTrue(target.isTourBus)
-            };
-        }
+    // 基本權限檢查
+    if (!currentUser.phone) { location.href = "index.html"; return; }
+    if (!title) { showToast("無效的活動資訊", "error"); return; }
 
-        document.getElementById('mainName').value = currentUser.name || "";
+    // 1. 先嘗試從緩存抓取
+    let allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
+    let target = allEvents.find(e => String(e.title).trim() === String(title).trim());
+
+    // 2. 🌟 防呆機制：如果緩存抓不到，立即向伺服器請求最新資料
+    if (!target) {
+        document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
+        try {
+            // 呼叫你的 GAS 獲取完整清單 (假設 type: 'get_events_page' 是你原有的讀取功能)
+            const response = await fetch(`${GAS_URL}?type=get_events_page`);
+            const remoteData = await response.json();
+            if (remoteData) {
+                localStorage.setItem('allEvents', JSON.stringify(remoteData));
+                target = remoteData.find(e => String(e.title).trim() === String(title).trim());
+            }
+        } catch (e) {
+            console.error("無法從伺服器補載資料", e);
+        }
+    }
+
+    // 3. 渲染畫面
+    if (target) {
+        eventConfig = {
+            title: title,
+            memberFee: parseInt(target.memberFee) || 0,
+            guestFee: parseInt(target.guestFee) || 0,
+            needId: isTrue(target.needId),
+            isTourBus: isTrue(target.isTourBus)
+        };
+        
+        // 更新 UI
         document.getElementById('displayEventTitle').innerText = eventConfig.title;
         document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
         
         initDynamicUI();
         updateTotal();
-    };    
+    } else {
+        document.getElementById('displayEventTitle').innerText = "活動不存在或已下架";
+        showToast("找不到此活動資訊", "error");
+    }
+};
+
+// 輔助函數：確保布林值判定準確
+function isTrue(val) {
+    if (typeof val === 'boolean') return val;
+    if (!val) return false;
+    const s = String(val).trim().toUpperCase();
+    return s === 'Y' || s === '是' || s === 'TRUE' || s === '1';
+}    
     
     function initDynamicUI() {
         if(eventConfig.needId) {

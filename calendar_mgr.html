@@ -239,33 +239,63 @@
     }
 
     async function submitData() {
-        const date = document.getElementById('eventDate').value;
-        const title = document.getElementById('eventTitle').value.trim();
-        const poster = document.getElementById('eventPoster').value.trim();
-        const desc = document.getElementById('eventDesc').value.trim();
-        const qr = document.getElementById('needQR').checked;
+    const date = document.getElementById('eventDate').value;
+    const title = document.getElementById('eventTitle').value.trim();
+    const poster = document.getElementById('eventPoster').value.trim();
+    const desc = document.getElementById('eventDesc').value.trim();
+    const qr = document.getElementById('needQR').checked;
 
-        if(!date || !title) { alert("日期與名稱不能為空"); return; }
+    if(!date || !title) { alert("日期與名稱不能為空"); return; }
 
-        closeModal('eventModal');
-        toggleLoading(true);
+    closeModal('eventModal');
+    toggleLoading(true);
 
-        const payload = {
-            key: STAFF_KEY,
-            type: currentEditData ? 'update_calendar_event' : 'add_event',
-            oldTitle: currentEditData ? currentEditData.title : null,
-            dateText: date,
-            title: title,
-            poster_url: poster,
-            description: desc, // 新增欄位參數
-            needQR: qr
-        };
+    const payload = {
+        key: STAFF_KEY,
+        type: currentEditData ? 'update_calendar_event' : 'add_event',
+        oldTitle: currentEditData ? currentEditData.title : null,
+        dateText: date,
+        title: title,
+        poster_url: poster,
+        description: desc,
+        needQR: qr
+    };
 
-        try {
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-            loadCalendar();
-        } catch(e) { alert("儲存失敗"); toggleLoading(false); }
+    try {
+        // 1. 執行存檔
+        const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        
+        if (response.ok) {
+            // 🌟 2. 關鍵優化：不再呼叫 loadCalendar()，改為手動更新本地資料
+            if (currentEditData) {
+                // 如果是編輯，直接修改現有陣列中的那筆資料
+                Object.assign(currentEditData, {
+                    dateText: date,
+                    title: title,
+                    poster_url: poster,
+                    description: desc,
+                    needQR: qr
+                });
+            } else {
+                // 如果是新增，就 push 進去（這裡建議之後還是跑一次 loadCalendar 確保順序正確）
+                allEvents.push({ dateText: date, title: title, poster_url: poster, description: desc, needQR: qr });
+            }
+            
+            // 3. 重新排序並渲染畫面
+            allEvents.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
+            renderList();
+            
+            // 4. 立即隱藏載入畫面
+            toggleLoading(false);
+            
+            // (選擇性) 在背景靜默更新資料，不顯示載入圈圈
+            // setTimeout(() => { silentLoadCalendar(); }, 1000);
+        }
+    } catch(e) { 
+        alert("儲存失敗"); 
+        toggleLoading(false); 
     }
+}
 
     async function confirmDelete() {
         if(!confirm(`確定要徹底刪除「${currentEditData.title}」？`)) return;

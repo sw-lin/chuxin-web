@@ -369,21 +369,22 @@ async function syncData() {
                 renderCalendarActivity([]);
             }
 
-            // --- D. 解析 B6 宣傳活動 ---
-           const promoRaw = data.promo || data.registrations_promo || "";
+           // --- D. 解析 B6 宣傳活動 ---
+const promoRaw = data.promo || data.registrations_promo || "";
 if (promoRaw && promoRaw !== "目前尚無宣傳期內之報名活動") {
     const itemStrings = promoRaw.split('[/ITEM]').filter(s => s.includes('[ITEM]'));
     window.currentActivePromos = itemStrings.map(itemStr => {
         const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
         
-        // ✅ 修正正則：相容全形：與半形:，且允許括號前後有空格
-        const titleMatch = itemStr.match(/【近期報名活動\s*[:：]\s*(.*?)】/);
+        // ✅ 核心修正：移除 "近期" 二字，使其匹配 "【報名活動：...】"
+        // 同時相容可能的 "【近期報名活動：...】"
+        const titleMatch = itemStr.match(/【(?:近期)?報名活動\s*[:：]\s*(.*?)】/);
         
         const cleanText = itemStr.replace(/\[ITEM\]/g, "").replace(/\[POSTER\].*?\[\/POSTER\]/g, "").trim();
         const dMatch = cleanText.match(/日期：(\d{4}\/\d{2}\/\d{2})/);
         
         const extractedTitle = titleMatch ? titleMatch[1].trim() : "解析失敗";
-        console.log(`📍 解析活動成功: [${extractedTitle}]`); // 這裡可以幫你抓出有沒有解析成功
+        console.log(`📍 解析活動成功: [${extractedTitle}]`);
 
         return {
             title: extractedTitle,

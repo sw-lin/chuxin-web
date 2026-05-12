@@ -885,29 +885,33 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
     container.innerHTML = ''; 
 
     promoEvents.forEach(ev => {
-        // ✅ 修正：直接從 ev 物件拿標題，不要再用 Regex 抓一次
+        // 從解析後的物件中取得標題
         const title = ev.title;
 
-        // 偵錯 Log：檢查比對對象
-        console.log(`🔍 正在檢查活動: ${title}`);
-        console.log(`📋 林士偉的已報名清單:`, userRegistrations);
+        // 偵錯日誌：確保能看到雙方的原始資料
+        console.log(`🔍 正在比對活動: "${title}"`);
+        console.log(`📋 已報名清單:`, userRegistrations);
 
-        // 這裡會精準比對 "五月夜遊" === "五月夜遊"
-        const isRegistered = (userRegistrations || []).includes(title);
+        // 🌟 核心修正：使用 some 取代 includes，並加入 trim() 消除空格影響
+        const isRegistered = (userRegistrations || []).some(reg => 
+            String(reg).trim() === String(title).trim()
+        );
         
-        const isCheckedIn = false;
+        const isCheckedIn = false; 
         const finalPoster = (ev.poster && typeof getDirectImageUrl === 'function') 
                             ? getDirectImageUrl(ev.poster) 
                             : ev.poster;
 
         let actionBtn = "";
         if (isRegistered) {
+            // 狀態轉換成功：顯示已報名
             actionBtn = `
                 <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2" disabled>
                     <i class="fas fa-check-circle"></i>
                     已報名成功
                 </button>`;
         } else {
+            // 狀態轉換失敗（或尚未報名）：顯示立即報名
             actionBtn = `
                 <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
                     class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all">
@@ -915,7 +919,6 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
                 </button>`;
         }
 
-        // 5. 組合最終卡片 HTML
         const cardHtml = `
             <div class="bg-white rounded-3xl shadow-sm border border-emerald-50 overflow-hidden mb-6">
                 ${finalPoster ? `

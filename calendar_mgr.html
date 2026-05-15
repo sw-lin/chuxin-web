@@ -182,10 +182,19 @@
 
     function renderList() {
         const list = document.getElementById('calendarList');
-        const todayStr = new Date().toLocaleDateString('en-CA');
+        // --- 關鍵修改開始：計算「明天」的日期 ---
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1); // 將日期加 1 天
+    const tomorrowStr = tomorrow.toLocaleDateString('en-CA'); // 取得明天的 YYYY-MM-DD
+    // --- 關鍵修改結束 ---
 
         list.innerHTML = allEvents.map((ev, i) => {
-            const isFuture = ev.dateText > todayStr;
+         // 將原本比對 todayStr 改為比對 tomorrowStr
+         // 這樣「活動日期」只要小於「明天」，也就是「今天或以前」的活動都會顯示
+         // 因為判斷式是 ev.dateText > tomorrowStr，
+         // 所以只有「後天以後」的活動才會被歸類為 isFuture (隱藏)
+         const isFuture = ev.dateText > tomorrowStr;
+            
             const hasPoster = ev.poster_url && ev.poster_url.trim() !== "";
             // 修正：必須 needQR 為 true 且 非未來日期 才顯示按鈕
             const canShowQR = (ev.needQR === true || ev.needQR === "TRUE") && !isFuture;

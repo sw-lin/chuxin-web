@@ -890,9 +890,27 @@ window.currentActivePromos = [];
 
 function renderRegistrationCards(promoEvents, userRegistrations) {
     const container = document.getElementById('eventSection');
+    const wrapper = document.getElementById('registrationWrapper'); // 🌟 新增：取得整個報名區塊的外框
+    
     if (!container) return;
     container.innerHTML = ''; 
 
+    // 🌟 核心修正：判斷是否有報名活動
+    if (!promoEvents || promoEvents.length === 0) {
+        // 如果沒有任何活動，隱藏整個包含標題的外框
+        if (wrapper) {
+            wrapper.classList.add('hidden');
+            wrapper.style.display = 'none';
+        }
+        return; // 直接結束執行
+    } else {
+        // 如果有活動，確保外框是顯示狀態
+        if (wrapper) {
+            wrapper.classList.remove('hidden');
+            wrapper.style.display = 'block';
+        }
+    }
+    
     promoEvents.forEach(ev => {
         // 從解析後的物件中取得標題
         const title = ev.title;

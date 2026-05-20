@@ -348,7 +348,7 @@ async function syncData() {
         '<a href="$1" target="_blank" class="text-yellow-300 hover:text-yellow-400 underline font-bold mx-1">🔗點此查看照片/網址</a>'
     );
                    newsElem.innerHTML = linkedNews; // 這裡要改用 innerHTML 才能解構超連結
-                }.innerText = newsContent;
+                }
             } else {
                 if (newsContainer) {
                     newsContainer.classList.add('hidden');

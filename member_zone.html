@@ -342,7 +342,7 @@ async function syncData() {
                     newsContainer.classList.remove('hidden');
                     newsContainer.style.display = 'flex';
                 }
-                if (newsElem) if (newsElem) {
+                if (newsElem) {
                    // 🌟 自動將公告內文中的網址轉成可以點擊的超連結，讓會員在首頁跑馬燈點開
                    const linkedNews = newsContent.replace(/(https?:\/\/[^\s\r\n]+)/g, 
         '<a href="$1" target="_blank" class="text-yellow-300 hover:text-yellow-400 underline font-bold mx-1">🔗點此查看照片/網址</a>'

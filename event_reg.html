@@ -927,10 +927,10 @@ function formatDateForInput(dVal) {
                 poster_url: document.getElementById('ev_poster').value,
                 desc: document.getElementById('ev_desc').value,
                 
-                // 關鍵修正：將 HTML ID 對應到 GAS 期待的參數名稱
-        start_date: document.getElementById('ev_start').value,    // 對應 B 欄
-        display_until: document.getElementById('ev_until').value, // 對應 C 欄
-        date: document.getElementById('ev_date').value,          // 對應 F 欄
+                // 🌟 已對齊 GAS 的日期欄位
+                startDate: document.getElementById('ev_start').value,  
+                deadline: document.getElementById('ev_until').value,   
+                eventDate: document.getElementById('ev_date').value,
                 
                 // 🌟 修正點：確保名稱與 GAS handleAddNewEvent_Registration 接收的一致
                 needId: needIdValue, 

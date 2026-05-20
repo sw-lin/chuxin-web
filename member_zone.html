@@ -369,24 +369,23 @@ async function syncData() {
                 renderCalendarActivity([]);
             }
 
-           // --- D. 解析 B6 宣傳活動 (標籤相容模式：有無 [ITEM] 都能拆) ---
+// --- D. 解析 B6 宣傳活動 (標籤相容模式：有無 [ITEM] 都能拆 + 網址自動超連結) ---
 const promoRaw = data.promo || data.registrations_promo || "";
 
 if (promoRaw && !promoRaw.includes("目前尚無")) {
-    // 💡 策略：如果有 [/ITEM] 就用它拆；如果沒有，就用雙換行 \n\n 拆（通常活動間會有空行）
+    // 💡 策略：如果有 [/ITEM] 就用它拆；如果沒有，就用「【」這個字當作一個項目的起點來拆分
     let itemStrings = [];
     if (promoRaw.includes('[/ITEM]')) {
         itemStrings = promoRaw.split('[/ITEM]').filter(s => s.trim() !== "");
     } else {
-        // GAS 把標籤刪了，我們改用「【」這個字當作一個項目的起點來拆分
         itemStrings = promoRaw.split(/(?=【)/).filter(s => s.trim() !== "");
     }
 
     window.currentActivePromos = itemStrings.map(itemStr => {
-        // 1. 抓海報 (如果 GAS 沒刪的話)
+        // 1. 抓海報
         const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
         
-        // 2. 抓標題 (改用最寬鬆的 Regex，只要有 【...】 就抓)
+        // 2. 抓標題 (相容寬鬆 Regex)
         const titleMatch = itemStr.match(/【(?:近期)?報名活動\s*[:：]?\s*(.*?)】/) || itemStr.match(/【(.*?)】/);
         
         // 3. 抓日期
@@ -394,9 +393,19 @@ if (promoRaw && !promoRaw.includes("目前尚無")) {
 
         const extractedTitle = titleMatch ? titleMatch[1].trim() : "點擊查看詳情";
 
+        // 4. 清理出純內文
+        let cleanedText = itemStr.replace(/\[ITEM\]|\[\/ITEM\]|\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+
+        // 🌟 核心升級：自動偵測內文中的 http/https 網址並轉化為「可點擊的超連結」
+        // 會自動套用 Tailwind 藍色、底線、滑鼠懸停變色，且點擊後自動開啟新視窗 (target="_blank")
+        cleanedText = cleanedText.replace(
+            /(https?:\/\/[^\s\r\n]+)/g, 
+            '<a href="$1" target="_blank" class="text-blue-600 hover:text-blue-800 underline font-semibold break-all inline-flex items-center"><i class="fas fa-external-link-alt mr-1 text-xs"></i>點此查看鏈結/照片</a>'
+        );
+
         return {
             title: extractedTitle,
-            fullText: itemStr.replace(/\[ITEM\]|\[\/ITEM\]|\[POSTER\].*?\[\/POSTER\]/g, "").trim(),
+            fullText: cleanedText, // 🌟 此處現在包含 HTML 超連結語法
             poster: pMatch ? pMatch[1].trim() : "",
             deadline: dMatch ? dMatch[1] : "額滿為止"
         };

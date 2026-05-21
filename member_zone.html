@@ -1213,10 +1213,21 @@ function renderVoteContent(voteData) {
     const voteStatus = activeVoteObj.votes.find(v => String(v.data.id) === String(voteData.id));
     const isVoted = voteStatus ? voteStatus.voted : false;
 
-    // 2. 核心時間邏輯判斷
+    // ==========================================
+    // 🌟 2. 核心時間邏輯判斷 (修正 Apple 裝置相容性與開始時間)
+    // ==========================================
     const now = new Date();
-    const endTime = new Date(voteData.endTime); // 後端已轉換為格式化字串
-    const isAfterEnd = now > endTime; // 活動是否已經結束
+    
+    // 將 "2026-05-21 12:00" 的橫槓替換為斜線 "2026/05/21 12:00"，解決 iPhone 無法解析的問題
+    const safeStartTime = voteData.startTime ? voteData.startTime.replace(/-/g, '/') : null;
+    const safeEndTime = voteData.endTime ? voteData.endTime.replace(/-/g, '/') : null;
+
+    // 轉換為真正的時間物件 (若資料庫沒填，則給予極端預設值防呆)
+    const startTime = safeStartTime ? new Date(safeStartTime) : new Date(0); 
+    const endTime = safeEndTime ? new Date(safeEndTime) : new Date('2099/12/31');
+
+    const isBeforeStart = now < startTime; // 判斷：活動是否還沒開始
+    const isAfterEnd = now > endTime;      // 判斷：活動是否已經結束
 
     // 判斷是否顯示統計結果： (設定為 ALWAYS) 或者 (設定為 HIDE 且 時間已過)
     const shouldShowResult = (voteData.showResult === 'ALWAYS') || (voteData.showResult === 'HIDE' && isAfterEnd);
@@ -1231,55 +1242,78 @@ function renderVoteContent(voteData) {
 
     let mainContentHtml = "";
 
-    if (isVoted) {
+    // ==========================================
+    // 🌟 狀態判斷分支
+    // ==========================================
+    if (isBeforeStart) {
+        // --- ⏳ 新增狀態：活動尚未開始 ---
+        mainContentHtml = `
+            <div class="py-12 text-center bg-white rounded-3xl shadow-inner border border-gray-100">
+                <i class="fas fa-hourglass-start text-emerald-300 text-5xl mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">活動尚未開始</h3>
+                <p class="text-gray-500 font-bold text-sm">
+                    本投票活動將於<br>
+                    <span class="text-emerald-700 text-lg">${voteData.startTime}</span><br>
+                    正式開放，請稍後再來喔！
+                </p>
+                <button onclick="closeVoteOverlay()" class="mt-8 w-3/4 mx-auto bg-slate-400 py-4 rounded-full text-white font-bold block">我知道了</button>
+            </div>
+        `;
+    } else if (isVoted) {
         if (shouldShowResult) {
             // --- 📊 狀態 A：已投票後的統計結果渲染 ---
-const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
+            const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
 
-mainContentHtml = optionsArray.map(opt => {
-    // 🌟 修正：計算包含該選項的所有票數
-    let count = 0;
-    Object.keys(stats.details).forEach(key => {
-        // 如果該筆紀錄包含此選項（例如 "選項A,選項B" 包含 "選項A"）
-        if (key.split(',').includes(opt)) {
-            count += stats.details[key];
-        }
-    });
+            mainContentHtml = optionsArray.map(opt => {
+                let count = 0;
+                Object.keys(stats.details).forEach(key => {
+                    if (key.split(',').includes(opt)) {
+                        count += stats.details[key];
+                    }
+                });
 
-    const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
-    
-    // 🌟 修正：整理所有選擇該選項的人員名單
-    let namesArray = [];
-    if (stats.voterLists) {
-        Object.keys(stats.voterLists).forEach(key => {
-            if (key.split(',').includes(opt)) {
-                namesArray = namesArray.concat(stats.voterLists[key]);
-            }
-        });
-    }
-    const names = [...new Set(namesArray)].join('、'); // 去重後合併
+                const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+                
+                let namesArray = [];
+                if (stats.voterLists) {
+                    Object.keys(stats.voterLists).forEach(key => {
+                        if (key.split(',').includes(opt)) {
+                            namesArray = namesArray.concat(stats.voterLists[key]);
+                        }
+                    });
+                }
+                const names = [...new Set(namesArray)].join('、'); 
 
-    return `
-        <div class="mb-8">
-            <div class="flex justify-between items-end mb-2 px-1">
-                <span class="font-bold text-emerald-900 text-lg">${opt}</span>
-                <span class="text-emerald-600 font-black">
-                    ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
-                </span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
-                <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
-            </div>
-            ${!voteData.isAnonymous && names ? `
-                <div class="mt-2 px-1">
-                    <p class="text-[11px] text-gray-400 leading-relaxed italic">
-                        <i class="fas fa-users text-[10px]"></i> ${names}
-                    </p>
+                return `
+                    <div class="mb-8">
+                        <div class="flex justify-between items-end mb-2 px-1">
+                            <span class="font-bold text-emerald-900 text-lg">${opt}</span>
+                            <span class="text-emerald-600 font-black">
+                                ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+                        </div>
+                        ${!voteData.isAnonymous && names ? `
+                            <div class="mt-2 px-1">
+                                <p class="text-[11px] text-gray-400 leading-relaxed italic">
+                                    <i class="fas fa-users text-[10px]"></i> ${names}
+                                </p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            mainContentHtml += `
+                <div class="mt-10">
+                    <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
+                        關閉視窗
+                    </button>
                 </div>
-            ` : ''}
-        </div>
-    `;
-}).join('');
+            `;
+            
         } else {
             // --- ⏳ 狀態 B：已投票，但 HIDE 且時間還沒到 ---
             mainContentHtml = `
@@ -1294,16 +1328,13 @@ mainContentHtml = optionsArray.map(opt => {
                         截止後正式公布，請到時再回來查看喔！
                     </p>
                 </div>
+                <div class="mt-10">
+                    <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
+                        關閉視窗
+                    </button>
+                </div>
             `;
         }
-        
-        mainContentHtml += `
-            <div class="mt-10">
-                <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
-                    關閉視窗
-                </button>
-            </div>
-        `;
 
     } else if (isAfterEnd) {
         // --- 🚫 狀態 C：活動已截止，且該用戶未參與投票 ---

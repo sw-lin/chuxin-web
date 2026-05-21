@@ -103,7 +103,7 @@ async function loadCalendar() {
 }
 
 /**
- * 渲染行程項目
+ * 渲染行程項目 (修正手機端過長跳行、不截斷)
  */
 function renderList(events) {
     const listContainer = document.getElementById('calendarList');
@@ -125,9 +125,9 @@ function renderList(events) {
                     <div class="text-3xl font-black text-emerald-900 mt-1 leading-none">${dateObj.day}</div>
                 </div>
 
-                <div class="flex-1 min-w-0">
-                    <h4 class="font-black text-emerald-950 text-base truncate">${ev.title}</h4>
-                    <div class="text-[11px] text-emerald-700/70 flex items-center gap-1 mt-1 font-medium">
+                <div class="flex-1">
+                    <h4 class="font-black text-emerald-950 text-base leading-snug break-words pr-1">${ev.title}</h4>
+                    <div class="text-[11px] text-emerald-700/70 flex items-center gap-1 mt-1.5 font-medium">
                         <i class="far fa-clock text-amber-500"></i>09:30 - 12:00
                     </div>
                 </div>

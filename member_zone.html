@@ -58,17 +58,18 @@
     <button onclick="logout()" class="px-4 py-2 bg-red-900/40 rounded-full text-[12px] font-bold">登出</button>
 </nav>
 
-    <!-- 1. 公告欄 -->
-   <div id="newsContainer" class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
-    <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
-        <i class="fas fa-bullhorn text-lg"></i>
-    </div>
-    <div class="flex-1">
-        <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
-        <p id="news" class="text-gray-600 text-xs leading-relaxed">同步最新公告中...</p>
-    </div>
-   </div>    
-    <!-- 2. 出席率卡片 -->
+<main class="max-w-xl mx-auto p-6 space-y-8">
+
+    <div id="newsContainer" class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
+        <div class="bg-emerald-100 text-emerald-700 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+            <i class="fas fa-bullhorn text-lg"></i>
+        </div>
+        <div class="flex-1">
+            <p class="text-xs font-bold text-emerald-900 mb-0.5">最新公告</p>
+            <p id="news" class="text-gray-600 text-xs leading-relaxed">同步最新公告中...</p>
+        </div>
+    </div>    
+
     <div onclick="showLearningHistory()" class="emerald-gradient rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden cursor-pointer active:scale-95 transition-all">
         <div class="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/5 rounded-full"></div>
         <div class="relative z-10 text-center">
@@ -90,7 +91,6 @@
         </div>
     </div>
 
-    <!-- 3. 掃碼按鈕 -->
     <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all hover:bg-orange-600">
         <i class="fas fa-qrcode text-2xl"></i>
         <span class="text-xl font-black tracking-widest">掃碼報到</span>
@@ -98,7 +98,6 @@
 
     <div id="vote-notice-container" class="w-full"></div>
     
-    <!-- 4. 近期活動區 -->
     <div class="space-y-4">
         <div class="flex items-center gap-3 px-2">
             <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
@@ -107,17 +106,15 @@
         <div id="calendarActivitySection" class="space-y-4"></div>
     </div>
 
-    <!-- 5. 報名區 -->
-    <div id="registrationWrapper" class="px-6 mb-8">
-    <div class="flex items-center justify-between mb-4 px-2">
-        <h3 class="font-black text-emerald-900 flex items-center gap-2 text-lg">
-            <i class="fas fa-edit text-emerald-600"></i> 活動預約報名
-        </h3>
+    <div id="registrationWrapper" class="mb-8">
+        <div class="flex items-center justify-between mb-4 px-2">
+            <h3 class="font-black text-emerald-900 flex items-center gap-2 text-lg">
+                <i class="fas fa-edit text-emerald-600"></i> 活動預約報名
+            </h3>
+        </div>
+        <div id="eventSection" class="space-y-4"></div>
     </div>
-    
-    <div id="eventSection" class="space-y-4"></div>
-    </div>
-    <!-- 6. 底部功能區 -->
+
     <div class="space-y-4 pt-6 border-t border-emerald-50">
         <div class="flex items-center gap-3 px-2">
             <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
@@ -159,19 +156,19 @@
         </div>
     </div>
 
-      <div id="scanModal" class="fixed inset-0 z-[300] bg-black/90 hidden flex-col items-center justify-center p-6 backdrop-blur-sm">
-      <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
-            <h3 class="font-black text-emerald-900">活動報到掃描</h3>
-            <button onclick="closeScanner()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-gray-400">
-                <i class="fas fa-times"></i>
-            </button>
+    <div id="scanModal" class="fixed inset-0 z-[300] bg-black/90 hidden flex-col items-center justify-center p-6 backdrop-blur-sm">
+        <div class="w-full max-w-sm bg-white rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
+                <h3 class="font-black text-emerald-900">活動報到掃描</h3>
+                <button onclick="closeScanner()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-gray-400">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="reader" class="w-full bg-black"></div>
+            <div class="p-6 text-center bg-white">
+                <p class="text-xs text-gray-400 font-bold tracking-widest">請將 QR Code 對準掃描框</p>
+            </div>
         </div>
-        <div id="reader" class="w-full bg-black"></div>
-        <div class="p-6 text-center bg-white">
-            <p class="text-xs text-gray-400 font-bold tracking-widest">請將 QR Code 對準掃描框</p>
-        </div>
-    </div>
     </div>
     
 </main>

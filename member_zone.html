@@ -27,6 +27,13 @@
             overflow: hidden;
             position: fixed;
             width: 100%;
+        }。
+        /* 🌟 新增：解決投票照片被嚴重裁切的問題 */
+        .vote-item-img, 
+           #vote-overlay img,
+           [id^="vote-"] img { 
+           object-fit: contain !important; /* 確保圖片縮放以看清全貌，絕不裁切 */
+           background-color: #f3f4f6;       /* 如果圖片太扁或太瘦，空隙處用淡灰色填補，視覺更精緻 */
         }        
     </style>
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />

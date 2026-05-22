@@ -175,16 +175,41 @@
         }
 
         async function fetchItems() {
-            toggleLoading(true);
-            try {
-                const res = await fetch(`${GAS_URL}?type=get_payment_items&key=${STAFF_KEY}`);
-                const data = await res.json();
-                const selector = document.getElementById('itemSelector');
-                const currentVal = selector.value;
+          toggleLoading(true);
+        try {
+          const res = await fetch(`${GAS_URL}?type=get_payment_items&key=${STAFF_KEY}`);
+          const data = await res.json();
+        
+          // 🛠️ 偵錯監控點：按 F12 打開 Console 就能看到後端到底傳了什麼
+          console.log("後端回傳的原始資料物件 data:", data);
+
+          const selector = document.getElementById('itemSelector');
+          if (!selector) {
+             console.error("錯誤：找不到 id 為 itemSelector 的選單元件！");
+             return;
+          }
+
+          const currentVal = selector.value;
+
+          // 🌟 防禦機制：確保 data.items 存在且是陣列，萬一是 undefined 就用空陣列代替
+          const itemList = data && Array.isArray(data.items) ? data.items : [];
+        
+          console.log("解析後的項目清單 itemList:", itemList);
+
+          if (itemList.length === 0) {
+             selector.innerHTML = '<option value="">-- 暫無帳簿項目 (請點開啟編輯新增) --</option>';
+          } else {
                 selector.innerHTML = '<option value="">-- 請選擇繳費項目 --</option>' + 
-                    data.items.map(it => `<option value="${it}">${it}</option>`).join('');
-                if (currentVal) selector.value = currentVal;
-            } finally { toggleLoading(false); }
+                itemList.map(it => `<option value="${it}">${it}</option>`).join('');
+          }
+
+             if (currentVal) selector.value = currentVal;
+         } catch (error) {
+             console.error("前端解析項目時發生錯誤:", error);
+             showToast("❌ 無法讀取帳簿項目");
+         } finally { 
+            toggleLoading(false); 
+         }
         }
 
         async function loadLedger() {

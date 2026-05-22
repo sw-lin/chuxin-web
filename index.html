@@ -329,7 +329,61 @@ function openLogin() {
     document.getElementById('loginModal').style.display = 'flex'; 
 }    
 function closeModal() { document.getElementById('loginModal').style.display = 'none'; }
-window.onload = initData;        
+
+// === PWA 強制自訂安裝機制 ===
+let deferredPrompt;
+
+// 1. 註冊 Service Worker (PWA 的硬性硬體規範)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker 註冊成功', reg))
+            .catch(err => console.log('Service Worker 註冊失敗', err));
+    });
+}
+
+// 2. 監聽瀏覽器是否準備好安裝
+window.addEventListener('beforeinstallprompt', (e) => {
+    // 阻止瀏覽器預設的低調提示
+    e.preventDefault();
+    // 儲存事件，留給我們自訂的按鈕觸發
+    deferredPrompt = e;
+    
+    // 動態在「會員進入」按鈕左邊，塞入一個「安裝 App」按鈕
+    const navRight = document.querySelector('nav .bg-emerald-800').parentElement;
+    if (!document.getElementById('pwaInstallBtn')) {
+        const installBtn = document.createElement('button');
+        installBtn.id = 'pwaInstallBtn';
+        installBtn.className = 'mr-2 bg-amber-500 text-emerald-950 px-4 py-2 rounded-full text-sm font-bold shadow-md hover:bg-amber-400 transition active:scale-95';
+        installBtn.innerHTML = '<i class="fas fa-download mr-1"></i>安裝 App';
+        
+        // 點擊此按鈕，即可「強制啟動」系統安裝提示
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt(); // 喚醒安裝視窗
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`使用者選擇結果: ${outcome}`);
+                if (outcome === 'accepted') {
+                    installBtn.remove(); // 使用者同意安裝後，移除按鈕
+                }
+                deferredPrompt = null;
+            }
+        });
+        
+        // 把按鈕塞進導覽列
+        const loginBtn = document.querySelector('nav button');
+        navRight.insertBefore(installBtn, loginBtn);
+    }
+});
+
+// 3. 安裝完成後的監聽（選用）
+window.addEventListener('appinstalled', (evt) => {
+    console.log('築心讀書會 App 已成功安裝到使用者的裝置上！');
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.remove();
+});
+   
+window.onload = initData;     
 </script>
 </body>
 </html>

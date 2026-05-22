@@ -255,9 +255,13 @@
                     <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="自駕"> 自駕</label>
                     <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="共乘"> 共乘</label>
                 </div>
-                <div id="seat_input_zone">
-                    <label class="text-[10px] font-bold text-blue-400">可載人數</label>
-                    <input type="number" id="reg_seats" min="0" class="w-full bg-white rounded-xl px-4 py-2 text-sm font-bold border-none">
+                <div id="seat_input_zone" class="mb-4 hidden">
+                    <label class="block text-[11px] font-black text-emerald-800 mb-1">可提供共乘座位數 (不含駕駛)</label>
+                    <input type="number" id="reg_seats" min="0" max="6" class="..." value="0">
+                </div>
+                <div id="car_number_zone" class="mb-4 hidden">
+                    <label class="block text-[11px] font-black text-emerald-800 mb-1">車牌號碼 (自駕者填寫)</label>
+                    <input type="text" id="reg_car_number" class="w-full border-b-2 border-emerald-100 bg-emerald-50/30 px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 transition-colors" placeholder="例如：ABC-1234">
                 </div>
             </div>
 
@@ -267,9 +271,12 @@
             </div>
         </div>
 
-        <div class="flex gap-3 pt-4">
-            <button onclick="closeRegModal()" class="flex-1 py-4 text-gray-400 font-black">取消</button>
-            <button onclick="saveSingleReg()" class="flex-[2] bg-[#064e3b] text-white rounded-2xl font-black shadow-lg">儲存變更</button>
+        <div class="flex gap-3 mt-6">
+           <button onclick="closeRegModal()" class="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-100 transition-all hover:bg-gray-200">取消</button>
+    
+           <button id="modal_delete_btn" class="hidden px-4 py-3 rounded-2xl font-bold text-red-500 bg-red-50 transition-all hover:bg-red-100">刪除</button>
+    
+           <button onclick="saveSingleReg()" class="flex-[2] py-3 rounded-2xl font-black text-white bg-emerald-600 shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-700 hover:shadow-emerald-300 transform active:scale-95">確認更新</button>
         </div>
     </div>
 </div>
@@ -566,7 +573,10 @@ function renderRegList(list) {
                 <div class="flex items-center gap-3">
                     ${avatarHTML}
                     <div>
-                        <div class="font-black text-emerald-900">${name}</div>
+                        <div class="font-black text-emerald-900 flex items-center gap-2">
+                            ${name}
+                            ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors" onclick="event.stopPropagation(); openRegModal('${phone}', '${name}')" title="修改詳細資料"></i>` : ''}
+                        </div>
                         <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
                     </div>
                 </div>
@@ -776,6 +786,20 @@ function openRegModal(phone, name) {
                 if (rd.value === transVal) rd.checked = true;
             });
             
+            // 🌟 1. 新增：車牌號碼回填 (相容 P 欄的名稱)
+            const carInput = document.getElementById('reg_car_number');
+            if (carInput) {
+                carInput.value = r["車號"] || r["車牌"] || "";
+            }
+
+            // 🌟 2. 新增：設定刪除按鈕
+            const delBtn = document.getElementById('modal_delete_btn');
+            if (delBtn) {
+                delBtn.classList.remove('hidden'); // 修改模式顯示刪除鍵
+                // 動態綁定 onclick，點擊時先關彈窗，再呼叫刪除
+                delBtn.setAttribute('onclick', `closeRegModal(); deleteSingleReg('${phone}', '${name}');`);
+            } 
+            
             // 如果有記錄可載人數
             if (r["可載人數"] !== undefined) {
                 document.getElementById('reg_seats').value = r["可載人數"];
@@ -785,6 +809,11 @@ function openRegModal(phone, name) {
     } else {
         // 如果沒有傳入參數，代表是「新增報名」
         console.log("📝 新增報名模式：已執行重置。");
+
+        // 🌟 確保新增模式時，隱藏刪除按鈕
+        const delBtn = document.getElementById('modal_delete_btn');
+        if (delBtn) delBtn.classList.add('hidden'); 
+        
         // 額外確保新增時預設選取一個交通方式（例如自駕）
         const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
         if (defaultTrans) {
@@ -807,11 +836,15 @@ function resetRegForm() {
     document.getElementById('reg_note').value = "";
     document.getElementById('reg_diet').value = "葷食";
     document.getElementById('reg_seats').value = 0;
-    document.getElementById('reg_is_member').value = "否"; // 預設為非會員
-    // 🌟 移除原本強制勾選自駕的程式碼，交給 openRegModal 處理
+    document.getElementById('reg_is_member').value = "否"; 
+    
+    // 🌟 新增：清空車號
+    const carInput = document.getElementById('reg_car_number');
+    if (carInput) carInput.value = "";
+
     document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);
-    updateSeatInput("共乘"); // 預設先隱藏座位輸入框    
-} 
+    updateSeatInput("共乘"); 
+}
 
 /**
  * 刪除目前選中的活動及其所有報名名單
@@ -895,18 +928,25 @@ function formatDateForInput(dVal) {
     }, 2500);
     }
         
-        function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工輸入</div>`; }
-        function updateSeatInput(val) { 
-            const seatZone = document.getElementById('seat_input_zone');
-            const seatInput = document.getElementById('reg_seats');
-    
-            if (val === '自駕') {
-               seatZone.style.display = 'block';
-            } else {
-               seatZone.style.display = 'none';
-               seatInput.value = 0; // 🌟 關鍵：切換到共乘時，強制將人數歸零，避免帶入舊資料
-            }
+function renderManualAddBtn() { return `<div onclick="openRegModal('', '')" class="border-2 border-dashed border-emerald-200 p-6 rounded-3xl flex flex-col items-center text-emerald-800 font-black text-sm cursor-pointer mt-4 hover:bg-emerald-50"><i class="fas fa-user-plus mb-2"></i>人工輸入</div>`; }
+
+function updateSeatInput(val) { 
+    const seatZone = document.getElementById('seat_input_zone');
+    const seatInput = document.getElementById('reg_seats');
+    const carZone = document.getElementById('car_number_zone'); // 🌟 抓取車號區塊
+
+    if (val === '自駕') {
+        seatZone.style.display = 'block';
+        if (carZone) carZone.style.display = 'block';
+    } else {
+        seatZone.style.display = 'none';
+        seatInput.value = 0; // 切換到共乘時歸零人數
+        if (carZone) {
+            carZone.style.display = 'none';
+            document.getElementById('reg_car_number').value = ""; // 🌟 切換時清空車號
         }
+    }
+}
         
         document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
 
@@ -1005,6 +1045,9 @@ async function saveSingleReg() {
         note: document.getElementById('reg_note').value,
         transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
         seats: isTourBus ? 0 : seatValue,
+        // 🌟 新增：抓取車牌號碼，如果沒有填寫就傳空字串
+        carNumber: document.getElementById('reg_car_number') ? document.getElementById('reg_car_number').value.trim() : "",
+        
         isPaid: "未繳",
         regTime: new Date().toLocaleString('zh-TW', { hour12: false })
     };

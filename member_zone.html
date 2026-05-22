@@ -48,13 +48,15 @@
 <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
 
 <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-6 h-16 shadow-lg flex items-center justify-between">
-    <div class="flex items-center gap-2">
-        <i class="fas fa-leaf text-emerald-400"></i>
-        <h1 class="text-xl font-black tracking-widest">會員中心</h1>
-    </div>
+    <button onclick="handleManualRefresh()" class="flex items-center gap-2 active:scale-95 transition-transform outline-none focus:outline-none">
+        <i id="refreshIcon" class="fas fa-sync-alt text-emerald-400 text-sm transition-all duration-500"></i>
+        <h1 class="text-xl font-black tracking-widest flex items-center gap-1">
+            會員中心
+            <span class="text-[10px] font-normal text-emerald-300/60 tracking-normal">(點擊刷新)</span>
+        </h1>
+    </button>
     <button onclick="logout()" class="px-4 py-2 bg-red-900/40 rounded-full text-[12px] font-bold">登出</button>
-</nav> 
-<main class="max-w-xl mx-auto p-6 space-y-8">
+</nav>
 
     <!-- 1. 公告欄 -->
    <div id="newsContainer" class="bg-white rounded-[2rem] p-5 shadow-sm border border-emerald-50 flex items-center space-x-4">
@@ -1544,6 +1546,40 @@ function setupCheckboxLimit(maxAllowed) {
             }
         });
     });
+}  
+// ==========================================
+// 🌟 新增：主動刷新點擊事件
+// ==========================================
+async function handleManualRefresh() {
+    console.log("🔄 會員觸發主動刷新...");
+    const icon = document.getElementById('refreshIcon');
+    
+    // 1. 讓重新整理圖示開始瘋狂旋轉
+    if (icon) {
+        icon.classList.add('fa-spin');
+    }
+
+    // 2. 直接呼叫你現有的全域同步資料核心
+    await syncData();
+
+    // 3. 同步完成後，多留 300 毫秒的視覺緩衝再停止旋轉，並彈出微提示
+    setTimeout(() => {
+        if (icon) {
+            icon.classList.remove('fa-spin');
+        }
+        
+        // 檢查是否有 Toast 提示元件，有的話給會員一個精準的反饋
+        const toastContainer = document.getElementById('toastContainer');
+        if (toastContainer) {
+            const toast = document.createElement('div');
+            toast.className = "bg-emerald-800/90 backdrop-blur-md text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg text-center animate-bounce border border-emerald-500/20";
+            toast.innerHTML = `<i class="fas fa-check-circle text-emerald-400 mr-1"></i> 資料已同步至最新狀態`;
+            toastContainer.appendChild(toast);
+            
+            // 2秒後自動移除提示
+            setTimeout(() => toast.remove(), 2000);
+        }
+    }, 300);
 }    
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">

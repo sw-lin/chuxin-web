@@ -10,27 +10,15 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
         .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
-        /* 修改後的樣式定義 */
         .input-group { @apply mb-6 bg-white p-6 rounded-[1.5rem] border border-emerald-100 shadow-sm; }
-        /* Label 調大到 14px 且加粗 */
         .label-text { @apply block text-sm font-black text-emerald-900 mb-3 ml-1; }
-        /* Input 文字調大到 18px (text-lg) 並增加高度 */
         .input-field { @apply w-full px-5 py-4 bg-gray-50 rounded-2xl outline-none text-lg font-bold border-2 border-transparent transition-all; }        
-        /* 錯誤提示也調大一點 */
-//        .error-hint {
-//        display: none;      /* 預設隱藏 */
-//        color: #ef4444;     /* 紅色文字 */
-//        font-size: 0.75rem; /* text-xs */
-//        font-weight: 700;   /* font-bold */
-//        margin-top: 0.5rem; /* mt-2 */
-//        margin-left: 0.25rem; /* ml-1 */
-//    }
         
         /* 錯誤狀態樣式 */
-//        .input-error {
-//        border-color: #ef4444 !important;
-//        background-color: #fef2f2 !important;
-//    }
+        .input-error {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
         .hidden { display: none !important; }
         input[type="number"] { appearance: textfield; }
         input[type="number"]::-webkit-outer-spin-button,
@@ -50,13 +38,9 @@
         }
     </style>
     <link rel="icon" type="image/png" href="favicon-32x32.png?v=2" sizes="32x32" />
-
     <link rel="shortcut icon" href="favicon.ico?v=2" />
-
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2" />
-
     <meta name="apple-mobile-web-app-title" content="築心讀書會" />
-
     <link rel="manifest" href="site.webmanifest?v=2" />
 </head>
 <body class="pb-32">
@@ -123,6 +107,11 @@
                 <label class="label-text">交通方式</label>
                 <select id="mainTransport" onchange="checkTransportLogic()" class="input-field"></select>
             </div>
+
+            <div id="carNumberWrapper" class="input-group hidden">
+                <label class="label-text">自駕車牌號碼 <span class="text-red-500">*</span></label>
+                <input type="text" id="mainCarNumber" class="input-field uppercase" placeholder="例如：ABC-1234">
+            </div>
           
             <div id="seatsWrapper" class="input-group hidden">
                 <label class="label-text">可載人數 (不含自己)</label>
@@ -147,7 +136,7 @@
                          <option value="1">1 位</option>
                          <option value="2">2 位</option>
                          <option value="3">3 位</option>
-                     </select>
+                      </select>
                 </div>
             </div>
             <div id="partnerContainer" class="space-y-4"></div>
@@ -181,14 +170,12 @@
     let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
     let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false };
 
-// --- 1. 電話格式檢查 (台灣手機：09 開頭且共 10 碼) ---
 function isValidTaiwanPhone(phone) {
     phone = toHalfWidth(phone);
     const regex = /^09\d{8}$/;
     return regex.test(phone);
 }
 
-// --- 2. 強化版身分證檢查 (確保傳入值已被清洗) ---
 function isValidTaiwanID(id) {
     if (!id) return false;
     id = toHalfWidth(id).toUpperCase();
@@ -206,7 +193,6 @@ function isValidTaiwanID(id) {
     return sum % 10 === 0;
 }    
 
-// --- 3. 整合型欄位驗證 UI (支援 ID 與 Phone) ---
 function validateField(input, type = 'ID') {
     const hint = input.nextElementSibling;
     const val = input.value.trim();
@@ -219,7 +205,7 @@ function validateField(input, type = 'ID') {
     let isValid = false;
     if (type === 'ID') {
         isValid = isValidTaiwanID(val);
-        if (isValid) input.value = toHalfWidth(val).toUpperCase(); // 自動轉大寫半形
+        if (isValid) input.value = toHalfWidth(val).toUpperCase();
     } else if (type === 'PHONE') {
         isValid = isValidTaiwanPhone(val);
     }
@@ -257,19 +243,15 @@ window.onload = async function() {
     const params = new URLSearchParams(window.location.search);
     const title = params.get('event');
     
-    // 基本權限檢查
     if (!currentUser.phone) { location.href = "index.html"; return; }
     if (!title) { showToast("無效的活動資訊", "error"); return; }
 
-    // 1. 先嘗試從緩存抓取
     let allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
     let target = allEvents.find(e => String(e.title).trim() === String(title).trim());
 
-    // 2. 🌟 防呆機制：如果緩存抓不到，立即向伺服器請求最新資料
     if (!target) {
         document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
         try {
-            // 呼叫你的 GAS 獲取完整清單 (假設 type: 'get_events_page' 是你原有的讀取功能)
             const response = await fetch(`${GAS_URL}?type=get_events_page`);
             const remoteData = await response.json();
             if (remoteData) {
@@ -281,7 +263,6 @@ window.onload = async function() {
         }
     }
 
-    // 3. 渲染畫面
     if (target) {
         eventConfig = {
             title: title,
@@ -291,10 +272,14 @@ window.onload = async function() {
             isTourBus: isTrue(target.isTourBus)
         };
         
-        // 更新 UI
         document.getElementById('displayEventTitle').innerText = eventConfig.title;
         document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
         
+        // 帶入姓名
+        if(currentUser.name) {
+            document.getElementById('mainName').value = currentUser.name;
+        }
+
         initDynamicUI();
         updateTotal();
     } else {
@@ -303,7 +288,6 @@ window.onload = async function() {
     }
 };
 
-// 輔助函數：確保布林值判定準確
 function isTrue(val) {
     if (typeof val === 'boolean') return val;
     if (!val) return false;
@@ -321,16 +305,36 @@ function isTrue(val) {
             transportSelect.innerHTML = `<option value="搭乘遊覽車">統一安排</option>`;
             transportSelect.disabled = true;
         } else {
-            transportSelect.innerHTML = `<option value="自駕">自行開車</option><option value="共乘">共乘不開車</option>`;
+            // 🌟 擴充：加入「個人自理」選項
+            transportSelect.innerHTML = `
+                <option value="自駕">自行開車</option>
+                <option value="共乘">共乘不開車</option>
+                <option value="個人自理">個人自理</option>
+            `;
             transportSelect.value = "自駕";
         }
         checkTransportLogic();
     }
     
+    // 🌟 核心防呆連動：只有選「自駕」才會同時看到「人數」與「車號」
     function checkTransportLogic() {
         const val = document.getElementById('mainTransport').value;
-        const showSeats = (!eventConfig.isTourBus && val === '自駕');
-        document.getElementById('seatsWrapper').classList.toggle('hidden', !showSeats);
+        const isSelfDrive = (!eventConfig.isTourBus && val === '自駕');
+        
+        // 控制可載人數欄位
+        document.getElementById('seatsWrapper').classList.toggle('hidden', !isSelfDrive);
+        
+        // 控制車號欄位
+        const carWrapper = document.getElementById('carNumberWrapper');
+        const carInput = document.getElementById('mainCarNumber');
+        
+        if (isSelfDrive) {
+            carWrapper.classList.remove('hidden');
+        } else {
+            carWrapper.classList.add('hidden');
+            carInput.value = ''; // 防呆：如果切換成共乘或自理，自動清空輸入框
+            carInput.classList.remove('input-error');
+        }
     }
 
 function adjustPartnerFields() {
@@ -338,10 +342,8 @@ function adjustPartnerFields() {
         const container = document.getElementById('partnerContainer');
         const currentFields = container.querySelectorAll('.partner-card').length;
 
-        // 1. 人數不變則不動作
         if (count === currentFields) return;
 
-        // 2. 減少人數時的防誤刪確認
         if (currentFields > count && currentFields > 0) {
             if (!confirm("減少人數將會清除資料，確定嗎？")) {
                 document.getElementById('partnerCountSelect').value = currentFields;
@@ -349,7 +351,6 @@ function adjustPartnerFields() {
             }
         }
 
-        // 3. 根據活動需求定義身分證與生日的 HTML (解決未定義錯誤)
         let idHtml = "";
         if (eventConfig.needId) {
             idHtml = `
@@ -366,7 +367,6 @@ function adjustPartnerFields() {
             `;
         }
 
-        // 4. 生成新的訪客欄位
         let newHtml = "";
         for (let i = 0; i < count; i++) {
             newHtml += `
@@ -419,12 +419,29 @@ async function submitForm(event) {
         const overlay = document.getElementById('loadingOverlay');
         
         try {
-            // --- 1. 主要報名者資料驗證 ---
+            // --- 1. 主要報名者資料與車號驗證 ---
             const mainIDInput = document.getElementById('mainID');
             const mainID = mainIDInput ? toHalfWidth(mainIDInput.value).toUpperCase() : "";
             const mainBirthday = document.getElementById('mainBirthday')?.value || "";
+            const transportValue = document.getElementById('mainTransport').value;
             
-            // 檢查身分證 (若活動需要)
+            // 🌟 新增：車號防呆攔截
+            const carInput = document.getElementById('mainCarNumber');
+            let carNumber = carInput ? toHalfWidth(carInput.value).toUpperCase().trim() : "";
+            
+            if (!eventConfig.isTourBus && transportValue === '自駕') {
+                if (!carNumber) {
+                    showToast("請填寫自駕車牌號碼，以供社區登記", "error");
+                    carInput.classList.add('input-error');
+                    carInput.focus();
+                    return;
+                } else {
+                    carInput.classList.remove('input-error');
+                }
+            } else {
+                carNumber = ""; // 非自駕則一律保持空字串上傳
+            }
+
             if (eventConfig.needId) {
                 if (!validateField(mainIDInput, 'ID')) { 
                     showToast("主要報名者身分證字號有誤", "error");
@@ -453,21 +470,18 @@ async function submitForm(event) {
                 const idNum = idInput ? toHalfWidth(idInput.value).toUpperCase() : "";
                 const bday = pBirthdays[i]?.value || "";
 
-                // 驗證姓名
                 if (!name) { 
                     showToast(`請填寫訪客 ${i+1} 姓名`, "error"); 
                     pNames[i].focus();
                     return; 
                 }
                 
-                // 🌟 新增：驗證電話 (09開頭10碼)
                 if (!validateField(phoneInput, 'PHONE')) {
                     showToast(`訪客 ${i+1} 電話格式有誤 (需09開頭10碼)`, "error");
                     phoneInput.focus();
                     return;
                 }
                 
-                // 驗證身分證與生日 (若活動需要)
                 if (eventConfig.needId) {
                     if (!validateField(idInput, 'ID')) {
                         showToast(`訪客 ${i+1} 身分證字號有誤`, "error");
@@ -482,7 +496,7 @@ async function submitForm(event) {
 
                 partnerRegistrations.push({
                     name, phone, idNumber: idNum, birthday: bday,
-                    diet: pDiets[i].value, transport: "", seats: 0,
+                    diet: pDiets[i].value, transport: "", seats: 0, carNumber: "", // 訪客車號欄位留空
                     isMember: false, proxy: currentUser.name, fee: eventConfig.guestFee, note: ""
                 });
             }
@@ -500,8 +514,9 @@ async function submitForm(event) {
                         idNumber: mainID,
                         birthday: mainBirthday,
                         diet: document.getElementById('mainDiet').value,
-                        transport: document.getElementById('mainTransport').value,
+                        transport: transportValue,
                         seats: document.getElementById('mainSeats').value || 0,
+                        carNumber: carNumber, // 🌟 成功包進 Payload！會自動填入後端試算表對應的欄位
                         isMember: true, proxy: "本人", fee: eventConfig.memberFee,
                         note: document.getElementById('regNote').value
                     },

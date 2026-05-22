@@ -1220,20 +1220,18 @@ function renderVoteContent(voteData) {
     const isVoted = voteStatus ? voteStatus.voted : false;
 
     // ==========================================
-    // 🌟 2. 核心時間邏輯判斷 (修正 Apple 裝置相容性與開始時間)
+    // 2. 核心時間邏輯判斷
     // ==========================================
     const now = new Date();
     
-    // 將 "2026-05-21 12:00" 的橫槓替換為斜線 "2026/05/21 12:00"，解決 iPhone 無法解析的問題
     const safeStartTime = voteData.startTime ? voteData.startTime.replace(/-/g, '/') : null;
     const safeEndTime = voteData.endTime ? voteData.endTime.replace(/-/g, '/') : null;
 
-    // 轉換為真正的時間物件 (若資料庫沒填，則給予極端預設值防呆)
     const startTime = safeStartTime ? new Date(safeStartTime) : new Date(0); 
     const endTime = safeEndTime ? new Date(safeEndTime) : new Date('2099/12/31');
 
-    const isBeforeStart = now < startTime; // 判斷：活動是否還沒開始
-    const isAfterEnd = now > endTime;      // 判斷：活動是否已經結束
+    const isBeforeStart = now < startTime; // 活動尚未開始
+    const isAfterEnd = now > endTime;      // 活動已經結束
 
     // 判斷是否顯示統計結果： (設定為 ALWAYS) 或者 (設定為 HIDE 且 時間已過)
     const shouldShowResult = (voteData.showResult === 'ALWAYS') || (voteData.showResult === 'HIDE' && isAfterEnd);
@@ -1249,10 +1247,10 @@ function renderVoteContent(voteData) {
     let mainContentHtml = "";
 
     // ==========================================
-    // 🌟 狀態判斷分支
+    // 🌟 狀態判斷分支（已重構權限與優先級）
     // ==========================================
     if (isBeforeStart) {
-        // --- ⏳ 新增狀態：活動尚未開始 ---
+        // --- ⏳ 狀態：活動尚未開始 ---
         mainContentHtml = `
             <div class="py-12 text-center bg-white rounded-3xl shadow-inner border border-gray-100">
                 <i class="fas fa-hourglass-start text-emerald-300 text-5xl mb-4"></i>
@@ -1265,103 +1263,102 @@ function renderVoteContent(voteData) {
                 <button onclick="closeVoteOverlay()" class="mt-8 w-3/4 mx-auto bg-slate-400 py-4 rounded-full text-white font-bold block">我知道了</button>
             </div>
         `;
-    } else if (isVoted) {
-        if (shouldShowResult) {
-            // --- 📊 狀態 A：已投票後的統計結果渲染 ---
-            const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
+    } 
+    // 💡 關鍵修正：只要系統判定「應該顯示結果」，且（用戶投過票、或活動已截止），就一律走綠色通道看結果！
+    else if (shouldShowResult && (isVoted || isAfterEnd)) {
+        // --- 📊 狀態 A：展示統計結果（不論有沒有投，截止後或設定為 ALWAYS 都能看） ---
+        const stats = voteData.stats || { total: 0, details: {}, voterLists: {} };
 
-            mainContentHtml = optionsArray.map(opt => {
-                let count = 0;
-                Object.keys(stats.details).forEach(key => {
+        mainContentHtml = optionsArray.map(opt => {
+            let count = 0;
+            Object.keys(stats.details).forEach(key => {
+                if (key.split(',').includes(opt)) {
+                    count += stats.details[key];
+                }
+            });
+
+            const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+            
+            let namesArray = [];
+            if (stats.voterLists) {
+                Object.keys(stats.voterLists).forEach(key => {
                     if (key.split(',').includes(opt)) {
-                        count += stats.details[key];
+                        namesArray = namesArray.concat(stats.voterLists[key]);
                     }
                 });
+            }
+            const names = [...new Set(namesArray)].join('、'); 
 
-                const percent = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
-                
-                let namesArray = [];
-                if (stats.voterLists) {
-                    Object.keys(stats.voterLists).forEach(key => {
-                        if (key.split(',').includes(opt)) {
-                            namesArray = namesArray.concat(stats.voterLists[key]);
-                        }
-                    });
-                }
-                const names = [...new Set(namesArray)].join('、'); 
-
-                return `
-                    <div class="mb-8">
-                        <div class="flex justify-between items-end mb-2 px-1">
-                            <span class="font-bold text-emerald-900 text-lg">${opt}</span>
-                            <span class="text-emerald-600 font-black">
-                                ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
-                            </span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
-                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
-                        </div>
-                        ${!voteData.isAnonymous && names ? `
-                            <div class="mt-2 px-1">
-                                <p class="text-[11px] text-gray-400 leading-relaxed italic">
-                                    <i class="fas fa-users text-[10px]"></i> ${names}
-                                </p>
-                            </div>
-                        ` : ''}
+            return `
+                <div class="mb-8">
+                    <div class="flex justify-between items-end mb-2 px-1">
+                        <span class="font-bold text-emerald-900 text-lg">${opt}</span>
+                        <span class="text-emerald-600 font-black">
+                            ${percent}% <span class="text-xs font-normal text-gray-400">(${count}票)</span>
+                        </span>
                     </div>
-                `;
-            }).join('');
-            
-            mainContentHtml += `
-                <div class="mt-10">
-                    <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
-                        關閉視窗
-                    </button>
+                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                        <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+                    </div>
+                    ${!voteData.isAnonymous && names ? `
+                        <div class="mt-2 px-1">
+                            <p class="text-[11px] text-gray-400 leading-relaxed italic">
+                                <i class="fas fa-users text-[10px]"></i> ${names}
+                            </p>
+                        </div>
+                    ` : ''}
                 </div>
             `;
-            
-        } else {
-            // --- ⏳ 狀態 B：已投票，但 HIDE 且時間還沒到 ---
-            mainContentHtml = `
-                <div class="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl shadow-inner border border-gray-100">
-                    <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4 animate-pulse">
-                        <i class="fas fa-clock text-3xl"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">投票已接收！</h3>
-                    <p class="text-gray-500 px-6 text-sm leading-relaxed">
-                        為確保公正，統計結果將於<br>
-                        <span class="text-emerald-700 font-bold">${voteData.endTime}</span><br>
-                        截止後正式公布，請到時再回來查看喔！
-                    </p>
+        }).join('');
+        
+        mainContentHtml += `
+            <div class="mt-10">
+                <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
+                    關閉視窗
+                </button>
+            </div>
+        `;
+        
+    } else if (isVoted && !shouldShowResult) {
+        // --- ⏳ 狀態 B：已投票，但結果設定為 HIDE 且時間還沒截止 ---
+        mainContentHtml = `
+            <div class="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl shadow-inner border border-gray-100">
+                <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                    <i class="fas fa-clock text-3xl"></i>
                 </div>
-                <div class="mt-10">
-                    <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
-                        關閉視窗
-                    </button>
-                </div>
-            `;
-        }
-
+                <h3 class="text-xl font-bold text-gray-800 mb-2">投票已接收！</h3>
+                <p class="text-gray-500 px-6 text-sm leading-relaxed">
+                    為確保公正，統計結果將於<br>
+                    <span class="text-emerald-700 font-bold">${voteData.endTime}</span><br>
+                    截止後正式公布，請到時再回來查看喔！
+                </p>
+            </div>
+            <div class="mt-10">
+                <button onclick="closeVoteOverlay()" class="w-full bg-slate-500 py-5 rounded-[2.5rem] shadow-lg text-white text-xl font-black tracking-widest active:scale-95 transition-all">
+                    關閉視窗
+                </button>
+            </div>
+        `;
     } else if (isAfterEnd) {
-        // --- 🚫 狀態 C：活動已截止，且該用戶未參與投票 ---
+        // --- 🚫 狀態 C：活動已截止，且系統設定完全不公開結果（如 showResult 設為完全隱藏） ---
         mainContentHtml = `
             <div class="py-12 text-center">
                 <i class="fas fa-exclamation-circle text-gray-300 text-5xl mb-4"></i>
-                <p class="text-gray-400 font-bold italic">本項活動已於 ${voteData.endTime} 截止。<br>僅限參與者查看統計結果。</p>
+                <p class="text-gray-400 font-bold italic">本項活動已於 ${voteData.endTime} 截止。<br>此欄位設定不開放查看統計結果。</p>
                 <button onclick="closeVoteOverlay()" class="mt-8 w-full bg-slate-400 py-4 rounded-full text-white font-bold">返回首頁</button>
             </div>
         `;
     } else {
-        // --- 🗳️ 狀態 D：未投票且活動進行中，顯示選擇清單 ---
+        // --- 🗳️ 狀態 D：未投票且活動進行中，顯示選擇清單讓會員正常投票 ---
         const optionsHtml = optionsArray.map((opt) => `
-    <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
-        <input type="checkbox" value="${opt}" class="vote-checkbox hidden peer">
-        <div class="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
-            <i class="fas fa-check text-white text-xs opacity-0 peer-checked:opacity-100"></i>
-        </div>
-        <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
-    </label>
-`).join('');
+            <label class="group relative flex items-center p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer transition-all hover:border-emerald-500 active:scale-[0.98] mb-4 shadow-sm">
+                <input type="checkbox" value="${opt}" class="vote-checkbox hidden peer">
+                <div class="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-all">
+                    <i class="fas fa-check text-white text-xs opacity-0 peer-checked:opacity-100"></i>
+                </div>
+                <span class="ml-4 text-lg font-bold text-gray-700 peer-checked:text-emerald-900">${opt}</span>
+            </label>
+        `).join('');
 
         mainContentHtml = `
             <div id="optionsContainer">${optionsHtml}</div>
@@ -1377,8 +1374,8 @@ function renderVoteContent(voteData) {
     container.innerHTML = `
         <div class="max-w-md mx-auto">
             ${voteData.posterUrl ? `
-                <div class="rounded-[2rem] overflow-hidden shadow-md mb-8 aspect-video bg-gray-200">
-                <img src="${getDirectImageUrl(voteData.posterUrl)}" class="w-full h-full object-cover">
+                <div class="rounded-[2rem] overflow-hidden shadow-md mb-8 aspect-video bg-gray-100">
+                <img src="${getDirectImageUrl(voteData.posterUrl)}" class="w-full h-full object-contain">
             </div>
             ` : ''}
             
@@ -1387,7 +1384,7 @@ function renderVoteContent(voteData) {
                     <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
                         ${isAfterEnd ? 'Poll Closed' : (isVoted ? 'Voted' : 'Active Poll')}
                     </span>
-                    ${!voteData.isAnonymous && isVoted && shouldShowResult ? `
+                    ${!voteData.isAnonymous && (isVoted || isAfterEnd) && shouldShowResult ? `
                         <span class="text-[10px] text-gray-400 font-bold">● 實名投票結果</span>
                     ` : ''}
                 </div>
@@ -1398,8 +1395,7 @@ function renderVoteContent(voteData) {
             ${mainContentHtml}
         </div>
     `;
-    // 🌟 關鍵位置：在 innerHTML 賦值之後，元素才真正出現在頁面上
-    // 只有在「未投票且活動進行中」的情況下才需要初始化限制邏輯
+
     if (!isVoted && !isAfterEnd) {
         setupCheckboxLimit(parseInt(voteData.maxChoices) || 1);
     }

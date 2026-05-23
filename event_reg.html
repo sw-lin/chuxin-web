@@ -95,9 +95,14 @@
         <div id="trafficStats" class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
             <h4 class="text-[11px] text-blue-700 font-bold mb-2">🚗 交通統計</h4>
             <div class="space-y-1 text-[12px] font-bold text-blue-900">
-                <p>自駕：<span id="carCount">0</span> 台 (可載 <span id="seatCount">0</span> 人)</p>
-                <p>共乘需求：<span id="carpoolCount">0</span> 人</p>
+               <p>自駕：<span id="carCount">0</span> 台 (可載 <span id="seatCount">0</span> 人)</p>
+               <p>共乘需求：<span id="carpoolCount">0</span> 人</p>
             </div>
+    
+            <button id="copyCarListBtn" onclick="copyCarListToClipboard()" class="w-full mt-3 py-2 bg-blue-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-blue-600 active:scale-95 transition-all" style="display: none;">
+              <i class="fas fa-clipboard-list mr-1"></i> 複製車牌名冊
+            </button>
+    
             <p class="text-[10px] text-blue-500/70 mt-2 italic">※ 僅限非遊覽車活動</p>
         </div>
 
@@ -1281,15 +1286,18 @@ function exportInsuranceCSV() {
     
     showToast("📂 CSV 匯出完成");
 }        
-// --- 🌟 新增：行政看板數據計算函式 ---
+
+// --- 🌟 新增與優化：行政看板數據計算函式 ---
 function updateAdminStats(list) {
     if (!list) return;
 
     // --- 第一階段：建立「誰代理誰」的交通對照表 ---
     const transportMap = {};
-    // 🌟 新增：準備存放過濾後的名單
     allData.currentDrivers = [];   // 存放司機
     allData.currentPassengers = []; // 存放乘客
+    
+    // 🌟 新增：準備存放格式化車牌字串的陣列
+    allData.carPlateList = []; 
     
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
@@ -1325,6 +1333,14 @@ function updateAdminStats(list) {
                 carCount++;
                 totalSeats += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
                 allData.currentDrivers.push(r); // 存入司機名單
+                
+                // 🌟 新增：撈取車號，若有填寫車號則塞入統計清單
+                const carNum = (r["車號"] || "").trim();
+                if (carNum) {
+                    allData.carPlateList.push(`- 車主：${name} (${carNum})`);
+                } else {
+                    allData.carPlateList.push(`- 車主：${name} (未填寫車牌)`);
+                }
             }
         } else if (trans === "共乘" || trans === "搭車") {
             carpoolCount++;
@@ -1345,7 +1361,7 @@ function updateAdminStats(list) {
 
     setUI('totalCount', list.length); 
     setUI('totalReg', list.length);   
-    setUI('paidCount', list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳")).length);
+    setUI('paidCount', list.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("App已繳") || (r["狀態"] || r["繳費狀態"] || "").includes("已繳")).length);
     setUI('carCount', carCount);
     setUI('seatCount', totalSeats);
     setUI('carpoolCount', carpoolCount);
@@ -1357,8 +1373,6 @@ function updateAdminStats(list) {
     }
 
     // --- 第四階段：控制按鈕顯示/隱藏 ---
-    // --- UI 自動切換邏輯 ---
-    // 🌟 修正：使用更寬鬆且與設定頁面一致的 Key 值判斷
     const isBus = (
         currentEventConfig?.["是遊覽車行"] === "是" || 
         currentEventConfig?.isTourBus === "是" || 
@@ -1372,24 +1386,54 @@ function updateAdminStats(list) {
         currentEventConfig?.needId === "Y"
     );
 
-    // 1. 處理保險圖示 (保險名冊)
+    // 1. 處理保險圖示
     const insBtn = document.getElementById('exportInsuranceBtn');
-    if (insBtn) {
-        // 如果需要身分證，就顯示按鈕；否則隱藏
-        insBtn.style.display = needID ? 'inline-block' : 'none';
-    }
+    if (insBtn) insBtn.style.display = needID ? 'inline-block' : 'none';
 
     // 2. 處理車輛分配按鈕
     const carBtn = document.getElementById('carpoolBtn');
-    if (carBtn) {
-        carBtn.style.display = isBus ? 'none' : 'inline-block';
-    }
+    if (carBtn) carBtn.style.display = isBus ? 'none' : 'inline-block';
 
     // 3. 處理交通統計區塊
     const tStats = document.getElementById('trafficStats');
-    if (tStats) {
-        tStats.style.display = isBus ? 'none' : 'block';
-    }    
+    if (tStats) tStats.style.display = isBus ? 'none' : 'block';    
+    
+    // 🌟 4. 新增：控制「複製車牌名冊」按鈕顯示邏輯 (遊覽車活動不顯示，且有自駕車才顯示)
+    const copyCarBtn = document.getElementById('copyCarListBtn');
+    if (copyCarBtn) {
+        copyCarBtn.style.display = (!isBus && carCount > 0) ? 'block' : 'none';
+    }
+}  
+/**
+ * 🌟 新增功能：一鍵複製格式化後的車牌名冊至系統剪貼簿
+ */
+function copyCarListToClipboard() {
+    // 確保有撈到資料
+    if (!allData.carPlateList || allData.carPlateList.length === 0) {
+        showToast("⚠️ 目前名單中無任何自駕車輛資訊");
+        return;
+    }
+
+    const eventTitle = document.getElementById('currentEventTitle')?.innerText || "本次活動";
+    
+    // 建立漂亮的複製格式
+    let textText = `【築心讀書會 - 車牌管制名冊】\n`;
+    textText += `活動名稱：${eventTitle}\n`;
+    textText += `總計車輛：${allData.carPlateList.length} 台\n`;
+    textText += `=======================\n`;
+    textText += allData.carPlateList.join("\n") + `\n`;
+    textText += `=======================\n`;
+    textText += `產出時間：${new Date().toLocaleString('zh-TW')}`;
+
+    // 執行複製到剪貼簿
+    navigator.clipboard.writeText(textText)
+        .then(() => {
+            showToast("📋 車牌名冊已成功複製至剪貼簿！");
+        })
+        .catch(err => {
+            console.error("無法複製車牌清單: ", err);
+            showToast("❌ 複製失敗，瀏覽器不支援此安全操作");
+        });
 }        
 function copyPaidListToLine() {
     // 1. 取得已繳費名單

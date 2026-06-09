@@ -756,7 +756,7 @@ function openRegModal(phone, name) {
             document.getElementById('reg_diet').value = r["餐食"] || r["飲食"] || "葷食";
 
             // 🌟 關鍵修正點：全面防禦「是否為會員」的讀取錯誤 (相容所有可能的欄位名)
-            const memStatus = r["是否為會員"] || r["是否會員"] || r["會員身份"] || r["會員"] || "是";
+            const memStatus = r["是否為會員"] || r["是否會員"] || r["會員身分"];
             document.getElementById('reg_is_member').value = (memStatus === '是' || memStatus === 'Y') ? '是' : '否';
 
             // 生日填充

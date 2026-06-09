@@ -750,12 +750,13 @@ function openRegModal(phone, name) {
             document.getElementById('reg_phone').value = String(r["電話"] || "").replace(/'/g, "");
             document.getElementById('reg_old_phone').value = String(phone).replace(/'/g, "");
             document.getElementById('reg_id').value = r["身分證"] || r["身分證字號"] || "";
-            document.getElementById('reg_diet').value = r["餐食"] || "葷食";
             document.getElementById('reg_note').value = r["備註"] || "";
+            
+            // 🌟 修正點：擴充飲食/餐食相容性
+            document.getElementById('reg_diet').value = r["餐食"] || r["飲食"] || "葷食";
 
-            // 🌟 修正點 1：讀取會員狀態 (H 欄位)
-            // 檢查可能的 Key 名稱 (中文或英文)
-            const memStatus = r["會員身份"] || r["會員"] || r["isMember"] || "否";
+            // 🌟 關鍵修正點：全面防禦「是否為會員」的讀取錯誤 (相容所有可能的欄位名)
+            const memStatus = r["是否為會員"] || r["是否會員"] || r["會員身份"] || r["會員"] || r["isMember"] || "否";
             document.getElementById('reg_is_member').value = (memStatus === '是' || memStatus === 'Y') ? '是' : '否';
 
             // 生日填充
@@ -786,17 +787,16 @@ function openRegModal(phone, name) {
                 if (rd.value === transVal) rd.checked = true;
             });
             
-            // 🌟 1. 新增：車牌號碼回填 (相容 P 欄的名稱)
+            // 車牌號碼回填
             const carInput = document.getElementById('reg_car_number');
             if (carInput) {
                 carInput.value = r["車號"] || r["車牌"] || "";
             }
 
-            // 🌟 2. 新增：設定刪除按鈕
+            // 設定刪除按鈕
             const delBtn = document.getElementById('modal_delete_btn');
             if (delBtn) {
-                delBtn.classList.remove('hidden'); // 修改模式顯示刪除鍵
-                // 動態綁定 onclick，點擊時先關彈窗，再呼叫刪除
+                delBtn.classList.remove('hidden'); 
                 delBtn.setAttribute('onclick', `closeRegModal(); deleteSingleReg('${phone}', '${name}');`);
             } 
             
@@ -810,11 +810,9 @@ function openRegModal(phone, name) {
         // 如果沒有傳入參數，代表是「新增報名」
         console.log("📝 新增報名模式：已執行重置。");
 
-        // 🌟 確保新增模式時，隱藏刪除按鈕
         const delBtn = document.getElementById('modal_delete_btn');
         if (delBtn) delBtn.classList.add('hidden'); 
         
-        // 額外確保新增時預設選取一個交通方式（例如自駕）
         const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
         if (defaultTrans) {
             defaultTrans.checked = true;

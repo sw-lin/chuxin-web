@@ -337,7 +337,12 @@ async function syncData() {
             if (data.events && Array.isArray(data.events)) {
                localStorage.setItem('allEvents', JSON.stringify(data.events));
                console.log("✅ 已同步活動配置到快取，包含欄位：", Object.keys(data.events[0] || {}));
-            }         
+            }  
+            // 🌟 新增：將真正的行事曆(Calendar)存入快取，供簽到功能判定使用
+            if (data.calendar && Array.isArray(data.calendar)) {
+               localStorage.setItem('calendarList', JSON.stringify(data.calendar));
+                console.log("✅ 總行事曆已同步至快取");
+            }
 
             // --- B. 頂部跑馬燈公告 ---
             const newsElem = document.getElementById('news');
@@ -484,66 +489,47 @@ function checkTodayCheckInStatus() {
     const hintElem = document.getElementById('checkInTargetHint');
     if (!container) return;
 
-    // 1. 取得今天日期的 YYYY-MM-DD 格式 (以台灣時區為主)
+    // 1. 取得今天日期的 YYYY-MM-DD
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const date = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${date}`; // 例如: "2026-06-12"
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    // 2. 判定時間鎖：檢查目前時間是否在 09:00 ~ 13:00 之間
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeVal = currentHour * 60 + currentMinute;
-    const startCheckInTime = 9 * 60;   // 09:00 (總分鐘數 540)
-    const endCheckInTime = 13 * 60;    // 13:00 (總分鐘數 780)
-
-    if (currentTimeVal < startCheckInTime || currentTimeVal > endCheckInTime) {
-        console.log("⏳ 目前非報到時段 (09:00~13:00)，隱藏簽到功能。");
+    // 2. 判定時間鎖：是否在 09:00 ~ 13:00 之間
+    const currentTimeVal = now.getHours() * 60 + now.getMinutes();
+    if (currentTimeVal < (9 * 60) || currentTimeVal > (13 * 60)) {
         container.style.display = 'none';
         return;
     }
 
-    // 3. 判定空間日：從 localStorage 取出剛剛 syncData 存下來的完整活動配置
-    const localEventsStr = localStorage.getItem('allEvents');
-    if (!localEventsStr) {
+    // 3. ⭐ 精準判定：從真正的行事曆快取中搜尋今天是否有要報到的課程
+    const localCalStr = localStorage.getItem('calendarList');
+    if (!localCalStr) {
         container.style.display = 'none';
         return;
     }
 
     try {
-        const allEvents = JSON.parse(localEventsStr);
-        if (!Array.isArray(allEvents)) return;
-
-        // 搜尋今天是否有「需要 QR 報到」的活動
-        const todayEvent = allEvents.find(ev => {
-            // 處理活動日期格式，相容標準 ISO 或是 YYYY-MM-DD
-            let evDate = "";
-            if (ev["日期"]) {
-                evDate = String(ev["日期"]).substring(0, 10).replace(/\//g, '-');
-            }
-            
-            // 檢查 C 欄 (NeedQR) 是否為 "是"
-            const isNeedQR = (ev["needQR"] === "是" || ev["NeedQR"] === "是" || ev["是否需要報到"] === "是");
-            
-            return evDate === todayStr && isNeedQR;
+        const calendarList = JSON.parse(localCalStr);
+        
+        // 尋找今天的活動日期是否匹配，且 needQR 是否為 true
+        const todayCourse = calendarList.find(c => {
+            let cDate = c.dateText ? String(c.dateText).substring(0, 10) : "";
+            return cDate === todayStr && c.needQR === true;
         });
 
-        if (todayEvent) {
-            // ⭐ 成功解鎖：抓取今日活動名稱，並顯示雙軌簽到按鈕
-            todayCheckInEventTitle = String(todayEvent["活動名稱"] || todayEvent["主題"] || "今日讀書會活動").trim();
+        if (todayCourse) {
+            // 解鎖成功：取得行事曆上的「主題/課程名稱」
+            todayCheckInEventTitle = String(todayCourse.title || "固定課程活動").trim();
             
-            container.style.display = 'block'; // 浮現容器
+            container.style.display = 'block'; // 顯現雙軌報到卡片
             if (hintElem) {
-                hintElem.innerText = `🎯 今日簽到項目：【${todayCheckInEventTitle}】(開放至 13:00)`;
+                hintElem.innerText = `🎯 今日報到項目：【${todayCheckInEventTitle}】(開放至 13:00)`;
             }
-            console.log(`✅ [時空鎖判定通過] 今日為活動報到日，項目：${todayCheckInEventTitle}`);
+            console.log("🎯 [行事曆對齊判定成功] 開放現場報到項目：" + todayCheckInEventTitle);
         } else {
-            console.log("🍃 今日非指定的活動報到日，隱藏簽到按鈕。");
             container.style.display = 'none';
         }
     } catch (err) {
-        console.error("解析快取活動列表失敗:", err);
+        console.error("行事曆解析失敗:", err);
         container.style.display = 'none';
     }
 }

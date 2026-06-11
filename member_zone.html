@@ -101,10 +101,21 @@
         </div>
     </div>
 
-    <button onclick="startScanner()" class="w-full bg-[#F97316] py-5 rounded-[2.5rem] shadow-xl text-white flex items-center justify-center space-x-3 active:scale-95 transition-all hover:bg-orange-600">
-        <i class="fas fa-qrcode text-2xl"></i>
-        <span class="text-xl font-black tracking-widest">掃碼報到</span>
-    </button>
+    <div id="checkInContainer" class="mt-6 p-4 bg-emerald-50 rounded-[2rem] border border-emerald-100 shadow-inner" style="display: none;">
+    <p class="text-xs text-center text-emerald-800 font-bold mb-3">📍 今日活動現場簽到專區</p>
+    <div class="flex flex-col sm:flex-row gap-3">
+        <button onclick="startScanner()" class="flex-1 bg-orange-500 py-4 rounded-[2rem] shadow-md text-white flex items-center justify-center space-x-2 active:scale-95 transition-all hover:bg-orange-600">
+            <i class="fas fa-qrcode text-lg"></i>
+            <span class="text-base font-bold tracking-widest">掃碼報到</span>
+        </button>
+
+        <button onclick="startGpsCheckIn()" class="flex-1 bg-blue-600 py-4 rounded-[2rem] shadow-md text-white flex items-center justify-center space-x-2 active:scale-95 transition-all hover:bg-blue-700">
+            <i class="fas fa-map-marker-alt text-lg"></i>
+            <span class="text-base font-bold tracking-widest">GPS 現場報到</span>
+        </button>
+    </div>
+    <p class="text-[10px] text-center text-gray-400 mt-2" id="checkInTargetHint">活動報到開放時間：09:00 ~ 13:00</p>
+    </div>
 
     <div id="vote-notice-container" class="w-full"></div>
     
@@ -691,6 +702,115 @@ function closeScanner() {
         }).catch(err => console.warn("停止掃描失敗", err));
     }
 } 
+/**
+ * 🌟 全新功能：GPS 現場報到前端地理圍欄驗證與傳送
+ */
+function startGpsCheckIn() {
+    if (!navigator.geolocation) {
+        showToast("您的裝置或瀏覽器不支援 GPS 定位功能", "error");
+        return;
+    }
+
+    // 安全防護：萬一全域變數遺失，防呆防錯
+    if (!todayCheckInEventTitle) {
+        showToast("未能辨識今日簽到活動名稱，請重新整理頁面", "error");
+        return;
+    }
+
+    showLoading(true); // 顯示系統原有的讀取蓋板
+
+    navigator.geolocation.getCurrentPosition(
+        async function (position) {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+
+            // 📍 清大李存敏館中心座標
+            const targetLat = 24.79373;
+            const targetLng = 120.99308;
+            const maxRadiusMeter = 150; // 允許半徑150公尺誤差（防室內飄移）
+
+            // 計算距離 (公尺)
+            const R = 6371000;
+            const dLat = (targetLat - userLat) * Math.PI / 180;
+            const dLng = (targetLng - userLng) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(userLat * Math.PI / 180) * Math.cos(targetLat * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+
+            // 地理圍欄判定
+            if (distance > maxRadiusMeter) {
+                showLoading(false);
+                alert(`📍 定位失敗：您目前距離李存敏館約 ${Math.round(distance)} 公尺，已超出簽到範圍（150公尺）。請移至教室或大樓大廳再試。`);
+                return;
+            }
+
+            // 驗證通過 ➔ 開始發送至後端
+            const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || "{}");
+            if (!userInfo.phone) {
+                showLoading(false);
+                showToast("登入資訊失效，請重新登入", "error");
+                return;
+            }
+
+            showToast("GPS 驗證成功，傳送中...", "info");
+
+            try {
+                // 🚀 打包與原本「掃碼簽到」一模一樣的格式，完美相容現有 GAS
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'checkin',
+                        phone: userInfo.phone,
+                        name: userInfo.name || "未知",
+                        eventTitle: todayCheckInEventTitle // 直接使用前端判定撈出的活動 Title
+                    })
+                });
+
+                if (!response.ok) throw new Error("Server Response Not OK");
+                const result = await response.json();
+
+                if (result.result === "SUCCESS") {
+                    showToast("現場 GPS 報到成功！", "success");
+                    if (typeof confetti === 'function') {
+                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    }
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    showToast(result.message || "報到未完成", "info");
+                }
+            } catch (e) {
+                console.error("GPS CheckIn Error:", e);
+                showToast("通訊異常或您已報到過，請重整確認", "error");
+            } finally {
+                showLoading(false);
+            }
+        },
+        function (error) {
+            showLoading(false);
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("❌ 報到失敗：請至手機設定中，將瀏覽器的位置定位權限改為「允許/使用App時允許」再點擊報到。");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("❌ 報到失敗：基地台或 GPS 訊號微弱，無法取得位置。");
+                    break;
+                case error.TIMEOUT:
+                    alert("❌ 定位超時：請移至窗邊或訊號良好處重試。");
+                    break;
+                default:
+                    alert("❌ 發生未知的定位授權異常。");
+            }
+        },
+        {
+            enableHighAccuracy: true, // 強制高精度硬體 GPS
+            timeout: 8000,
+            maximumAge: 0
+        }
+    );
+}
+    
 
 // 全域變數預期在 syncData 之後會被填充
 let globalConfig = {}; 

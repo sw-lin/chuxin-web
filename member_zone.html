@@ -461,6 +461,10 @@ if (promoRaw && !promoRaw.includes("目前尚無")) {
                 data.events || [],
                 data.registrations || []
             );
+            // 🌟 新增：等 updateUI 跑完且 localStorage 的 'allEvents' 穩定後，進行現場報到功能檢查
+            setTimeout(() => {
+                checkTodayCheckInStatus();
+            }, 100);
         }
     } catch (e) {
         console.error("❌ syncData 執行異常:", e);
@@ -468,6 +472,82 @@ if (promoRaw && !promoRaw.includes("目前尚無")) {
         if (overlay) overlay.style.display = 'none';
     }
 }
+// 全域變數：用來暫存「今天經判定需要簽到」的活動名稱
+let todayCheckInEventTitle = "";
+
+/**
+ * 🌟 新增：前端時空防護鎖判定
+ * 自動檢查當天是否為報到日 (Calendar中的 C欄 needQR === "是")，且時間在 09:00 ~ 13:00
+ */
+function checkTodayCheckInStatus() {
+    const container = document.getElementById('checkInContainer');
+    const hintElem = document.getElementById('checkInTargetHint');
+    if (!container) return;
+
+    // 1. 取得今天日期的 YYYY-MM-DD 格式 (以台灣時區為主)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const date = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${date}`; // 例如: "2026-06-12"
+
+    // 2. 判定時間鎖：檢查目前時間是否在 09:00 ~ 13:00 之間
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeVal = currentHour * 60 + currentMinute;
+    const startCheckInTime = 9 * 60;   // 09:00 (總分鐘數 540)
+    const endCheckInTime = 13 * 60;    // 13:00 (總分鐘數 780)
+
+    if (currentTimeVal < startCheckInTime || currentTimeVal > endCheckInTime) {
+        console.log("⏳ 目前非報到時段 (09:00~13:00)，隱藏簽到功能。");
+        container.style.display = 'none';
+        return;
+    }
+
+    // 3. 判定空間日：從 localStorage 取出剛剛 syncData 存下來的完整活動配置
+    const localEventsStr = localStorage.getItem('allEvents');
+    if (!localEventsStr) {
+        container.style.display = 'none';
+        return;
+    }
+
+    try {
+        const allEvents = JSON.parse(localEventsStr);
+        if (!Array.isArray(allEvents)) return;
+
+        // 搜尋今天是否有「需要 QR 報到」的活動
+        const todayEvent = allEvents.find(ev => {
+            // 處理活動日期格式，相容標準 ISO 或是 YYYY-MM-DD
+            let evDate = "";
+            if (ev["日期"]) {
+                evDate = String(ev["日期"]).substring(0, 10).replace(/\//g, '-');
+            }
+            
+            // 檢查 C 欄 (NeedQR) 是否為 "是"
+            const isNeedQR = (ev["needQR"] === "是" || ev["NeedQR"] === "是" || ev["是否需要報到"] === "是");
+            
+            return evDate === todayStr && isNeedQR;
+        });
+
+        if (todayEvent) {
+            // ⭐ 成功解鎖：抓取今日活動名稱，並顯示雙軌簽到按鈕
+            todayCheckInEventTitle = String(todayEvent["活動名稱"] || todayEvent["主題"] || "今日讀書會活動").trim();
+            
+            container.style.display = 'block'; // 浮現容器
+            if (hintElem) {
+                hintElem.innerText = `🎯 今日簽到項目：【${todayCheckInEventTitle}】(開放至 13:00)`;
+            }
+            console.log(`✅ [時空鎖判定通過] 今日為活動報到日，項目：${todayCheckInEventTitle}`);
+        } else {
+            console.log("🍃 今日非指定的活動報到日，隱藏簽到按鈕。");
+            container.style.display = 'none';
+        }
+    } catch (err) {
+        console.error("解析快取活動列表失敗:", err);
+        container.style.display = 'none';
+    }
+}
+    
 function updateUI(user, totalRequiredFromGAS, events, registrations) {
     console.log("=== updateUI 開始更新 ===");
 
@@ -703,34 +783,35 @@ function closeScanner() {
     }
 } 
 /**
- * 🌟 全新功能：GPS 現場報到前端地理圍欄驗證與傳送
+ * 🌟 新增：GPS 現場報到功能 (計算與清大李存敏館距離，符合則發送與掃碼一致的 Payload)
  */
 function startGpsCheckIn() {
     if (!navigator.geolocation) {
-        showToast("您的裝置或瀏覽器不支援 GPS 定位功能", "error");
+        alert("❌ 您的手機或瀏覽器不支援網路定位功能。");
         return;
     }
 
-    // 安全防護：萬一全域變數遺失，防呆防錯
     if (!todayCheckInEventTitle) {
-        showToast("未能辨識今日簽到活動名稱，請重新整理頁面", "error");
+        alert("❌ 未能成功識別今日活動標題，請重新整理頁面。");
         return;
     }
 
-    showLoading(true); // 顯示系統原有的讀取蓋板
+    // 呼叫您系統原有的讀取覆蓋畫面
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'flex';
 
     navigator.geolocation.getCurrentPosition(
         async function (position) {
             const userLat = position.coords.latitude;
             const userLng = position.coords.longitude;
 
-            // 📍 清大李存敏館中心座標
-            const targetLat = 24.79373;
-            const targetLng = 120.99308;
-            const maxRadiusMeter = 150; // 允許半徑150公尺誤差（防室內飄移）
+            // 📍 清大李存敏館（地科館）參考座標與最大接受半徑
+            const targetLat = 24.79373; 
+            const targetLng = 120.99308; 
+            const maxDistanceMeter = 150; // 允許 150 公尺內誤差範圍
 
-            // 計算距離 (公尺)
-            const R = 6371000;
+            // 🧮 計算地球海弗辛距離
+            const R = 6371000; 
             const dLat = (targetLat - userLat) * Math.PI / 180;
             const dLng = (targetLng - userLng) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -739,73 +820,73 @@ function startGpsCheckIn() {
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
 
-            // 地理圍欄判定
-            if (distance > maxRadiusMeter) {
-                showLoading(false);
-                alert(`📍 定位失敗：您目前距離李存敏館約 ${Math.round(distance)} 公尺，已超出簽到範圍（150公尺）。請移至教室或大樓大廳再試。`);
+            // 空間防護判定
+            if (distance > maxDistanceMeter) {
+                if (overlay) overlay.style.display = 'none';
+                alert(`📍 位置不符：您目前距離李存敏館約 ${Math.round(distance)} 公尺，超出報到範圍（150公尺）。請確認已抵達上課教室附近。`);
                 return;
             }
 
-            // 驗證通過 ➔ 開始發送至後端
+            // 取得目前 Session 登入的加密/明碼用戶資訊
             const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || "{}");
             if (!userInfo.phone) {
-                showLoading(false);
+                if (overlay) overlay.style.display = 'none';
                 showToast("登入資訊失效，請重新登入", "error");
                 return;
             }
 
-            showToast("GPS 驗證成功，傳送中...", "info");
+            showToast("GPS 驗證通過，傳送中...", "info");
 
             try {
-                // 🚀 打包與原本「掃碼簽到」一模一樣的格式，完美相容現有 GAS
+                // 🚀 發送與您原本 onScanSuccess 格式完全一致的 POST 請求
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({
                         type: 'checkin',
-                        phone: userInfo.phone,
-                        name: userInfo.name || "未知",
-                        eventTitle: todayCheckInEventTitle // 直接使用前端判定撈出的活動 Title
+                        phone: userInfo.phone,           
+                        name: userInfo.name || "未知",    
+                        eventTitle: todayCheckInEventTitle // 自動填入剛剛分析出的 C 欄對應活動標題
                     })
                 });
 
                 if (!response.ok) throw new Error("Server Response Not OK");
                 const result = await response.json();
-
+                
                 if (result.result === "SUCCESS") {
-                    showToast("現場 GPS 報到成功！", "success");
+                    showToast("報到成功！", "success");
                     if (typeof confetti === 'function') {
                         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
-                    setTimeout(() => location.reload(), 3000);
+                    setTimeout(() => location.reload(), 3000); 
                 } else {
                     showToast(result.message || "報到未完成", "info");
                 }
             } catch (e) {
-                console.error("GPS CheckIn Error:", e);
-                showToast("通訊異常或您已報到過，請重整確認", "error");
+                console.error("GPS 報到錯誤:", e);
+                showToast("通訊異常或您已報到過，請重新整理頁面確認", "error");
             } finally {
-                showLoading(false);
+                if (overlay) overlay.style.display = 'none';
             }
         },
         function (error) {
-            showLoading(false);
+            if (overlay) overlay.style.display = 'none';
             switch (error.code) {
                 case error.PERMISSION_DENIED:
-                    alert("❌ 報到失敗：請至手機設定中，將瀏覽器的位置定位權限改為「允許/使用App時允許」再點擊報到。");
+                    alert("❌ 報到失敗：您拒絕了定位權限。請檢查並開啟手機瀏覽器的隱私定位授權再重試。");
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    alert("❌ 報到失敗：基地台或 GPS 訊號微弱，無法取得位置。");
+                    alert("❌ 報到失敗：無法取得位置資訊（GPS訊號微弱），請移至窗邊或室外。");
                     break;
                 case error.TIMEOUT:
-                    alert("❌ 定位超時：請移至窗邊或訊號良好處重試。");
+                    alert("❌ 報到失敗：定位請求超時，請重試。");
                     break;
                 default:
-                    alert("❌ 發生未知的定位授權異常。");
+                    alert("❌ 定位發生未知錯誤。");
             }
         },
         {
-            enableHighAccuracy: true, // 強制高精度硬體 GPS
-            timeout: 8000,
+            enableHighAccuracy: true, // 強制開啟高精度真實硬體 GPS 定位
+            timeout: 10000,
             maximumAge: 0
         }
     );
@@ -993,7 +1074,7 @@ function renderCalendarActivity(calendar) {
     }
 
     const posterUrl = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(nextEvent.poster) : nextEvent.poster;
-    const hasDesc = nextEvent.desc && nextEvent.desc !== "歡迎永躍參加！";
+    const hasDesc = nextEvent.desc && nextEvent.desc !== "歡迎踴躍參加！";
 
     // 4. 渲染 HTML (優化對齊結構)
     container.innerHTML = `

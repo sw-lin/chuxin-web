@@ -249,7 +249,9 @@
             return;
         }
 
-        const eventMark = `EVENT:${date}|${title}`;
+        // 🗑️ 拿掉舊的字串拼接，改為跟 GPS 一致的純活動標題，讓資料庫保持乾淨！
+        // 原本：const eventMark = `EVENT:${date}|${title}`;
+        const eventMark = title;
 
         // 🎯 核心修正：在送出給後端之前，再次強制清洗電話格式，當作最後一道防線
         let finalPhone = String(pendingCheckin.phone).trim();

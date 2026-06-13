@@ -566,20 +566,28 @@ function updateUI(user, totalRequiredFromGAS, events, registrations) {
     }
 }   
 // 點擊卡片觸發的函式
-function showLearningHistory() {
+// 點擊卡片觸發的函式（升級：進入時自動即時同步，免登出登入）
+async function showLearningHistory() {
     const modal = document.getElementById('historyModal');
     const container = document.getElementById('historyList');
-    
-    // 🛑 修復關鍵：獲取正確的 user 資料來源
-    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-    // 如果全域變數 currentUser 有資料就用它的，不然就用 Session 的
-    // 確保即使 syncData 失敗，也不會讓整個頁面當掉
-    const activeUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : userInfo;
-
     if (!modal || !container) return;
 
-    // 🌟 修正：從 activeUser 或是全域陣列抓取紀錄
-    // 這樣就不會再發生 "user is not defined" 的錯誤
+    // 🌟 核心閃電優化：進入學習歷程前，先在背景偷偷執行 syncData() 向後端抓最新簽到狀態
+    // 這樣剛剛報到完的紀錄就會立刻被更新到全域變數與介面上！
+    console.log("🔄 正在即時同步最新的學習歷程...");
+    try {
+        await syncData(); 
+        console.log("✅ 學習歷程即時同步完成！");
+    } catch (syncErr) {
+        console.error("❌ 進入歷程時即時同步失敗，將使用快取資料呈現:", syncErr);
+    }
+    
+    // 🛑 獲取正確的 user 資料來源
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    // 如果全域變數 currentUser 有最新資料就用最新德，不然就用 Session 的
+    const activeUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : userInfo;
+
+    // 🌟 優先從 currentUser 裡面的 attendedLogs 或是全域陣列抓取紀錄
     let logs = [];
     if (window.currentAttendedData && window.currentAttendedData.length > 0) {
         logs = window.currentAttendedData;
@@ -600,6 +608,12 @@ function showLearningHistory() {
                 <p class="text-[10px] text-red-400 mt-4 px-4 break-all font-mono">診斷：${debugMsg}</p>
             </div>`; 
     } else {
+        // 🌟 排序優化：讓最新簽到的課程排在最上面 (由新到舊排序)
+        // 假設您的 log.dateText 格式為 YYYY-MM-DD 或有包含日期字串
+        try {
+            logs.sort((a, b) => new Date(b.dateText || 0) - new Date(a.dateText || 0));
+        } catch(e) { console.log("排序失敗", e); }
+
         container.innerHTML = logs.map(log => `
             <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 mb-3">
                 <div class="flex items-center gap-3">
@@ -616,9 +630,11 @@ function showLearningHistory() {
         `).join('');
     }
 
+    // 顯現彈窗
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
-}    
+}
+    
 // 刪除原本重複的 window.onload 或 addEventListener，統一用這段
 window.addEventListener('load', async () => {
     console.log("🚀 系統啟動：開始初始化資料...");

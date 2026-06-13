@@ -790,10 +790,14 @@ function startGpsCheckIn() {
         async function (position) {
             const userLat = position.coords.latitude;
             const userLng = position.coords.longitude;
+            
+            // 🌟 新增除錯機制：印出目前手機 GPS 的精確度誤差半徑（單位：公尺）
+            console.log(`📡 目前手機 GPS 精確度誤差值：+/- ${position.coords.accuracy} 公尺`);
+            console.log(`📍 偵測到用戶 DD 座標：(${userLat}, ${userLng})`);
 
             // 📍 清大李存敏館（地科館）參考座標與最大接受半徑
-            const targetLat = 24.79373; 
-            const targetLng = 120.99308; 
+            const targetLat = 24.790556; 
+            const targetLng = 120.991111; 
             const maxDistanceMeter = 150; // 允許 150 公尺內誤差範圍
 
             // 🧮 計算地球海弗辛距離

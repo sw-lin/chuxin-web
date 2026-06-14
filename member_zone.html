@@ -568,7 +568,7 @@ function updateUI(user, totalRequiredFromGAS, events, registrations) {
         renderRegistrationCards(window.currentActivePromos, registrations);
     }
 }   
-// 點擊卡片觸發的函式
+
 // 點擊卡片觸發的函式（升級：進入時自動即時同步，免登出登入）
 async function showLearningHistory() {
     const modal = document.getElementById('historyModal');
@@ -657,8 +657,8 @@ window.addEventListener('load', async () => {
     
     // 3. 執行非同步同步 (內部會更新公告、出席率、全域變數)
     try {
-        await syncData();
-        console.log("✅ syncData 執行完成");
+        //await syncData();
+        //console.log("✅ syncData 執行完成");
         // 🌟 建議放在這裡：等核心資料都穩定了，再檢查投票
         if (typeof checkActiveVote === 'function') {
             console.log("🗳️ 檢查是否有進行中的投票...");

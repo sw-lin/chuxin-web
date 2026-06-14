@@ -577,13 +577,13 @@ async function showLearningHistory() {
 
     // 🌟 核心閃電優化：進入學習歷程前，先在背景偷偷執行 syncData() 向後端抓最新簽到狀態
     // 這樣剛剛報到完的紀錄就會立刻被更新到全域變數與介面上！
-    console.log("🔄 正在即時同步最新的學習歷程...");
-    try {
-        await syncData(); 
-        console.log("✅ 學習歷程即時同步完成！");
-    } catch (syncErr) {
-        console.error("❌ 進入歷程時即時同步失敗，將使用快取資料呈現:", syncErr);
-    }
+    //console.log("🔄 正在即時同步最新的學習歷程...");
+    //try {
+    //    await syncData(); 
+    //    console.log("✅ 學習歷程即時同步完成！");
+   // } catch (syncErr) {
+    //    console.error("❌ 進入歷程時即時同步失敗，將使用快取資料呈現:", syncErr);
+   // }
     
     // 🛑 獲取正確的 user 資料來源
     const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
@@ -657,8 +657,8 @@ window.addEventListener('load', async () => {
     
     // 3. 執行非同步同步 (內部會更新公告、出席率、全域變數)
     try {
-        //await syncData();
-        //console.log("✅ syncData 執行完成");
+        await syncData();
+        console.log("✅ syncData 執行完成");
         // 🌟 建議放在這裡：等核心資料都穩定了，再檢查投票
         if (typeof checkActiveVote === 'function') {
             console.log("🗳️ 檢查是否有進行中的投票...");

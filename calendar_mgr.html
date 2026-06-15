@@ -293,7 +293,7 @@
         }
     }
 
-    async function confirmDelete() {
+async function confirmDelete() {
         if(!confirm(`確定要徹底刪除「${currentEditData.title}」？`)) return;
         
         closeModal('eventModal');
@@ -301,17 +301,20 @@
         
         try {
             const payload = { 
-                type: 'delete_calendar_event', // 🌟 關鍵校正：必須與 GAS 的 case 完全一致
+                type: 'delete_calendar_event', 
                 key: STAFF_KEY, 
-                title: currentEditData.title,  // 傳遞 title 作為備用比對
-                eventId: currentEditData.eventId // 🌟 關鍵寫入：傳遞精準的 eventId
+                title: currentEditData.title,  
+                eventId: currentEditData.eventId 
             };
 
             const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
             const result = await response.json();
 
             if (result.result === "SUCCESS") {
-                await loadCalendar(); // 刪除成功後重新載入清單
+                // 🌟 把後端的除錯日誌印出來看！
+                alert("後端執行報告：\n" + result.debugLogs.join("\n"));
+                
+                await loadCalendar(); 
             } else {
                 alert("刪除失敗：" + (result.message || "未知錯誤"));
             }

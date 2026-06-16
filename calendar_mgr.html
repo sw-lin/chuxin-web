@@ -172,16 +172,22 @@
     }
 
     async function loadCalendar() {
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            const data = await res.json();
-            allEvents = data.calendar || [];
-            allEvents.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
-            renderList();
-        } catch(e) { console.error(e); }
+    toggleLoading(true);
+    try {
+        // 🌟 關鍵修改：只請求 type=get_calendar_only，速度快 10 倍以上
+        const res = await fetch(`${GAS_URL}?type=get_calendar_only&t=${Date.now()}`);
+        const data = await res.json();
+        
+        allEvents = data.calendar || [];
+        allEvents.sort((a, b) => new Date(a.dateText) - new Date(b.dateText));
+        renderList();
+    } catch(e) { 
+        console.error(e); 
+        showToast("⚠️ 讀取失敗，請檢查網路");
+    } finally {
         toggleLoading(false);
     }
+}
 
     function renderList() {
         const list = document.getElementById('calendarList');

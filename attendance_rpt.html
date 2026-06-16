@@ -148,37 +148,26 @@
         setTimeout(() => { t.style.opacity = '0'; }, 3000);
     }
 
-    // 載入活動清單並填充下拉選單
-    async function loadFinishedEvents() {
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${GAS_URL}?t=${Date.now()}`);
-            const data = await res.json();
-            const selector = document.getElementById('eventSelector');
-            
-            if (data && data.calendar) {
-                const now = new Date();
-                const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-
-                // 過濾與排序：需要 QR 且日期 <= 今天，依日期降冪排序 (新的在前)
-                const validEvents = data.calendar
-                    .filter(ev => ev.needQR === true && new Date(ev.dateText.replace(/\//g, '-')) <= todayEnd)
-                    .sort((a, b) => b.dateText.localeCompare(a.dateText));
-                
-                let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
-                validEvents.forEach(ev => {
-                    const safeDate = ev.dateText.toString().replace(/\//g, '-');
-                    // 重要：將日期存入 data-date 屬性，value 只存標題
-                    optionsHtml += `<option value="${ev.title}" data-date="${safeDate}">${safeDate} | ${ev.title}</option>`;
-                });
-                selector.innerHTML = optionsHtml;
-            }
-        } catch(e) { 
-            console.error(e);
-            showToast("⚠️ 活動清單載入失敗"); 
-        }
-        toggleLoading(false);
+    // 前端 loadFinishedEvents 建議簡化如下
+async function loadFinishedEvents() {
+    toggleLoading(true);
+    try {
+        // 建議後端增加一個 type=get_qr_events，專門只撈符合 QR 條件的活動
+        const res = await fetch(`${GAS_URL}?type=get_qr_events&t=${Date.now()}`);
+        const data = await res.json();
+        const selector = document.getElementById('eventSelector');
+        
+        // data.calendar 現在應該已經是被後端過濾好的清單
+        let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
+        data.calendar.forEach(ev => {
+            optionsHtml += `<option value="${ev.title}" data-date="${ev.dateText}">${ev.dateText} | ${ev.title}</option>`;
+        });
+        selector.innerHTML = optionsHtml;
+    } catch(e) { 
+        showToast("⚠️ 活動清單載入失敗"); 
     }
+    toggleLoading(false);
+}
 
     // 獲取報表資料 (已加入電話號碼自動校正機制)
     async function fetchReport() {

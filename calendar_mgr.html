@@ -318,7 +318,7 @@ async function confirmDelete() {
 
             if (result.result === "SUCCESS") {
                 // 🌟 把後端的除錯日誌印出來看！
-             // alert("後端執行報告：\n" + result.debugLogs.join("\n"));
+              alert("後端執行報告：\n" + result.debugLogs.join("\n"));
                 
                 await loadCalendar(); 
             } else {

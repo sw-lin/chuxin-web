@@ -133,6 +133,7 @@
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
 let slideIndex = 0;
+let globalConfig = {}; // 🌟 新增：用來儲存從 GAS 抓到的全域設定開關   
 
 // 強化後的網址轉換邏輯
 function transformDriveUrl(url) {
@@ -157,6 +158,7 @@ async function initData() {
         const res = await fetch(GAS_URL + "?t=" + Date.now());
         const data = await res.json();
         const config = data.config || {};
+        globalConfig = config; // 🌟 新增：將設定存入全域變數，供後續登入判斷
         console.log("接收到的 Config:", config);      
 
         // --- 1. 處理「關於築心」文字 ---

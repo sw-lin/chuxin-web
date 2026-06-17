@@ -147,11 +147,13 @@
         async function loadSettings() {
             showLoading(true);
             try {
+                // 加上時間戳，確保每次拿到的都是試算表最新一秒的狀態
                 const res = await fetch(`${GAS_URL}?type=get_permission_settings&t=${Date.now()}`);
                 const data = await res.json();
                 const config = data.config || {};
                 const rolePerms = data.rolePermissions || {}; 
 
+                // 1. 還原職務核取方塊狀態
                 document.querySelectorAll('.permission-checkbox').forEach(cb => {
                     const k = cb.dataset.key;
                     const r = cb.dataset.role;
@@ -160,15 +162,27 @@
                     }
                 });
 
-                // 自動加載既有的各項 Config 參數
+                // 2. 將連結資料填回輸入框
                 document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
                 document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
                 
-                // 🌟 新增自動同步：讀取 enforce_paid_member 設定到下拉選單 (預設為否)
-                document.getElementById('enforce_paid_member').value = config.enforce_paid_member || '否';
+                // 3. 🌟【核心修正】精準將試算表內的現況（是/否）反映在下拉選單上！
+                const currentStatus = config.enforce_paid_member ? config.enforce_paid_member.trim() : '否';
+                const selectEl = document.getElementById('enforce_paid_member');
+                
+                if (selectEl) {
+                    selectEl.value = currentStatus;
+                    // 動態變更樣式，若當前是「是」，給予醒目的淡橘色邊框，提醒會長正在嚴格模式下
+                    if (currentStatus === '是') {
+                        selectEl.classList.add('border-orange-400', 'bg-orange-50/10');
+                    } else {
+                        selectEl.classList.remove('border-orange-400', 'bg-orange-50/10');
+                    }
+                }
 
             } catch (e) {
-                showToast("❌ 無法連接資料庫");
+                showToast("❌ 無法連接資料庫讀取設定");
+                console.error(e);
             }
             showLoading(false);
         }
@@ -188,6 +202,9 @@
                 }
             });
 
+            // 取得當前會長選取的開關值
+            const uiSelectValue = document.getElementById('enforce_paid_member').value;
+
             const payload = {
                 type: 'update_permissions_and_links',
                 key: staffKey,
@@ -195,8 +212,7 @@
                 links: {
                     reading_folder_url: document.getElementById('reading_folder_url').value,
                     photo_gallery_url: document.getElementById('photo_gallery_url').value,
-                    // 🌟 新增儲存打包：將選單的「是/否」一併收納進 links 中傳回後端
-                    enforce_paid_member: document.getElementById('enforce_paid_member').value
+                    enforce_paid_member: uiSelectValue // 打包發送
                 }
             };
 
@@ -207,14 +223,24 @@
                     body: JSON.stringify(payload) 
                 });
                 const result = await res.json();
+                
                 if(result.result === "SUCCESS") {
-                    showToast("✅ 設定已成功同步至系統資料庫");
-                    setTimeout(() => location.reload(), 1500);
+                    // 🌟【UX 優化】儲存成功後不再重新載入整個網頁，而是就地更新狀態！
+                    showToast("✅ 機制與權限設定已同步成功！");
+                    
+                    // 動態更新選單外觀，給予會長最踏實的操作反饋
+                    const selectEl = document.getElementById('enforce_paid_member');
+                    if (uiSelectValue === '是') {
+                        selectEl.classList.add('border-orange-400', 'bg-orange-50/10');
+                    } else {
+                        selectEl.classList.remove('border-orange-400', 'bg-orange-50/10');
+                    }
+                    
                 } else {
                     showToast("❌ 儲存失敗：" + result.message);
                 }
             } catch (e) {
-                showToast("❌ 連線異常");
+                showToast("❌ 伺服器連線異常");
             }
             showLoading(false);
         }

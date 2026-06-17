@@ -348,6 +348,14 @@ async function syncData() {
         console.log("=== 2. 收到後端資料 ===", data);
 
         if (data.result === "SUCCESS") {
+　　　　　　 // --- 🚨 [新增] 權限安全守衛 ---
+            // 只要後端判定 hasMemberAccess 為 false，直接導向訪客專區
+            if (data.user && data.user.hasMemberAccess === false) {
+                alert("提示：目前已進入會費審查期，您尚未完成繳費，即將導回訪客區。");
+                window.location.href = 'guest_zone.html';
+                return; // 終止後續所有 UI 更新與邏輯執行
+            }　
+            
             // --- A. Config ---
             if (data.config) globalConfig = data.config;
 

@@ -296,11 +296,24 @@ async function handleLogin() {
 
             console.log("GAS 回傳原始資料:", result);
             
-            // 2. 讀取試算表設定開關 (enforce_paid_member)
-            // 只要設定為「是」或「開」，就會啟動嚴格審查；若填「否」、「關」或未填，則代表學期初放行期
-            const enforceSetting = String(globalConfig.enforce_paid_member || "").trim();
-            const isEnforceOn = (enforceSetting === "是" || enforceSetting === "開" || enforceSetting === "true");
+           // 2. 讀取試算表設定開關 (enforce_paid_member)
+            // 🌟 防呆補抓：如果使用者手速太快，網頁剛開還沒載入完 Config 就按登入，我們就在這裡緊急補抓一次
+            let currentConfig = globalConfig;
+            if (!currentConfig || Object.keys(currentConfig).length === 0) {
+                console.warn("Config 尚未載入，嘗試補抓...");
+                try {
+                    const configRes = await fetch(GAS_URL + "?t=" + Date.now());
+                    const configData = await configRes.json();
+                    currentConfig = configData.config || {};
+                    globalConfig = currentConfig; // 順便更新回全域變數
+                } catch(e) {
+                    console.error("補抓 Config 失敗", e);
+                }
+            }
 
+            // 只要設定為「是」或「開」，就會啟動嚴格審查；若填「否」、「關」或未填，則代表學期初放行期
+            const enforceSetting = String(currentConfig.enforce_paid_member || "").trim();
+            const isEnforceOn = (enforceSetting === "是" || enforceSetting === "開" || enforceSetting === "true");
             // 3. 根據「身份」、「繳費狀態」與「後台開關」決定是否核發會員專區通行證 (hasMemberAccess)
             let hasMemberAccess = false;
             

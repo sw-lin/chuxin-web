@@ -301,6 +301,23 @@
 let currentUser = {};
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
+  // 🌟 必須放置於 member_zone.html 腳本最上方的安全守衛
+(function() {
+    const userInfoStr = sessionStorage.getItem('userInfo');
+    if (!userInfoStr) {
+        alert("請先登入！");
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    const userInfo = JSON.parse(userInfoStr);
+    // 檢查是否有在首頁通過驗證並取得會員通行證 (hasMemberAccess)
+    if (userInfo.hasMemberAccess !== true) {
+        alert("提示：目前已進入會費審查期，系統檢測到您尚未完成本學期會費繳納，將為您引導至訪客專區。");
+        window.location.href = 'guest_zone.html';
+        return;
+    }
+})();  
 
 // =========================================
 // 2. 資料同步核心：確保公告、權限、行事曆一個不漏

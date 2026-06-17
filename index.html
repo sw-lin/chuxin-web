@@ -291,11 +291,28 @@ async function handleLogin() {
         const result = await res.json();
         
         if (result.result === "SUCCESS") {
-            // 處理繳費狀態 (防呆轉換)
-            const isPaidStatus = String(result.isPaid).toLowerCase() === "true";
+            // 1. 處理繳費狀態 (🌟 增加防呆：同時支援後端傳回布林值 true 或中文字串 "已繳")
+            const isPaidStatus = String(result.isPaid).toLowerCase() === "true" || String(result.isPaid).trim() === "已繳";
 
             console.log("GAS 回傳原始資料:", result);
             
+            // 2. 讀取試算表設定開關 (enforce_paid_member)
+            // 只要設定為「是」或「開」，就會啟動嚴格審查；若填「否」、「關」或未填，則代表學期初放行期
+            const enforceSetting = String(globalConfig.enforce_paid_member || "").trim();
+            const isEnforceOn = (enforceSetting === "是" || enforceSetting === "開" || enforceSetting === "true");
+
+            // 3. 根據「身份」、「繳費狀態」與「後台開關」決定是否核發會員專區通行證 (hasMemberAccess)
+            let hasMemberAccess = false;
+            
+            if (result.role === "Admin") {
+                hasMemberAccess = true; // 管理員永遠放行
+            } else if (isEnforceOn) {
+                hasMemberAccess = (isPaidStatus === true); // 開啟嚴格審查時，只有真正已繳費者可拿通行證
+            } else {
+                hasMemberAccess = true; // 關閉審查時（每學期初混亂期），名冊內所有會員皆核發通行證
+            }
+
+            // 4. 將完整資料與通行證標籤存入 sessionStorage
             const userStore = {
                 result: "SUCCESS",
                 name: result.name,
@@ -306,15 +323,17 @@ async function handleLogin() {
                 encryptedPhone: result.encryptedPhone || "",
                 staffKey: result.staffKey || "",
                 isPaid: isPaidStatus,
+                hasMemberAccess: hasMemberAccess, // 🌟 新增：核發通行證標記
                 attendedLogs: result.attendedLogs || []
             };
             
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
-            // 判斷跳轉目標：Admin 或 已繳費會員去 member_zone，其餘去 guest_zone
-            let targetPage = (result.role === "Admin" || isPaidStatus === true) ? 'member_zone.html' : 'guest_zone.html';
+            // 5. 依據通行證決定登入當下跳轉的頁面
+            let targetPage = (hasMemberAccess === true) ? 'member_zone.html' : 'guest_zone.html';
+            
+            console.log(`[登入分流] 繳費審查開關：${isEnforceOn ? '開啟' : '關閉'} | 會員繳費狀態：${isPaidStatus} | 核發通行證：${hasMemberAccess} -> 導向：${targetPage}`);
             window.location.href = targetPage;
-
         } else {
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));
             btn.disabled = false;

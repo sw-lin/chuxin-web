@@ -431,7 +431,7 @@ async function submitForm(event) {
             
             if (!eventConfig.isTourBus && transportValue === '自駕') {
                 if (!carNumber) {
-                    showToast("請填寫自駕車牌號碼，以供社區登記", "error");
+                    showToast("請填寫自駕車牌號碼", "error");
                     carInput.classList.add('input-error');
                     carInput.focus();
                     return;

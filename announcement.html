@@ -20,13 +20,9 @@
         .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f8f8f8; display: flex; align-items: center; gap: 10px; }
     </style>
     <link rel="icon" type="image/png" href="favicon-32x32.png?v=2" sizes="32x32" />
-
     <link rel="shortcut icon" href="favicon.ico?v=2" />
-
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2" />
-
     <meta name="apple-mobile-web-app-title" content="築心讀書會" />
-
     <link rel="manifest" href="site.webmanifest?v=2" />
 </head>
 <body class="min-h-screen pb-20">
@@ -41,36 +37,33 @@
 
     <main class="p-4 max-w-xl mx-auto">
         
-        <!-- 區塊一：會員首頁公告欄 -->
         <div class="action-card shadow-sm">
             <div class="card-header bg-emerald-50/50">
                 <i class="fas fa-scroll text-emerald-700"></i>
                 <span class="font-bold text-emerald-900">1. 會員 App 公告欄</span>
             </div>
 
-                <div class="p-5">
+            <div class="p-5">
                 <p class="text-[11px] text-gray-400 mb-3 font-bold uppercase tracking-wider">更新後，在預定期限內 全體會員登入後可見</p>
-                <textarea id="newsContent" rows="4" placeholder="讀取目前公告中..." class="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
+                <textarea id="newsContent" rows="4" placeholder="正在努力讀取資料庫..." class="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-gray-700 leading-relaxed resize-none transition-all"></textarea>
 
-<div class="flex gap-4 mb-4">
-    <div class="flex-1">
-        <label class="block text-emerald-700 font-bold mb-1">起始日期</label>
-        <input type="date" id="startDate" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none">
-    </div>
-    <div class="flex-1">
-        <label class="block text-emerald-700 font-bold mb-1">結束日期</label>
-        <input type="date" id="endDate" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none">
-    </div>
-</div>
+                <div class="flex gap-4 mb-4">
+                    <div class="flex-1">
+                        <label class="block text-emerald-700 font-bold mb-1">起始日期</label>
+                        <input type="date" id="startDate" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-emerald-700 font-bold mb-1">結束日期</label>
+                        <input type="date" id="endDate" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-emerald-500 outline-none">
+                    </div>
+                </div>
 
-                </div>                
                 <button onclick="updateAppNews()" class="w-full mt-4 py-4 bg-[#064E3B] text-white rounded-xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all">
                     <i class="fas fa-save"></i> 儲存並更新公告
                 </button>
             </div>
         </div>
 
-        <!-- 區塊二：LINE 群組推播 -->
         <div class="action-card shadow-sm">
             <div class="card-header bg-green-50/50">
                 <i class="fab fa-line text-green-600 text-lg"></i>
@@ -89,101 +82,112 @@
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
-                         
-                         // 📦 1. 統一提取資料 (auth 包)
-    const auth = (function() {
-        try {
-            const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
-            const loneKey = sessionStorage.getItem('staffKey'); 
-            return {
-                key: info.staffKey || loneKey || "",
-                permissions: info.userPermissions || [],
-                isValid: !!(info.staffKey || loneKey)
-            };
-        } catch (e) {
-            return { key: "", permissions: [], isValid: false };
-        }
-    })();
+                                 
+        // 📦 1. 統一提取資料 (auth 包)
+        const auth = (function() {
+            try {
+                const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+                const loneKey = sessionStorage.getItem('staffKey'); 
+                return {
+                    key: info.staffKey || loneKey || "",
+                    permissions: info.userPermissions || [],
+                    isValid: !!(info.staffKey || loneKey)
+                };
+            } catch (e) {
+                return { key: "", permissions: [], isValid: false };
+            }
+        })();
 
-    // 🔗 2. 重新對接舊有的變數名稱 (讓後面的程式碼不用動)
-    var STAFF_KEY = auth.key;  
+        // 🔗 2. 重新對接舊有的變數名稱
+        var STAFF_KEY = auth.key;  
 
-// 頁面載入後的安全檢查
-window.onload = function() {
-    if (!STAFF_KEY) {
-        alert("管理權限無效，請重新進行幹部驗證");
-        window.location.href = "index.html"; // 踢回會員區重新驗證
-        return;
-    }
-    fetchCurrentNews(); // 金鑰正常，開始抓資料
-};
+        // 頁面載入後的安全檢查
+        window.onload = function() {
+            if (!STAFF_KEY) {
+                alert("管理權限無效，請重新進行幹部驗證");
+                window.location.href = "index.html";
+                return;
+            }
+            fetchCurrentNews(); // 金鑰正常，開始抓資料
+        };
 
         function showLoading(show, text) {
             document.getElementById('loadingText').innerText = text || "同步中...";
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
-        // 讀取目前資料庫裡的公告內容
-function fetchCurrentNews() {
-    fetch(GAS_URL)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            // 1. 填入公告內容
-            document.getElementById('newsContent').value = data.news || "";
+        // 讀取目前資料庫裡的公告內容 (🌟 已優化增加 Loading 鎖定)
+        function fetchCurrentNews() {
+            showLoading(true, "讀取目前公告中..."); // 🌟 啟動轉圈圈
             
-            // 2. 填入起始日期 (對應 GAS 修正後的 startDate)
-            if (data.startDate) {
-                document.getElementById('startDate').value = formatDateForInput(data.startDate);
-            }
-            
-            // 3. 填入結束日期 (對應 GAS 修正後的 endDate)
-            if (data.endDate) {
-                document.getElementById('endDate').value = formatDateForInput(data.endDate);
-            }
-        })
-        .catch(function(err) { console.error("讀取失敗：", err); });
-}
-
-        // 更新 App 內部的公告欄[cite: 4]
-        function updateAppNews() {
-         const content = document.getElementById('newsContent').value.trim();
-         let startDate = document.getElementById('startDate').value; 
-         let endDate = document.getElementById('endDate').value;
-
-        // --- 自動計算日期邏輯 ---
-        const today = new Date();
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-
-        const isoToday = today.toISOString().split('T')[0];
-        const isoNextWeek = nextWeek.toISOString().split('T')[0];
-
-       // 如果沒填，就帶入預設值 (今日 ~ 一週後)
-       if (!startDate) startDate = isoToday;
-       if (!endDate) endDate = isoNextWeek;
-
-       if (!content) return alert("公告內容不能為空");
-
-      showLoading(true, "更新公告中...");
-      const payload = {
-        type: 'update_news',
-        key: STAFF_KEY,
-        content: content,
-        startDate: startDate, // 這裡會傳給 GAS 的 params.startDate
-        endDate: endDate      // 這裡會傳給 GAS 的 params.endDate
-    };
-
-        fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
-        .then(res => res.json())
-        .then(result => {
-            if (result.result === "SUCCESS") {
-                showToast("✅ 公告與有效期限已更新");
-            } else { alert("更新失敗"); }
-        })
-        .finally(() => showLoading(false));            
+            fetch(GAS_URL + "?t=" + Date.now()) // 🌟 加上時間戳，防止瀏覽器快取舊資料
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    // 1. 填入公告內容
+                    document.getElementById('newsContent').value = data.news || "";
+                    
+                    // 2. 填入起始日期
+                    if (data.startDate) {
+                        document.getElementById('startDate').value = formatDateForInput(data.startDate);
+                    }
+                    
+                    // 3. 填入結束日期
+                    if (data.endDate) {
+                        document.getElementById('endDate').value = formatDateForInput(data.endDate);
+                    }
+                })
+                .catch(function(err) { 
+                    console.error("讀取失敗：", err); 
+                    showToast("❌ 無法載入最新公告");
+                })
+                .finally(function() {
+                    showLoading(false); // 🌟 不論成功或失敗，都關閉轉圈圈
+                });
         }
 
-        // 發送 LINE 訊息推播[cite: 4]
+        // 更新 App 內部的公告欄
+        function updateAppNews() {
+            const content = document.getElementById('newsContent').value.trim();
+            let startDate = document.getElementById('startDate').value; 
+            let endDate = document.getElementById('endDate').value;
+
+            // --- 自動計算日期邏輯 ---
+            const today = new Date();
+            const nextWeek = new Date();
+            nextWeek.setDate(today.getDate() + 7);
+
+            const isoToday = today.toISOString().split('T')[0];
+            const isoNextWeek = nextWeek.toISOString().split('T')[0];
+
+            if (!startDate) startDate = isoToday;
+            if (!endDate) endDate = isoNextWeek;
+
+            if (!content) return alert("公告內容不能為空");
+
+            showLoading(true, "更新公告中...");
+            const payload = {
+                type: 'update_news',
+                key: STAFF_KEY,
+                content: content,
+                startDate: startDate,
+                endDate: endDate
+            };
+
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(res => res.json())
+                .then(result => {
+                    if (result.result === "SUCCESS") {
+                        showToast("✅ 公告與有效期限已更新");
+                    } else { alert("更新失敗"); }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("網路連線錯誤，請稍後再試");
+                })
+                .finally(() => showLoading(false));        
+        }
+
+        // 發送 LINE 訊息推播
         function sendLineBroadcast() {
             var msg = document.getElementById('lineMsg').value.trim();
             if (!msg) return alert("請輸入 LINE 訊息內容");
@@ -200,22 +204,28 @@ function fetchCurrentNews() {
                         document.getElementById('lineMsg').value = '';
                     } else { alert("發送失敗"); }
                 })
+                .catch(err => {
+                    console.error(err);
+                    alert("推播失敗，請檢查系統後台");
+                })
                 .finally(function() { showLoading(false); });
         }
+
         // 將日期轉換為 HTML5 input 要求的 YYYY-MM-DD 格式
-    function formatDateForInput(dateStr) {
-    if (!dateStr) return "";
-    var d = new Date(dateStr);
-    if (isNaN(d.getTime())) return ""; // 處理無效日期
-    var month = '' + (d.getMonth() + 1);
-    var day = '' + d.getDate();
-    var year = d.getFullYear();
+        function formatDateForInput(dateStr) {
+            if (!dateStr) return "";
+            var d = new Date(dateStr);
+            if (isNaN(d.getTime())) return ""; 
+            var month = '' + (d.getMonth() + 1);
+            var day = '' + d.getDate();
+            var year = d.getFullYear();
 
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
 
-    return [year, month, day].join('-');
-    }
+            return [year, month, day].join('-');
+        }
+
         function showToast(m) {
             var t = document.createElement('div');
             t.className = 'toast';

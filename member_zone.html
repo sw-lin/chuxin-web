@@ -1211,10 +1211,10 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
         } else {
             // 狀態轉換失敗（或尚未報名）：顯示立即報名
             actionBtn = `
-                <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
-                    class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all">
-                    立即報名
-                </button>`;
+              <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
+                  class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all">
+                   立即報名
+              </button>`;
         }
 
         const cardHtml = `
@@ -1243,14 +1243,32 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
         container.insertAdjacentHTML('beforeend', cardHtml);
     });
 }
+
 // 獨立的跳轉函式
-function goToRegistration(title) {
-    if (!currentUser?.phone) {
+function goToRegistration(encodedTitle) {
+    // 🌟 防呆第一步：解碼活動名稱
+    const title = decodeURIComponent(encodedTitle);
+
+    // 🌟 核心修正：如果全域變數 currentUser 剛好為空，直接從備份的 localStorage 拿
+    if (!currentUser || !currentUser.phone) {
+        const savedUser = localStorage.getItem('築心_currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+        }
+    }
+
+    // 再次檢查，如果真的連 localStorage 都沒有，才踢回登入
+    if (!currentUser || !currentUser.phone) {
         alert("找不到用戶資訊，請重新登入");
+        window.location.href = "index.html"; // 貼心地幫他導回登入頁
         return;
     }
-    // 跳轉到對應的報名頁面
-    window.location.href = `event_registration.html?event=${title}&phone=${currentUser.phone}`;
+    
+    // 🔍 偵錯 log，方便你在控制台看有沒有成功抓到
+    console.log("🚀 準備跳轉報名，用戶手機:", currentUser.phone, "活動名稱:", title);
+
+    // 跳轉到對應的報名頁面（對 phone 也進行編碼保護安全）
+    window.location.href = `event_registration.html?event=${encodeURIComponent(title)}&phone=${encodeURIComponent(currentUser.phone)}`;
 }
   
 function showToast(msg, type) {

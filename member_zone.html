@@ -1244,31 +1244,80 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
     });
 }
 
-// 獨立的跳轉函式
+// 獨立的跳轉函式（萬能排錯與自動修復版）
 function goToRegistration(encodedTitle) {
-    // 🌟 防呆第一步：解碼活動名稱
+    // 1. 解碼活動名稱
     const title = decodeURIComponent(encodedTitle);
+    
+    // 🔍 偵錯日誌：先檢查目前全域變數的真實狀態
+    console.log("=== 築心報名按鈕點擊 - 偵錯開始 ===");
+    console.log("1. 目前全域 currentUser 變數值:", currentUser);
+    console.log("2. 目前全域 currentUser 的型態:", typeof currentUser);
 
-    // 🌟 核心修正：如果全域變數 currentUser 剛好為空，直接從備份的 localStorage 拿
-    if (!currentUser || !currentUser.phone) {
-        const savedUser = localStorage.getItem('築心_currentUser');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
+    let phone = "";
+
+    // 🟢 步驟 A：嘗試從全域變數 currentUser 提取手機號碼
+    if (currentUser) {
+        if (typeof currentUser === 'string') {
+            // 防呆：如果 currentUser 本身就是一串手機號碼字串
+            phone = currentUser.trim();
+        } else if (typeof currentUser === 'object') {
+            // 防呆：如果是物件，嘗試抓取所有可能的手機或賬號欄位名
+            phone = currentUser.phone || currentUser.mobile || currentUser.phoneText || currentUser.userPhone || currentUser.id;
         }
     }
 
-    // 再次檢查，如果真的連 localStorage 都沒有，才踢回登入
-    if (!currentUser || !currentUser.phone) {
-        alert("找不到用戶資訊，請重新登入");
-        window.location.href = "index.html"; // 貼心地幫他導回登入頁
+    // 🟢 步驟 B：如果變數抓不到，全面搜查所有可能用過的 LocalStorage / SessionStorage Key
+    if (!phone) {
+        console.log("⚠️ 全域變數未找到手機，開始全面掃描暫存快取...");
+        const possibleKeys = ['築心_currentUser', 'currentUser', 'user', 'userData', 'phone', 'userPhone', 'member'];
+        
+        for (let key of possibleKeys) {
+            const localData = localStorage.getItem(key) || sessionStorage.getItem(key);
+            if (localData) {
+                console.log(`💡 在暫存 [${key}] 中找到資料:`, localData);
+                try {
+                    const parsed = JSON.parse(localData);
+                    if (typeof parsed === 'object' && parsed) {
+                        phone = parsed.phone || parsed.mobile || parsed.phoneText || parsed.userPhone || parsed.id;
+                        if (phone) {
+                            currentUser = parsed; // 自動修復全域變數
+                            break;
+                        }
+                    } else if (typeof parsed === 'string' || typeof parsed === 'number') {
+                        phone = String(parsed).trim();
+                        currentUser = phone; // 自動修復全域變數
+                        break;
+                    }
+                } catch (e) {
+                    // 如果不是 JSON 字串，代表是純文字（例如直接存手機號碼）
+                    if (localData.trim().length >= 9) { 
+                        phone = localData.trim();
+                        currentUser = phone; // 自動修復全域變數
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 🟢 步驟 C：最後檢查與跳轉
+    if (!phone) {
+        console.error("❌ 偵錯失敗：在全域變數與所有 LocalStorage 中都找不到任何用戶手機資訊！");
+        console.log("目前 localStorage 所有內容：", Object.keys(localStorage));
+        console.log("=== 偵錯結束 ===");
+        
+        alert("找不到用戶資訊，請重新登入。\n（請在網頁畫面上按 F12 打開 Console 查看詳細錯誤日誌）");
+        window.location.href = "index.html"; 
         return;
     }
-    
-    // 🔍 偵錯 log，方便你在控制台看有沒有成功抓到
-    console.log("🚀 準備跳轉報名，用戶手機:", currentUser.phone, "活動名稱:", title);
 
-    // 跳轉到對應的報名頁面（對 phone 也進行編碼保護安全）
-    window.location.href = `event_registration.html?event=${encodeURIComponent(title)}&phone=${encodeURIComponent(currentUser.phone)}`;
+    console.log("✅ 成功自動修復並取得手機號碼:", phone);
+    console.log("🚀 準備跳轉，活動名稱:", title);
+    console.log("=== 偵錯成功結束 ===");
+
+    // 跳轉到對應的報名頁面
+    window.location.href = `event_registration.html?event=${encodeURIComponent(title)}&phone=${encodeURIComponent(phone)}`;
 }
   
 function showToast(msg, type) {

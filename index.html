@@ -42,14 +42,19 @@
         </button>
     </nav>
 
-    <header class="relative w-full h-[600px] md:h-[800px] overflow-hidden bg-emerald-900">
-        <div id="slideContainer" class="w-full h-full">
-            <div class="slide flex items-center justify-center text-white h-full">載入中...</div>
-        </div>
-        <div class="absolute inset-0 hero-gradient flex items-center justify-center text-center z-10">
-            <h1 class="text-4xl md:text-7xl text-white font-bold tracking-widest drop-shadow-lg">在共讀中築心</h1>
-        </div>
-    </header>
+    <!-- 請將 header 區塊替換為以下內容 -->
+<header class="relative w-full h-[600px] md:h-[800px] overflow-hidden bg-emerald-900 cursor-pointer" onclick="openFullscreenGallery()">
+    <div id="slideContainer" class="w-full h-full">
+        <div class="slide flex items-center justify-center text-white h-full">載入中...</div>
+    </div>
+    <div class="absolute inset-0 hero-gradient flex flex-col items-center justify-center text-center z-10 px-4">
+        <h1 class="text-4xl md:text-7xl text-white font-bold tracking-widest drop-shadow-lg mb-6">在共讀中築心</h1>
+        <!-- 🌟 新增：全螢幕播放相簿按鈕 -->
+        <button class="bg-white/20 backdrop-blur-md border border-white/40 text-white px-6 py-3 rounded-full font-bold text-sm md:text-base hover:bg-white/30 transition active:scale-95 flex items-center gap-2 shadow-xl">
+            <i class="fas fa-expand mr-1"></i> 全螢幕播放活動相簿
+        </button>
+    </div>
+</header>
 
     <section id="about" class="py-24 px-6 bg-white">
     <div class="max-w-4xl mx-auto">
@@ -417,7 +422,89 @@ window.addEventListener('appinstalled', (evt) => {
     if (btn) btn.remove();
 });
    
-window.onload = initData;     
+window.onload = initData; 
+// 🌟 全螢幕播放器相關變數
+let galleryPhotos = [];
+let galleryIndex = 0;
+let galleryTimer = null;
+
+// 1. 開啟全螢幕播放
+async function openFullscreenGallery() {
+    const modal = document.getElementById('galleryModal');
+    const imgElem = document.getElementById('fullscreenImg');
+    const caption = document.getElementById('fullscreenCaption');
+    
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    caption.innerText = "相簿照片載入中...";
+
+    try {
+        // 向 GAS 撈取 Config 裡 marquee_folder_id 目錄內的所有照片
+        if (galleryPhotos.length === 0) {
+            const res = await fetch(`${GAS_URL}?type=get_marquee_photos&t=${Date.now()}`);
+            const data = await res.json();
+            if (data.result === "SUCCESS" && data.photos && data.photos.length > 0) {
+                galleryPhotos = data.photos;
+            }
+        }
+
+        if (galleryPhotos.length > 0) {
+            galleryIndex = 0;
+            showNextGalleryPhoto();
+            // 自動播放：每 3.5 秒自動換下一張
+            if (galleryTimer) clearInterval(galleryTimer);
+            galleryTimer = setInterval(showNextGalleryPhoto, 3500);
+        } else {
+            caption.innerText = "目前相簿中尚無照片可顯示";
+        }
+    } catch (e) {
+        console.error("載入相簿失敗:", e);
+        caption.innerText = "載入相簿發生異常";
+    }
+}
+
+// 2. 顯示下一張照片
+function showNextGalleryPhoto() {
+    if (galleryPhotos.length === 0) return;
+    const imgElem = document.getElementById('fullscreenImg');
+    const caption = document.getElementById('fullscreenCaption');
+    
+    imgElem.style.opacity = '0.3';
+    setTimeout(() => {
+        imgElem.src = galleryPhotos[galleryIndex];
+        caption.innerText = `活動花絮 (${galleryIndex + 1} / ${galleryPhotos.length})`;
+        imgElem.style.opacity = '1';
+        galleryIndex = (galleryIndex + 1) % galleryPhotos.length;
+    }, 150);
+}
+
+// 3. 關閉全螢幕播放 (點擊畫面/照片即觸發)
+function closeFullscreenGallery() {
+    const modal = document.getElementById('galleryModal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    if (galleryTimer) {
+        clearInterval(galleryTimer);
+        galleryTimer = null;
+    }
+}
+    
 </script>
+<!-- 🌟 全螢幕照片播放器 (點擊任意處或照片即可關閉) 🌟 -->
+<div id="galleryModal" class="fixed inset-0 z-[200] bg-black/95 hidden flex-col items-center justify-center p-4 cursor-pointer select-none" onclick="closeFullscreenGallery()">
+    <div class="absolute top-6 right-6 text-white/70 hover:text-white text-3xl font-bold transition z-10">
+        <i class="fas fa-times-circle"></i>
+    </div>
+    <div class="text-xs text-white/50 absolute top-6 left-6 font-mono">
+        點擊畫面任意處關閉
+    </div>
+    
+    <!-- 全螢幕大圖容器 -->
+    <div class="relative max-w-5xl max-h-[85vh] flex items-center justify-center">
+        <img id="fullscreenImg" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-all duration-300">
+    </div>
+    <div id="fullscreenCaption" class="text-white/80 text-sm mt-4 font-bold tracking-wider"></div>
+</div>
+    
 </body>
 </html>

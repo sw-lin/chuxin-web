@@ -60,20 +60,25 @@
         </section>
 
         <section class="bg-white rounded-[2rem] p-8 shadow-sm border border-emerald-100 mb-8">
-            <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2 text-lg">
-                <i class="fas fa-link text-orange-500"></i> 資源連結管理
-            </h2>
-            <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">導讀資料夾 (reading_folder_url)</label>
-                    <input type="text" id="reading_folder_url" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://drive.google.com/...">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">活動剪影 (photo_gallery_url)</label>
-                    <input type="text" id="photo_gallery_url" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://photos.app.goo.gl/...">
-                </div>
-            </div>
-        </section>
+    <h2 class="text-emerald-900 font-black mb-6 flex items-center gap-2 text-lg">
+        <i class="fas fa-link text-orange-500"></i> 資源連結管理
+    </h2>
+    <div class="grid md:grid-cols-3 gap-6">
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">導讀資料夾 (reading_folder_url)</label>
+            <input type="text" id="reading_folder_url" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://drive.google.com/...">
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">活動剪影 (photo_gallery_url)</label>
+            <input type="text" id="photo_gallery_url" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://photos.app.goo.gl/...">
+        </div>
+        <!-- 🌟 新增：全螢幕播放相簿目錄 -->
+        <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-2 ml-1 italic">全螢幕相簿目錄 (marquee_folder_id)</label>
+            <input type="text" id="marquee_folder_id" class="w-full p-4 rounded-2xl border-2 border-emerald-50 outline-none focus:border-emerald-600 transition bg-gray-50/30" placeholder="https://drive.google.com/drive/folders/...">
+        </div>
+    </div>
+</section>
 
         <section class="bg-white rounded-[2rem] p-8 shadow-sm border border-emerald-100">
             <h2 class="text-emerald-900 font-black mb-4 flex items-center gap-2 text-lg">
@@ -165,6 +170,8 @@
                 // 2. 將連結資料填回輸入框
                 document.getElementById('reading_folder_url').value = config.reading_folder_url || '';
                 document.getElementById('photo_gallery_url').value = config.photo_gallery_url || '';
+                // 🌟 新增：填回全螢幕相簿目錄網址
+                document.getElementById('marquee_folder_id').value = config.marquee_folder_id || '';
                 
                 // 3. 🌟【核心修正】精準將試算表內的現況（是/否）反映在下拉選單上！
                 const currentStatus = config.enforce_paid_member ? config.enforce_paid_member.trim() : '否';
@@ -212,6 +219,7 @@
                 links: {
                     reading_folder_url: document.getElementById('reading_folder_url').value,
                     photo_gallery_url: document.getElementById('photo_gallery_url').value,
+                    marquee_folder_id: document.getElementById('marquee_folder_id').value, // 🌟 新增打包此欄位
                     enforce_paid_member: uiSelectValue // 打包發送
                 }
             };

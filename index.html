@@ -475,18 +475,34 @@ async function openFullscreenGallery() {
 }
 
 // 2. 顯示下一張照片
+// 🌟 優化後的全螢幕照片輪播邏輯 (移除變暗閃爍，實現流暢淡入)
 function showNextGalleryPhoto() {
     if (galleryPhotos.length === 0) return;
     const imgElem = document.getElementById('fullscreenImg');
     const caption = document.getElementById('fullscreenCaption');
     
-    imgElem.style.opacity = '0.3';
+    // 預先載入下一張圖片，確保換圖時不需要等待網路載入
+    const nextIndex = (galleryIndex + 1) % galleryPhotos.length;
+    const nextImgPreload = new Image();
+    nextImgPreload.src = galleryPhotos[nextIndex];
+
+    // 1. 優雅淡出當前圖片 (將透明度稍微降至 0.8 或 0，並平滑過渡)
+    imgElem.style.opacity = '0';
+
+    // 2. 等待淡出動畫完成後 (200毫秒)，於背景快速切換圖片網址並淡入
     setTimeout(() => {
         imgElem.src = galleryPhotos[galleryIndex];
         caption.innerText = `活動花絮 (${galleryIndex + 1} / ${galleryPhotos.length})`;
+        
+        // 圖片載入完成後再優雅淡入，避免出現閃動或黑屏
+        imgElem.onload = () => {
+            imgElem.style.opacity = '1';
+        };
+        // 容錯備援：若圖片早已快取完成，直接恢復透明度
         imgElem.style.opacity = '1';
-        galleryIndex = (galleryIndex + 1) % galleryPhotos.length;
-    }, 150);
+        
+        galleryIndex = nextIndex;
+    }, 200);
 }
 
 // 3. 關閉全螢幕播放 (點擊畫面/照片即觸發)

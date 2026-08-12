@@ -152,17 +152,41 @@
 async function loadFinishedEvents() {
     toggleLoading(true);
     try {
-        // 建議後端增加一個 type=get_qr_events，專門只撈符合 QR 條件的活動
         const res = await fetch(`${GAS_URL}?type=get_qr_events&t=${Date.now()}`);
         const data = await res.json();
         const selector = document.getElementById('eventSelector');
         
-        // data.calendar 現在應該已經是被後端過濾好的清單
+        let rawCalendar = data.calendar || [];
+
+        // 🎯 取得今天的日期 (格式: YYYY-MM-DD)
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        // 🎯 修正問題 2：過濾出包含今天(含)以前已發生的活動
+        const filteredCalendar = rawCalendar.filter(ev => {
+            if (!ev.dateText) return false;
+            // 抓取格式如 YYYY-MM-DD 的前 10 個字元進行比對
+            const eventDate = String(ev.dateText).substring(0, 10);
+            return eventDate <= todayStr;
+        });
+
+        // 🎯 修正問題 1：依活動日期排序 (越早發生的項目排在越上面)
+        filteredCalendar.sort((a, b) => {
+            const dateA = String(a.dateText || "").substring(0, 10);
+            const dateB = String(b.dateText || "").substring(0, 10);
+            return dateA.localeCompare(dateB); // 由升冪排序 (舊 -> 新)
+        });
+
+        // 渲染至下拉選單
         let optionsHtml = '<option value="">-- 請選擇活動項目 --</option>';
-        data.calendar.forEach(ev => {
+        filteredCalendar.forEach(ev => {
             optionsHtml += `<option value="${ev.title}" data-date="${ev.dateText}">${ev.dateText} | ${ev.title}</option>`;
         });
         selector.innerHTML = optionsHtml;
+
     } catch(e) { 
         showToast("⚠️ 活動清單載入失敗"); 
     }

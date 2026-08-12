@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雲端資料管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .emerald-gradient { background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    </style>
+    <link rel="icon" type="image/png" href="favicon-32x32.png?v=2" sizes="32x32" />
+    <link rel="shortcut icon" href="favicon.ico?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2" />
+    <meta name="apple-mobile-web-app-title" content="築心讀書會" />
+    <link rel="manifest" href="site.webmanifest?v=2" />
+</head>
+<body class="pb-20">
+
+    <nav class="emerald-gradient text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-4xl mx-auto grid grid-cols-3 items-center">
+            <div class="flex justify-start">
+               <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center transition hover:text-emerald-200"><i class="fas fa-chevron-left mr-1"></i>返回</button>
+            </div>
+            <div class="text-center whitespace-nowrap">
+                <h1 class="font-black tracking-[0.2em] text-lg">雲端資料管理</h1>
+            </div>
+            <div class="flex justify-end">
+                <!-- 預留給未來擴充功能按鈕使用 -->
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto p-6 space-y-8">
+        
+        <section class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-emerald-100">
+            <div class="flex items-center gap-2 mb-6">
+                <i class="fas fa-images text-orange-500 text-2xl"></i>
+                <div>
+                    <h2 class="text-emerald-900 font-black text-lg">活動照片快速上傳</h2>
+                    <p class="text-xs text-gray-500 font-bold mt-1">上傳後將儲存至專屬相簿，並同步呈現於首頁與跑馬燈中。</p>
+                </div>
+            </div>
+            
+            <!-- 隱藏的檔案選擇輸入框（支援手機多選照片） -->
+            <input type="file" id="photoInput" accept="image/*" multiple class="hidden" onchange="handleFileSelect(event)">
+
+            <div class="flex flex-col sm:flex-row gap-4 mt-8">
+                <button onclick="document.getElementById('photoInput').click()" class="flex-[2] bg-emerald-50 text-emerald-800 border-2 border-emerald-200 py-4 px-6 rounded-2xl font-black text-sm hover:bg-emerald-100 transition active:scale-95 flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-folder-open text-emerald-600 text-lg"></i> 從裝置選取照片
+                </button>
+                <button id="uploadBtn" onclick="startUploadProcess()" disabled class="flex-[3] bg-emerald-800 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-md disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-cloud-upload-alt text-lg"></i> 批次送出至雲端
+                </button>
+            </div>
+
+            <!-- 選擇檔案狀態與預覽提示 -->
+            <div id="uploadStatus" class="mt-4 text-sm text-emerald-700 font-bold hidden bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center tracking-wide"></div>
+        </section>
+
+        <!-- 未來可擴充：導讀資料上傳區塊 -->
+        <section class="bg-white/50 rounded-[2.5rem] p-8 border border-dashed border-emerald-200 opacity-60">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="fas fa-book-reader text-gray-400"></i>
+                <h2 class="text-gray-500 font-black">導讀資料上傳 (建置中)</h2>
+            </div>
+            <p class="text-xs text-gray-400">未來將開放直接透過此介面上傳 PDF 或文件至指定雲端資料夾。</p>
+        </section>
+        
+    </div>
+
+    <!-- UI 元件：Loading 與 Toast -->
+    <div id="loadingOverlay">
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-emerald-900 font-bold" id="loadingText">處理中，請稍候...</p>
+        </div>
+    </div>
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000]"></div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
+        
+        // 📦 1. 統一提取資料 (auth 包)
+        const auth = (function() {
+            try {
+                const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+                const loneKey = sessionStorage.getItem('staffKey'); 
+                return {
+                    key: info.staffKey || loneKey || "",
+                    permissions: info.userPermissions || [],
+                    isValid: !!(info.staffKey || loneKey)
+                };
+            } catch (e) {
+                return { key: "", permissions: [], isValid: false };
+            }
+        })();
+
+        const STAFF_KEY = auth.key;
+        const userPermissions = auth.permissions;
+        let selectedFiles = [];
+
+        // UI 輔助功能
+        function showLoading(show, text = "處理中，請稍候...") { 
+            document.getElementById('loadingText').innerText = text;
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; 
+        }
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 3000);
+        }
+
+        // 網頁載入時執行權限驗證
+        window.onload = () => { 
+            if (!STAFF_KEY) {
+                alert("請重新登入");
+                location.href = "index.html";
+                return;
+            }
+
+            // 確保權限與首頁佈置 (manage_config) 共用一致的參數
+            const hasConfigPermission = userPermissions.some(p => 
+                p.trim().toLowerCase() === "all" || 
+                p.trim().toLowerCase() === "manage_config"
+            );
+            
+            if (!hasConfigPermission) {
+                alert("⚠️ 您不具備管理雲端資料的權限，即將返回選單。");
+                location.href = "staff_menu.html";
+            }
+        };
+
+        // --- 檔案選擇與上傳邏輯 ---
+        function handleFileSelect(event) {
+            selectedFiles = Array.from(event.target.files);
+            const statusEl = document.getElementById('uploadStatus');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (selectedFiles.length > 0) {
+                statusEl.innerHTML = `<i class="fas fa-check-circle mr-1 text-emerald-500"></i> 已選取 <b>${selectedFiles.length}</b> 張照片，點擊右側按鈕開始上傳。`;
+                statusEl.classList.remove('hidden');
+                uploadBtn.disabled = false;
+            } else {
+                statusEl.classList.add('hidden');
+                uploadBtn.disabled = true;
+            }
+        }
+
+        async function startUploadProcess() {
+            if (selectedFiles.length === 0) return;
+
+            const statusEl = document.getElementById('uploadStatus');
+            let successCount = 0;
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                showLoading(true, `上傳中... (${i + 1}/${selectedFiles.length})`);
+
+                try {
+                    const base64Data = await convertFileToBase64(file);
+                    const payload = {
+                        type: 'upload_activity_photo',
+                        key: STAFF_KEY,
+                        fileName: file.name,
+                        fileData: base64Data
+                    };
+
+                    const res = await fetch(GAS_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+
+                    if (result.result === 'SUCCESS') {
+                        successCount++;
+                    }
+                } catch (err) {
+                    console.error("上傳發生錯誤:", err);
+                }
+            }
+
+            showLoading(false);
+            
+            if (successCount === selectedFiles.length) {
+                showToast(`✅ 完美！${successCount} 張照片全數上傳成功`);
+            } else {
+                showToast(`⚠️ 上傳完畢，成功 ${successCount} 張，失敗 ${selectedFiles.length - successCount} 張`);
+            }
+
+            // 清空狀態
+            document.getElementById('photoInput').value = '';
+            selectedFiles = [];
+            document.getElementById('uploadBtn').disabled = true;
+            statusEl.innerHTML = `<i class="fas fa-info-circle mr-1"></i> 上傳流程結束。`;
+        }
+
+        // 將 File 轉成 Base64 字串
+        function convertFileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+</html>

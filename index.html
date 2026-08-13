@@ -517,20 +517,25 @@ function closeFullscreenGallery() {
 }
     
 </script>
-<!-- 🌟 全螢幕照片播放器 (點擊任意處或照片即可關閉) 🌟 -->
-<div id="galleryModal" class="fixed inset-0 z-[200] bg-black/95 hidden flex-col items-center justify-center p-4 cursor-pointer select-none" onclick="closeFullscreenGallery()">
-    <div class="absolute top-6 right-6 text-white/70 hover:text-white text-3xl font-bold transition z-10">
-        <i class="fas fa-times-circle"></i>
+<!-- 🌟 全螢幕照片播放器 (極致滿框版，點擊任意處或照片即可關閉) 🌟 -->
+<div id="galleryModal" class="fixed inset-0 z-[200] bg-black/95 hidden flex-col items-center justify-center p-0 cursor-pointer select-none" onclick="closeFullscreenGallery()">
+    <!-- 右上角關閉按鈕 -->
+    <div class="absolute top-4 right-4 text-white/80 hover:text-white text-3xl font-bold transition z-20 bg-black/40 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm">
+        <i class="fas fa-times"></i>
     </div>
-    <div class="text-xs text-white/50 absolute top-6 left-6 font-mono">
+    
+    <!-- 頂部提示文字 -->
+    <div class="text-xs text-white/60 absolute top-4 left-4 font-mono z-20 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
         點擊畫面任意處關閉
     </div>
     
-    <!-- 全螢幕大圖容器 -->
-    <div class="relative max-w-5xl max-h-[85vh] flex items-center justify-center">
-        <img id="fullscreenImg" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-all duration-300">
+    <!-- 🌟 滿框大图容器：移除 max-w-5xl 限制，寬高拉伸至 95vw / 92vh -->
+    <div class="relative w-[96vw] h-[92vh] flex items-center justify-center">
+        <img id="fullscreenImg" src="" class="w-full h-full object-contain rounded-lg shadow-2xl transition-all duration-300">
     </div>
-    <div id="fullscreenCaption" class="text-white/80 text-sm mt-4 font-bold tracking-wider"></div>
+    
+    <!-- 底部頁碼提示 -->
+    <div id="fullscreenCaption" class="absolute bottom-3 text-white/90 text-xs font-bold tracking-wider bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-sm z-20"></div>
 </div>
     
 </body>

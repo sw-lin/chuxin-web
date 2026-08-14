@@ -271,11 +271,13 @@
 
             allRecords.forEach(r => {
                 const amt = Number(r.amount) || 0;
-                if (r.type === '收入') {
-                    totalIncome += amt;
-                } else if (r.type === '支出' && r.status === '已結案') {
-                    // 僅統計已核銷結案的支出
-                    totalExpense += amt;
+                // 🌟 只要狀態不是已作廢，才納入計算
+                if (r.status !== '已作廢') {
+                    if (r.type === '收入') {
+                        totalIncome += amt;
+                    } else if (r.type === '支出' && r.status === '已結案') {
+                        totalExpense += amt;
+                    }
                 }
             });
 
@@ -305,32 +307,46 @@
             let html = '';
             filtered.forEach(r => {
                 const isIncome = r.type === '收入';
-                const statusColor = r.status === '已結案' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800 animate-pulse';
+                const isCanceled = r.status === '已作廢';
 
-                // 產生動態簽核按鈕
+                // 狀態標籤顏色
+                let statusColor = 'bg-amber-100 text-amber-800 animate-pulse';
+                if (r.status === '已結案') statusColor = 'bg-emerald-100 text-emerald-800';
+                if (isCanceled) statusColor = 'bg-gray-200 text-gray-600 line-through';
+
+                // 動態簽核按鈕
                 let actionBtnHtml = '';
-                if (!isIncome) {
+                if (!isIncome && !isCanceled) {
                     if (r.status === '待會長核准' && (auth.role === '會長' || auth.role === '副會長')) {
-                        actionBtnHtml = `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition"><i class="fas fa-check mr-1"></i>會長核准</button>`;
+                        actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>會長核准</button>`;
                     } else if (r.status === '待財務撥款' && auth.role === '財務') {
-                        actionBtnHtml = `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition"><i class="fas fa-hand-holding-usd mr-1"></i>財務撥款</button>`;
+                        actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>財務撥款</button>`;
                     } else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
-                        actionBtnHtml = `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition"><i class="fas fa-signature mr-1"></i>確認簽收結案</button>`;
+                        actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-signature mr-1"></i>確認簽收結案</button>`;
+                    }
+
+                    // 🌟 財務或會長可點擊「作廢/刪除」按鈕
+                    if (auth.role === '財務' || auth.role === '會長') {
+                        actionBtnHtml += `<button onclick="cancelRecord(${r.rowIndex})" class="mt-2 text-xs font-bold bg-gray-100 hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl transition"><i class="fas fa-ban mr-1"></i>作廢</button>`;
                     }
                 }
 
                 // 單據圖片按鈕
                 const receiptBtnHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" class="text-xs text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 hover:bg-orange-100 transition inline-flex items-center gap-1"><i class="fas fa-receipt"></i>檢視單據</a>` : '';
 
+                // 作廢原因呈現
+                const cancelNoteHtml = isCanceled && r.cancelNote ? `<div class="text-xs text-red-500 font-bold mt-1 bg-red-50 p-2 rounded-lg border border-red-100"><i class="fas fa-exclamation-circle mr-1"></i>${r.cancelNote}</div>` : '';
+
                 html += `
-                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 ${isCanceled ? 'opacity-60 bg-gray-50' : ''}">
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs font-black px-2 py-0.5 rounded-md ${isIncome ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">${r.type}</span>
-                                <span class="font-black text-gray-800 text-sm">${r.category}</span>
+                                <span class="font-black text-gray-800 text-sm ${isCanceled ? 'line-through' : ''}">${r.category}</span>
                                 <span class="text-[10px] text-gray-400 font-bold">(${r.id})</span>
                             </div>
                             <div class="text-xs text-gray-600 font-bold">${r.desc || '無摘要說明'}</div>
+                            ${cancelNoteHtml}
                             <div class="text-[11px] text-gray-400 flex items-center gap-3">
                                 <span><i class="far fa-calendar-alt mr-1"></i>${r.date}</span>
                                 <span><i class="far fa-user mr-1"></i>${r.applicant}</span>
@@ -339,19 +355,57 @@
 
                         <div class="flex md:flex-col items-end justify-between w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-gray-100">
                             <div class="text-right">
-                                <div class="text-base font-black ${isIncome ? 'text-emerald-600' : 'text-red-500'}">${isIncome ? '+' : '-'} NT$ ${Number(r.amount).toLocaleString()}</div>
+                                <div class="text-base font-black ${isIncome ? 'text-emerald-600' : 'text-red-500'} ${isCanceled ? 'line-through text-gray-400' : ''}">${isIncome ? '+' : '-'} NT$ ${Number(r.amount).toLocaleString()}</div>
                                 <div class="flex items-center gap-2 justify-end mt-1">
                                     ${receiptBtnHtml}
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}">${r.status}</span>
                                 </div>
                             </div>
-                            ${actionBtnHtml}
+                            <div>${actionBtnHtml}</div>
                         </div>
                     </div>
                 `;
             });
 
             container.innerHTML = html;
+        }
+
+        // 🌟 新增：作廢與刪除請求
+        async function cancelRecord(rowIndex) {
+            const reason = prompt("⚠️ 確定要作廢此筆請款/收支紀錄嗎？\n請輸入「作廢/取消說明」（例如：活動取消、金額異動）：");
+            
+            if (reason === null) return; // 使用者按取消
+            if (reason.trim() === "") {
+                alert("作廢說明為必填項目，請重新輸入！");
+                return;
+            }
+
+            showLoading(true, "紀錄作廢處理中...");
+            try {
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: 'cancel',
+                    reason: reason.trim()
+                };
+
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ 該筆紀錄已作廢");
+                    await loadRecords();
+                } else {
+                    showToast("❌ 操作失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常");
+            }
+            showLoading(false);
         }
 
         // --- 篩選切換 ---

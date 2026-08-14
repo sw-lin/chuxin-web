@@ -116,12 +116,19 @@
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">項目類別</label>
                             <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
+                                <!-- 支出選項 (已更新為 10 個標準分類) -->
                                 <option value="場地費" class="opt-expense">場地費</option>
-                                <option value="講師費" class="opt-expense">講師費</option>
-                                <option value="活動雜支" class="opt-expense">活動雜支</option>
+                                <option value="演講費" class="opt-expense">演講費</option>
+                                <option value="禮物金" class="opt-expense">禮物金</option>
                                 <option value="幹部補助" class="opt-expense">幹部補助</option>
+                                <option value="導讀補貼" class="opt-expense">導讀補貼</option>
+                                <option value="活動補助" class="opt-expense">活動補助</option>
+                                <option value="活動探勘費" class="opt-expense">活動探勘費</option>
+                                <option value="期末聚餐補助" class="opt-expense">期末聚餐補助</option>
+                                <option value="全勤獎金" class="opt-expense">全勤獎金</option>
                                 <option value="其他支出" class="opt-expense">其他支出</option>
 
+                                <!-- 收入選項 (保持原樣，預設隱藏) -->
                                 <option value="會員會費" class="opt-income hidden">會員會費</option>
                                 <option value="個人捐款" class="opt-income hidden">個人捐款</option>
                                 <option value="前期結餘" class="opt-income hidden">前期結餘</option>
@@ -461,7 +468,8 @@
 
             document.querySelectorAll('.opt-expense').forEach(e => e.classList.toggle('hidden', mode !== 'expense'));
             document.querySelectorAll('.opt-income').forEach(e => e.classList.toggle('hidden', mode !== 'income'));
-            document.getElementById('recordCategory').selectedIndex = mode === 'expense' ? 0 : 5;
+            // 當切換到支出時選第 0 個(場地費)，切換到收入時選第 10 個(會員會費)
+            document.getElementById('recordCategory').selectedIndex = mode === 'expense' ? 0 : 10;
         }
 
         function toggleReceiptInput() {

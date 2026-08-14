@@ -291,8 +291,9 @@
             const container = document.getElementById('recordsContainer');
             let filtered = allRecords;
 
+            // 🌟 修正點：待處理要過濾掉「已結案」與「已作廢」
             if (currentFilter === 'pending') {
-                filtered = allRecords.filter(r => r.type === '支出' && r.status !== '已結案');
+                filtered = allRecords.filter(r => r.type === '支出' && r.status !== '已結案' && r.status !== '已作廢');
             } else if (currentFilter === '收入' || currentFilter === '支出') {
                 filtered = allRecords.filter(r => r.type === currentFilter);
             }

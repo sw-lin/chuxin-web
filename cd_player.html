@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CD 視聽館 - 築心讀書會</title>
+    
+    <!-- 讀書會專屬 PWA 與網站圖示設定 -->
+    <link rel="shortcut icon" href="favicon.ico?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2" />
+    <meta name="apple-mobile-web-app-title" content="築心讀書會" />
+    <link rel="manifest" href="site.webmanifest?v=2" />
+    
+    <!-- 載入 Tailwind CSS 與 FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* 禁止文字選取與圖片拖曳，提升防護力 */
+        body { 
+            -webkit-user-select: none; 
+            user-select: none; 
+            -webkit-touch-callout: none;
+            background-color: #f8fafc; 
+        }
+        /* 自訂音訊播放器樣式 (隱藏下載按鈕的第二層防護) */
+        audio::-webkit-media-controls-enclosure {
+            border-radius: 1rem;
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 pb-20">
+
+    <!-- 頂部導覽列 -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='member_zone.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors">
+            <i class="fas fa-chevron-left mr-1"></i> 返回
+        </button>
+        <h1 class="text-lg font-black tracking-widest absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+            CD 視聽館
+        </h1>
+        <div class="w-12"></div>
+    </nav>
+
+    <!-- 主體內容區塊 -->
+    <main class="p-4 max-w-2xl mx-auto mt-4">
+        
+        <section class="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-purple-100 relative overflow-hidden">
+            <!-- 裝飾背景圖案 -->
+            <i class="fas fa-compact-disc absolute -right-6 -top-6 text-9xl text-purple-50/50 transform rotate-45 pointer-events-none"></i>
+            
+            <div class="relative z-10">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-12 h-12 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center shadow-inner">
+                        <i class="fas fa-headphones-alt text-2xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-emerald-950 text-lg">線上導讀視聽</h4>
+                        <p class="text-xs text-gray-500 font-bold mt-0.5">僅供會員線上研習，嚴禁側錄或下載外傳</p>
+                    </div>
+                </div>
+
+                <!-- 1. 選擇 CD 專輯下拉選單 -->
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-emerald-800 mb-2 ml-1 tracking-wider uppercase">選擇專輯 Select Album</label>
+                    <div class="relative">
+                        <select id="albumSelector" onchange="loadAlbumTracks()" class="w-full bg-emerald-50/50 p-4 pr-10 rounded-2xl text-sm font-bold text-emerald-900 outline-none appearance-none border-2 border-transparent focus:border-purple-400 transition-all shadow-sm">
+                            <option value="">⏳ 載入 CD 清單中...</option>
+                        </select>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-700/50">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 音訊播放器與控制區 -->
+                <div class="bg-slate-50 p-5 rounded-[2rem] border border-slate-100 shadow-inner space-y-4">
+                    
+                    <!-- 狀態顯示文字 -->
+                    <div id="playerStatusText" class="text-sm text-center text-emerald-800 font-black truncate px-2 text-shadow-sm">
+                        請從上方選單選擇 CD
+                    </div>
+
+                    <!-- 原生音訊播放器 (禁用下載與右鍵) -->
+                    <audio id="cdAudioPlayer" controls controlsList="nodownload" oncontextmenu="return false;" class="w-full h-12 outline-none">
+                        您的瀏覽器不支援線上音訊播放。
+                    </audio>
+
+                    <!-- 切換曲目按鈕列 -->
+                    <div class="flex items-center justify-between gap-3 pt-1">
+                        <button onclick="playPrevTrack()" class="flex-1 bg-white hover:bg-purple-50 text-purple-900 border border-purple-100 py-3 rounded-xl text-xs font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-1">
+                            <i class="fas fa-step-backward"></i> 上一首
+                        </button>
+                        
+                        <button onclick="playNextTrack()" class="flex-1 bg-white hover:bg-purple-50 text-purple-900 border border-purple-100 py-3 rounded-xl text-xs font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-1">
+                            下一首 <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. 曲目點選清單 (動態渲染) -->
+                <div id="trackListContainer" class="mt-6 hidden">
+                    <div class="flex items-center gap-2 mb-3 ml-1">
+                        <div class="w-1.5 h-4 bg-purple-500 rounded-full"></div>
+                        <h5 class="text-xs font-black text-gray-600 tracking-widest uppercase">曲目清單 Tracklist</h5>
+                    </div>
+                    <div id="trackList" class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- 由 JS 自動產生曲目按鈕列表 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- UI 元件：Loading / Toast -->
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000]"></div>
+
+    <script>
+        // ⚠️ 確保這裡設定為您現有的 Google Apps Script 網址
+        const GAS_URL = "您的_GAS_網頁應用程式網址"; 
+        
+        let availableCDs = [];
+        let currentPlaylist = [];
+        let currentTrackIndex = 0;
+
+        // UI Toast 提示系統
+        function showToast(msg, type="info") {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = (type === "success" ? '<i class="fas fa-check-circle text-emerald-400 mr-2"></i>' : (type === "error" ? '<i class="fas fa-exclamation-circle text-red-400 mr-2"></i>' : '')) + msg;
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            setTimeout(() => toast.classList.add('opacity-0', '-translate-y-4'), 2500);
+        }
+
+        // 頁面載入時初始化
+        window.addEventListener('load', async () => {
+            // 安全性檢查：阻擋開發者工具開啟 (簡易防護)
+            document.addEventListener('contextmenu', event => event.preventDefault());
+            loadCDList();
+        });
+
+        // 1. 載入下拉選單 CD 專輯清單
+        async function loadCDList() {
+            const selector = document.getElementById('albumSelector');
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_cd_list&t=${Date.now()}`);
+                const data = await res.json();
+                
+                if (data.result === "SUCCESS" && data.cdList.length > 0) {
+                    availableCDs = data.cdList;
+                    selector.innerHTML = '<option value="">-- 請選擇要收聽的 CD 專輯 --</option>' + 
+                        availableCDs.map(cd => `<option value="${cd.folderId}">${cd.title}</option>`).join('');
+                } else {
+                    selector.innerHTML = '<option value="">目前尚無已上架的 CD 資料</option>';
+                }
+            } catch (e) {
+                selector.innerHTML = '<option value="">❌ 系統連線失敗，請稍後再試</option>';
+                showToast("載入 CD 清單失敗", "error");
+            }
+        }
+
+        // 2. 切換專輯時，載入該專輯的所有曲目
+        async function loadAlbumTracks() {
+            const folderId = document.getElementById('albumSelector').value;
+            const player = document.getElementById('cdAudioPlayer');
+            const statusText = document.getElementById('playerStatusText');
+            const container = document.getElementById('trackListContainer');
+
+            if (!folderId) {
+                player.src = "";
+                statusText.innerText = "請從上方選單選擇 CD";
+                container.classList.add('hidden');
+                return;
+            }
+
+            statusText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 正在搜尋專輯音軌...';
+            
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_cd_album_tracks&folderId=${folderId}&t=${Date.now()}`);
+                const data = await res.json();
+
+                if (data.result === "SUCCESS" && data.tracks.length > 0) {
+                    currentPlaylist = data.tracks;
+                    renderTrackList();
+                    container.classList.remove('hidden');
+                    playTrack(0); // 預設從第 1 首開始播
+                } else {
+                    statusText.innerText = "❌ 此目錄下未找到音軌或設定錯誤";
+                    container.classList.add('hidden');
+                }
+            } catch (e) {
+                statusText.innerText = "❌ 載入曲目清單異常";
+            }
+        }
+
+        // 3. 渲染下方的曲目清單
+        function renderTrackList() {
+            const listElem = document.getElementById('trackList');
+            listElem.innerHTML = currentPlaylist.map((track, idx) => `
+                <button onclick="playTrack(${idx})" id="trackBtn_${idx}" class="w-full text-left p-3.5 rounded-2xl text-xs font-bold transition-all flex items-center justify-between ${idx === currentTrackIndex ? 'bg-purple-600 text-white shadow-md' : 'bg-gray-50 hover:bg-purple-50 text-emerald-950 border border-gray-100'}">
+                    <span class="truncate flex items-center">
+                        <i class="${idx === currentTrackIndex ? 'fas fa-volume-up animate-pulse text-purple-200' : 'fas fa-music text-gray-300'} mr-3 text-sm w-4 text-center"></i> 
+                        ${track.name}
+                    </span>
+                    <span class="text-[10px] opacity-70 ml-2 whitespace-nowrap">Track ${idx + 1}</span>
+                </button>
+            `).join('');
+        }
+
+        // 4. 取得指定曲目的音訊串流並播放
+        async function playTrack(index) {
+            if (index < 0 || index >= currentPlaylist.length) return;
+
+            currentTrackIndex = index;
+            renderTrackList(); // 更新清單的高亮 UI
+
+            const track = currentPlaylist[index];
+            const player = document.getElementById('cdAudioPlayer');
+            const statusText = document.getElementById('playerStatusText');
+
+            statusText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> 串流載入 (${index + 1}/${currentPlaylist.length}): ${track.name}...`;
+
+            try {
+                // 向 GAS 請求 Base64 串流
+                const res = await fetch(`${GAS_URL}?type=get_cd_audio_stream&fileId=${track.id}`);
+                const data = await res.json();
+
+                if (data.result === "SUCCESS") {
+                    player.src = data.audioData;
+                    player.play();
+                    statusText.innerHTML = `<i class="fas fa-play-circle text-purple-600 mr-1.5"></i> 正在播放：${track.name}`;
+                } else {
+                    statusText.innerText = `❌ 載入失敗：${data.message}`;
+                    showToast("讀取音訊失敗", "error");
+                }
+            } catch (e) {
+                statusText.innerText = "❌ 網路連線異常，請檢查網路";
+            }
+        }
+
+        // 5. 控制按鈕邏輯
+        function playPrevTrack() {
+            if (currentPlaylist.length === 0) return;
+            let targetIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : currentPlaylist.length - 1;
+            playTrack(targetIndex);
+        }
+
+        function playNextTrack() {
+            if (currentPlaylist.length === 0) return;
+            let targetIndex = currentTrackIndex < currentPlaylist.length - 1 ? currentTrackIndex + 1 : 0;
+            playTrack(targetIndex);
+        }
+
+        // 6. 當音軌播完時，自動跳下一首
+        document.getElementById('cdAudioPlayer').addEventListener('ended', function() {
+            if (currentTrackIndex < currentPlaylist.length - 1) {
+                playTrack(currentTrackIndex + 1);
+            } else {
+                document.getElementById('playerStatusText').innerHTML = "🎉 <span class='text-emerald-700'>全專輯播放完畢！</span>";
+            }
+        });
+
+    </script>
+</body>
+</html>

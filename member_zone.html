@@ -137,25 +137,37 @@
     </div>
 
     <div class="space-y-4 pt-6 border-t border-emerald-50">
-        <div class="flex items-center gap-3 px-2">
-            <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
-            <h3 class="text-lg font-black text-emerald-950 tracking-wide">專屬服務</h3>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-             <button onclick="openService('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
-                 <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                 <i class="fas fa-book-reader text-emerald-700 text-xl"></i>
-                 </div>
-                 <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
-            </button>            
-            <button onclick="openService('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
-                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+      <div class="flex items-center gap-3 px-2">
+        <div class="h-5 w-1 bg-emerald-600 rounded-full"></div>
+        <h3 class="text-lg font-black text-emerald-950 tracking-wide">專屬服務</h3>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        
+        <!-- 1. 課程資料庫 -->
+        <button onclick="openService('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+            <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-book-reader text-emerald-700 text-xl"></i>
+            </div>
+            <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
+        </button>            
+
+        <!-- 2. 活動剪影 -->
+        <button onclick="openService('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+            <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
                 <i class="fas fa-camera-retro text-amber-700 text-xl"></i>
-                </div>
-                <span class="font-black text-emerald-900 text-sm">活動剪影</span>
-             </button> 
-            
-             <!-- 新增：清大校園車輛繳費系統 -->
+            </div>
+            <span class="font-black text-emerald-900 text-sm">活動剪影</span>
+        </button> 
+
+        <!-- 🌟 3. 新增：CD 視聽館 (獨立跳轉頁面) -->
+        <button onclick="location.href='cd_player.html'" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+            <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center shadow-inner">
+                <i class="fas fa-compact-disc text-purple-700 text-xl"></i>
+            </div>
+            <span class="font-black text-emerald-900 text-sm">CD 視聽館</span>
+        </button>
+
+        <!-- 4. 清大校園車輛繳費系統 -->
         <button onclick="window.open('https://mitwit-line-web-server.herokuapp.com/service/temporary/agency/S26B841C/search/', '_blank')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
             <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
                 <i class="fas fa-car text-blue-700 text-xl"></i>
@@ -163,28 +175,26 @@
             <span class="font-black text-emerald-900 text-sm">清大車輛繳費</span>
         </button> 
 
-            
-            <button onclick="openProfileModal()" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
-                <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
-                <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
-            </button>
-            <!-- <button onclick="goToAI()" class="bg-emerald-50 p-6 rounded-[2rem] shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
-                <div class="bg-emerald-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
-                    <i class="fas fa-comment-dots text-xl"></i>
-                </div>
-                <span class="font-black text-emerald-900 text-sm tracking-wide">智慧助理</span>
-            </button>             -->
-            <button id="calendarBtn" onclick="location.href='calendar.html'" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
-                <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
+        <!-- 5. 個人資料修改 -->
+        <button onclick="openProfileModal()" class="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center">
+            <div class="bg-amber-50 text-amber-700 w-12 h-12 rounded-full flex items-center justify-center"><i class="fas fa-user-cog text-xl"></i></div>
+            <span class="font-black text-emerald-900 text-sm tracking-wide">個人資料修改</span>
+        </button>
+
+        <!-- 6. 行事曆 -->
+        <button id="calendarBtn" onclick="location.href='calendar.html'" class="bg-amber-50 p-6 rounded-[2rem] shadow-sm border border-amber-100 flex flex-col items-center justify-center space-y-2.5 transition-all active:scale-95">
+            <div class="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md">
                 <i class="fas fa-calendar-alt text-xl"></i>
             </div>
             <span class="font-black text-emerald-900 text-sm tracking-wide">行事曆</span>
-            </button>            
-            <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
-                <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
-                <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
-            </button>
-        </div>
+        </button>            
+
+        <!-- 7. 幹部管理區 -->
+        <button id="staffBtn" class="hidden bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-50 flex flex-col items-center justify-center space-y-2.5 active:bg-gray-50 transition-all text-center border-l-4 border-l-emerald-600">
+            <div class="bg-emerald-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md"><i class="fas fa-id-card-alt text-xl"></i></div>
+            <span class="font-black text-emerald-900 text-sm tracking-wide">幹部管理區</span>
+        </button>
+    </div>
     </div>
 
     <div id="scanModal" class="fixed inset-0 z-[300] bg-black/90 hidden flex-col items-center justify-center p-6 backdrop-blur-sm">

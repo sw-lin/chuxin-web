@@ -93,6 +93,15 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">會費與雜支</span>
         </div>
 
+        <!-- 🌟 新增：財務總帳與簽核 (放置於繳費記錄後方) 🌟 -->
+        <div onclick="navTo('finance_mgr')" class="staff-card p-6 flex flex-col items-center text-center bg-emerald-50/10 border-emerald-100/50">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-emerald-700 !to-teal-900" style="background: linear-gradient(135deg, #047857 0%, #134E4A 100%);">
+                <i class="fas fa-file-invoice-dollar text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">財務總帳與簽核</span>
+            <span class="text-[11px] text-gray-400 mt-1 font-bold">收支、經費申請與簽核</span>
+        </div>
+
         <div onclick="navTo('event_reg')" class="staff-card p-6 flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
                 <i class="fas fa-file-signature text-white text-2xl"></i>
@@ -117,7 +126,6 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">投票活動管理</span>
         </div>
 
-        <!-- 🌟 新增：雲端資料管理 🌟 -->
         <div onclick="navTo('cloud_data_mgr')" class="staff-card p-6 flex flex-col items-center text-center bg-blue-50/10 border-blue-100/50">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-blue-600 !to-blue-800" style="background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%);">
                 <i class="fas fa-cloud-upload-alt text-white text-2xl"></i>

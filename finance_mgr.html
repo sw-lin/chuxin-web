@@ -228,21 +228,38 @@
         }
 
         // --- 載入總帳明細 ---
+        // --- 修正版：載入總帳明細 ---
         async function loadRecords() {
             showLoading(true, "讀取財務資料中...");
             try {
-                const res = await fetch(`${GAS_URL}?type=get_finance_records&t=${Date.now()}`);
+                // 改用 POST 發送以帶入身份 Key，防止被後端權限阻擋
+                const payload = {
+                    type: 'get_finance_records',
+                    key: auth.key
+                };
+
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
                 const result = await res.json();
 
-                if (result.result === 'SUCCESS') {
+                if (result && result.result === 'SUCCESS') {
                     allRecords = result.records || [];
                     calculateSummary();
                     renderRecords();
                 } else {
-                    showToast("❌ 讀取失敗：" + result.message);
+                    const errorMsg = (result && result.message) ? result.message : "未知錯誤";
+                    showToast("❌ 讀取失敗：" + errorMsg);
+                    document.getElementById('recordsContainer').innerHTML = 
+                        `<div class="text-center py-12 text-red-400 font-bold">載入失敗：${errorMsg}</div>`;
                 }
             } catch (err) {
+                console.error("載入紀錄失敗:", err);
                 showToast("❌ 伺服器連線失敗");
+                document.getElementById('recordsContainer').innerHTML = 
+                    `<div class="text-center py-12 text-red-400 font-bold">連線失敗，請稍後再試</div>`;
             }
             showLoading(false);
         }

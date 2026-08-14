@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>經費簽核與總帳</title>
+    <title>財務總帳與經費簽核</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -14,236 +14,405 @@
         .tab-inactive { color: #9CA3AF; font-weight: 700; }
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
     </style>
+    <link rel="icon" type="image/png" href="favicon-32x32.png?v=2" sizes="32x32" />
 </head>
 <body class="pb-32">
 
     <!-- 導航列 -->
     <nav class="emerald-gradient text-white p-4 sticky top-0 z-50 shadow-lg">
-        <div class="max-w-4xl mx-auto grid grid-cols-3 items-center">
+        <div class="max-w-5xl mx-auto grid grid-cols-3 items-center">
             <div class="flex justify-start">
                <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center transition hover:text-emerald-200">
-                   <i class="fas fa-chevron-left mr-1"></i>返回
+                   <i class="fas fa-chevron-left mr-1"></i>返回選單
                </button>
             </div>
             <div class="text-center whitespace-nowrap">
-                <h1 class="font-black tracking-widest text-lg">財務與經費簽核</h1>
+                <h1 class="font-black tracking-widest text-lg">財務總帳與簽核</h1>
             </div>
-            <div class="flex justify-end"></div>
+            <div class="flex justify-end">
+                <button onclick="loadRecords()" class="text-xs bg-emerald-800/80 hover:bg-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-500/50 transition">
+                    <i class="fas fa-sync-alt mr-1"></i>重新整理
+                </button>
+            </div>
         </div>
     </nav>
 
-    <!-- 雙頁籤切換器 -->
-    <div class="max-w-4xl mx-auto mt-4 px-4 flex border-b border-gray-200">
-        <button id="tab-expense" onclick="switchTab('expense')" class="flex-1 py-4 text-center tab-active transition">
-            <i class="fas fa-file-invoice-dollar mr-2"></i>支出請款申請
-        </button>
-        <button id="tab-income" onclick="switchTab('income')" class="flex-1 py-4 text-center tab-inactive transition hidden">
-            <i class="fas fa-hand-holding-usd mr-2"></i>新增收入 (財務專用)
-        </button>
-    </div>
+    <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
 
-    <!-- 內容區塊 -->
-    <div class="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
-        
-        <!-- 表單區塊 -->
-        <section class="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-emerald-100">
-            <h2 id="formTitle" class="text-emerald-900 font-black mb-6 text-lg border-l-4 border-emerald-600 pl-3">新增支出請款</h2>
-            
-            <div class="space-y-5">
-                <!-- 日期與經手人 (自動帶入) -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">日期</label>
-                        <input type="date" id="recordDate" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-emerald-500 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">申請/經手人</label>
-                        <input type="text" id="applicantName" readonly class="w-full p-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 outline-none font-bold">
-                    </div>
-                </div>
-
-                <!-- 項目類別與金額 -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">項目類別</label>
-                        <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-emerald-500 font-bold">
-                            <!-- 支出選項 (預設) -->
-                            <option value="場地費" class="opt-expense">場地費</option>
-                            <option value="講師費" class="opt-expense">講師費</option>
-                            <option value="活動雜支" class="opt-expense">活動雜支</option>
-                            <option value="幹部補助" class="opt-expense">幹部補助</option>
-                            <option value="其他支出" class="opt-expense">其他支出</option>
-                            <!-- 收入選項 (預設隱藏) -->
-                            <option value="會員會費" class="opt-income hidden">會員會費</option>
-                            <option value="個人捐款" class="opt-income hidden">個人捐款</option>
-                            <option value="前期結餘" class="opt-income hidden">前期結餘</option>
-                            <option value="其他收入" class="opt-income hidden">其他收入</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">金額 (NT$)</label>
-                        <input type="number" id="recordAmount" min="0" placeholder="0" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-emerald-500 font-black text-emerald-700">
-                    </div>
-                </div>
-
-                <!-- 說明摘要 -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">說明/摘要 (細節敘述)</label>
-                    <textarea id="recordDesc" rows="2" placeholder="請簡述款項用途..." class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-emerald-500 font-bold resize-none"></textarea>
-                </div>
-
-                <!-- 單據上傳 (僅支出時顯示) -->
-                <div id="receiptSection" class="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
-                    <label class="flex items-center gap-2 cursor-pointer mb-3">
-                        <input type="checkbox" id="hasReceipt" class="w-4 h-4 text-emerald-600 rounded" onchange="toggleReceiptInput()">
-                        <span class="font-bold text-orange-800 text-sm">檢附單據 (啟動相機拍照)</span>
-                    </label>
-                    
-                    <div id="receiptInputContainer" class="hidden">
-                        <!-- capture="environment" 會優先呼叫手機後置鏡頭 -->
-                        <input type="file" id="receiptFile" accept="image/*" capture="environment" class="hidden" onchange="previewReceipt(event)">
-                        <button onclick="document.getElementById('receiptFile').click()" class="w-full py-3 bg-white border-2 border-dashed border-orange-300 text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-camera"></i> 點擊拍照或選擇相片
-                        </button>
-                        <div id="receiptStatus" class="mt-2 text-xs font-bold text-emerald-600 hidden text-center"></div>
-                    </div>
-                </div>
-
-                <!-- 送出按鈕 -->
-                <button onclick="submitRecord()" class="w-full py-4 mt-4 bg-emerald-800 text-white rounded-xl font-black shadow-md active:scale-95 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-paper-plane"></i> 送出資料
-                </button>
+        <!-- 💰 頂部財務儀表板 (即時統計) -->
+        <section class="grid grid-cols-3 gap-3 md:gap-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 text-center">
+                <span class="text-[11px] font-bold text-gray-400 block mb-1">總收入</span>
+                <span id="statIncome" class="text-lg md:text-2xl font-black text-emerald-600">NT$ 0</span>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-red-100 text-center">
+                <span class="text-[11px] font-bold text-gray-400 block mb-1">總支出</span>
+                <span id="statExpense" class="text-lg md:text-2xl font-black text-red-500">NT$ 0</span>
+            </div>
+            <div class="bg-emerald-900 text-white p-4 rounded-2xl shadow-sm text-center">
+                <span class="text-[11px] font-bold text-emerald-200 block mb-1">目前結餘</span>
+                <span id="statBalance" class="text-lg md:text-2xl font-black text-amber-300">NT$ 0</span>
             </div>
         </section>
+
+        <!-- 📑 頁籤切換器 -->
+        <div class="flex border-b border-gray-200 bg-white rounded-t-2xl">
+            <button id="tab-list" onclick="switchView('list')" class="flex-1 py-4 text-center tab-active transition">
+                <i class="fas fa-list-alt mr-2"></i>收支明細與簽核
+            </button>
+            <button id="tab-apply" onclick="switchView('apply')" class="flex-1 py-4 text-center tab-inactive transition">
+                <i class="fas fa-plus-circle mr-2"></i>填寫請款 / 入帳
+            </button>
+        </div>
+
+        <!-- 🔴 視圖一：財務明細列表與簽核專區 -->
+        <div id="view-list" class="space-y-4">
+            <!-- 篩選列 -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="flex gap-2">
+                    <button onclick="filterRecords('all')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-800 text-white" data-type="all">全部</button>
+                    <button onclick="filterRecords('pending')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600" data-type="pending">待處理</button>
+                    <button onclick="filterRecords('收入')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600" data-type="收入">僅收入</button>
+                    <button onclick="filterRecords('支出')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600" data-type="支出">僅支出</button>
+                </div>
+                <span id="recordCount" class="text-xs font-bold text-gray-400">共 0 筆紀錄</span>
+            </div>
+
+            <!-- 卡片式清單區塊 -->
+            <div id="recordsContainer" class="space-y-3">
+                <div class="text-center py-12 text-gray-400 font-bold">載入資料中...</div>
+            </div>
+        </div>
+
+        <!-- 🔴 視圖二：填寫請款 / 收入表單 -->
+        <div id="view-apply" class="hidden space-y-6">
+            <!-- 模式切換器 (支出 vs 收入) -->
+            <div id="incomeTabContainer" class="flex bg-gray-100 p-1.5 rounded-2xl gap-2">
+                <button id="subtab-expense" onclick="switchApplyMode('expense')" class="flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900">
+                    <i class="fas fa-file-invoice-dollar mr-1"></i>支出請款
+                </button>
+                <button id="subtab-income" onclick="switchApplyMode('income')" class="flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hidden">
+                    <i class="fas fa-hand-holding-usd mr-1"></i>新增收入 (財務專用)
+                </button>
+            </div>
+
+            <!-- 表單內容 -->
+            <section class="bg-white rounded-[2rem] p-6 shadow-sm border border-emerald-100">
+                <h2 id="formTitle" class="text-emerald-900 font-black mb-6 text-base border-l-4 border-emerald-600 pl-3">新增支出請款</h2>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">日期</label>
+                            <input type="date" id="recordDate" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">申請/經手人</label>
+                            <input type="text" id="applicantName" readonly class="w-full p-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-bold text-sm outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">項目類別</label>
+                            <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
+                                <option value="場地費" class="opt-expense">場地費</option>
+                                <option value="講師費" class="opt-expense">講師費</option>
+                                <option value="活動雜支" class="opt-expense">活動雜支</option>
+                                <option value="幹部補助" class="opt-expense">幹部補助</option>
+                                <option value="其他支出" class="opt-expense">其他支出</option>
+
+                                <option value="會員會費" class="opt-income hidden">會員會費</option>
+                                <option value="個人捐款" class="opt-income hidden">個人捐款</option>
+                                <option value="前期結餘" class="opt-income hidden">前期結餘</option>
+                                <option value="其他收入" class="opt-income hidden">其他收入</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">金額 (NT$)</label>
+                            <input type="number" id="recordAmount" min="0" placeholder="0" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-black text-sm text-emerald-700 outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">說明/摘要 (細節敘述)</label>
+                        <textarea id="recordDesc" rows="2" placeholder="請簡述款項用途..." class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500 resize-none"></textarea>
+                    </div>
+
+                    <div id="receiptSection" class="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                        <label class="flex items-center gap-2 cursor-pointer mb-2">
+                            <input type="checkbox" id="hasReceipt" class="w-4 h-4 text-emerald-600 rounded" onchange="toggleReceiptInput()">
+                            <span class="font-bold text-orange-800 text-sm">檢附單據 (拍照上傳)</span>
+                        </label>
+                        
+                        <div id="receiptInputContainer" class="hidden mt-2">
+                            <input type="file" id="receiptFile" accept="image/*" capture="environment" class="hidden" onchange="previewReceipt(event)">
+                            <button onclick="document.getElementById('receiptFile').click()" class="w-full py-3 bg-white border-2 border-dashed border-orange-300 text-orange-600 font-bold text-xs rounded-xl hover:bg-orange-50 transition flex items-center justify-center gap-2">
+                                <i class="fas fa-camera"></i> 拍照或選取照片
+                            </button>
+                            <div id="receiptStatus" class="mt-2 text-xs font-bold text-emerald-600 hidden text-center"></div>
+                        </div>
+                    </div>
+
+                    <button onclick="submitRecord()" class="w-full py-3.5 bg-emerald-800 text-white rounded-xl font-black text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-paper-plane"></i> 儲存並送出
+                    </button>
+                </div>
+            </section>
+        </div>
+
     </div>
 
     <!-- UI 元件：Loading 與 Toast -->
     <div id="loadingOverlay">
         <div class="flex flex-col items-center gap-4">
             <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-emerald-900 font-bold" id="loadingText">處理中，請稍候...</p>
+            <p class="text-emerald-900 font-bold text-sm" id="loadingText">處理中，請稍候...</p>
         </div>
     </div>
-    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-all pointer-events-none z-[2000] whitespace-nowrap"></div>
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-xs font-bold opacity-0 transition-all pointer-events-none z-[2000] whitespace-nowrap"></div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
         
-        let currentMode = 'expense'; // 'expense' or 'income'
+        let allRecords = [];
+        let currentFilter = 'all';
+        let applyMode = 'expense';
         let selectedReceiptBase64 = null;
         let selectedReceiptName = null;
 
-        // 取得登入者資訊
+        // 取得身份資訊
         const auth = (function() {
             try {
                 const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
                 const loneKey = sessionStorage.getItem('staffKey'); 
                 return {
                     key: info.staffKey || loneKey || "",
-                    name: info.name || "測試幹部",
+                    name: info.name || info.userName || "幹部",
                     role: info.role || "幹部",
                     isValid: !!(info.staffKey || loneKey)
                 };
             } catch (e) {
-                return { key: "", name: "", role: "", isValid: false };
+                return { key: "", name: "幹部", role: "幹部", isValid: false };
             }
         })();
 
-        // 初始化頁面
         window.onload = () => {
             if (!auth.isValid) {
-                alert("請先登入幹部系統");
+                alert("請先驗證幹部身分");
                 location.href = "index.html";
                 return;
             }
 
-            // 預設填入今日日期與申請人
             document.getElementById('recordDate').valueAsDate = new Date();
             document.getElementById('applicantName').value = auth.name;
 
-            // 權限判定：只有財務可以看到「新增收入」Tab
+            // 財務/會長可看到「新增收入」選單
             if (auth.role === '財務' || auth.role === '會長') {
-                document.getElementById('tab-income').classList.remove('hidden');
+                document.getElementById('subtab-income').classList.remove('hidden');
             }
+
+            // 預設載入清單
+            loadRecords();
         };
 
-        // UI 輔助功能
-        function showLoading(show, text = "處理中...") { 
-            document.getElementById('loadingText').innerText = text;
-            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; 
-        }
-        function showToast(m) {
-            const t = document.getElementById('toast');
-            t.innerText = m; t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 3000);
+        // --- 視圖切換 ---
+        function switchView(view) {
+            document.getElementById('view-list').classList.toggle('hidden', view !== 'list');
+            document.getElementById('view-apply').classList.toggle('hidden', view !== 'apply');
+            
+            document.getElementById('tab-list').className = view === 'list' ? 'flex-1 py-4 text-center tab-active transition' : 'flex-1 py-4 text-center tab-inactive transition';
+            document.getElementById('tab-apply').className = view === 'apply' ? 'flex-1 py-4 text-center tab-active transition' : 'flex-1 py-4 text-center tab-inactive transition';
+
+            if (view === 'list') loadRecords();
         }
 
-        // 切換頁籤 (收入/支出)
-        function switchTab(mode) {
-            currentMode = mode;
-            const tabExp = document.getElementById('tab-expense');
-            const tabInc = document.getElementById('tab-income');
-            const title = document.getElementById('formTitle');
-            const receiptSec = document.getElementById('receiptSection');
+        // --- 載入總帳明細 ---
+        async function loadRecords() {
+            showLoading(true, "讀取財務資料中...");
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_finance_records&t=${Date.now()}`);
+                const result = await res.json();
 
-            // 樣式切換
-            if (mode === 'expense') {
-                tabExp.className = "flex-1 py-4 text-center tab-active transition";
-                tabInc.className = "flex-1 py-4 text-center tab-inactive transition";
-                title.innerText = "新增支出請款";
-                receiptSec.classList.remove('hidden');
-            } else {
-                tabInc.className = "flex-1 py-4 text-center tab-active transition";
-                tabExp.className = "flex-1 py-4 text-center tab-inactive transition";
-                title.innerText = "新增入帳紀錄";
-                receiptSec.classList.add('hidden');
-                // 收入不需要上傳單據，清空狀態
-                document.getElementById('hasReceipt').checked = false;
-                toggleReceiptInput();
+                if (result.result === 'SUCCESS') {
+                    allRecords = result.records || [];
+                    calculateSummary();
+                    renderRecords();
+                } else {
+                    showToast("❌ 讀取失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 伺服器連線失敗");
+            }
+            showLoading(false);
+        }
+
+        // --- 計算總金額與結餘 ---
+        function calculateSummary() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            allRecords.forEach(r => {
+                const amt = Number(r.amount) || 0;
+                if (r.type === '收入') {
+                    totalIncome += amt;
+                } else if (r.type === '支出' && r.status === '已結案') {
+                    // 僅統計已核銷結案的支出
+                    totalExpense += amt;
+                }
+            });
+
+            document.getElementById('statIncome').innerText = `NT$ ${totalIncome.toLocaleString()}`;
+            document.getElementById('statExpense').innerText = `NT$ ${totalExpense.toLocaleString()}`;
+            document.getElementById('statBalance').innerText = `NT$ ${(totalIncome - totalExpense).toLocaleString()}`;
+        }
+
+        // --- 渲染紀錄列表與簽核按鈕 ---
+        function renderRecords() {
+            const container = document.getElementById('recordsContainer');
+            let filtered = allRecords;
+
+            if (currentFilter === 'pending') {
+                filtered = allRecords.filter(r => r.type === '支出' && r.status !== '已結案');
+            } else if (currentFilter === '收入' || currentFilter === '支出') {
+                filtered = allRecords.filter(r => r.type === currentFilter);
             }
 
-            // 切換下拉選單選項
-            document.querySelectorAll('.opt-expense').forEach(el => el.classList.toggle('hidden', mode !== 'expense'));
-            document.querySelectorAll('.opt-income').forEach(el => el.classList.toggle('hidden', mode !== 'income'));
-            
-            // 重置選單至該類別的第一個選項
-            document.getElementById('recordCategory').selectedIndex = mode === 'expense' ? 0 : 5; 
+            document.getElementById('recordCount').innerText = `共 ${filtered.length} 筆紀錄`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center text-gray-400 font-bold border border-gray-100">目前尚無相關紀錄</div>`;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(r => {
+                const isIncome = r.type === '收入';
+                const statusColor = r.status === '已結案' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800 animate-pulse';
+
+                // 產生動態簽核按鈕
+                let actionBtnHtml = '';
+                if (!isIncome) {
+                    if (r.status === '待會長核准' && (auth.role === '會長' || auth.role === '副會長')) {
+                        actionBtnHtml = `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition"><i class="fas fa-check mr-1"></i>會長核准</button>`;
+                    } else if (r.status === '待財務撥款' && auth.role === '財務') {
+                        actionBtnHtml = `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition"><i class="fas fa-hand-holding-usd mr-1"></i>財務撥款</button>`;
+                    } else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
+                        actionBtnHtml = `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition"><i class="fas fa-signature mr-1"></i>確認簽收結案</button>`;
+                    }
+                }
+
+                // 單據圖片按鈕
+                const receiptBtnHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" class="text-xs text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 hover:bg-orange-100 transition inline-flex items-center gap-1"><i class="fas fa-receipt"></i>檢視單據</a>` : '';
+
+                html += `
+                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black px-2 py-0.5 rounded-md ${isIncome ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">${r.type}</span>
+                                <span class="font-black text-gray-800 text-sm">${r.category}</span>
+                                <span class="text-[10px] text-gray-400 font-bold">(${r.id})</span>
+                            </div>
+                            <div class="text-xs text-gray-600 font-bold">${r.desc || '無摘要說明'}</div>
+                            <div class="text-[11px] text-gray-400 flex items-center gap-3">
+                                <span><i class="far fa-calendar-alt mr-1"></i>${r.date}</span>
+                                <span><i class="far fa-user mr-1"></i>${r.applicant}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex md:flex-col items-end justify-between w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-gray-100">
+                            <div class="text-right">
+                                <div class="text-base font-black ${isIncome ? 'text-emerald-600' : 'text-red-500'}">${isIncome ? '+' : '-'} NT$ ${Number(r.amount).toLocaleString()}</div>
+                                <div class="flex items-center gap-2 justify-end mt-1">
+                                    ${receiptBtnHtml}
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}">${r.status}</span>
+                                </div>
+                            </div>
+                            ${actionBtnHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
         }
 
-        // 切換單據上傳區塊顯示
+        // --- 篩選切換 ---
+        function filterRecords(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const active = btn.dataset.type === type;
+                btn.className = `filter-btn text-xs font-bold px-3 py-1.5 rounded-xl transition ${active ? 'bg-emerald-800 text-white' : 'bg-gray-100 text-gray-600'}`;
+            });
+            renderRecords();
+        }
+
+        // --- 執行簽核動作 ---
+        async function updateStatus(rowIndex, action) {
+            if (!confirm("確定要進行此簽核操作嗎？")) return;
+
+            showLoading(true, "簽核狀態更新中...");
+            try {
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: action
+                };
+
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ " + result.message);
+                    await loadRecords();
+                } else {
+                    showToast("❌ 操作失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常");
+            }
+            showLoading(false);
+        }
+
+        // --- 切換申請模式 (支出 vs 收入) ---
+        function switchApplyMode(mode) {
+            applyMode = mode;
+            document.getElementById('subtab-expense').className = mode === 'expense' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500';
+            document.getElementById('subtab-income').className = mode === 'income' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500';
+            
+            document.getElementById('formTitle').innerText = mode === 'expense' ? '新增支出請款' : '新增入帳紀錄';
+            document.getElementById('receiptSection').classList.toggle('hidden', mode === 'income');
+
+            document.querySelectorAll('.opt-expense').forEach(e => e.classList.toggle('hidden', mode !== 'expense'));
+            document.querySelectorAll('.opt-income').forEach(e => e.classList.toggle('hidden', mode !== 'income'));
+            document.getElementById('recordCategory').selectedIndex = mode === 'expense' ? 0 : 5;
+        }
+
         function toggleReceiptInput() {
             const isChecked = document.getElementById('hasReceipt').checked;
-            const container = document.getElementById('receiptInputContainer');
-            if (isChecked) {
-                container.classList.remove('hidden');
-            } else {
-                container.classList.add('hidden');
-                document.getElementById('receiptFile').value = '';
-                selectedReceiptBase64 = null;
-                document.getElementById('receiptStatus').classList.add('hidden');
-            }
+            document.getElementById('receiptInputContainer').classList.toggle('hidden', !isChecked);
         }
 
-        // 預覽與轉檔照片
         async function previewReceipt(event) {
             const file = event.target.files[0];
             const statusEl = document.getElementById('receiptStatus');
-            
             if (file) {
                 statusEl.innerText = `🔄 照片處理中...`;
                 statusEl.classList.remove('hidden');
                 try {
                     selectedReceiptBase64 = await convertFileToBase64(file);
                     selectedReceiptName = file.name;
-                    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> 已準備好單據照片 (${Math.round(file.size/1024)}KB)`;
+                    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> 單據照片已掛載 (${Math.round(file.size/1024)}KB)`;
                 } catch (e) {
-                    statusEl.innerHTML = `<span class="text-red-500">❌ 照片處理失敗</span>`;
-                    selectedReceiptBase64 = null;
+                    statusEl.innerHTML = `<span class="text-red-500">❌ 圖片處理失敗</span>`;
                 }
             }
         }
 
-        // 轉換 Base64 工具
         function convertFileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -253,7 +422,7 @@
             });
         }
 
-        // 送出表單
+        // --- 送出請款/入帳表單 ---
         async function submitRecord() {
             const date = document.getElementById('recordDate').value;
             const category = document.getElementById('recordCategory').value;
@@ -262,53 +431,56 @@
             const hasReceipt = document.getElementById('hasReceipt').checked;
 
             if (!date || !amount || amount <= 0) {
-                alert("請填寫完整的日期與正確的金額！");
-                return;
-            }
-
-            if (currentMode === 'expense' && hasReceipt && !selectedReceiptBase64) {
-                alert("您勾選了檢附單據，請確實拍照或上傳檔案！");
+                alert("請填寫正確的日期與金額！");
                 return;
             }
 
             const payload = {
                 type: 'submit_finance_record',
                 key: auth.key,
-                recordType: currentMode === 'expense' ? '支出' : '收入',
+                recordType: applyMode === 'expense' ? '支出' : '收入',
                 date: date,
                 category: category,
                 amount: amount,
                 description: desc,
                 applicantName: auth.name,
-                hasReceipt: (currentMode === 'expense' && hasReceipt),
+                hasReceipt: (applyMode === 'expense' && hasReceipt),
                 fileData: selectedReceiptBase64,
                 fileName: selectedReceiptName
             };
 
-            showLoading(true, "資料傳送中，請勿關閉視窗...");
-
+            showLoading(true, "傳送請款資料中...");
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
 
                 if (result.result === 'SUCCESS') {
                     showToast("✅ " + result.message);
-                    // 清空表單
                     document.getElementById('recordAmount').value = '';
                     document.getElementById('recordDesc').value = '';
                     document.getElementById('hasReceipt').checked = false;
                     toggleReceiptInput();
+                    
+                    // 自動切換回清單檢視
+                    switchView('list');
                 } else {
                     showToast("❌ 提交失敗：" + result.message);
                 }
             } catch (err) {
-                showToast("❌ 網路異常，請稍後再試");
+                showToast("❌ 網路異常");
             }
-
             showLoading(false);
+        }
+
+        function showLoading(show, text = "處理中...") {
+            document.getElementById('loadingText').innerText = text;
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 3000);
         }
     </script>
 </body>

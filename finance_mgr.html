@@ -115,25 +115,18 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">項目類別</label>
-                            <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
-                                <!-- 支出選項 (已更新為 10 個標準分類) -->
-                                <option value="場地費" class="opt-expense">場地費</option>
-                                <option value="演講費" class="opt-expense">演講費</option>
-                                <option value="禮物金" class="opt-expense">禮物金</option>
-                                <option value="幹部補助" class="opt-expense">幹部補助</option>
-                                <option value="導讀補貼" class="opt-expense">導讀補貼</option>
-                                <option value="活動補助" class="opt-expense">活動補助</option>
-                                <option value="活動探勘費" class="opt-expense">活動探勘費</option>
-                                <option value="期末聚餐補助" class="opt-expense">期末聚餐補助</option>
-                                <option value="全勤獎金" class="opt-expense">全勤獎金</option>
-                                <option value="其他支出" class="opt-expense">其他支出</option>
-
-                                <!-- 收入選項 (保持原樣，預設隱藏) -->
-                                <option value="會員會費" class="opt-income hidden">會員會費</option>
-                                <option value="個人捐款" class="opt-income hidden">個人捐款</option>
-                                <option value="前期結餘" class="opt-income hidden">前期結餘</option>
-                                <option value="其他收入" class="opt-income hidden">其他收入</option>
-                            </select>
+                            <div class="grid grid-cols-2 gap-4">
+                              <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">項目類別</label>
+                                <!-- 🌟 清空內部的 option，交由 JS 動態生成 -->
+                                <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
+                                </select>
+                             </div>
+                             <div>
+                               <label class="block text-xs font-bold text-gray-500 mb-1">金額 (NT$)</label>
+                               <input type="number" id="recordAmount" min="0" placeholder="0" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-black text-sm text-emerald-700 outline-none focus:border-emerald-500">
+                             </div>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">金額 (NT$)</label>
@@ -188,6 +181,17 @@
         let selectedReceiptBase64 = null;
         let selectedReceiptName = null;
 
+        // 🌟 新增：依職務動態分配的支出項目表
+        const expenseCategoryMap = {
+            "會長": ["場地費用", "幹部補助", "其他"],
+            "副會長": ["場地費用", "幹部補助", "其他"], // 預設副會長與會長權限相仿
+            "企劃": ["講演費用", "導讀開會補貼", "選書小禮物", "其他"],
+            "活動": ["活動場地費", "活動雜支", "會員活動補助", "活動探勘補助", "期末聚餐補助", "其他"],
+            "班務": ["講員茶水雜支", "全勤獎金", "其他"],
+            "文書": ["文書雜支", "其他"],
+            "財務": ["停車費代付", "其他"]
+        };
+
         // 取得身份資訊
         const auth = (function() {
             try {
@@ -218,7 +222,8 @@
             if (auth.role === '財務' || auth.role === '會長') {
                 document.getElementById('subtab-income').classList.remove('hidden');
             }
-
+            // 🌟 新增這一行：初始化預設的支出下拉選單
+            switchApplyMode('expense'); 
             // 預設載入清單
             loadRecords();
         };
@@ -461,6 +466,7 @@
         }
 
         // --- 切換申請模式 (支出 vs 收入) ---
+        // --- 修正版：切換申請模式與動態選單 ---
         function switchApplyMode(mode) {
             applyMode = mode;
             document.getElementById('subtab-expense').className = mode === 'expense' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500';
@@ -469,10 +475,29 @@
             document.getElementById('formTitle').innerText = mode === 'expense' ? '新增支出請款' : '新增入帳紀錄';
             document.getElementById('receiptSection').classList.toggle('hidden', mode === 'income');
 
-            document.querySelectorAll('.opt-expense').forEach(e => e.classList.toggle('hidden', mode !== 'expense'));
-            document.querySelectorAll('.opt-income').forEach(e => e.classList.toggle('hidden', mode !== 'income'));
-            // 當切換到支出時選第 0 個(場地費)，切換到收入時選第 10 個(會員會費)
-            document.getElementById('recordCategory').selectedIndex = mode === 'expense' ? 0 : 10;
+            const selectEl = document.getElementById('recordCategory');
+            selectEl.innerHTML = ''; // 每次切換前先清空選項
+
+            if (mode === 'expense') {
+                // 讀取當前幹部對應的陣列，若無對應職位，則退回預設的 ["其他"]
+                const roleCategories = expenseCategoryMap[auth.role] || ["其他"];
+                
+                roleCategories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.innerText = cat;
+                    selectEl.appendChild(opt);
+                });
+            } else {
+                // 收入選項 (固定不變)
+                const incomeCategories = ["會員會費", "個人捐款", "前期結餘", "其他收入"];
+                incomeCategories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.innerText = cat;
+                    selectEl.appendChild(opt);
+                });
+            }
         }
 
         function toggleReceiptInput() {

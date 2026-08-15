@@ -217,8 +217,10 @@
             document.getElementById('applicantName').value = auth.name;
 
             // 財務/會長可看到「新增收入」選單
+            // 財務/會長可看到「新增收入」選單與「產生報表」按鈕
             if (auth.role === '財務' || auth.role === '會長') {
                 document.getElementById('subtab-income').classList.remove('hidden');
+                document.getElementById('reportBtnContainer').classList.remove('hidden'); // 顯示報表按鈕
             }
             // 🌟 新增這一行：初始化預設的支出下拉選單
             switchApplyMode('expense'); 
@@ -588,6 +590,134 @@
             t.innerText = m; t.style.opacity = '1';
             setTimeout(() => t.style.opacity = '0', 3000);
         }
+        // ================= 財務報表專區 =================
+        let reportDataForCSV = [];
+
+        function openReportModal() {
+            document.getElementById('reportModal').classList.remove('hidden');
+            document.getElementById('reportModal').classList.add('flex');
+            generateReport();
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+            document.getElementById('reportModal').classList.remove('flex');
+        }
+
+        function generateReport() {
+            let prevBalance = 0;
+            let incomeGroups = {};
+            let expenseGroups = {};
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            // 1. 分類與合併加總
+            allRecords.forEach(r => {
+                if (r.status === '已作廢') return; // 完全排除作廢項目
+
+                const amt = Number(r.amount) || 0;
+                const cat = r.category || '未分類';
+
+                if (r.type === '收入') {
+                    if (cat === '前期結餘') {
+                        prevBalance += amt;
+                    } else {
+                        if (!incomeGroups[cat]) incomeGroups[cat] = 0;
+                        incomeGroups[cat] += amt;
+                        totalIncome += amt;
+                    }
+                } else if (r.type === '支出' && r.status === '已結案') { 
+                    // 支出僅統計已確實結案(已撥款且簽收)的金額
+                    if (!expenseGroups[cat]) expenseGroups[cat] = 0;
+                    expenseGroups[cat] += amt;
+                    totalExpense += amt;
+                }
+            });
+
+            // 2. 產生可供截圖的精美 HTML 表格
+            let html = `
+                <table class="w-full text-sm text-left border-collapse border border-gray-200 bg-white">
+                    <thead>
+                        <tr class="bg-emerald-100 text-emerald-900 border-b-2 border-emerald-600">
+                            <th class="p-3 font-black">項目別 (已合併)</th>
+                            <th class="p-3 font-black text-right">小計 (NT$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            reportDataForCSV = [ ["項目別", "小計 (NT$)"] ];
+
+            // 區塊 A：前期結餘
+            html += `<tr class="border-b border-gray-200"><td class="p-3 font-bold text-gray-800">上期結餘</td><td class="p-3 font-bold text-right text-emerald-700">${prevBalance.toLocaleString()}</td></tr>`;
+            reportDataForCSV.push(["上期結餘", prevBalance]);
+
+            // 區塊 B：本期收入
+            html += `<tr class="bg-gray-50"><td colspan="2" class="p-2 font-black text-emerald-900 text-xs border-b border-gray-200">【 本期收入 】</td></tr>`;
+            for (let cat in incomeGroups) {
+                html += `<tr class="border-b border-gray-100"><td class="p-3 text-gray-700 font-bold pl-5">${cat}</td><td class="p-3 text-right font-bold text-emerald-600">${incomeGroups[cat].toLocaleString()}</td></tr>`;
+                reportDataForCSV.push([cat, incomeGroups[cat]]);
+            }
+            
+            // 區塊 C：本期支出
+            html += `<tr class="bg-gray-50"><td colspan="2" class="p-2 font-black text-red-900 text-xs border-b border-gray-200">【 本期支出 】</td></tr>`;
+            for (let cat in expenseGroups) {
+                html += `<tr class="border-b border-gray-100"><td class="p-3 text-gray-700 font-bold pl-5">${cat}</td><td class="p-3 text-right font-bold text-red-500">${expenseGroups[cat].toLocaleString()}</td></tr>`;
+                reportDataForCSV.push([cat, expenseGroups[cat]]);
+            }
+
+            // 區塊 D：期末結餘
+            const finalBalance = prevBalance + totalIncome - totalExpense;
+            html += `
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-emerald-800 text-white">
+                            <td class="p-4 font-black text-right tracking-widest">本期總結餘</td>
+                            <td class="p-4 font-black text-right text-lg">${finalBalance.toLocaleString()}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+            reportDataForCSV.push(["本期總結餘", finalBalance]);
+
+            document.getElementById('reportContent').innerHTML = html;
+        }
+
+        // 3. 匯出 Excel (CSV) 功能
+        function downloadCSV() {
+            let csvContent = "\uFEFF"; // 加上 BOM 讓 Excel 識別 UTF-8 中文不亂碼
+            reportDataForCSV.forEach(row => {
+                csvContent += row.join(",") + "\r\n";
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `財務結算表_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     </script>
+    <!-- 🌟 新增：報表彈窗 (供財務截圖與匯出) -->
+    <div id="reportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4 md:p-6">
+        <div class="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-emerald-900 p-4 text-center relative">
+                <h3 class="text-lg font-black text-white tracking-widest">財務結算總表</h3>
+                <button onclick="closeReportModal()" class="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-200 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <!-- 報表內容動態生成 -->
+            <div class="p-6 overflow-y-auto bg-[#FDFBF7]" id="reportContent"></div>
+            
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-center gap-4">
+                <button onclick="downloadCSV()" class="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-sm hover:bg-emerald-700 transition active:scale-95 flex items-center gap-2">
+                    <i class="fas fa-download"></i>匯出 Excel
+                </button>
+                <button onclick="closeReportModal()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition">關閉</button>
+            </div>
+        </div>
+    </div>
+    
 </body>
 </html>

@@ -552,6 +552,7 @@
                 amount: amount,
                 description: desc,
                 applicantName: auth.name,
+                applicantRole: auth.role, // 🌟 新增這行：把登入者的職稱一起送給後端
                 hasReceipt: (applyMode === 'expense' && hasReceipt),
                 fileData: selectedReceiptBase64,
                 fileName: selectedReceiptName
@@ -630,9 +631,10 @@
                         totalIncome += amt;
                     }
                 } else if (r.type === '支出' && r.status === '已結案') { 
-                    // 🌟 支出：將項目加上單位標籤，例如 "場地費 (林士偉)"
-                    const expenseKey = `${cat} <span class="text-[10px] text-gray-400 font-normal ml-1">(${applicant})</span>`;
-                    const csvKey = `${cat} (${applicant})`; // 給 CSV 用的純文字 Key
+                    // 🌟 支出：改用「職稱(使用單位)」來標示，例如 "場地費 (企劃)"
+                    const unit = r.role || '未知單位'; 
+                    const expenseKey = `${cat} <span class="text-[10px] text-gray-400 font-normal ml-1">(${unit})</span>`;
+                    const csvKey = `${cat} (${unit})`; 
 
                     if (!expenseGroups[expenseKey]) {
                         expenseGroups[expenseKey] = { amount: 0, csvName: csvKey };

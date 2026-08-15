@@ -607,7 +607,8 @@
         function generateReport() {
             let prevBalance = 0;
             let incomeGroups = {};
-            let expenseGroups = {};
+            // 🌟 改變群組方式：以「項目別 + 單位」為 Key 來彙整支出
+            let expenseGroups = {}; 
             let totalIncome = 0;
             let totalExpense = 0;
 
@@ -617,19 +618,26 @@
 
                 const amt = Number(r.amount) || 0;
                 const cat = r.category || '未分類';
+                const applicant = r.applicant || '未知'; // 🌟 抓取申請人(使用單位)
 
                 if (r.type === '收入') {
                     if (cat === '前期結餘') {
                         prevBalance += amt;
                     } else {
+                        // 收入不需要標示單位，直接用項目分類
                         if (!incomeGroups[cat]) incomeGroups[cat] = 0;
                         incomeGroups[cat] += amt;
                         totalIncome += amt;
                     }
                 } else if (r.type === '支出' && r.status === '已結案') { 
-                    // 支出僅統計已確實結案(已撥款且簽收)的金額
-                    if (!expenseGroups[cat]) expenseGroups[cat] = 0;
-                    expenseGroups[cat] += amt;
+                    // 🌟 支出：將項目加上單位標籤，例如 "場地費 (林士偉)"
+                    const expenseKey = `${cat} <span class="text-[10px] text-gray-400 font-normal ml-1">(${applicant})</span>`;
+                    const csvKey = `${cat} (${applicant})`; // 給 CSV 用的純文字 Key
+
+                    if (!expenseGroups[expenseKey]) {
+                        expenseGroups[expenseKey] = { amount: 0, csvName: csvKey };
+                    }
+                    expenseGroups[expenseKey].amount += amt;
                     totalExpense += amt;
                 }
             });
@@ -659,11 +667,14 @@
                 reportDataForCSV.push([cat, incomeGroups[cat]]);
             }
             
-            // 區塊 C：本期支出
+            // 區塊 C：本期支出 (🌟 包含使用單位標示)
             html += `<tr class="bg-gray-50"><td colspan="2" class="p-2 font-black text-red-900 text-xs border-b border-gray-200">【 本期支出 】</td></tr>`;
-            for (let cat in expenseGroups) {
-                html += `<tr class="border-b border-gray-100"><td class="p-3 text-gray-700 font-bold pl-5">${cat}</td><td class="p-3 text-right font-bold text-red-500">${expenseGroups[cat].toLocaleString()}</td></tr>`;
-                reportDataForCSV.push([cat, expenseGroups[cat]]);
+            for (let htmlKey in expenseGroups) {
+                const itemData = expenseGroups[htmlKey];
+                // htmlKey 裡面已經帶有 <span> 標籤做出的灰色小括號
+                html += `<tr class="border-b border-gray-100"><td class="p-3 text-gray-700 font-bold pl-5">${htmlKey}</td><td class="p-3 text-right font-bold text-red-500">${itemData.amount.toLocaleString()}</td></tr>`;
+                // CSV 寫入純文字格式
+                reportDataForCSV.push([itemData.csvName, itemData.amount]);
             }
 
             // 區塊 D：期末結餘

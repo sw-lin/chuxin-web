@@ -324,16 +324,19 @@
 
                 // 動態簽核按鈕
                 let actionBtnHtml = '';
-                if (!isIncome && !isCanceled) {
-                    if (r.status === '待會長核准' && (auth.role === '會長' || auth.role === '副會長')) {
-                        actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>會長核准</button>`;
-                    } else if (r.status === '待財務撥款' && auth.role === '財務') {
-                        actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>財務撥款</button>`;
-                    } else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
-                        actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-signature mr-1"></i>確認簽收結案</button>`;
+                if (!isCanceled) {
+                    // 1. 支出專屬的流程按鈕
+                    if (!isIncome) {
+                        if (r.status === '待會長核准' && (auth.role === '會長' || auth.role === '副會長')) {
+                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>會長核准</button>`;
+                        } else if (r.status === '待財務撥款' && auth.role === '財務') {
+                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>財務撥款</button>`;
+                        } else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
+                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-signature mr-1"></i>確認簽收結案</button>`;
+                        }
                     }
 
-                    // 🌟 財務或會長可點擊「作廢/刪除」按鈕
+                    // 2. 🌟 收支皆適用的「作廢/刪除」按鈕 (僅限財務與會長可見)
                     if (auth.role === '財務' || auth.role === '會長') {
                         actionBtnHtml += `<button onclick="cancelRecord(${r.rowIndex})" class="mt-2 text-xs font-bold bg-gray-100 hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl transition"><i class="fas fa-ban mr-1"></i>作廢</button>`;
                     }

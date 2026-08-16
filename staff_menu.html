@@ -130,14 +130,14 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">照片與導讀上傳</span>
         </div>
 
-        <!-- 🌟 新增：LINE 私訊通知綁定按鈕 🌟 -->
+        <!-- 🌟 新增：LINE 私訊通知綁定按鈕 🌟 
         <div onclick="bindLineNotify()" class="staff-card p-6 flex flex-col items-center text-center bg-emerald-50/30 border-emerald-200">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-emerald-600 !to-green-600" style="background: linear-gradient(135deg, #059669 0%, #16A34A 100%);">
                 <i class="fas fa-bell text-white text-2xl"></i>
             </div>
             <span class="text-emerald-900 font-black text-base">LINE 簽核私訊</span>
             <span class="text-[11px] text-emerald-600 mt-1 font-bold">一對一通知綁定</span>
-        </div>
+        </div>　　-->
 
         <div id="permissionBtn" onclick="navTo('permission_mgr')" class="staff-card p-6 hidden flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-orange-700 !to-orange-900" style="background: linear-gradient(135deg, #7C2D12 0%, #431407 100%);">
@@ -190,27 +190,10 @@
             location.href = page + '.html';
         }
 
-        // 🌟 3. 新增：連動 LINE Notify 授權邏輯
+        // 🌟 3. 新增：連動 LINE Notify 授權邏輯　無法使用了
         function bindLineNotify() {
-            // 請替換為您在 LINE Notify 開發者後台申請的 Client ID
-            const clientId = "YOUR_LINE_NOTIFY_CLIENT_ID"; 
-            
-            // 請替換為您的 GAS 部署網址 (Callback網址)
-            const redirectUri = encodeURIComponent("https://script.google.com/macros/s/YOUR_GAS_DEPLOYMENT_ID/exec");
-            
-            // 將幹部的 Key 或手機傳過去，以便後端知道是誰完成連動
-            const state = encodeURIComponent(auth.key || auth.phone);
-
-            if (clientId === "YOUR_LINE_NOTIFY_CLIENT_ID") {
-                alert("尚未設定 LINE Notify Client ID，請先於系統後端填入參數。");
-                return;
-            }
-
-            const lineNotifyUrl = `https://notify-bot.line.me/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=notify&state=${state}`;
-            
-            // 開啟 LINE Notify 授權頁面
-            window.location.href = lineNotifyUrl;
-        }
+  　　　　  alert("【LINE 私訊通知綁定說明】\n\n請開啟築心讀書會的 LINE 官方帳號 (機器人)，並在私訊對話框中發送一次文字訊息（例如輸入「綁定」），系統就會自動記錄您的 LINE ID 並完成簽核私訊對接！");
+　　　　}
     </script>
 </body>
 </html>

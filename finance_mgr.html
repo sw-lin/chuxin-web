@@ -712,6 +712,59 @@
             link.click();
             document.body.removeChild(link);
         }
+        // 🌟 開啟作廢彈窗
+function triggerCancel(rowIndex) {
+  document.getElementById('cancelRowIndex').value = rowIndex;
+  document.getElementById('cancelReasonInput').value = '';
+  document.getElementById('cancelModal').classList.remove('hidden');
+  document.getElementById('cancelModal').classList.add('flex');
+}
+
+// 🌟 關閉作廢彈窗
+function closeCancelModal() {
+  document.getElementById('cancelModal').classList.add('hidden');
+  document.getElementById('cancelModal').classList.remove('flex');
+}
+
+// 🌟 送出作廢至後端 GAS
+async function submitCancelAction() {
+  const rowIndex = document.getElementById('cancelRowIndex').value;
+  const reason = document.getElementById('cancelReasonInput').value.trim();
+
+  if (!reason) {
+    alert("請輸入作廢說明！");
+    return;
+  }
+
+  closeCancelModal();
+  toggleLoading(true); // 開啟轉圈圈
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'update_finance_status',
+        action: 'cancel',
+        rowIndex: rowIndex,
+        reason: reason,
+        key: STAFF_KEY
+      })
+    });
+    
+    const result = await res.json();
+    if (result.result === "SUCCESS") {
+      showToast("🗑️ 單據已成功作廢");
+      loadFinanceRecords(); // 重新讀取清單
+    } else {
+      alert("作廢失敗：" + result.message);
+    }
+  } catch (err) {
+    alert("系統連線異常：" + err.toString());
+  } finally {
+    toggleLoading(false);
+  }
+}
+        
     </script>
     <!-- 🌟 新增：報表彈窗 (供財務截圖與匯出) -->
     <div id="reportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4 md:p-6">
@@ -731,6 +784,20 @@
             </div>
         </div>
     </div>
-    
+    <!-- 🌟 自訂作廢說明彈窗 (取代瀏覽器原生 prompt) -->
+   <div id="cancelModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+    <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl space-y-4">
+      <h3 class="text-lg font-black text-red-600 text-center">⚠️ 確定要作廢此筆紀錄？</h3>
+      <p class="text-xs text-gray-500 text-center">請輸入作廢/取消說明（例如：活動取消、金額異動）：</p>
+
+      <input type="hidden" id="cancelRowIndex">
+      <textarea id="cancelReasonInput" rows="3" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold focus:outline-none focus:border-red-500" placeholder="填寫作廢原因..."></textarea>
+
+      <div class="grid grid-cols-2 gap-3 pt-2">
+       <button onclick="closeCancelModal()" class="py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">取消</button>
+       <button onclick="submitCancelAction()" class="py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-md">確認作廢</button>
+    </div>
+   </div>
+  </div>
 </body>
 </html>

@@ -620,36 +620,32 @@
 
         function generateReport() {
             let prevBalance = 0;
-            let incomeItems = []; // 收入項目陣列
-            let expenseItems = []; // 支出項目陣列
+            let rawIncomeMap = new Map();   // 儲存合併後的本期收入 (Key: 組別_項目)
+            let rawExpenseMap = new Map();  // 儲存合併後的本期支出 (Key: 組別_項目)
             let totalIncome = 0;
             let totalExpense = 0;
 
-            // 1. 分類與整理
+            // 1. 分類、合併與金額加總
             allRecords.forEach(r => {
                 if (r.status === '已作廢') return; // 完全排除作廢項目
 
                 const amt = Number(r.amount) || 0;
-                const cat = r.category || '未分類';
-                const group = r.role || '一般'; // 🌟 抓取組別/職務
+                const cat = (r.category || '未分類').trim();
+                const group = (r.role || '一般').trim(); // 抓取組別/職務
 
                 if (r.type === '收入') {
                     if (cat === '前期結餘') {
                         prevBalance += amt;
                     } else {
-                        incomeItems.push({
-                            group: '總務/財務',
-                            category: cat,
-                            amount: amt
-                        });
+                        const key = `總務/財務_${cat}`;
+                        const currentAmt = rawIncomeMap.get(key) || 0;
+                        rawIncomeMap.set(key, currentAmt + amt);
                         totalIncome += amt;
                     }
                 } else if (r.type === '支出' && r.status === '已結案') { 
-                    expenseItems.push({
-                        group: group,
-                        category: cat,
-                        amount: amt
-                    });
+                    const key = `${group}_${cat}`;
+                    const currentAmt = rawExpenseMap.get(key) || 0;
+                    rawExpenseMap.set(key, currentAmt + amt);
                     totalExpense += amt;
                 }
             });
@@ -679,33 +675,35 @@
             `;
             reportDataForCSV.push(["前期幹部", "上期結餘", prevBalance]);
 
-            // 區塊 B：本期收入
-            if (incomeItems.length > 0) {
+            // 區塊 B：本期收入 (已合併相同項目)
+            if (rawIncomeMap.size > 0) {
                 html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-emerald-900 text-xs border-b border-gray-200">【 本期收入 】</td></tr>`;
-                incomeItems.forEach(item => {
+                rawIncomeMap.forEach((amt, key) => {
+                    const [grp, cat] = key.split('_');
                     html += `
                         <tr class="border-b border-gray-100">
-                            <td class="p-3 text-gray-600 font-bold">${item.group}</td>
-                            <td class="p-3 text-gray-800 font-bold">${item.category}</td>
-                            <td class="p-3 text-right font-bold text-emerald-600">${item.amount.toLocaleString()}</td>
+                            <td class="p-3 text-gray-600 font-bold">${grp}</td>
+                            <td class="p-3 text-gray-800 font-bold">${cat}</td>
+                            <td class="p-3 text-right font-bold text-emerald-600">${amt.toLocaleString()}</td>
                         </tr>
                     `;
-                    reportDataForCSV.push([item.group, item.category, item.amount]);
+                    reportDataForCSV.push([grp, cat, amt]);
                 });
             }
 
-            // 區塊 C：本期支出 (三欄式呈現：組別 / 項目 / 金額)
-            if (expenseItems.length > 0) {
+            // 區塊 C：本期支出 (已合併相同項目)
+            if (rawExpenseMap.size > 0) {
                 html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-red-900 text-xs border-b border-gray-200">【 本期支出 】</td></tr>`;
-                expenseItems.forEach(item => {
+                rawExpenseMap.forEach((amt, key) => {
+                    const [grp, cat] = key.split('_');
                     html += `
                         <tr class="border-b border-gray-100">
-                            <td class="p-3 text-gray-600 font-bold">${item.group}</td>
-                            <td class="p-3 text-gray-800 font-bold">${item.category}</td>
-                            <td class="p-3 text-right font-bold text-red-500">${item.amount.toLocaleString()}</td>
+                            <td class="p-3 text-gray-600 font-bold">${grp}</td>
+                            <td class="p-3 text-gray-800 font-bold">${cat}</td>
+                            <td class="p-3 text-right font-bold text-red-500">${amt.toLocaleString()}</td>
                         </tr>
                     `;
-                    reportDataForCSV.push([item.group, item.category, item.amount]);
+                    reportDataForCSV.push([grp, cat, amt]);
                 });
             }
 

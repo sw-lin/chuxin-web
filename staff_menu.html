@@ -30,13 +30,9 @@
         }
     </style>
     <link rel="icon" type="image/png" href="favicon-32x32.png?v=2" sizes="32x32" />
-
     <link rel="shortcut icon" href="favicon.ico?v=2" />
-
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2" />
-
     <meta name="apple-mobile-web-app-title" content="築心讀書會" />
-
     <link rel="manifest" href="site.webmanifest?v=2" />
 </head>
 <body class="pb-16">
@@ -93,7 +89,7 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">會費與雜支</span>
         </div>
 
-        <!-- 🌟 新增：財務總帳與簽核 (放置於繳費記錄後方) 🌟 -->
+        <!-- 財務總帳與簽核 -->
         <div onclick="navTo('finance_mgr')" class="staff-card p-6 flex flex-col items-center text-center bg-emerald-50/10 border-emerald-100/50">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-emerald-700 !to-teal-900" style="background: linear-gradient(135deg, #047857 0%, #134E4A 100%);">
                 <i class="fas fa-file-invoice-dollar text-white text-2xl"></i>
@@ -134,6 +130,15 @@
             <span class="text-[11px] text-gray-400 mt-1 font-bold">照片與導讀上傳</span>
         </div>
 
+        <!-- 🌟 新增：LINE 私訊通知綁定按鈕 🌟 -->
+        <div onclick="bindLineNotify()" class="staff-card p-6 flex flex-col items-center text-center bg-emerald-50/30 border-emerald-200">
+            <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-emerald-600 !to-green-600" style="background: linear-gradient(135deg, #059669 0%, #16A34A 100%);">
+                <i class="fas fa-bell text-white text-2xl"></i>
+            </div>
+            <span class="text-emerald-900 font-black text-base">LINE 簽核私訊</span>
+            <span class="text-[11px] text-emerald-600 mt-1 font-bold">一對一通知綁定</span>
+        </div>
+
         <div id="permissionBtn" onclick="navTo('permission_mgr')" class="staff-card p-6 hidden flex flex-col items-center text-center">
             <div class="icon-box w-14 h-14 rounded-2xl flex items-center justify-center mb-3 !from-orange-700 !to-orange-900" style="background: linear-gradient(135deg, #7C2D12 0%, #431407 100%);">
                 <i class="fas fa-user-shield text-white text-2xl"></i>
@@ -143,8 +148,8 @@
         </div>
     </main>
 
-<script>
-        // 📦 1. 統一提取資料 (升級版轉接頭)
+    <script>
+        // 📦 1. 統一提取資料
         const auth = (function() {
             try {
                 const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
@@ -153,18 +158,18 @@
                 return {
                     key: info.staffKey || loneKey || "",
                     permissions: info.userPermissions || [],
-                    isValid: !!(info.staffKey || loneKey)
+                    isValid: !!(info.staffKey || loneKey),
+                    phone: info.userPhone || ""
                 };
             } catch (e) {
-                return { key: "", permissions: [], isValid: false };
+                return { key: "", permissions: [], isValid: false, phone: "" };
             }
         })();
 
-        // 🔗 2. 重新對接變數
         const userPermissions = auth.permissions;
         const currentKey = auth.key;
 
-        // 🚀 3. 初始化檢查
+        // 🚀 2. 初始化檢查
         window.onload = function() {
             if (!auth.isValid) {
                 alert("非法進入！請先驗證金鑰。");
@@ -174,8 +179,6 @@
 
             sessionStorage.setItem('staffKey', currentKey);
             
-            console.log("當前職稱權限:", userPermissions);
-
             if (userPermissions.includes('all') || userPermissions.includes('ALL')) {
                 const btn = document.getElementById('permissionBtn');
                 if (btn) btn.classList.remove('hidden');
@@ -185,6 +188,28 @@
         // 跳轉功能
         function navTo(page) {
             location.href = page + '.html';
+        }
+
+        // 🌟 3. 新增：連動 LINE Notify 授權邏輯
+        function bindLineNotify() {
+            // 請替換為您在 LINE Notify 開發者後台申請的 Client ID
+            const clientId = "YOUR_LINE_NOTIFY_CLIENT_ID"; 
+            
+            // 請替換為您的 GAS 部署網址 (Callback網址)
+            const redirectUri = encodeURIComponent("https://script.google.com/macros/s/YOUR_GAS_DEPLOYMENT_ID/exec");
+            
+            // 將幹部的 Key 或手機傳過去，以便後端知道是誰完成連動
+            const state = encodeURIComponent(auth.key || auth.phone);
+
+            if (clientId === "YOUR_LINE_NOTIFY_CLIENT_ID") {
+                alert("尚未設定 LINE Notify Client ID，請先於系統後端填入參數。");
+                return;
+            }
+
+            const lineNotifyUrl = `https://notify-bot.line.me/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=notify&state=${state}`;
+            
+            // 開啟 LINE Notify 授權頁面
+            window.location.href = lineNotifyUrl;
         }
     </script>
 </body>

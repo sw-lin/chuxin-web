@@ -650,7 +650,7 @@
                 }
             });
 
-            // 2. 繪製三欄式 HTML 表格
+            // 2. 繪製三欄式 HTML 表格（網頁畫面維持原本簡潔樣式）
             let html = `
                 <table class="w-full text-sm text-left border-collapse border border-gray-200 bg-white">
                     <thead>
@@ -663,6 +663,7 @@
                     <tbody>
             `;
 
+            // 初始化 Excel (CSV) 匯出資料陣列，寫入第一列標題
             reportDataForCSV = [ ["組別", "項目", "金額 (NT$)"] ];
 
             // 區塊 A：前期結餘
@@ -675,9 +676,14 @@
             `;
             reportDataForCSV.push(["前期幹部", "上期結餘", prevBalance]);
 
-            // 區塊 B：本期收入 (已合併相同項目)
+            // 區塊 B：本期收入 (網頁畫面與 Excel 斷點分流)
             if (rawIncomeMap.size > 0) {
                 html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-emerald-900 text-xs border-b border-gray-200">【 本期收入 】</td></tr>`;
+                
+                // 🌟 僅在 Excel (CSV) 產出陣列中插入空白列與收入分區標題
+                reportDataForCSV.push(["", "", ""]);
+                reportDataForCSV.push(["【 本期收入 】", "", ""]);
+
                 rawIncomeMap.forEach((amt, key) => {
                     const [grp, cat] = key.split('_');
                     html += `
@@ -691,9 +697,14 @@
                 });
             }
 
-            // 區塊 C：本期支出 (已合併相同項目)
+            // 區塊 C：本期支出 (網頁畫面與 Excel 斷點分流)
             if (rawExpenseMap.size > 0) {
                 html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-red-900 text-xs border-b border-gray-200">【 本期支出 】</td></tr>`;
+                
+                // 🌟 僅在 Excel (CSV) 產出陣列中插入空白列與支出分區標題
+                reportDataForCSV.push(["", "", ""]);
+                reportDataForCSV.push(["【 本期支出 】", "", ""]);
+
                 rawExpenseMap.forEach((amt, key) => {
                     const [grp, cat] = key.split('_');
                     html += `
@@ -719,6 +730,9 @@
                     </tfoot>
                 </table>
             `;
+            
+            // 🌟 僅在 Excel (CSV) 產出陣列中插入結算斷點與總結餘
+            reportDataForCSV.push(["", "", ""]);
             reportDataForCSV.push(["-", "本期總結餘", finalBalance]);
 
             document.getElementById('reportContent').innerHTML = html;

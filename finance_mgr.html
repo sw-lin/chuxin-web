@@ -142,7 +142,8 @@
                         </label>
                         
                         <div id="receiptInputContainer" class="hidden mt-2">
-                            <input type="file" id="receiptFile" accept="image/*" capture="environment" class="hidden" onchange="previewReceipt(event)">
+                            <!-- 修正後：移除 capture 屬性，讓手機可以自由選擇「拍照」或「從相簿挑選照片」 -->
+<input type="file" id="receiptFile" accept="image/*" class="hidden" onchange="previewReceipt(event)">
                             <button onclick="document.getElementById('receiptFile').click()" class="w-full py-3 bg-white border-2 border-dashed border-orange-300 text-orange-600 font-bold text-xs rounded-xl hover:bg-orange-50 transition flex items-center justify-center gap-2">
                                 <i class="fas fa-camera"></i> 拍照或選取照片
                             </button>

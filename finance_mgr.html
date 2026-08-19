@@ -319,6 +319,70 @@
         </div>
     </div>
 
+    <!-- 🌟 全新：辦理已結案項目沖銷與經費追回彈窗 (O/P/Q 欄位連動) -->
+    <div id="offsetModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4 border-l-4 border-purple-600 pl-3">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-undo-alt text-purple-600 text-lg"></i>
+                    <h3 class="text-lg font-black text-gray-800">已結案項目沖銷與追回</h3>
+                </div>
+            </div>
+            
+            <input type="hidden" id="offsetRowIndex">
+            
+            <!-- ⚠️ 強烈警示標語 -->
+            <div class="bg-red-50 p-3.5 rounded-2xl border border-red-200 mb-4 text-xs font-bold text-red-700 space-y-1">
+                <div class="flex items-center gap-1.5 text-red-800 font-black text-sm">
+                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    <span>高風險操作警示</span>
+                </div>
+                <p class="leading-relaxed opacity-90">此單據已簽收結案！執行沖銷將會更新實際發生費用，並計算需向申請者追回/繳回之經費金額。</p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- 原始撥款金額 (唯讀) -->
+                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-500">原撥款總額 (F欄)</span>
+                    <span id="offsetOriginalAmount" class="text-base font-black text-gray-800">NT$ 0</span>
+                </div>
+
+                <!-- P 欄：實際已發生費用 -->
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-600 mb-1">實際已發生費用 (P欄)</label>
+                    <input type="number" id="offsetActualCost" min="0" oninput="calculateOffsetAmount()" class="w-full p-3 rounded-xl border border-purple-200 bg-purple-50/30 font-black text-base text-purple-900 outline-none focus:border-purple-500 transition" placeholder="請輸入實際花費金額">
+                </div>
+
+                <!-- Q 欄：應沖銷 / 繳回總額 (自動計算) -->
+                <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs font-black text-amber-900 block">應沖銷 / 繳回金額 (Q欄)</span>
+                        <span class="text-[10px] text-amber-700 font-bold">(原撥款額 - 實際費用)</span>
+                    </div>
+                    <span id="offsetRefundDisplay" class="text-lg font-black text-rose-600">NT$ 0</span>
+                </div>
+
+                <!-- O 欄：關聯單號 -->
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 mb-1">沖銷關聯單號 (O欄)</label>
+                    <input type="text" id="offsetRefId" readonly class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-bold text-xs outline-none">
+                </div>
+
+                <!-- 說明原因 -->
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-600 mb-1"><span class="text-red-500">*</span> 沖銷/追回原因說明</label>
+                    <textarea id="offsetReason" rows="2" class="w-full p-3 rounded-xl border border-gray-200 bg-white font-bold text-sm outline-none focus:border-purple-500 resize-none transition" placeholder="例如：活動取消追回全額、發票實報實銷後多出退回..."></textarea>
+                </div>
+
+                <!-- 操作按鈕 -->
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button onclick="closeOffsetModal()" class="py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-sm transition">取消</button>
+                    <button onclick="submitOffsetAction()" class="py-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-black text-sm shadow-md transition">確認執行沖銷</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
         
@@ -506,6 +570,11 @@
                     // 條件 3：當下身份「不是審核者 (!canAudit)」(避免跟審核鍵打架)
                     if ((r.status === '待會長核准' || r.status === '被退回') && auth.name === r.applicant && !canAudit) {
                         actionBtnHtml += `<button onclick="openEditModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-gray-100 text-blue-600 border border-blue-100 px-3 py-1.5 rounded-xl transition mr-1"><i class="fas fa-edit"></i> 修改/作廢</button>`;
+                    }
+                    
+                    // 🌟 辦理沖銷/追回按鈕：當單子已結案時，僅開放「會長」與「財務」執行
+                    if (isClosed && (auth.role === '會長' || auth.role === '財務')) {
+                        actionBtnHtml += `<button onclick="openOffsetModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-xl transition mr-1 shadow-sm"><i class="fas fa-undo-alt mr-1"></i>辦理沖銷/追回</button>`;
                     }
                 }
 
@@ -1162,6 +1231,110 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ================= 🌟 辦理沖銷與經費追回專區 🌟 =================
+        let currentOriginalAmount = 0;
+
+        function openOffsetModal(rowIndex) {
+            const record = allRecords.find(r => r.rowIndex === rowIndex);
+            if(!record) return;
+
+            document.getElementById('offsetRowIndex').value = record.rowIndex;
+            currentOriginalAmount = Number(record.amount) || 0;
+
+            document.getElementById('offsetOriginalAmount').innerText = "NT$ " + currentOriginalAmount.toLocaleString();
+            document.getElementById('offsetActualCost').value = 0; // 預設實際發生費用為 0
+            
+            // 自動編號 O 欄關聯單號 (例如：OFF-EXP-202608020)
+            document.getElementById('offsetRefId').value = "OFF-" + record.id;
+            document.getElementById('offsetReason').value = '';
+
+            calculateOffsetAmount(); // 計算初始應繳回金額
+
+            document.getElementById('offsetModal').classList.remove('hidden');
+            document.getElementById('offsetModal').classList.add('flex');
+        }
+
+        function closeOffsetModal() {
+            document.getElementById('offsetModal').classList.add('hidden');
+            document.getElementById('offsetModal').classList.remove('flex');
+        }
+
+        // 動態計算 Q 欄 (應沖銷 / 繳回總額)
+        function calculateOffsetAmount() {
+            const actualCost = Number(document.getElementById('offsetActualCost').value) || 0;
+            const refundAmount = currentOriginalAmount - actualCost;
+
+            const refundEl = document.getElementById('offsetRefundDisplay');
+            if (refundAmount < 0) {
+                refundEl.innerText = "金額異常 (實際大於原額)";
+                refundEl.className = "text-xs font-black text-red-500";
+            } else {
+                refundEl.innerText = "NT$ " + refundAmount.toLocaleString();
+                refundEl.className = "text-lg font-black text-rose-600";
+            }
+        }
+
+        // 送出沖銷資料
+        async function submitOffsetAction() {
+            const rowIndex = document.getElementById('offsetRowIndex').value;
+            const actualCost = document.getElementById('offsetActualCost').value;
+            const refId = document.getElementById('offsetRefId').value;
+            const reason = document.getElementById('offsetReason').value.trim();
+
+            if (actualCost === '' || Number(actualCost) < 0) {
+                alert("⚠️ 請輸入正確的「實際已發生費用」！");
+                return;
+            }
+
+            if (Number(actualCost) > currentOriginalAmount) {
+                alert("⚠️ 實際已發生費用不能大於原撥款金額！");
+                return;
+            }
+
+            if (!reason) {
+                alert("⚠️ 請務必填寫「沖銷/追回原因說明」，以便入帳備查！");
+                return;
+            }
+
+            const refundAmount = currentOriginalAmount - Number(actualCost);
+
+            // 🌟 再確認二次警告
+            const confirmMsg = `⚠️ 【最終確認】\n\n您即將針對此筆單據執行沖銷程序：\n• 原撥款金額：NT$ ${currentOriginalAmount.toLocaleString()}\n• 實際已發生費用 (P欄)：NT$ ${Number(actualCost).toLocaleString()}\n• 應向申請者追回金額 (Q欄)：NT$ ${refundAmount.toLocaleString()}\n\n確定要更新試算表並發起追回嗎？`;
+
+            if (!confirm(confirmMsg)) return;
+
+            closeOffsetModal();
+            showLoading(true, "正式沖銷資料寫入中...");
+
+            try {
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: 'offset', // 沖銷動作
+                    offsetData: {
+                        refId: refId,            // O欄
+                        actualCost: actualCost,  // P欄
+                        refundAmount: refundAmount, // Q欄
+                        reason: reason
+                    }
+                };
+
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ 已成功辦理沖銷，帳目已更新！");
+                    await loadRecords();
+                } else {
+                    showToast("❌ 沖銷失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常，無法連線");
+            }
+            showLoading(false);
         }
     </script>
 </body>

@@ -316,7 +316,7 @@
             if (view === 'list') loadRecords();
         }
 
-        async function loadRecords() {
+        async function loadRecords(retryCount = 2) {
             showLoading(true, "讀取財務資料中...");
             try {
                 const payload = {
@@ -324,30 +324,46 @@
                     key: auth.key
                 };
 
+                // 設定一個 15 秒的控制器，避免網路無限期卡住
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
                 const result = await res.json();
 
                 if (result && result.result === 'SUCCESS') {
                     allRecords = result.records || [];
                     calculateSummary();
                     renderRecords();
+                    showLoading(false);
                 } else {
                     const errorMsg = (result && result.message) ? result.message : "未知錯誤";
-                    showToast("❌ 讀取失敗：" + errorMsg);
-                    document.getElementById('recordsContainer').innerHTML = 
-                        `<div class="text-center py-12 text-red-400 font-bold bg-red-50 rounded-2xl">載入失敗：${errorMsg}</div>`;
+                    throw new Error(errorMsg);
                 }
             } catch (err) {
-                console.error("載入紀錄失敗:", err);
-                showToast("❌ 伺服器連線失敗");
+                console.warn(`載入紀錄嘗試失敗 (剩餘重試次數: ${retryCount}):`, err);
+                
+                // 如果還有重試扣打，等待 1.5 秒後自動幫使用者重試一次
+                if (retryCount > 0) {
+                    showLoading(true, "網路連線較慢，正在自動重新整理...");
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    return loadRecords(retryCount - 1);
+                }
+
+                showLoading(false);
+                showToast("❌ 讀取失敗，請檢查網路連線");
                 document.getElementById('recordsContainer').innerHTML = 
-                    `<div class="text-center py-12 text-red-400 font-bold bg-red-50 rounded-2xl">連線失敗，請稍後再試</div>`;
+                    `<div class="bg-red-50 text-center py-12 text-red-500 font-bold rounded-2xl border border-red-100 shadow-sm">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>
+                        連線失敗，請點擊上方「重新整理」按鈕再試一次
+                     </div>`;
             }
-            showLoading(false);
         }
 
         function calculateSummary() {

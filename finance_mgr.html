@@ -572,8 +572,8 @@
                         actionBtnHtml += `<button onclick="openEditModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-gray-100 text-blue-600 border border-blue-100 px-3 py-1.5 rounded-xl transition mr-1"><i class="fas fa-edit"></i> 修改/作廢</button>`;
                     }
                     
-                    // 🌟 辦理沖銷/追回按鈕：當單子已結案時，僅開放「會長」與「財務」執行
-                    if (isClosed && (auth.role === '會長' || auth.role === '財務')) {
+                    // 🌟 辦理沖銷/追回按鈕：當單子已結案時，僅開放「財務」執行
+                    if (isClosed && (auth.role === '財務')) {
                         actionBtnHtml += `<button onclick="openOffsetModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-xl transition mr-1 shadow-sm"><i class="fas fa-undo-alt mr-1"></i>辦理沖銷/追回</button>`;
                     }
                 }

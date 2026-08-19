@@ -444,7 +444,8 @@
                 // 假設您的後端 API 傳回 r.auditNote (對應P欄) 與 r.historyLog (對應Q欄)
                 const cancelReasonText = r.cancelNote || r.auditNote; // 兼容舊版與新版欄位
                 const cancelNoteHtml = (isCanceled && cancelReasonText) ? `<div class="text-[11px] text-red-500 font-bold mt-2 bg-red-50/80 p-2 rounded-lg border border-red-100/50"><i class="fas fa-exclamation-circle mr-1"></i>作廢原因：${cancelReasonText}</div>` : '';
-                const historyHtml = r.historyLog ? `<div class="text-[10px] text-gray-400 mt-2 pt-2 border-t border-gray-50 leading-relaxed font-semibold"><i class="fas fa-history mr-1 opacity-70"></i>${r.historyLog.replace(/\n/g, '<br>')}</div>` : '';
+               // 🌟 升級：將修改與簽核歷程改為醒目的藍色與加粗，提醒申請者注意
+                const historyHtml = r.historyLog ? `<div class="text-[11px] text-blue-600 mt-2 pt-2 border-t border-blue-100/60 leading-relaxed font-bold bg-blue-50/40 p-2 rounded-lg"><i class="fas fa-info-circle mr-1 text-blue-500"></i><span class="text-gray-500 font-semibold">修改與歷程紀錄：</span><br>${r.historyLog.replace(/\n/g, '<br>')}</div>` : '';
 
                 html += `
                     <div class="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 ${isCanceled ? 'opacity-60 bg-gray-50/50' : 'hover:border-emerald-200 transition-colors'}">

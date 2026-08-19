@@ -167,12 +167,15 @@
     </div>
     <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-6 py-3 rounded-full text-xs font-bold opacity-0 transition-all pointer-events-none z-[2000] whitespace-nowrap shadow-lg"></div>
 
-    <!-- 🌟 新增：修改紀錄彈窗 (對應新的修改機制) -->
+    <!-- 🌟 修改財務紀錄彈窗 (內含作廢功能) -->
     <div id="editModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div class="flex items-center gap-2 mb-6 border-l-4 border-blue-500 pl-3">
-                <i class="fas fa-edit text-blue-500 text-lg"></i>
-                <h3 class="text-lg font-black text-gray-800">修改財務紀錄</h3>
+            <div class="flex items-center justify-between mb-6 border-l-4 border-blue-500 pl-3">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-edit text-blue-500 text-lg"></i>
+                    <h3 class="text-lg font-black text-gray-800">修改財務紀錄</h3>
+                </div>
+                <span id="editModalStatusBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-gray-100 text-gray-600"></span>
             </div>
             
             <input type="hidden" id="editRowIndex">
@@ -199,13 +202,21 @@
                     <textarea id="editDesc" rows="2" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-blue-500 resize-none transition"></textarea>
                 </div>
                 
-                <div class="text-[10px] text-orange-600 font-bold bg-orange-50 p-2 rounded-lg">
+                <div class="text-[10px] text-orange-600 font-bold bg-orange-50 p-2.5 rounded-xl border border-orange-100">
                     <i class="fas fa-info-circle mr-1"></i> 修改紀錄將會自動寫入 P/Q 欄歷程中備查。
                 </div>
 
+                <!-- 主要操作按鈕 (取消與確認修改) -->
                 <div class="grid grid-cols-2 gap-3 pt-2">
                     <button onclick="closeEditModal()" class="py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-sm transition">取消</button>
                     <button onclick="submitEditAction()" class="py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-sm shadow-md transition">確認修改</button>
+                </div>
+
+                <!-- 🌟 額外加入的作廢按鈕 (僅在「待會長核准」或管理員權限時顯示) -->
+                <div id="modalCancelContainer" class="pt-2 border-t border-gray-100 mt-3 hidden">
+                    <button onclick="triggerCancelFromEditModal()" class="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 border border-red-200">
+                        <i class="fas fa-ban"></i> 直接作廢此筆請款單
+                    </button>
                 </div>
             </div>
         </div>
@@ -389,7 +400,7 @@
                 let actionBtnHtml = '';
                 if (!isCanceled) {
                     if (!isIncome) {
-                        if (r.status === '待會長核准' && (auth.role === '會長' || auth.role === '副會長')) {
+                        if (r.status === '待會長核准' && (auth.role === '會長')) {
                             actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>核准</button>`;
                         } else if (r.status === '待財務撥款' && auth.role === '財務') {
                             actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>撥款</button>`;
@@ -407,11 +418,8 @@
                   //  if (auth.role === '財務' || auth.role === '會長') {
                   //      actionBtnHtml += `<button onclick="triggerCancel(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-red-50 text-red-500 border border-red-100 px-3 py-1.5 rounded-xl transition"><i class="fas fa-ban"></i></button>`;
                   //  }
-                    // 在 renderRecords 的按鈕判斷中，放寬申請人本人在特定初始狀態下也能看到作廢按鈕
-                      const isMyDraft = (auth.name === r.applicant && (r.status === '待會長核准' || r.status === '草稿'));
-                        if (auth.role === '財務' || auth.role === '會長' || isMyDraft) {
-                           actionBtnHtml += `<button onclick="triggerCancel(${r.rowIndex})" class="...">作廢</button>`;
-                        }
+                    
+                    // ⚠️ 舊的卡片外層作廢按鈕已移除，改由進階「修改彈窗」內統一處理！
                 }
 
                 const receiptBtnHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" class="text-[10px] text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 hover:bg-orange-100 transition inline-flex items-center gap-1"><i class="fas fa-receipt"></i>單據</a>` : '';
@@ -462,6 +470,11 @@
             if(!record) return;
 
             document.getElementById('editRowIndex').value = record.rowIndex;
+            
+            // 狀態標籤
+            const badgeEl = document.getElementById('editModalStatusBadge');
+            badgeEl.innerText = record.status;
+
             // 處理日期格式兼容 YYYY/MM/DD -> YYYY-MM-DD
             let formattedDate = record.date;
             if(formattedDate.includes('/')) formattedDate = formattedDate.replace(/\//g, '-');
@@ -479,7 +492,6 @@
                 categories = expenseCategoryMap[record.role || auth.role] || ["場地費用", "活動雜支", "文書雜支", "其他"];
             }
             
-            // 確保原本的分類存在於選項中
             if (!categories.includes(record.category)) categories.push(record.category);
 
             categories.forEach(cat => {
@@ -490,8 +502,25 @@
                 selectEl.appendChild(opt);
             });
 
+            // 🌟 判斷是否顯示彈窗內的「作廢按鈕」
+            // 條件：如果狀態為「待會長核准」且（是申請人本人 或 是會長/財務）
+            const canCancel = (record.status === '待會長核准') && (auth.name === record.applicant || auth.role === '會長' || auth.role === '財務');
+            const cancelContainer = document.getElementById('modalCancelContainer');
+            if (canCancel) {
+                cancelContainer.classList.remove('hidden');
+            } else {
+                cancelContainer.classList.add('hidden');
+            }
+
             document.getElementById('editModal').classList.remove('hidden');
             document.getElementById('editModal').classList.add('flex');
+        }
+
+        // 從修改彈窗中觸發作廢
+        function triggerCancelFromEditModal() {
+            const rowIndex = document.getElementById('editRowIndex').value;
+            closeEditModal(); // 關閉修改彈窗
+            triggerCancel(rowIndex); // 開啟原本的作廢說明輸入彈窗
         }
 
         function closeEditModal() {

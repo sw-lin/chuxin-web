@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>財務總帳與經費簽核</title>
+    <title>財務管理與經費簽核</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -13,6 +13,9 @@
         .tab-active { border-bottom: 4px solid #064E3B; color: #064E3B; font-weight: 900; }
         .tab-inactive { color: #9CA3AF; font-weight: 700; }
         #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
     </style>
     <link rel="icon" type="image/png" href="favicon-32x32.png?v=2" sizes="32x32" />
 </head>
@@ -30,7 +33,7 @@
                 <h1 class="font-black tracking-widest text-lg">財務總帳與簽核</h1>
             </div>
             <div class="flex justify-end">
-                <button onclick="loadRecords()" class="text-xs bg-emerald-800/80 hover:bg-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-500/50 transition">
+                <button onclick="loadRecords()" class="text-xs bg-emerald-800/80 hover:bg-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-500/50 transition shadow-sm">
                     <i class="fas fa-sync-alt mr-1"></i>重新整理
                 </button>
             </div>
@@ -39,7 +42,7 @@
 
     <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
 
-        <!-- 💰 頂部財務儀表板 (即時統計) -->
+        <!-- 💰 頂部財務儀表板 -->
         <section class="grid grid-cols-3 gap-3 md:gap-4">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 text-center">
                 <span class="text-[11px] font-bold text-gray-400 block mb-1">總收入</span>
@@ -49,9 +52,10 @@
                 <span class="text-[11px] font-bold text-gray-400 block mb-1">總支出</span>
                 <span id="statExpense" class="text-lg md:text-2xl font-black text-red-500">NT$ 0</span>
             </div>
-            <div class="bg-emerald-900 text-white p-4 rounded-2xl shadow-sm text-center">
-                <span class="text-[11px] font-bold text-emerald-200 block mb-1">目前結餘</span>
-                <span id="statBalance" class="text-lg md:text-2xl font-black text-amber-300">NT$ 0</span>
+            <div class="bg-emerald-900 text-white p-4 rounded-2xl shadow-sm text-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                <span class="text-[11px] font-bold text-emerald-200 block mb-1 relative z-10">目前結餘</span>
+                <span id="statBalance" class="text-lg md:text-2xl font-black text-amber-300 relative z-10">NT$ 0</span>
             </div>
         </section>
 
@@ -67,25 +71,23 @@
 
         <!-- 🔴 視圖一：財務明細列表與簽核專區 -->
         <div id="view-list" class="space-y-4 relative pb-8">
-            <!-- 篩選列 -->
             <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                 <div class="flex gap-2">
                     <button onclick="filterRecords('all')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-800 text-white" data-type="all">全部</button>
-                    <button onclick="filterRecords('pending')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600" data-type="pending">待處理</button>
-                    <button onclick="filterRecords('收入')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600" data-type="收入">僅收入</button>
-                    <button onclick="filterRecords('支出')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600" data-type="支出">僅支出</button>
+                    <button onclick="filterRecords('pending')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="pending">待處理</button>
+                    <button onclick="filterRecords('收入')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="收入">僅收入</button>
+                    <button onclick="filterRecords('支出')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="支出">僅支出</button>
                 </div>
-                <span id="recordCount" class="text-xs font-bold text-gray-400">共 0 筆紀錄</span>
+                <span id="recordCount" class="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">共 0 筆紀錄</span>
             </div>
 
-            <!-- 卡片式清單區塊 -->
-            <div id="recordsContainer" class="space-y-3">
+            <!-- 紀錄清單容器 -->
+            <div id="recordsContainer" class="space-y-4">
                 <div class="text-center py-12 text-gray-400 font-bold">載入資料中...</div>
             </div>
             
-            <!-- 🌟 財務/會長專屬，產生期末結算表按鈕 -->
-            <div id="reportBtnContainer" class="hidden mt-6 flex justify-center">
-                <button onclick="openReportModal()" class="bg-[#064E3B] text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:bg-emerald-800 active:scale-95 transition-all flex items-center gap-2">
+            <div id="reportBtnContainer" class="hidden mt-8 flex justify-center">
+                <button onclick="openReportModal()" class="bg-[#064E3B] text-white px-8 py-3.5 rounded-2xl font-black shadow-lg hover:bg-emerald-800 active:scale-95 transition-all flex items-center gap-2 border border-emerald-700">
                     <i class="fas fa-file-excel"></i> 產生期末財務結算報表
                 </button>
             </div>
@@ -94,10 +96,10 @@
         <!-- 🔴 視圖二：填寫請款 / 收入表單 -->
         <div id="view-apply" class="hidden space-y-6">
             <div id="incomeTabContainer" class="flex bg-gray-100 p-1.5 rounded-2xl gap-2">
-                <button id="subtab-expense" onclick="switchApplyMode('expense')" class="flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900">
+                <button id="subtab-expense" onclick="switchApplyMode('expense')" class="flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900 transition-all">
                     <i class="fas fa-file-invoice-dollar mr-1"></i>支出請款
                 </button>
-                <button id="subtab-income" onclick="switchApplyMode('income')" class="flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hidden">
+                <button id="subtab-income" onclick="switchApplyMode('income')" class="flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hidden hover:text-emerald-700 transition-all">
                     <i class="fas fa-hand-holding-usd mr-1"></i>新增收入 (財務專用)
                 </button>
             </div>
@@ -109,7 +111,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">日期</label>
-                            <input type="date" id="recordDate" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
+                            <input type="date" id="recordDate" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500 transition">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">申請/經手人</label>
@@ -120,22 +122,21 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">項目類別</label>
-                            <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500">
-                            </select>
+                            <select id="recordCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500 transition"></select>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">金額 (NT$)</label>
-                            <input type="number" id="recordAmount" min="0" placeholder="0" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-black text-sm text-emerald-700 outline-none focus:border-emerald-500">
+                            <input type="number" id="recordAmount" min="0" placeholder="0" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-black text-sm text-emerald-700 outline-none focus:border-emerald-500 transition">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">說明/摘要 (細節敘述)</label>
-                        <textarea id="recordDesc" rows="2" placeholder="請簡述款項用途..." class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500 resize-none"></textarea>
+                        <textarea id="recordDesc" rows="2" placeholder="請簡述款項用途..." class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-emerald-500 resize-none transition"></textarea>
                     </div>
 
                     <div id="receiptSection" class="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
-                        <label class="flex items-center gap-2 cursor-pointer mb-2">
+                        <label class="flex items-center gap-2 cursor-pointer mb-2 w-max">
                             <input type="checkbox" id="hasReceipt" class="w-4 h-4 text-emerald-600 rounded" onchange="toggleReceiptInput()">
                             <span class="font-bold text-orange-800 text-sm">檢附單據 (拍照上傳)</span>
                         </label>
@@ -149,55 +150,96 @@
                         </div>
                     </div>
 
-                    <button onclick="submitRecord()" class="w-full py-3.5 bg-emerald-800 text-white rounded-xl font-black text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-2">
+                    <button onclick="submitRecord()" class="w-full py-3.5 bg-emerald-800 text-white rounded-xl font-black text-sm shadow-md hover:bg-emerald-700 active:scale-95 transition flex items-center justify-center gap-2">
                         <i class="fas fa-paper-plane"></i> 儲存並送出
                     </button>
                 </div>
             </section>
         </div>
-
     </div>
 
     <!-- UI 元件：Loading 與 Toast -->
     <div id="loadingOverlay">
-        <div class="flex flex-col items-center gap-4">
+        <div class="flex flex-col items-center gap-4 bg-white/90 p-6 rounded-2xl shadow-xl">
             <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-emerald-900 font-bold text-sm" id="loadingText">處理中，請稍候...</p>
+            <p class="text-emerald-900 font-black text-sm tracking-wider" id="loadingText">處理中，請稍候...</p>
         </div>
     </div>
-    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-xs font-bold opacity-0 transition-all pointer-events-none z-[2000] whitespace-nowrap"></div>
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-6 py-3 rounded-full text-xs font-bold opacity-0 transition-all pointer-events-none z-[2000] whitespace-nowrap shadow-lg"></div>
 
-    <!-- 🌟 報表彈窗 (供財務截圖與匯出) -->
+    <!-- 🌟 新增：修改紀錄彈窗 (對應新的修改機制) -->
+    <div id="editModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex items-center gap-2 mb-6 border-l-4 border-blue-500 pl-3">
+                <i class="fas fa-edit text-blue-500 text-lg"></i>
+                <h3 class="text-lg font-black text-gray-800">修改財務紀錄</h3>
+            </div>
+            
+            <input type="hidden" id="editRowIndex">
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1">日期</label>
+                        <input type="date" id="editDate" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-blue-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1">項目類別</label>
+                        <select id="editCategory" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-blue-500 transition"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 mb-1">金額 (NT$)</label>
+                    <input type="number" id="editAmount" min="0" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-black text-base text-blue-700 outline-none focus:border-blue-500 transition">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 mb-1">說明/摘要</label>
+                    <textarea id="editDesc" rows="2" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 font-bold text-sm outline-none focus:border-blue-500 resize-none transition"></textarea>
+                </div>
+                
+                <div class="text-[10px] text-orange-600 font-bold bg-orange-50 p-2 rounded-lg">
+                    <i class="fas fa-info-circle mr-1"></i> 修改紀錄將會自動寫入 P/Q 欄歷程中備查。
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button onclick="closeEditModal()" class="py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-sm transition">取消</button>
+                    <button onclick="submitEditAction()" class="py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-sm shadow-md transition">確認修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🌟 自訂作廢說明彈窗 (對應 P 欄說明) -->
+    <div id="cancelModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl space-y-4">
+            <h3 class="text-lg font-black text-red-600 text-center">⚠️ 確定要作廢此筆紀錄？</h3>
+            <p class="text-xs text-gray-500 text-center">請輸入作廢/取消說明（將寫入審核說明欄）：</p>
+
+            <input type="hidden" id="cancelRowIndex">
+            <textarea id="cancelReasonInput" rows="3" class="w-full p-3 bg-red-50/30 border border-red-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-red-400 transition resize-none" placeholder="填寫作廢原因..."></textarea>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="closeCancelModal()" class="py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-sm transition">取消</button>
+                <button onclick="submitCancelAction()" class="py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-sm shadow-md transition">確認作廢</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🌟 報表彈窗 -->
     <div id="reportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4 md:p-6">
         <div class="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-emerald-900 p-4 text-center relative">
                 <h3 class="text-lg font-black text-white tracking-widest">財務結算總表</h3>
-                <button onclick="closeReportModal()" class="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-200 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+                <button onclick="closeReportModal()" class="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-200 hover:text-white text-xl transition"><i class="fas fa-times"></i></button>
             </div>
-            <!-- 報表內容動態生成 -->
             <div class="p-6 overflow-y-auto bg-[#FDFBF7]" id="reportContent"></div>
-            
             <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-center gap-4">
-                <button onclick="downloadCSV()" class="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-sm hover:bg-emerald-700 transition active:scale-95 flex items-center gap-2">
+                <button onclick="downloadCSV()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-sm transition active:scale-95 flex items-center gap-2">
                     <i class="fas fa-download"></i>匯出 Excel
                 </button>
-                <button onclick="closeReportModal()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition">關閉</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🌟 自訂作廢說明彈窗 -->
-    <div id="cancelModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl space-y-4">
-            <h3 class="text-lg font-black text-red-600 text-center">⚠️ 確定要作廢此筆紀錄？</h3>
-            <p class="text-xs text-gray-500 text-center">請輸入作廢/取消說明（例如：活動取消、金額異動）：</p>
-
-            <input type="hidden" id="cancelRowIndex">
-            <textarea id="cancelReasonInput" rows="3" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold focus:outline-none focus:border-red-500" placeholder="填寫作廢原因..."></textarea>
-
-            <div class="grid grid-cols-2 gap-3 pt-2">
-                <button onclick="closeCancelModal()" class="py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">取消</button>
-                <button onclick="submitCancelAction()" class="py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-md">確認作廢</button>
+                <button onclick="closeReportModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold transition">關閉</button>
             </div>
         </div>
     </div>
@@ -216,7 +258,8 @@
             "企劃": ["講演費用", "導讀開會補貼", "選書小禮物", "其他"],
             "活動": ["活動場地費", "活動雜支", "會員活動補助", "活動探勘補助", "期末聚餐補助", "其他"],
             "班務": ["講員茶水雜支", "全勤獎金", "其他"],
-            "文書": ["文書雜支", "其他"]
+            "文書": ["文書雜支", "其他"],
+          //  "財務": ["匯費手續費", "其他"]
         };
 
         const auth = (function() {
@@ -285,13 +328,13 @@
                     const errorMsg = (result && result.message) ? result.message : "未知錯誤";
                     showToast("❌ 讀取失敗：" + errorMsg);
                     document.getElementById('recordsContainer').innerHTML = 
-                        `<div class="text-center py-12 text-red-400 font-bold">載入失敗：${errorMsg}</div>`;
+                        `<div class="text-center py-12 text-red-400 font-bold bg-red-50 rounded-2xl">載入失敗：${errorMsg}</div>`;
                 }
             } catch (err) {
                 console.error("載入紀錄失敗:", err);
                 showToast("❌ 伺服器連線失敗");
                 document.getElementById('recordsContainer').innerHTML = 
-                    `<div class="text-center py-12 text-red-400 font-bold">連線失敗，請稍後再試</div>`;
+                    `<div class="text-center py-12 text-red-400 font-bold bg-red-50 rounded-2xl">連線失敗，請稍後再試</div>`;
             }
             showLoading(false);
         }
@@ -329,7 +372,7 @@
             document.getElementById('recordCount').innerText = `共 ${filtered.length} 筆紀錄`;
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center text-gray-400 font-bold border border-gray-100">目前尚無相關紀錄</div>`;
+                container.innerHTML = `<div class="bg-white py-12 rounded-2xl text-center text-gray-400 font-bold border border-gray-100 shadow-sm"><i class="fas fa-inbox text-3xl mb-3 text-gray-200 block"></i>目前尚無相關紀錄</div>`;
                 return;
             }
 
@@ -337,56 +380,69 @@
             filtered.forEach(r => {
                 const isIncome = r.type === '收入';
                 const isCanceled = r.status === '已作廢';
+                const isClosed = r.status === '已結案';
 
                 let statusColor = 'bg-amber-100 text-amber-800 animate-pulse';
-                if (r.status === '已結案') statusColor = 'bg-emerald-100 text-emerald-800';
-                if (isCanceled) statusColor = 'bg-gray-200 text-gray-600 line-through';
+                if (isClosed) statusColor = 'bg-emerald-100 text-emerald-800';
+                if (isCanceled) statusColor = 'bg-gray-200 text-gray-500 line-through';
 
                 let actionBtnHtml = '';
                 if (!isCanceled) {
                     if (!isIncome) {
                         if (r.status === '待會長核准' && (auth.role === '會長' || auth.role === '副會長')) {
-                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>會長核准</button>`;
+                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>核准</button>`;
                         } else if (r.status === '待財務撥款' && auth.role === '財務') {
-                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>財務撥款</button>`;
+                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>撥款</button>`;
                         } else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
-                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-signature mr-1"></i>確認簽收結案</button>`;
+                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-[11px] font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-signature mr-1"></i>簽收結案</button>`;
                         }
                     }
 
+                    // 🌟 升級：提供修改按鈕 (只要尚未結案/作廢，且身分相符)
+                    if (!isClosed && (auth.name === r.applicant || auth.role === '會長' || auth.role === '財務')) {
+                        actionBtnHtml += `<button onclick="openEditModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-gray-100 text-blue-600 border border-blue-100 px-3 py-1.5 rounded-xl transition mr-1"><i class="fas fa-edit"></i></button>`;
+                    }
+
+                    // 權限作廢
                     if (auth.role === '財務' || auth.role === '會長') {
-                        actionBtnHtml += `<button onclick="triggerCancel(${r.rowIndex})" class="mt-2 text-xs font-bold bg-gray-100 hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl transition"><i class="fas fa-ban mr-1"></i>作廢</button>`;
+                        actionBtnHtml += `<button onclick="triggerCancel(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-red-50 text-red-500 border border-red-100 px-3 py-1.5 rounded-xl transition"><i class="fas fa-ban"></i></button>`;
                     }
                 }
 
-                const receiptBtnHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" class="text-xs text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 hover:bg-orange-100 transition inline-flex items-center gap-1"><i class="fas fa-receipt"></i>檢視單據</a>` : '';
-                const cancelNoteHtml = isCanceled && r.cancelNote ? `<div class="text-xs text-red-500 font-bold mt-1 bg-red-50 p-2 rounded-lg border border-red-100"><i class="fas fa-exclamation-circle mr-1"></i>${r.cancelNote}</div>` : '';
+                const receiptBtnHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" class="text-[10px] text-orange-600 font-bold bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 hover:bg-orange-100 transition inline-flex items-center gap-1"><i class="fas fa-receipt"></i>單據</a>` : '';
+                
+                // 🌟 升級：讀取 P 欄作廢說明 與 Q 欄歷程軌跡 (如有對應資料)
+                // 假設您的後端 API 傳回 r.auditNote (對應P欄) 與 r.historyLog (對應Q欄)
+                const cancelReasonText = r.cancelNote || r.auditNote; // 兼容舊版與新版欄位
+                const cancelNoteHtml = (isCanceled && cancelReasonText) ? `<div class="text-[11px] text-red-500 font-bold mt-2 bg-red-50/80 p-2 rounded-lg border border-red-100/50"><i class="fas fa-exclamation-circle mr-1"></i>作廢原因：${cancelReasonText}</div>` : '';
+                const historyHtml = r.historyLog ? `<div class="text-[10px] text-gray-400 mt-2 pt-2 border-t border-gray-50 leading-relaxed font-semibold"><i class="fas fa-history mr-1 opacity-70"></i>${r.historyLog.replace(/\n/g, '<br>')}</div>` : '';
 
                 html += `
-                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 ${isCanceled ? 'opacity-60 bg-gray-50' : ''}">
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-black px-2 py-0.5 rounded-md ${isIncome ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">${r.type}</span>
-                                <span class="font-black text-gray-800 text-sm ${isCanceled ? 'line-through' : ''}">${r.category}</span>
-                                <span class="text-[10px] text-gray-400 font-bold">(${r.id})</span>
+                    <div class="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 ${isCanceled ? 'opacity-60 bg-gray-50/50' : 'hover:border-emerald-200 transition-colors'}">
+                        <div class="space-y-1.5 w-full md:w-auto flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[10px] font-black px-2 py-0.5 rounded-md ${isIncome ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}">${r.type}</span>
+                                <span class="font-black text-gray-800 text-sm ${isCanceled ? 'line-through text-gray-400' : ''}">${r.category}</span>
+                                <span class="text-[10px] text-gray-400 font-bold tracking-wider">(${r.id})</span>
                             </div>
-                            <div class="text-xs text-gray-600 font-bold">${r.desc || '無摘要說明'}</div>
-                            ${cancelNoteHtml}
-                            <div class="text-[11px] text-gray-400 flex items-center gap-3">
+                            <div class="text-xs text-gray-600 font-bold leading-relaxed">${r.desc || '無摘要說明'}</div>
+                            <div class="text-[10px] text-gray-400 flex items-center gap-3 font-semibold">
                                 <span><i class="far fa-calendar-alt mr-1"></i>${r.date}</span>
-                                <span><i class="far fa-user mr-1"></i>${r.applicant} (${r.role || '未知'})</span>
+                                <span><i class="far fa-user mr-1"></i>${r.applicant}</span>
                             </div>
+                            ${cancelNoteHtml}
+                            ${historyHtml}
                         </div>
 
-                        <div class="flex md:flex-col items-end justify-between w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-gray-100">
+                        <div class="flex md:flex-col items-end justify-between w-full md:w-auto border-t md:border-t-0 pt-3 md:pt-0 border-gray-50 shrink-0">
                             <div class="text-right">
-                                <div class="text-base font-black ${isIncome ? 'text-emerald-600' : 'text-red-500'} ${isCanceled ? 'line-through text-gray-400' : ''}">${isIncome ? '+' : '-'} NT$ ${Number(r.amount).toLocaleString()}</div>
-                                <div class="flex items-center gap-2 justify-end mt-1">
+                                <div class="text-lg font-black tracking-tight ${isIncome ? 'text-emerald-600' : 'text-red-500'} ${isCanceled ? 'line-through text-gray-400' : ''}">${isIncome ? '+' : '-'} NT$ ${Number(r.amount).toLocaleString()}</div>
+                                <div class="flex items-center gap-2 justify-end mt-1.5">
                                     ${receiptBtnHtml}
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}">${r.status}</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${statusColor}">${r.status}</span>
                                 </div>
                             </div>
-                            <div>${actionBtnHtml}</div>
+                            <div class="flex items-center justify-end gap-1 w-full">${actionBtnHtml}</div>
                         </div>
                     </div>
                 `;
@@ -395,6 +451,95 @@
             container.innerHTML = html;
         }
 
+        // ================= 🌟 財務修改機制專區 🌟 =================
+        function openEditModal(rowIndex) {
+            const record = allRecords.find(r => r.rowIndex === rowIndex);
+            if(!record) return;
+
+            document.getElementById('editRowIndex').value = record.rowIndex;
+            // 處理日期格式兼容 YYYY/MM/DD -> YYYY-MM-DD
+            let formattedDate = record.date;
+            if(formattedDate.includes('/')) formattedDate = formattedDate.replace(/\//g, '-');
+            document.getElementById('editDate').value = formattedDate;
+            document.getElementById('editAmount').value = record.amount;
+            document.getElementById('editDesc').value = record.desc;
+
+            const selectEl = document.getElementById('editCategory');
+            selectEl.innerHTML = '';
+            
+            let categories = [];
+            if (record.type === '收入') {
+                categories = ["會員會費", "個人捐款", "前期結餘", "其他收入"];
+            } else {
+                categories = expenseCategoryMap[record.role || auth.role] || ["場地費用", "活動雜支", "文書雜支", "其他"];
+            }
+            
+            // 確保原本的分類存在於選項中
+            if (!categories.includes(record.category)) categories.push(record.category);
+
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.innerText = cat;
+                if(cat === record.category) opt.selected = true;
+                selectEl.appendChild(opt);
+            });
+
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').classList.add('flex');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editModal').classList.remove('flex');
+        }
+
+        async function submitEditAction() {
+            const rowIndex = document.getElementById('editRowIndex').value;
+            const date = document.getElementById('editDate').value;
+            const category = document.getElementById('editCategory').value;
+            const amount = document.getElementById('editAmount').value;
+            const desc = document.getElementById('editDesc').value;
+
+            if (!date || !amount || amount <= 0) {
+                alert("請填寫正確的日期與金額！");
+                return;
+            }
+
+            closeEditModal();
+            showLoading(true, "紀錄修改同步中...");
+
+            try {
+                // 採用 update_finance_status 並附帶 newData (支援 O/P/Q 機制)
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: 'edit',
+                    newData: {
+                        date: date,
+                        category: category,
+                        amount: amount,
+                        description: desc
+                    }
+                };
+
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ 修改成功，已記錄至歷程");
+                    await loadRecords();
+                } else {
+                    showToast("❌ 修改失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常，無法連線");
+            }
+            showLoading(false);
+        }
+
+        // ================= 🌟 狀態與作廢機制專區 🌟 =================
         function triggerCancel(rowIndex) {
             document.getElementById('cancelRowIndex').value = rowIndex;
             document.getElementById('cancelReasonInput').value = '';
@@ -412,7 +557,7 @@
             const reason = document.getElementById('cancelReasonInput').value.trim();
 
             if (!reason) {
-                alert("請輸入作廢說明！");
+                alert("請務必輸入作廢說明，以便登錄 P 欄備查！");
                 return;
             }
 
@@ -425,13 +570,10 @@
                     key: auth.key,
                     rowIndex: rowIndex,
                     action: 'cancel',
-                    reason: reason
+                    reason: reason // 會寫入至 P 欄
                 };
 
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
 
                 if (result.result === 'SUCCESS') {
@@ -450,13 +592,13 @@
             currentFilter = type;
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 const active = btn.dataset.type === type;
-                btn.className = `filter-btn text-xs font-bold px-3 py-1.5 rounded-xl transition ${active ? 'bg-emerald-800 text-white' : 'bg-gray-100 text-gray-600'}`;
+                btn.className = `filter-btn text-xs font-bold px-3 py-1.5 rounded-xl transition ${active ? 'bg-emerald-800 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
             });
             renderRecords();
         }
 
         async function updateStatus(rowIndex, action) {
-            if (!confirm("確定要進行此簽核操作嗎？")) return;
+            if (!confirm("確定要執行此簽核步驟嗎？此動作將寫入 Q 欄歷程。")) return;
 
             showLoading(true, "簽核狀態更新中...");
             try {
@@ -467,10 +609,7 @@
                     action: action
                 };
 
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
 
                 if (result.result === 'SUCCESS') {
@@ -485,10 +624,11 @@
             showLoading(false);
         }
 
+        // ================= 🌟 填寫請款表單專區 🌟 =================
         function switchApplyMode(mode) {
             applyMode = mode;
-            document.getElementById('subtab-expense').className = mode === 'expense' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500';
-            document.getElementById('subtab-income').className = mode === 'income' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500';
+            document.getElementById('subtab-expense').className = mode === 'expense' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900 transition-all' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hover:text-emerald-700 transition-all';
+            document.getElementById('subtab-income').className = mode === 'income' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900 transition-all' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hover:text-emerald-700 transition-all';
             
             document.getElementById('formTitle').innerText = mode === 'expense' ? '新增支出請款' : '新增入帳紀錄';
             document.getElementById('receiptSection').classList.toggle('hidden', mode === 'income');
@@ -524,12 +664,12 @@
             const file = event.target.files[0];
             const statusEl = document.getElementById('receiptStatus');
             if (file) {
-                statusEl.innerText = `🔄 照片處理中...`;
+                statusEl.innerText = `🔄 照片優化壓縮中...`;
                 statusEl.classList.remove('hidden');
                 try {
                     selectedReceiptBase64 = await convertFileToBase64(file);
                     selectedReceiptName = file.name;
-                    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> 單據照片已掛載 (${Math.round(file.size/1024)}KB)`;
+                    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> 單據照片已準備就緒 (${Math.round(file.size/1024)}KB)`;
                 } catch (e) {
                     statusEl.innerHTML = `<span class="text-red-500">❌ 圖片處理失敗</span>`;
                 }
@@ -572,7 +712,7 @@
                 fileName: selectedReceiptName
             };
 
-            showLoading(true, "傳送請款資料中...");
+            showLoading(true, "送出請款表單中...");
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
@@ -582,13 +722,15 @@
                     document.getElementById('recordAmount').value = '';
                     document.getElementById('recordDesc').value = '';
                     document.getElementById('hasReceipt').checked = false;
+                    selectedReceiptBase64 = null;
                     toggleReceiptInput();
+                    document.getElementById('receiptStatus').classList.add('hidden');
                     switchView('list');
                 } else {
                     showToast("❌ 提交失敗：" + result.message);
                 }
             } catch (err) {
-                showToast("❌ 網路異常");
+                showToast("❌ 網路異常，無法連線至資料庫");
             }
             showLoading(false);
         }
@@ -604,7 +746,7 @@
             setTimeout(() => t.style.opacity = '0', 3000);
         }
 
-        // ================= 🌟 財務三欄式報表專區 🌟 =================
+        // ================= 🌟 報表系統 🌟 =================
         let reportDataForCSV = [];
 
         function openReportModal() {
@@ -620,18 +762,17 @@
 
         function generateReport() {
             let prevBalance = 0;
-            let rawIncomeMap = new Map();   // 儲存合併後的本期收入 (Key: 組別_項目)
-            let rawExpenseMap = new Map();  // 儲存合併後的本期支出 (Key: 組別_項目)
+            let rawIncomeMap = new Map();   
+            let rawExpenseMap = new Map();  
             let totalIncome = 0;
             let totalExpense = 0;
 
-            // 1. 分類、合併與金額加總
             allRecords.forEach(r => {
-                if (r.status === '已作廢') return; // 完全排除作廢項目
+                if (r.status === '已作廢') return;
 
                 const amt = Number(r.amount) || 0;
                 const cat = (r.category || '未分類').trim();
-                const group = (r.role || '一般').trim(); // 抓取組別/職務
+                const group = (r.role || '一般').trim();
 
                 if (r.type === '收入') {
                     if (cat === '前期結餘') {
@@ -650,9 +791,8 @@
                 }
             });
 
-            // 2. 繪製三欄式 HTML 表格（網頁畫面維持原本簡潔樣式）
             let html = `
-                <table class="w-full text-sm text-left border-collapse border border-gray-200 bg-white">
+                <table class="w-full text-sm text-left border-collapse border border-gray-200 bg-white shadow-sm rounded-xl overflow-hidden">
                     <thead>
                         <tr class="bg-emerald-100 text-emerald-900 border-b-2 border-emerald-600">
                             <th class="p-3 font-black w-1/4">組別</th>
@@ -663,24 +803,19 @@
                     <tbody>
             `;
 
-            // 初始化 Excel (CSV) 匯出資料陣列，寫入第一列標題
             reportDataForCSV = [ ["組別", "項目", "金額 (NT$)"] ];
 
-            // 區塊 A：前期結餘
             html += `
                 <tr class="border-b border-gray-200 bg-emerald-50/30">
                     <td class="p-3 font-bold text-gray-700">前期幹部</td>
                     <td class="p-3 font-bold text-gray-800">上期結餘</td>
-                    <td class="p-3 font-bold text-right text-emerald-700">${prevBalance.toLocaleString()}</td>
+                    <td class="p-3 font-black text-right text-emerald-700">${prevBalance.toLocaleString()}</td>
                 </tr>
             `;
             reportDataForCSV.push(["前期幹部", "上期結餘", prevBalance]);
 
-            // 區塊 B：本期收入 (網頁畫面與 Excel 斷點分流)
             if (rawIncomeMap.size > 0) {
-                html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-emerald-900 text-xs border-b border-gray-200">【 本期收入 】</td></tr>`;
-                
-                // 🌟 僅在 Excel (CSV) 產出陣列中插入空白列與收入分區標題
+                html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-emerald-900 text-xs border-b border-gray-200 tracking-wider">【 本期收入 】</td></tr>`;
                 reportDataForCSV.push(["", "", ""]);
                 reportDataForCSV.push(["【 本期收入 】", "", ""]);
 
@@ -690,18 +825,15 @@
                         <tr class="border-b border-gray-100">
                             <td class="p-3 text-gray-600 font-bold">${grp}</td>
                             <td class="p-3 text-gray-800 font-bold">${cat}</td>
-                            <td class="p-3 text-right font-bold text-emerald-600">${amt.toLocaleString()}</td>
+                            <td class="p-3 text-right font-black text-emerald-600">${amt.toLocaleString()}</td>
                         </tr>
                     `;
                     reportDataForCSV.push([grp, cat, amt]);
                 });
             }
 
-            // 區塊 C：本期支出 (網頁畫面與 Excel 斷點分流)
             if (rawExpenseMap.size > 0) {
-                html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-red-900 text-xs border-b border-gray-200">【 本期支出 】</td></tr>`;
-                
-                // 🌟 僅在 Excel (CSV) 產出陣列中插入空白列與支出分區標題
+                html += `<tr class="bg-gray-100"><td colspan="3" class="p-2 font-black text-red-900 text-xs border-b border-gray-200 tracking-wider">【 本期支出 】</td></tr>`;
                 reportDataForCSV.push(["", "", ""]);
                 reportDataForCSV.push(["【 本期支出 】", "", ""]);
 
@@ -711,14 +843,13 @@
                         <tr class="border-b border-gray-100">
                             <td class="p-3 text-gray-600 font-bold">${grp}</td>
                             <td class="p-3 text-gray-800 font-bold">${cat}</td>
-                            <td class="p-3 text-right font-bold text-red-500">${amt.toLocaleString()}</td>
+                            <td class="p-3 text-right font-black text-red-500">${amt.toLocaleString()}</td>
                         </tr>
                     `;
                     reportDataForCSV.push([grp, cat, amt]);
                 });
             }
 
-            // 區塊 D：結算
             const finalBalance = prevBalance + totalIncome - totalExpense;
             html += `
                     </tbody>
@@ -731,7 +862,6 @@
                 </table>
             `;
             
-            // 🌟 僅在 Excel (CSV) 產出陣列中插入結算斷點與總結餘
             reportDataForCSV.push(["", "", ""]);
             reportDataForCSV.push(["-", "本期總結餘", finalBalance]);
 

@@ -660,6 +660,12 @@
 
         // ================= 🌟 填寫請款表單專區 🌟 =================
         function switchApplyMode(mode) {
+            // 🌟 嚴格防護：檢查若要切換到 'income'（入帳），必須確認當前身分為「財務」或「會長」
+            if (mode === 'income' && auth.role !== '財務' && auth.role !== '會長') {
+                showToast("❌ 權限不足：只有財務幹部與會長能執行入帳作業");
+                return; // 直接攔截，不予切換
+            }
+
             applyMode = mode;
             document.getElementById('subtab-expense').className = mode === 'expense' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900 transition-all' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hover:text-emerald-700 transition-all';
             document.getElementById('subtab-income').className = mode === 'income' ? 'flex-1 py-2.5 rounded-xl font-black text-sm bg-white shadow-sm text-emerald-900 transition-all' : 'flex-1 py-2.5 rounded-xl font-bold text-sm text-gray-500 hover:text-emerald-700 transition-all';

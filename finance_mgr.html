@@ -259,15 +259,19 @@
                 <textarea id="auditComment" rows="2" class="w-full p-3 rounded-xl border-2 border-emerald-50 bg-white font-bold text-sm outline-none focus:border-emerald-400 resize-none transition" placeholder="請填寫簽核意見或作廢原因..."></textarea>
             </div>
 
-            <!-- 整合操作按鈕 -->
-            <div class="grid grid-cols-2 gap-3">
+            <!-- 整合操作按鈕 (取消與核准) -->
+            <div class="grid grid-cols-2 gap-3 mb-3">
                 <button onclick="closeAuditModal()" class="py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-sm transition">取消</button>
                 <button id="auditSubmitBtn" onclick="submitAuditAction()" class="py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-sm shadow-md transition">確認簽核</button>
             </div>
             
-            <div class="pt-2 border-t border-gray-100 mt-3">
-                <button onclick="submitAuditCancel()" class="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 border border-red-200">
-                    <i class="fas fa-ban"></i> 退回並作廢此單
+            <!-- 🌟 拆分退回與作廢按鈕 -->
+            <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                <button onclick="submitAuditReturn()" class="py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 border border-orange-200">
+                    <i class="fas fa-reply"></i> 退回請申請者修改
+                </button>
+                <button onclick="submitAuditCancel()" class="py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 border border-red-200">
+                    <i class="fas fa-ban"></i> 直接作廢此單
                 </button>
             </div>
         </div>
@@ -459,21 +463,27 @@
                 const isIncome = r.type === '收入';
                 const isCanceled = r.status === '已作廢';
                 const isClosed = r.status === '已結案';
+                const isReturned = r.status === '被退回'; // 🌟 新增判斷是否被退回
 
                 let statusColor = 'bg-amber-100 text-amber-800 animate-pulse';
                 if (isClosed) statusColor = 'bg-emerald-100 text-emerald-800';
                 if (isCanceled) statusColor = 'bg-gray-200 text-gray-500 line-through';
+                if (isReturned) statusColor = 'bg-rose-100 text-rose-700 animate-pulse'; // 🌟 退回狀態顯示醒目的紅色
 
                 let actionBtnHtml = '';
+                let canAudit = false; // 🌟 關鍵防呆標記：用來記錄當下使用者是否正在以「主管」身分審核
+
                 if (!isCanceled) {
                     if (!isIncome) {
                         // 🌟 會長簽核：改為開啟「簽核審查彈窗」
                         if (r.status === '待會長核准' && auth.role === '會長') {
                             actionBtnHtml += `<button onclick="openAuditModal(${r.rowIndex}, 'approve')" class="mt-2 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-clipboard-check mr-1"></i>審查與核准</button>`;
+                            canAudit = true; // 標記為審查者
                         } 
                         // 🌟 財務撥款：改為開啟「簽核審查彈窗」
                         else if (r.status === '待財務撥款' && auth.role === '財務') {
                             actionBtnHtml += `<button onclick="openAuditModal(${r.rowIndex}, 'fund')" class="mt-2 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-clipboard-check mr-1"></i>審查與撥款</button>`;
+                            canAudit = true; // 標記為審查者
                         } 
                         // 簽收結案保持不變
                         else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
@@ -481,8 +491,11 @@
                         }
                     }
 
-                    // 🌟 嚴格限制修改權限：只有「申請者本人」且「待會長核准(尚未簽核)」時才能修改
-                    if (r.status === '待會長核准' && auth.name === r.applicant) {
+                    // 🌟 嚴格限制修改權限：
+                    // 條件 1：狀態是「待會長核准」或「被退回」
+                    // 條件 2：是申請者本人
+                    // 條件 3：當下身份「不是審核者 (!canAudit)」(避免跟審核鍵打架)
+                    if ((r.status === '待會長核准' || r.status === '被退回') && auth.name === r.applicant && !canAudit) {
                         actionBtnHtml += `<button onclick="openEditModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-gray-100 text-blue-600 border border-blue-100 px-3 py-1.5 rounded-xl transition mr-1"><i class="fas fa-edit"></i> 修改/作廢</button>`;
                     }
                 }
@@ -699,6 +712,43 @@
                 const result = await res.json();
                 if (result.result === 'SUCCESS') {
                     showToast("✅ 單據已退回作廢！");
+                    await loadRecords();
+                } else {
+                    showToast("❌ 失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常");
+            }
+            showLoading(false);
+        }
+
+        // 🌟 從審查彈窗中執行「退回請申請者修改」
+        async function submitAuditReturn() {
+            const rowIndex = document.getElementById('auditRowIndex').value;
+            const comment = document.getElementById('auditComment').value.trim();
+            
+            if (!comment) {
+                alert("⚠️ 退回必須填寫主管審核意見，讓申請者知道哪裡需要修改！");
+                return;
+            }
+
+            if (!confirm("確定要退回此請款單，讓申請者重新修改嗎？")) return;
+
+            closeAuditModal();
+            showLoading(true, "退回處理中...");
+            try {
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: 'return',
+                    comment: comment,
+                    roleName: auth.role
+                };
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ 單據已退回給申請者！");
                     await loadRecords();
                 } else {
                     showToast("❌ 失敗：" + result.message);

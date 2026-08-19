@@ -606,6 +606,109 @@
             document.getElementById('editModal').classList.remove('flex');
         }
 
+        // ================= 🌟 主管簽核與審查機制專區 🌟 =================
+        let currentAuditAction = '';
+        
+        function openAuditModal(rowIndex, actionType) {
+            const record = allRecords.find(r => r.rowIndex === rowIndex);
+            if(!record) return;
+
+            document.getElementById('auditRowIndex').value = record.rowIndex;
+            currentAuditAction = actionType;
+
+            // 填入唯讀的原始資料
+            document.getElementById('auditDate').innerText = record.date;
+            document.getElementById('auditCategory').innerText = record.category;
+            document.getElementById('auditAmount').innerText = "NT$ " + Number(record.amount).toLocaleString();
+            document.getElementById('auditDesc').innerText = record.desc || '無';
+            document.getElementById('auditComment').value = '';
+
+            // 動態調整確認按鈕的樣式與文字
+            const submitBtn = document.getElementById('auditSubmitBtn');
+            if(actionType === 'approve') {
+                submitBtn.innerText = '確認核准';
+                submitBtn.className = 'py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-sm shadow-md transition';
+            } else if(actionType === 'fund') {
+                submitBtn.innerText = '確認撥款';
+                submitBtn.className = 'py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-sm shadow-md transition';
+            }
+
+            document.getElementById('auditModal').classList.remove('hidden');
+            document.getElementById('auditModal').classList.add('flex');
+        }
+
+        function closeAuditModal() {
+            document.getElementById('auditModal').classList.add('hidden');
+            document.getElementById('auditModal').classList.remove('flex');
+        }
+
+        // 執行簽核/撥款送出
+        async function submitAuditAction() {
+            const rowIndex = document.getElementById('auditRowIndex').value;
+            const comment = document.getElementById('auditComment').value.trim();
+            
+            closeAuditModal();
+            showLoading(true, "簽核資料傳送中...");
+            
+            try {
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: currentAuditAction,
+                    comment: comment,
+                    roleName: auth.role
+                };
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ 簽核完成！");
+                    await loadRecords();
+                } else {
+                    showToast("❌ 操作失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常");
+            }
+            showLoading(false);
+        }
+
+        // 從審查彈窗中直接執行退回作廢
+        async function submitAuditCancel() {
+            const rowIndex = document.getElementById('auditRowIndex').value;
+            const comment = document.getElementById('auditComment').value.trim();
+            
+            if (!comment) {
+                alert("⚠️ 退回作廢必須填寫主管審核意見！");
+                return;
+            }
+
+            if (!confirm("確定要退回並作廢此筆請款單嗎？")) return;
+
+            closeAuditModal();
+            showLoading(true, "作廢處理中...");
+            try {
+                const payload = {
+                    type: 'update_finance_status',
+                    key: auth.key,
+                    rowIndex: rowIndex,
+                    action: 'cancel',
+                    reason: comment
+                };
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.result === 'SUCCESS') {
+                    showToast("✅ 單據已退回作廢！");
+                    await loadRecords();
+                } else {
+                    showToast("❌ 失敗：" + result.message);
+                }
+            } catch (err) {
+                showToast("❌ 網路異常");
+            }
+            showLoading(false);
+        }
+
         async function submitEditAction() {
             const rowIndex = document.getElementById('editRowIndex').value;
             const date = document.getElementById('editDate').value;

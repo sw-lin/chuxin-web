@@ -221,6 +221,57 @@
             </div>
         </div>
     </div>
+    <!-- 🌟 全新：簽核與審查專用彈窗 (會長/財務專用) -->
+    <div id="auditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4 border-l-4 border-emerald-500 pl-3">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-clipboard-check text-emerald-500 text-lg"></i>
+                    <h3 class="text-lg font-black text-gray-800">單據簽核與審查</h3>
+                </div>
+            </div>
+            
+            <input type="hidden" id="auditRowIndex">
+            
+            <!-- 唯讀原始資料顯示區 -->
+            <div class="bg-gray-50/80 p-4 rounded-2xl border border-gray-100 mb-4 space-y-2.5">
+                <div class="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                    <span class="text-xs font-bold text-gray-400">日期</span>
+                    <span id="auditDate" class="text-sm font-bold text-gray-700"></span>
+                </div>
+                <div class="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                    <span class="text-xs font-bold text-gray-400">項目類別</span>
+                    <span id="auditCategory" class="text-sm font-bold text-gray-700"></span>
+                </div>
+                <div class="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                    <span class="text-xs font-bold text-gray-400">申請金額</span>
+                    <span id="auditAmount" class="text-base font-black text-emerald-600"></span>
+                </div>
+                <div class="pt-1">
+                    <span class="text-[11px] font-bold text-gray-400 block mb-1">原始用途說明：</span>
+                    <div id="auditDesc" class="text-xs font-bold text-gray-700 leading-relaxed bg-white p-2.5 rounded-xl border border-gray-100"></div>
+                </div>
+            </div>
+
+            <!-- 審核意見輸入區 -->
+            <div class="mb-5">
+                <label class="block text-[11px] font-bold text-emerald-700 mb-1"><i class="fas fa-comment-dots mr-1"></i>主管審核意見 (選填，若作廢則為必填)</label>
+                <textarea id="auditComment" rows="2" class="w-full p-3 rounded-xl border-2 border-emerald-50 bg-white font-bold text-sm outline-none focus:border-emerald-400 resize-none transition" placeholder="請填寫簽核意見或作廢原因..."></textarea>
+            </div>
+
+            <!-- 整合操作按鈕 -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeAuditModal()" class="py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-sm transition">取消</button>
+                <button id="auditSubmitBtn" onclick="submitAuditAction()" class="py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-sm shadow-md transition">確認簽核</button>
+            </div>
+            
+            <div class="pt-2 border-t border-gray-100 mt-3">
+                <button onclick="submitAuditCancel()" class="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 border border-red-200">
+                    <i class="fas fa-ban"></i> 退回並作廢此單
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 🌟 自訂作廢說明彈窗 (對應 P 欄說明) -->
     <div id="cancelModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
@@ -416,17 +467,23 @@
                 let actionBtnHtml = '';
                 if (!isCanceled) {
                     if (!isIncome) {
-                        if (r.status === '待會長核准' && (auth.role === '會長')) {
-                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'approve')" class="mt-2 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-check mr-1"></i>核准</button>`;
-                        } else if (r.status === '待財務撥款' && auth.role === '財務') {
-                            actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'fund')" class="mt-2 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-hand-holding-usd mr-1"></i>撥款</button>`;
-                        } else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
+                        // 🌟 會長簽核：改為開啟「簽核審查彈窗」
+                        if (r.status === '待會長核准' && auth.role === '會長') {
+                            actionBtnHtml += `<button onclick="openAuditModal(${r.rowIndex}, 'approve')" class="mt-2 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-clipboard-check mr-1"></i>審查與核准</button>`;
+                        } 
+                        // 🌟 財務撥款：改為開啟「簽核審查彈窗」
+                        else if (r.status === '待財務撥款' && auth.role === '財務') {
+                            actionBtnHtml += `<button onclick="openAuditModal(${r.rowIndex}, 'fund')" class="mt-2 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-clipboard-check mr-1"></i>審查與撥款</button>`;
+                        } 
+                        // 簽收結案保持不變
+                        else if (r.status === '待申請人簽收' && (auth.name === r.applicant || auth.role === '會長')) {
                             actionBtnHtml += `<button onclick="updateStatus(${r.rowIndex}, 'sign')" class="mt-2 text-[11px] font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-sm transition mr-1"><i class="fas fa-signature mr-1"></i>簽收結案</button>`;
                         }
                     }
 
-                    if (!isClosed && (auth.name === r.applicant || auth.role === '會長' || auth.role === '財務')) {
-                        actionBtnHtml += `<button onclick="openEditModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-gray-100 text-blue-600 border border-blue-100 px-3 py-1.5 rounded-xl transition mr-1"><i class="fas fa-edit"></i> 修改</button>`;
+                    // 🌟 嚴格限制修改權限：只有「申請者本人」且「待會長核准(尚未簽核)」時才能修改
+                    if (r.status === '待會長核准' && auth.name === r.applicant) {
+                        actionBtnHtml += `<button onclick="openEditModal(${r.rowIndex})" class="mt-2 text-[11px] font-bold bg-gray-50 hover:bg-gray-100 text-blue-600 border border-blue-100 px-3 py-1.5 rounded-xl transition mr-1"><i class="fas fa-edit"></i> 修改/作廢</button>`;
                     }
                 }
 

@@ -141,14 +141,22 @@
                             <span class="font-bold text-orange-800 text-sm">檢附單據 (拍照上傳)</span>
                         </label>
                         
-                        <div id="receiptInputContainer" class="hidden mt-2">
-                            <!-- 修正後：移除 capture 屬性，讓手機可以自由選擇「拍照」或「從相簿挑選照片」 -->
-<input type="file" id="receiptFile" accept="image/*" class="hidden" onchange="previewReceipt(event)">
-                            <button onclick="document.getElementById('receiptFile').click()" class="w-full py-3 bg-white border-2 border-dashed border-orange-300 text-orange-600 font-bold text-xs rounded-xl hover:bg-orange-50 transition flex items-center justify-center gap-2">
-                                <i class="fas fa-camera"></i> 拍照或選取照片
-                            </button>
-                            <div id="receiptStatus" class="mt-2 text-xs font-bold text-emerald-600 hidden text-center"></div>
-                        </div>
+                        <div id="receiptInputContainer" class="hidden mt-2 space-y-2">
+                           <!-- 隱藏的檔案輸入框：一個專門拍照，一個專門選相簿 -->
+                           <input type="file" id="receiptCamera" accept="image/*" capture="environment" class="hidden" onchange="previewReceipt(event)">
+                           <input type="file" id="receiptGallery" accept="image/*" class="hidden" onchange="previewReceipt(event)">
+
+                           <!-- 雙按鈕設計 -->
+                           <div class="grid grid-cols-2 gap-2">
+                              <button type="button" onclick="document.getElementById('receiptCamera').click()" class="py-2.5 bg-white border border-orange-300 text-orange-600 font-bold text-xs rounded-xl hover:bg-orange-50 transition flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-camera text-sm"></i> 現場拍照
+                              </button>
+                              <button type="button" onclick="document.getElementById('receiptGallery').click()" class="py-2.5 bg-white border border-orange-300 text-orange-600 font-bold text-xs rounded-xl hover:bg-orange-50 transition flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-images text-sm"></i> 從相簿挑選
+                              </button>
+                           </div>
+                           <div id="receiptStatus" class="mt-2 text-xs font-bold text-emerald-600 hidden text-center"></div>
+                    </div>
                     </div>
 
                     <button onclick="submitRecord()" class="w-full py-3.5 bg-emerald-800 text-white rounded-xl font-black text-sm shadow-md hover:bg-emerald-700 active:scale-95 transition flex items-center justify-center gap-2">

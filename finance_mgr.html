@@ -513,7 +513,9 @@
                 if (r.status !== '已作廢') {
                     if (r.type === '收入') {
                         totalIncome += amt;
-                    } else if (r.type === '支出' && r.status === '已結案') {
+                    } 
+                    // 🌟 關鍵修正：將「已辦理沖銷」也視為已完成的支出，算進總支出中！
+                    else if (r.type === '支出' && (r.status === '已結案' || r.status === '已辦理沖銷')) {
                         totalExpense += amt;
                     }
                 }
@@ -528,8 +530,9 @@
             const container = document.getElementById('recordsContainer');
             let filtered = allRecords;
 
+            // 🌟 關鍵修正：待辦清單中，同時排除「已結案」、「已作廢」與「已辦理沖銷」
             if (currentFilter === 'pending') {
-                filtered = allRecords.filter(r => r.type === '支出' && r.status !== '已結案' && r.status !== '已作廢');
+                filtered = allRecords.filter(r => r.type === '支出' && r.status !== '已結案' && r.status !== '已作廢' && r.status !== '已辦理沖銷');
             } else if (currentFilter === '收入' || currentFilter === '支出') {
                 filtered = allRecords.filter(r => r.type === currentFilter);
             }
@@ -546,12 +549,14 @@
                 const isIncome = r.type === '收入';
                 const isCanceled = r.status === '已作廢';
                 const isClosed = r.status === '已結案';
+                const isOffset = r.status === '已辦理沖銷'; // 🌟 新增狀態判斷
                 const isReturned = r.status === '被退回'; // 🌟 新增判斷是否被退回
 
                 let statusColor = 'bg-amber-100 text-amber-800 animate-pulse';
                 if (isClosed) statusColor = 'bg-emerald-100 text-emerald-800';
                 if (isCanceled) statusColor = 'bg-gray-200 text-gray-500 line-through';
                 if (isReturned) statusColor = 'bg-rose-100 text-rose-700 animate-pulse'; // 🌟 退回狀態顯示醒目的紅色
+                if (isOffset) statusColor = 'bg-purple-100 text-purple-800'; // 🌟 給「沖銷」一個專屬紫色標籤
 
                 let actionBtnHtml = '';
                 let canAudit = false; // 🌟 關鍵防呆標記：用來記錄當下使用者是否正在以「主管」身分審核

@@ -401,38 +401,47 @@
           //  "財務": ["匯費手續費", "其他"]
         };
 
-        const auth = (function() {
-            try {
-                const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
-                const loneKey = sessionStorage.getItem('staffKey'); 
-                return {
-                    key: info.staffKey || loneKey || "",
-                    name: info.name || info.userName || "幹部",
-                    role: info.role || "幹部",
-                    isValid: !!(info.staffKey || loneKey)
-                };
-            } catch (e) {
-                return { key: "", name: "幹部", role: "幹部", isValid: false };
-            }
-        })();
+        // 1. 讀取登入暫存資料
+        const userStr = sessionStorage.getItem('userInfo');
+        const user = userStr ? JSON.parse(userStr) : null;
+        const loneKey = sessionStorage.getItem('staffKey'); 
 
+        // 2. 🌟 建立權限物件（同時記錄「登入狀態」與「幹部金鑰」）
+        const auth = {
+            isLoggedIn: !!(user && user.result === "SUCCESS"), // 是否已成功登入
+            name: user ? (user.name || user.userName || "成員") : "成員",
+            role: user ? (user.role || "Member") : "Member",
+            key: (user ? user.staffKey : "") || loneKey || "",
+            // 🌟 幹部標記：必須有登入，且身上帶有 staffKey 幹部金鑰
+            isStaff: !!(user && (user.staffKey || loneKey))
+        };
+
+        // 3. 🌟 頁面安全守護 (Auth Guard)
         window.onload = () => {
-        if (!auth.isValid) {
-        alert("請先驗證幹部身分");
-        // 🌟 關鍵修改：在 index.html 後面加上 ?redirect=finance_mgr.html
-        location.href = "index.html?redirect=finance_mgr.html";
-        return;
-        }
+            // 情況 A：完全未登入 ➔ 帶上記錄小抄 (redirect) 導向首頁登入
+            if (!auth.isLoggedIn) {
+                alert("請先登入系統以進行簽核或請款！");
+                location.href = "index.html?redirect=finance_mgr.html";
+                return;
+            }
 
-        document.getElementById('recordDate').valueAsDate = new Date();
-        document.getElementById('applicantName').value = auth.name;
+            // 帶入填表人預設資訊
+            if (document.getElementById('recordDate')) document.getElementById('recordDate').valueAsDate = new Date();
+            if (document.getElementById('applicantName')) document.getElementById('applicantName').value = auth.name;
 
-        if (auth.role === '財務' || auth.role === '會長') {
-        document.getElementById('subtab-income').classList.remove('hidden');
-        document.getElementById('reportBtnContainer').classList.remove('hidden');
-        }
-        switchApplyMode('expense'); 
-        loadRecords();
+            // 情況 B：幹部登入成功 ➔ 解鎖會長/財務專用簽核與報表按鈕
+            if (auth.isStaff && (auth.role === '財務' || auth.role === '會長' || auth.role === 'Admin')) {
+                console.log("🔓 幹部驗證通過！解鎖管理與簽核功能");
+                const subtabIncome = document.getElementById('subtab-income');
+                const reportBtn = document.getElementById('reportBtnContainer');
+                if (subtabIncome) subtabIncome.classList.remove('hidden');
+                if (reportBtn) reportBtn.classList.remove('hidden');
+            } else {
+                console.log("👤 一般會員登入：開放請款填寫與個人撥款簽收");
+            }
+
+            switchApplyMode('expense'); 
+            loadRecords();
         };
 
         function switchView(view) {

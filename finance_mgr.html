@@ -417,21 +417,22 @@
         })();
 
         window.onload = () => {
-            if (!auth.isValid) {
-                alert("請先驗證幹部身分");
-                location.href = "index.html";
-                return;
-            }
+        if (!auth.isValid) {
+        alert("請先驗證幹部身分");
+        // 🌟 關鍵修改：在 index.html 後面加上 ?redirect=finance_mgr.html
+        location.href = "index.html?redirect=finance_mgr.html";
+        return;
+        }
 
-            document.getElementById('recordDate').valueAsDate = new Date();
-            document.getElementById('applicantName').value = auth.name;
+        document.getElementById('recordDate').valueAsDate = new Date();
+        document.getElementById('applicantName').value = auth.name;
 
-            if (auth.role === '財務' || auth.role === '會長') {
-                document.getElementById('subtab-income').classList.remove('hidden');
-                document.getElementById('reportBtnContainer').classList.remove('hidden');
-            }
-            switchApplyMode('expense'); 
-            loadRecords();
+        if (auth.role === '財務' || auth.role === '會長') {
+        document.getElementById('subtab-income').classList.remove('hidden');
+        document.getElementById('reportBtnContainer').classList.remove('hidden');
+        }
+        switchApplyMode('expense'); 
+        loadRecords();
         };
 
         function switchView(view) {

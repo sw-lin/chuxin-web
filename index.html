@@ -358,11 +358,20 @@ async function handleLogin() {
             
             sessionStorage.setItem('userInfo', JSON.stringify(userStore));
 
-            // 5. 依據通行證決定登入當下跳轉的頁面
-            let targetPage = (hasMemberAccess === true) ? 'member_zone.html' : 'guest_zone.html';
+            // 5. 依據通行證決定登入當下跳轉的頁面 (🌟 加入 LINE 簽核跳轉判斷)
+            let defaultPage = (hasMemberAccess === true) ? 'member_zone.html' : 'guest_zone.html';
             
-            console.log(`[登入分流] 繳費審查開關：${isEnforceOn ? '開啟' : '關閉'} | 會員繳費狀態：${isPaidStatus} | 核發通行證：${hasMemberAccess} -> 導向：${targetPage}`);
-            window.location.href = targetPage;
+            // 讀取網址列是否有 redirect 參數 (小抄)
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectTarget = urlParams.get('redirect');
+            
+            if (redirectTarget) {
+                console.log(`[登入分流] 偵測到指定目標，轉跳至：${redirectTarget}`);
+                window.location.href = redirectTarget; // 直接把幹部/申請人送去財務頁面！
+            } else {
+                console.log(`[登入分流] 繳費審查開關：${isEnforceOn ? '開啟' : '關閉'} | 會員繳費狀態：${isPaidStatus} | 核發通行證：${hasMemberAccess} -> 導向：${defaultPage}`);
+                window.location.href = defaultPage;    // 正常登入就去會員區/訪客區
+            }
         } else {
             alert("登入失敗：" + (result.message || "帳號或密碼錯誤"));
             btn.disabled = false;

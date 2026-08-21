@@ -111,39 +111,42 @@
             loadParkingData();
         };
 
-        // 從後端 GAS 取得設定與登記清單
+        // 從後端 GAS 取得設定與登記清單（強化版：自動相容各種回傳格式）
         async function loadParkingData() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
                 const res = await fetch(`${GAS_URL}?type=get_parking_data&t=${Date.now()}`);
                 const data = await res.json();
+                console.log("後端回傳資料：", data); // 可在 F12 主控台查看實際結構
 
-                if (data.result === "SUCCESS") {
-                    // 1. 填入參數
-                    if (data.config) {
-                        document.getElementById('cfg_total').value = data.config.total || 130;
-                        document.getElementById('cfg_price').value = data.config.price || 30;
-                        document.getElementById('cfg_deadline').value = data.config.deadline || "";
-                        pricePerTicket = Number(data.config.price) || 30;
-                    }
+                // 兼容處理：無論後端有沒有包一層 result === "SUCCESS" 都能正確讀取
+                const configData = data.config || data; 
+                const listData = data.list || data.applicants || [];
 
-                    // 2. 轉換登記名單結構
-                    if (data.list && Array.isArray(data.list)) {
-                        applicants = data.list.map(item => ({
-                            phone: item.phone,
-                            name: item.name,
-                            bonus: Number(item.bonus) || 0,
-                            isPaid: item.isPaid || false
-                        }));
-                    }
-
-                    calculateTickets();
-                } else {
-                    alert("無法載入停車券資料：" + data.message);
+                // 1. 填入參數
+                if (configData) {
+                    document.getElementById('cfg_total').value = configData.total || 140;
+                    document.getElementById('cfg_price').value = configData.price || 40;
+                    document.getElementById('cfg_deadline').value = configData.deadline || "";
+                    pricePerTicket = Number(configData.price) || 40;
                 }
+
+                // 2. 轉換登記名單結構
+                if (Array.isArray(listData)) {
+                    applicants = listData.map(item => ({
+                        phone: item.phone || "",
+                        name: item.name || "未具名",
+                        bonus: Number(item.bonus) || 0,
+                        isPaid: item.isPaid === true || item.isPaid === "true" || item.isPaid === "已繳費"
+                    }));
+                } else {
+                    applicants = [];
+                }
+
+                calculateTickets();
             } catch (err) {
                 console.error("連線錯誤:", err);
-                alert("伺服器連線異常，請稍後再試。");
+                alert("伺服器連線異常，請檢查網路或 GAS 部署狀態。");
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }

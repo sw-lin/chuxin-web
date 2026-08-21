@@ -1930,8 +1930,9 @@ async function submitParkingRequest(btnElement) {
 // ==========================================
 
 // 1. 向後端詢問停車卷設定與使用者登記狀態
+// 1. 向後端詢問停車卷設定與使用者登記狀態 (POST 修正版)
 function checkParkingStatus() {
-    console.log("🚗 [Step 1] 執行 checkParkingStatus()");
+    console.log("🚗 [Step 1] 執行 checkParkingStatus() (改用 POST)");
     const userStr = sessionStorage.getItem('userInfo');
     if (!userStr) {
         console.warn("🚗 [Error] 找不到 userInfo，中斷。");
@@ -1939,23 +1940,40 @@ function checkParkingStatus() {
     }
     const user = JSON.parse(userStr);
 
-    const url = `${GAS_URL}?type=get_parking_data&phone=${encodeURIComponent(user.phone)}&t=${Date.now()}`;
-    console.log("🚗 [Step 2] 發送 GET 請求:", url);
+    // 🌟 修正點：打包 payload，對應 GAS 的 doPost 邏輯
+    const payload = {
+        type: "get_parking_data",
+        phone: user.phone
+    };
 
-    fetch(url)
-        .then(res => res.json())
-        .then(res => {
-            console.log("🚗 [Step 3] 收到 GAS 回傳結果:", res);
-            if (res.result === "SUCCESS") {
-                parkingConfig = res.config;
-                isUserParkingRegistered = res.isRegistered;
-                console.log("🚗 [Step 4] 更新變數 - Config:", parkingConfig, " | 是否登記:", isUserParkingRegistered);
-                renderParkingBanner();
-            } else {
-                console.error("🚗 [Error] 後端回傳失敗:", res.message);
-            }
-        })
-        .catch(err => console.error("🚗 [Error] 停車卷狀態讀取失敗 (網路異常):", err));
+    console.log("🚗 [Step 2] 發送 POST 請求，夾帶資料:", payload);
+
+    fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+        console.log("🚗 [Step 3] 收到 GAS 回傳結果:", res);
+        
+        // 防呆：如果後端還是回傳 error 物件
+        if (res.error) {
+            console.error("🚗 [Error] 後端拒絕請求:", res.error);
+            return;
+        }
+
+        if (res.result === "SUCCESS" || res.config) {
+            parkingConfig = res.config || res;
+            isUserParkingRegistered = res.isRegistered || false;
+            console.log("🚗 [Step 4] 更新變數 - Config:", parkingConfig, " | 是否登記:", isUserParkingRegistered);
+            
+            // 觸發渲染與時間防呆
+            renderParkingBanner();
+        } else {
+            console.error("🚗 [Error] 後端回傳失敗:", res.message);
+        }
+    })
+    .catch(err => console.error("🚗 [Error] 停車卷狀態讀取失敗 (網路異常):", err));
 }
 
 // 2. 渲染橫幅：精準時間鎖與狀態切換

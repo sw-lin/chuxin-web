@@ -117,13 +117,26 @@
             loadParkingData();
         };
 
-        // 從後端 GAS 取得設定與登記清單
+        // 從後端 GAS 取得設定與登記清單 (改為 POST 請求對應後端)
         async function loadParkingData() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const res = await fetch(`${GAS_URL}?type=get_parking_data&t=${Date.now()}`);
+                // 🌟 關鍵修正：將 GET 改為 POST，並打包 payload 傳遞
+                const payload = {
+                    type: "get_parking_data"
+                };
+                
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
                 const data = await res.json();
                 console.log("🔍 後端完整回傳資料：", data);
+
+                // 避免拿到 error 物件時出錯
+                if (data.error) {
+                    throw new Error(data.error);
+                }
 
                 const configData = data.config || data; 
                 const listData = data.list || data.applicants || [];
@@ -133,7 +146,6 @@
                     document.getElementById('cfg_total').value = configData.total || 140;
                     document.getElementById('cfg_price').value = configData.price || 40;
                     
-                    // 🌟 絕對強固的日期強制解析
                     console.log("📅 原始接收到的 deadline 值：", configData.deadline);
                     if (configData.deadline) {
                         let rawDateStr = String(configData.deadline).trim();
@@ -142,7 +154,6 @@
                         }
                         rawDateStr = rawDateStr.replace(/\//g, '-');
                         
-                        console.log("✨ 格式化後的日期字串：", rawDateStr);
                         document.getElementById('cfg_deadline').value = rawDateStr;
                     } else {
                         document.getElementById('cfg_deadline').value = "";
@@ -166,7 +177,7 @@
                 calculateTickets();
             } catch (err) {
                 console.error("連線錯誤:", err);
-                alert("伺服器連線異常，請檢查網路或 GAS 狀態。");
+                alert("伺服器連線異常或請求無效，請檢查網路或 GAS 狀態。");
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }

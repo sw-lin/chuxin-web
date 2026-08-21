@@ -732,6 +732,7 @@ window.addEventListener('load', async () => {
         if (typeof checkActiveVote === 'function') {
             console.log("🗳️ 檢查是否有進行中的投票...");
             checkActiveVote();
+            checkParkingStatus();
         }        
     } catch (err) {
         console.error("❌ syncData 執行出錯:", err);
@@ -753,7 +754,6 @@ window.addEventListener('load', async () => {
             };
         }
     }
-    checkParkingStatus();
 });
     // 關閉彈窗
 function closeHistoryModal() {

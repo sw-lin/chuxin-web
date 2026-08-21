@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>停車劵管理 - 築心讀書會</title>
+    <title>停車卷管理 - 築心讀書會</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -16,10 +16,10 @@
     <!-- 頂部導航 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors z-10">
-            <i class="fas fa-chevron-left mr-1"></i> 返回
+            <i class="fas fa-chevron-left mr-1"></i> 控制台
         </button>
         <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
-            停車劵管理中心
+            停車卷管理中心
         </h1>
         <div class="w-12"></div>
     </nav>
@@ -118,13 +118,12 @@
         };
 
         // 從後端 GAS 取得設定與登記清單
-        // 從後端 GAS 取得設定與登記清單
         async function loadParkingData() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
                 const res = await fetch(`${GAS_URL}?type=get_parking_data&t=${Date.now()}`);
                 const data = await res.json();
-                console.log("後端回傳資料：", data);
+                console.log("🔍 後端完整回傳資料：", data);
 
                 const configData = data.config || data; 
                 const listData = data.list || data.applicants || [];
@@ -134,22 +133,17 @@
                     document.getElementById('cfg_total').value = configData.total || 140;
                     document.getElementById('cfg_price').value = configData.price || 40;
                     
-                    // 🌟 絕對強固的日期解析處理
+                    // 🌟 絕對強固的日期強制解析
+                    console.log("📅 原始接收到的 deadline 值：", configData.deadline);
                     if (configData.deadline) {
-                        let dateStr = configData.deadline.toString().trim();
-                        // 如果包含 T (例如 ISO 格式)，只取前半部的 YYYY-MM-DD
-                        if (dateStr.includes('T')) {
-                            dateStr = dateStr.split('T')[0];
+                        let rawDateStr = String(configData.deadline).trim();
+                        if (rawDateStr.includes('T')) {
+                            rawDateStr = rawDateStr.split('T')[0];
                         }
-                        // 將斜線全部轉為橫槓
-                        dateStr = dateStr.replace(/\//g, '-');
+                        rawDateStr = rawDateStr.replace(/\//g, '-');
                         
-                        // 驗證是否為有效日期格式
-                        if (dateStr.length >= 8) {
-                            document.getElementById('cfg_deadline').value = dateStr;
-                        } else {
-                            document.getElementById('cfg_deadline').value = "";
-                        }
+                        console.log("✨ 格式化後的日期字串：", rawDateStr);
+                        document.getElementById('cfg_deadline').value = rawDateStr;
                     } else {
                         document.getElementById('cfg_deadline').value = "";
                     }

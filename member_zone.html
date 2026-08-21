@@ -118,6 +118,10 @@
     </div>
 
     <div id="vote-notice-container" class="w-full"></div>
+
+    <div id="vote-notice-container" class="w-full"></div>
+    <!-- 🌟 新增：停車卷動態橫幅容器 -->
+    <div id="parking-notice-container" class="w-full mt-2"></div>
     
     <div class="space-y-4">
         <div class="flex items-center gap-3 px-2">
@@ -741,6 +745,7 @@ window.addEventListener('load', async () => {
             };
         }
     }
+    checkParkingStatus);
 });
     // 關閉彈窗
 function closeHistoryModal() {
@@ -1881,7 +1886,100 @@ async function handleManualRefresh() {
             setTimeout(() => toast.remove(), 2000);
         }
     }, 300);
-}    
+}  
+// 全域變數儲存停車卷狀態
+let parkingConfig = null;
+let isUserParkingRegistered = false; 
+
+// 1. 向後端詢問停車卷設定與使用者登記狀態
+function checkParkingStatus() {
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    
+    // TODO: 這裡替換為實際的 GAS API 呼叫，例如：
+    // fetch(`${GAS_URL}?type=get_parking_status&phone=${encodeURIComponent(user.phone)}`)
+    // .then(res => res.json()).then(res => { ... })
+    
+    // 模擬後端回傳的資料
+    parkingConfig = { deadline: '2026-09-30' }; // 這裡對接您管理台設定的截止日期
+    isUserParkingRegistered = false; // 假設後端判定該會員尚未登記
+
+    renderParkingBanner();
+}
+
+// 2. 渲染橫幅：極簡時間鎖防呆機制
+function renderParkingBanner() {
+    const container = document.getElementById('parking-notice-container');
+    if (!container || !parkingConfig || !parkingConfig.deadline) return;
+
+    // 將截止日期的時間設為當日 23:59:59
+    const deadlineDate = new Date(parkingConfig.deadline.replace(/-/g, '/'));
+    deadlineDate.setHours(23, 59, 59);
+    const now = new Date();
+
+    // ⏳ 核心防呆：只要時間超過截止日，按鈕直接神隱，會員畫面保持乾淨！
+    if (now > deadlineDate) {
+        container.innerHTML = ""; 
+        return;
+    }
+
+    let btnHtml = "";
+    if (isUserParkingRegistered) {
+        // ✅ 已登記：按鈕變灰，不需顯示任何統計結果
+        btnHtml = `
+            <button class="w-full bg-gray-300 py-5 rounded-[2.5rem] text-gray-500 flex items-center justify-between px-10 cursor-not-allowed shadow-inner" disabled>
+                <div class="flex flex-col text-left">
+                    <span class="text-[10px] font-bold tracking-widest opacity-70">COMPLETED</span>
+                    <span class="text-xl font-black tracking-widest">學期停車卷登記</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-bold">已完成申請</span>
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </button>`;
+    } else {
+        // 🚀 未登記：顯示藍色登記按鈕
+        btnHtml = `
+            <button onclick="submitParkingRequest(this)" class="w-full bg-blue-700 py-5 rounded-[2.5rem] text-white flex items-center justify-between px-10 active:scale-95 transition-all shadow-xl hover:bg-blue-600">
+                <div class="flex flex-col text-left">
+                    <span class="text-[10px] font-bold tracking-widest opacity-70">TICKET</span>
+                    <span class="text-xl font-black tracking-widest">學期停車卷登記</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-bold">停車卷需求登記</span>
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
+            </button>`;
+    }
+    
+    container.innerHTML = `<div class="mt-4">${btnHtml}</div>`;
+}
+
+// 3. 處理點擊登記
+async function submitParkingRequest(btnElement) {
+    // 防連點機制
+    btnElement.disabled = true;
+    btnElement.innerHTML = `<span class="text-white font-bold w-full text-center tracking-widest"><i class="fas fa-spinner fa-spin mr-2"></i>申請傳送中...</span>`;
+    
+    try {
+        const userStr = sessionStorage.getItem('userInfo');
+        const user = JSON.parse(userStr);
+
+        // TODO: 呼叫 GAS 發送登記資料
+        // await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'submit_parking', phone: user.phone }) });
+        
+        // 模擬成功後，狀態直接切換並重新渲染
+        isUserParkingRegistered = true;
+        renderParkingBanner();
+        showToast("✅ 已成功送出停車卷申請！", "success");
+        
+    } catch (e) {
+        alert("網路連線異常，請稍後再試。");
+        renderParkingBanner(); // 失敗恢復按鈕狀態
+    }
+}
+    
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">
     <nav class="bg-[#064E3B] px-6 py-5 flex items-center justify-between shrink-0 shadow-md relative">

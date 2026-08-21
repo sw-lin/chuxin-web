@@ -719,21 +719,23 @@ window.addEventListener('load', async () => {
         await syncData();
         console.log("✅ syncData 執行完成");
 
-        // 🌟【權限檢查守衛】必須在 syncData 之後執行，確保已取得最新狀態
-        // 注意：這裡的 data 應該要從 syncData 內部取得，或者確保 currentUser 已更新
-        // 如果 syncData 內部直接更新了全域變數 currentUser，我們可以直接拿來用：
         if (currentUser && currentUser.hasMemberAccess === false) {
             alert("提示：目前已進入會費審查期，您尚未完成繳費，即將導回訪客區。");
             window.location.href = 'guest_zone.html';
-            return; // 強制中斷，後面的投票與報名檢查都不會執行
+            return; 
         }
         
-        // 🌟 建議放在這裡：等核心資料都穩定了，再檢查投票
         if (typeof checkActiveVote === 'function') {
             console.log("🗳️ 檢查是否有進行中的投票...");
             checkActiveVote();
+        }     
+        
+        // 🌟【修正點】：將停車券檢查獨立抽出來，確保絕對會執行！
+        if (typeof checkParkingStatus === 'function') {
+            console.log("🚗 開始觸發停車劵檢查...");
             checkParkingStatus();
-        }        
+        }
+           
     } catch (err) {
         console.error("❌ syncData 執行出錯:", err);
     }
@@ -1929,64 +1931,87 @@ async function submitParkingRequest(btnElement) {
 
 // 1. 向後端詢問停車卷設定與使用者登記狀態
 function checkParkingStatus() {
+    console.log("🚗 [Step 1] 執行 checkParkingStatus()");
     const userStr = sessionStorage.getItem('userInfo');
-    if (!userStr) return;
+    if (!userStr) {
+        console.warn("🚗 [Error] 找不到 userInfo，中斷。");
+        return;
+    }
     const user = JSON.parse(userStr);
 
-    // 呼叫您 GAS 中寫好的 get_parking_data
     const url = `${GAS_URL}?type=get_parking_data&phone=${encodeURIComponent(user.phone)}&t=${Date.now()}`;
+    console.log("🚗 [Step 2] 發送 GET 請求:", url);
 
     fetch(url)
         .then(res => res.json())
         .then(res => {
+            console.log("🚗 [Step 3] 收到 GAS 回傳結果:", res);
             if (res.result === "SUCCESS") {
                 parkingConfig = res.config;
                 isUserParkingRegistered = res.isRegistered;
+                console.log("🚗 [Step 4] 更新變數 - Config:", parkingConfig, " | 是否登記:", isUserParkingRegistered);
                 renderParkingBanner();
+            } else {
+                console.error("🚗 [Error] 後端回傳失敗:", res.message);
             }
         })
-        .catch(err => console.error("停車卷狀態讀取失敗:", err));
+        .catch(err => console.error("🚗 [Error] 停車卷狀態讀取失敗 (網路異常):", err));
 }
 
 // 2. 渲染橫幅：精準時間鎖與狀態切換
 function renderParkingBanner() {
+    console.log("🚗 [Step 5] 執行 renderParkingBanner()");
     const wrapper = document.getElementById('parkingSectionWrapper');
     const container = document.getElementById('parking-notice-container');
+    
+    if (!wrapper) console.error("🚗 [Error] 畫面上找不到 ID 為 parkingSectionWrapper 的元素！");
+    if (!container) console.error("🚗 [Error] 畫面上找不到 ID 為 parking-notice-container 的元素！");
     if (!wrapper || !container) return;
 
-    // 若後端沒有設定截止日，直接隱藏整個區塊
     if (!parkingConfig || !parkingConfig.deadline) {
+        console.warn("🚗 [狀態] 隱藏按鈕 (原因：後端沒有傳回 deadline 或 config 為空)");
         wrapper.classList.add('hidden');
         wrapper.style.display = 'none';
         return;
     }
 
     // 將截止日期的時間設為當日 23:59:59
-    const deadlineDate = new Date(parkingConfig.deadline.replace(/-/g, '/'));
-    deadlineDate.setHours(23, 59, 59);
-    const now = new Date();
-
-    // ⏳ 核心防呆：只要時間超過截止日，按鈕直接神隱
-    if (now > deadlineDate) {
+    console.log("🚗 [Step 6] 原始 deadline 字串:", parkingConfig.deadline);
+    const deadlineStr = parkingConfig.deadline.replace(/-/g, '/');
+    const deadlineDate = new Date(deadlineStr);
+    
+    if (isNaN(deadlineDate.getTime())) {
+        console.error("🚗 [Error] 隱藏按鈕 (原因：deadline 字串無法轉換為有效日期格式)", deadlineStr);
         wrapper.classList.add('hidden');
         wrapper.style.display = 'none';
         return;
     }
 
-    // 期限內：解除隱藏，讓區塊顯示
+    deadlineDate.setHours(23, 59, 59);
+    const now = new Date();
+    
+    console.log("🚗 [Step 7] 判定時間 -> 截止日:", deadlineDate.toLocaleString(), " | 目前時間:", now.toLocaleString());
+
+    if (now > deadlineDate) {
+        console.warn("🚗 [狀態] 隱藏按鈕 (原因：目前時間已超過截止日)");
+        wrapper.classList.add('hidden');
+        wrapper.style.display = 'none';
+        return;
+    }
+
+    console.log("🚗 [狀態] 條件符合，準備顯示按鈕！");
     wrapper.classList.remove('hidden');
     wrapper.style.display = 'block';
 
-    // 根據是否登記過，動態改變按鈕狀態
     if (isUserParkingRegistered) {
-        // ✅ 已登記：變為灰色無法點擊
+        console.log("🚗 [按鈕樣式] 顯示為『已登記』(灰色)");
         container.innerHTML = `
             <button class="w-full bg-gray-300 py-4 rounded-[2rem] text-gray-500 flex justify-between px-6 items-center cursor-not-allowed shadow-inner" disabled>
                 <span class="font-black">學期停車劵 (您已登記)</span>
                 <i class="fas fa-check-circle"></i>
             </button>`;
     } else {
-        // 🚀 未登記：顯示藍色登記按鈕，點擊會觸發 navTo('parking_request') 導向登記頁
+        console.log("🚗 [按鈕樣式] 顯示為『我要登記』(藍色)");
         container.innerHTML = `
             <button onclick="navTo('parking_request')" class="w-full bg-blue-600 text-white py-4 rounded-[2rem] shadow-md flex justify-between px-6 items-center active:scale-95 transition-all">
                 <span class="font-black">學期停車劵登記</span>
@@ -1994,9 +2019,10 @@ function renderParkingBanner() {
             </button>`;
     }
 
-    // 隱藏 HTML 裡原本寫死的備用按鈕 (避免畫面上出現兩顆按鈕)
     const oldBtn = wrapper.querySelector('button[onclick="navTo(\'parking_request\')"]:not(#parking-notice-container button)');
     if (oldBtn) oldBtn.style.display = 'none';
+    
+    console.log("🚗 [Step 8] 渲染完成！");
 }    
     
 </script>

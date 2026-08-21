@@ -518,35 +518,6 @@ async function syncData() {
                 if (isStaff) staffBtn.onclick = enterStaffMode;
             }
 
-            // ==========================================
-            // 🌟🌟🌟 新增：停車卷顯示防呆邏輯 🌟🌟🌟
-            // ==========================================
-            const parkingWrapper = document.getElementById('parkingSectionWrapper');
-            if (parkingWrapper) {
-                // 嘗試從 globalConfig 取得截止日期 (請確認後端 Config 表的 Key 是 parking_deadline)
-                const deadlineStr = globalConfig ? globalConfig.parking_deadline : null; 
-
-                if (!deadlineStr || deadlineStr.trim() === "") {
-                    // 沒填日期或清空 -> 隱藏
-                    parkingWrapper.classList.add('hidden');
-                    parkingWrapper.style.display = 'none';
-                } else {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0); 
-                    const deadlineDate = new Date(deadlineStr.replace(/\//g, '-'));
-                    
-                    if (today > deadlineDate) {
-                        // 已過期 -> 隱藏
-                        parkingWrapper.classList.add('hidden');
-                        parkingWrapper.style.display = 'none';
-                    } else {
-                        // 期限內 -> 顯示
-                        parkingWrapper.classList.remove('hidden');
-                        parkingWrapper.style.display = 'block'; 
-                    }
-                }
-            }
-
             // --- G. 更新 UI ---
             console.log("=== 3. 執行 updateUI ===");
             updateUI(
@@ -782,6 +753,7 @@ window.addEventListener('load', async () => {
             };
         }
     }
+    checkParkingStatus();
 });
     // 關閉彈窗
 function closeHistoryModal() {
@@ -1927,54 +1899,6 @@ async function handleManualRefresh() {
 let parkingConfig = null;
 let isUserParkingRegistered = false; 
 
-// 2. 渲染橫幅：極簡時間鎖防呆機制
-function renderParkingBanner() {
-    const container = document.getElementById('parking-notice-container');
-    if (!container || !parkingConfig || !parkingConfig.deadline) return;
-
-    // 將截止日期的時間設為當日 23:59:59
-    const deadlineDate = new Date(parkingConfig.deadline.replace(/-/g, '/'));
-    deadlineDate.setHours(23, 59, 59);
-    const now = new Date();
-
-    // ⏳ 核心防呆：只要時間超過截止日，按鈕直接神隱，會員畫面保持乾淨！
-    if (now > deadlineDate) {
-        container.innerHTML = ""; 
-        return;
-    }
-
-    let btnHtml = "";
-    if (isUserParkingRegistered) {
-        // ✅ 已登記：按鈕變灰，不需顯示任何統計結果
-        btnHtml = `
-            <button class="w-full bg-gray-300 py-5 rounded-[2.5rem] text-gray-500 flex items-center justify-between px-10 cursor-not-allowed shadow-inner" disabled>
-                <div class="flex flex-col text-left">
-                    <span class="text-[10px] font-bold tracking-widest opacity-70">COMPLETED</span>
-                    <span class="text-xl font-black tracking-widest">學期停車卷登記</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm font-bold">已完成申請</span>
-                    <i class="fas fa-check-circle"></i>
-                </div>
-            </button>`;
-    } else {
-        // 🚀 未登記：顯示藍色登記按鈕
-        btnHtml = `
-            <button onclick="submitParkingRequest(this)" class="w-full bg-blue-700 py-5 rounded-[2.5rem] text-white flex items-center justify-between px-10 active:scale-95 transition-all shadow-xl hover:bg-blue-600">
-                <div class="flex flex-col text-left">
-                    <span class="text-[10px] font-bold tracking-widest opacity-70">TICKET</span>
-                    <span class="text-xl font-black tracking-widest">學期停車卷登記</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm font-bold">停車卷需求登記</span>
-                    <i class="fas fa-ticket-alt"></i>
-                </div>
-            </button>`;
-    }
-    
-    container.innerHTML = `<div class="mt-4">${btnHtml}</div>`;
-}
-
 // 3. 處理點擊登記
 async function submitParkingRequest(btnElement) {
     // 防連點機制
@@ -1998,6 +1922,84 @@ async function submitParkingRequest(btnElement) {
         renderParkingBanner(); // 失敗恢復按鈕狀態
     }
 }
+    
+// ==========================================
+// 🚗 停車卷專屬控制邏輯 (真實連線版)
+// ==========================================
+let parkingConfig = null;
+let isUserParkingRegistered = false;
+
+// 1. 向後端詢問停車卷設定與使用者登記狀態
+function checkParkingStatus() {
+    const userStr = sessionStorage.getItem('userInfo');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+
+    // 呼叫您 GAS 中寫好的 get_parking_data
+    const url = `${GAS_URL}?type=get_parking_data&phone=${encodeURIComponent(user.phone)}&t=${Date.now()}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(res => {
+            if (res.result === "SUCCESS") {
+                parkingConfig = res.config;
+                isUserParkingRegistered = res.isRegistered;
+                renderParkingBanner();
+            }
+        })
+        .catch(err => console.error("停車卷狀態讀取失敗:", err));
+}
+
+// 2. 渲染橫幅：精準時間鎖與狀態切換
+function renderParkingBanner() {
+    const wrapper = document.getElementById('parkingSectionWrapper');
+    const container = document.getElementById('parking-notice-container');
+    if (!wrapper || !container) return;
+
+    // 若後端沒有設定截止日，直接隱藏整個區塊
+    if (!parkingConfig || !parkingConfig.deadline) {
+        wrapper.classList.add('hidden');
+        wrapper.style.display = 'none';
+        return;
+    }
+
+    // 將截止日期的時間設為當日 23:59:59
+    const deadlineDate = new Date(parkingConfig.deadline.replace(/-/g, '/'));
+    deadlineDate.setHours(23, 59, 59);
+    const now = new Date();
+
+    // ⏳ 核心防呆：只要時間超過截止日，按鈕直接神隱
+    if (now > deadlineDate) {
+        wrapper.classList.add('hidden');
+        wrapper.style.display = 'none';
+        return;
+    }
+
+    // 期限內：解除隱藏，讓區塊顯示
+    wrapper.classList.remove('hidden');
+    wrapper.style.display = 'block';
+
+    // 根據是否登記過，動態改變按鈕狀態
+    if (isUserParkingRegistered) {
+        // ✅ 已登記：變為灰色無法點擊
+        container.innerHTML = `
+            <button class="w-full bg-gray-300 py-4 rounded-[2rem] text-gray-500 flex justify-between px-6 items-center cursor-not-allowed shadow-inner" disabled>
+                <span class="font-black">學期停車劵 (您已登記)</span>
+                <i class="fas fa-check-circle"></i>
+            </button>`;
+    } else {
+        // 🚀 未登記：顯示藍色登記按鈕，點擊會觸發 navTo('parking_request') 導向登記頁
+        container.innerHTML = `
+            <button onclick="navTo('parking_request')" class="w-full bg-blue-600 text-white py-4 rounded-[2rem] shadow-md flex justify-between px-6 items-center active:scale-95 transition-all">
+                <span class="font-black">學期停車劵登記</span>
+                <i class="fas fa-ticket-alt"></i>
+            </button>`;
+    }
+
+    // 隱藏 HTML 裡原本寫死的備用按鈕 (避免畫面上出現兩顆按鈕)
+    const oldBtn = wrapper.querySelector('button[onclick="navTo(\'parking_request\')"]:not(#parking-notice-container button)');
+    if (oldBtn) oldBtn.style.display = 'none';
+}    
     
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">

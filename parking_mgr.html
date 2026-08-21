@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>停車卷管理 - 築心讀書會</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    </style>
+</head>
+<body class="pb-20">
+    <!-- 頂部導航 -->
+    <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
+        <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors z-10">
+            <i class="fas fa-chevron-left mr-1"></i> 控制台
+        </button>
+        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
+            停車卷管理中心
+        </h1>
+        <div class="w-12"></div>
+    </nav>
+
+    <main class="p-6 max-w-3xl mx-auto space-y-6">
+        <!-- 區塊一：參數設定 -->
+        <section class="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
+            <h2 class="text-blue-900 font-black mb-4 flex items-center gap-2 text-lg">
+                <i class="fas fa-cog text-blue-600"></i> 登記參數設定
+            </h2>
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">總發放張數</label>
+                    <input type="number" id="cfg_total" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center" placeholder="130">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">單張票價 (元)</label>
+                    <input type="number" id="cfg_price" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center" placeholder="30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">登記截止日</label>
+                    <input type="date" id="cfg_deadline" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-bold text-sm">
+                </div>
+            </div>
+            <button onclick="saveConfigAndAllocations()" class="w-full py-3 bg-blue-800 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-95 transition-all">
+                儲存參數 (會員端即刻生效)
+            </button>
+        </section>
+
+        <!-- 區塊二：分配結算與繳費名單 -->
+        <section class="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-emerald-900 font-black flex items-center gap-2 text-lg">
+                    <i class="fas fa-calculator text-emerald-600"></i> 分配結算名單
+                </h2>
+                <button onclick="exportToCSV()" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-all">
+                    <i class="fas fa-download mr-1"></i>匯出 Excel 表單
+                </button>
+            </div>
+
+            <!-- 數據儀表板 -->
+            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex justify-between items-center mb-4">
+                <div>
+                    <span class="text-emerald-700 font-bold text-xs block mb-1">需求人數：<span id="stat_applicants" class="text-sm font-black">0</span> 人</span>
+                    <span class="text-emerald-900 font-black block">基本分配：每人 <span id="stat_base" class="text-lg text-emerald-700">0</span> 張</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-red-700 font-bold text-xs block mb-1">待分配餘數</span>
+                    <span id="stat_remainder" class="text-3xl font-black text-red-500">0</span> <span class="text-gray-500 text-xs font-bold">張</span>
+                </div>
+            </div>
+
+            <!-- 名單表格 -->
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="w-full text-left text-sm whitespace-nowrap bg-white">
+                    <thead class="bg-gray-100 text-gray-600 text-xs">
+                        <tr>
+                            <th class="p-3 font-black">姓名</th>
+                            <th class="p-3 font-black text-center">基本</th>
+                            <th class="p-3 font-black text-center">有功獎勵</th>
+                            <th class="p-3 font-black text-center">獲得張數</th>
+                            <th class="p-3 font-black text-right">應繳費</th>
+                            <th class="p-3 font-black text-center">繳費登記</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parkingTableBody" class="divide-y divide-gray-100">
+                        <tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">資料載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <button onclick="saveConfigAndAllocations()" class="w-full mt-4 py-3 bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:bg-emerald-600 active:scale-95 transition-all">
+                儲存分配與繳費狀態
+            </button>
+        </section>
+    </main>
+
+    <div id="loadingOverlay"><div class="flex flex-col items-center gap-4"><div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div><p class="text-emerald-900 font-bold">資料載入中...</p></div></div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
+
+        let baseCount = 0;
+        let remainderCount = 0;
+        let pricePerTicket = 30;
+        let applicants = []; // 從 GAS 實際載入的名單
+
+        window.onload = function() {
+            loadParkingData();
+        };
+
+        // 從後端 GAS 取得設定與登記清單
+        async function loadParkingData() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch(`${GAS_URL}?type=get_parking_data&t=${Date.now()}`);
+                const data = await res.json();
+
+                if (data.result === "SUCCESS") {
+                    // 1. 填入參數
+                    if (data.config) {
+                        document.getElementById('cfg_total').value = data.config.total || 130;
+                        document.getElementById('cfg_price').value = data.config.price || 30;
+                        document.getElementById('cfg_deadline').value = data.config.deadline || "";
+                        pricePerTicket = Number(data.config.price) || 30;
+                    }
+
+                    // 2. 轉換登記名單結構
+                    if (data.list && Array.isArray(data.list)) {
+                        applicants = data.list.map(item => ({
+                            phone: item.phone,
+                            name: item.name,
+                            bonus: Number(item.bonus) || 0,
+                            isPaid: item.isPaid || false
+                        }));
+                    }
+
+                    calculateTickets();
+                } else {
+                    alert("無法載入停車券資料：" + data.message);
+                }
+            } catch (err) {
+                console.error("連線錯誤:", err);
+                alert("伺服器連線異常，請稍後再試。");
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        }
+
+        // 核心計算邏輯
+        function calculateTickets() {
+            const total = parseInt(document.getElementById('cfg_total').value) || 0;
+            pricePerTicket = parseInt(document.getElementById('cfg_price').value) || 0;
+            const count = applicants.length;
+
+            if (count === 0) {
+                baseCount = 0;
+                remainderCount = total;
+            } else {
+                baseCount = Math.floor(total / count);
+                const usedBonus = applicants.reduce((sum, p) => sum + (p.bonus || 0), 0);
+                remainderCount = (total % count) - usedBonus;
+            }
+
+            document.getElementById('stat_applicants').innerText = count;
+            document.getElementById('stat_base').innerText = baseCount;
+            document.getElementById('stat_remainder').innerText = remainderCount;
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('parkingTableBody');
+            if (applicants.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">目前尚無會員登記紀錄</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = applicants.map((p, index) => {
+                const totalTickets = baseCount + p.bonus;
+                const fee = totalTickets * pricePerTicket;
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-3 font-bold text-emerald-900">${p.name}</td>
+                        <td class="p-3 text-center text-gray-500">${baseCount}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="addBonus(${index})" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 ${remainderCount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">+1</button>
+                            <span class="ml-2 font-black text-blue-900 w-4 inline-block">${p.bonus}</span>
+                        </td>
+                        <td class="p-3 text-center font-black text-emerald-700 text-lg">${totalTickets}</td>
+                        <td class="p-3 text-right font-mono font-bold text-gray-700">$${fee}</td>
+                        <td class="p-3 text-center">
+                            <input type="checkbox" ${p.isPaid ? 'checked' : ''} onchange="togglePaid(${index}, this)" class="w-5 h-5 accent-emerald-600 cursor-pointer">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addBonus(index) {
+            if (remainderCount > 0) {
+                applicants[index].bonus += 1;
+                calculateTickets();
+            } else {
+                alert("餘數已分配完畢！");
+            }
+        }
+
+        function togglePaid(index, checkbox) {
+            applicants[index].isPaid = checkbox.checked;
+        }
+
+        // 統一儲存設定與分配結果至 GAS
+        async function saveConfigAndAllocations() {
+            const staffKey = sessionStorage.getItem('staffKey') || localStorage.getItem('築心管理授權') || "";
+            
+            const payload = {
+                type: "save_parking_allocation",
+                key: staffKey,
+                config: {
+                    total: parseInt(document.getElementById('cfg_total').value) || 130,
+                    price: parseInt(document.getElementById('cfg_price').value) || 30,
+                    deadline: document.getElementById('cfg_deadline').value || ""
+                },
+                updates: applicants.map(p => ({
+                    phone: p.phone,
+                    bonus: p.bonus,
+                    isPaid: p.isPaid
+                }))
+            };
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (result.result === "SUCCESS") {
+                    alert("✅ 停車卷參數與分配名單已成功儲存！");
+                    loadParkingData(); // 重新載入最新狀態
+                } else {
+                    alert("❌ 儲存失敗：" + result.message);
+                }
+            } catch (err) {
+                console.error("儲存錯誤:", err);
+                alert("伺服器連線異常，請稍後再試。");
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "姓名,基本張數,有功獎勵,總張數,應繳費用,繳費狀態\n";
+            
+            applicants.forEach(p => {
+                const totalTickets = baseCount + p.bonus;
+                const fee = totalTickets * pricePerTicket;
+                const status = p.isPaid ? "已繳費" : "未繳";
+                csvContent += `${p.name},${baseCount},${p.bonus},${totalTickets},${fee},${status}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "停車卷分配名冊.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

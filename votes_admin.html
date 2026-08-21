@@ -68,7 +68,8 @@
         </button>
     </nav>
 
-    <main class="p-4 max-w-2xl mx-auto">
+    <!-- 🌟 修正點 3-A：擴充為 max-w-4xl 讓筆電兩側空間得以利用 -->
+    <main class="p-4 max-w-4xl mx-auto">
         <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-emerald-50 mb-6">
             <label class="form-label">Select Vote Project</label>
             <div class="relative">
@@ -95,7 +96,8 @@
 
                     <div class="col-span-2">
                         <label class="form-label">詳細說明</label>
-                        <textarea id="description" rows="3" class="form-input" placeholder="請輸入活動詳細說明..."></textarea>
+                        <!-- 🌟 修正點 3-B：加入 min-h-[150px] 與 resize-y 讓視窗更大且可手動拉長 -->
+                        <textarea id="description" rows="5" class="form-input min-h-[150px] resize-y" placeholder="請輸入活動詳細說明..."></textarea>
                     </div>
 
                     <div class="col-span-2">
@@ -300,7 +302,9 @@
             document.getElementById('status').value = v.status;
             document.getElementById('showResult').value = v.showResult;
             
-            document.getElementById('anonymous').value = v.anonymous;
+            // 🌟 修正點 1：將布林值強制轉為大寫字串，對齊下拉選單的 Value
+            document.getElementById('anonymous').value = String(v.anonymous).toUpperCase();
+            
             handleTypeChange(); // 新增：填充完資料後執行一次，確保單選框狀態正確
             document.getElementById('deleteBtn').classList.remove('hidden');
         }
@@ -421,13 +425,14 @@ function handleTypeChange() {
     const maxInput = document.getElementById('maxChoices');
     
     if (type === 'SINGLE') {
-        // 如果是單選，強制設為 1 並禁用輸入
         maxInput.value = 1;
         maxInput.readOnly = true; 
-        maxInput.style.backgroundColor = "#F3F4F6"; // 變灰色提示不可點
+        // 🌟 修正點 2：移除 style.backgroundColor，改用 Tailwind class 降低透明度
+        maxInput.classList.add('opacity-50', 'cursor-not-allowed');
+        maxInput.style.backgroundColor = ""; 
     } else {
-        // 如果是多選，開放輸入，並確保預設值至少為 2
         maxInput.readOnly = false;
+        maxInput.classList.remove('opacity-50', 'cursor-not-allowed');
         maxInput.style.backgroundColor = ""; 
         if (parseInt(maxInput.value) <= 1) {
             maxInput.value = 2;

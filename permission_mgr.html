@@ -100,6 +100,7 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
         
+        // 🌟 修改這裡：在 featureConfig 陣列最後方加入「停車劵管理」與它的 key
         const featureConfig = [
             { name: "會員名冊管理", key: "edit_member" },
             { name: "行事曆排程", key: "edit_calendar" },
@@ -107,7 +108,8 @@
             { name: "繳費財務管理", key: "edit_payments" },
             { name: "活動報名下載", key: "edit_registration" },
             { name: "民調中心管理", key: "manage_votes" },
-            { name: "畫面與雲端管理", key: "manage_config" }
+            { name: "畫面與雲端管理", key: "manage_config" },
+            { name: "停車劵管理", key: "edit_parking" } // 👈 這裡新增
         ];
 
         const roles = ["副會長", "文書", "班務", "企劃", "活動", "財務"];

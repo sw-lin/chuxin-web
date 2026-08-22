@@ -21,7 +21,9 @@
         <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
             停車劵管理中心
         </h1>
-        <div class="w-12"></div>
+        
+        <!-- 🌟 新增：開啟編輯開關按鈕 -->
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 z-10">開啟編輯</button>
     </nav>
 
     <main class="p-6 max-w-3xl mx-auto space-y-6">
@@ -33,18 +35,19 @@
             <div class="grid grid-cols-3 gap-4 mb-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">總發放張數</label>
-                    <input type="number" id="cfg_total" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center" placeholder="130">
+                    <input type="number" id="cfg_total" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center disabled:opacity-50 disabled:cursor-not-allowed" placeholder="130">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">單張票價 (元)</label>
-                    <input type="number" id="cfg_price" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center" placeholder="30">
+                    <input type="number" id="cfg_price" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center disabled:opacity-50 disabled:cursor-not-allowed" placeholder="30">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">登記截止日</label>
-                    <input type="date" id="cfg_deadline" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-bold text-sm">
+                    <input type="date" id="cfg_deadline" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 </div>
             </div>
-            <button onclick="saveConfigAndAllocations()" class="w-full py-3 bg-blue-800 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-95 transition-all">
+            <!-- 🌟 加入 ID 供 JS 控制隱藏/顯示 -->
+            <button id="saveConfigBtn" onclick="saveConfigAndAllocations()" class="w-full py-3 bg-blue-800 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-95 transition-all hidden">
                 儲存參數 (會員端即刻生效)
             </button>
         </section>
@@ -91,7 +94,8 @@
                 </table>
             </div>
             
-            <button onclick="saveConfigAndAllocations()" class="w-full mt-4 py-3 bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:bg-emerald-600 active:scale-95 transition-all">
+            <!-- 🌟 加入 ID 供 JS 控制隱藏/顯示 -->
+            <button id="saveAllocationBtn" onclick="saveConfigAndAllocations()" class="w-full mt-4 py-3 bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:bg-emerald-600 active:scale-95 transition-all hidden">
                 儲存分配與繳費狀態
             </button>
         </section>
@@ -108,22 +112,93 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
 
+        // ==========================================
+        // 🔐 權限模組與狀態 (仿照行事曆架構)
+        // ==========================================
+        const auth = (function() {
+            try {
+                const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
+                const loneKey = sessionStorage.getItem('staffKey'); 
+                return {
+                    key: info.staffKey || loneKey || "",
+                    permissions: info.userPermissions || [],
+                    isValid: !!(info.staffKey || loneKey)
+                };
+            } catch (e) {
+                return { key: "", permissions: [], isValid: false };
+            }
+        })();
+
+        var STAFF_KEY = auth.key;
+        const userPermissions = auth.permissions;
+        let isEditMode = false;
+
+        // 全域變數
         let baseCount = 0;
         let remainderCount = 0;
         let pricePerTicket = 30;
         let applicants = [];
 
         window.onload = function() {
+            if (!STAFF_KEY) { location.href="index.html"; return; }
+            
+            // 🌟 權限檢查：是否具備 edit_parking 或 all 權限
+            const editToggleBtn = document.getElementById('editToggleBtn');
+            if (!userPermissions.includes("all") && !userPermissions.includes("edit_parking")) {
+                if (editToggleBtn) {
+                    editToggleBtn.style.visibility = 'hidden'; 
+                }
+            }
+
             console.log("🚀 頁面載入完成，開始呼叫 loadParkingData()");
+            
+            // 初始化凍結狀態
+            setInputsState(false);
+            
             loadParkingData();
         };
+
+        // ==========================================
+        // ✏️ 編輯模式控制
+        // ==========================================
+        function toggleEditMode() {
+            if (!userPermissions.includes("all") && !userPermissions.includes("edit_parking")) {
+                alert("您沒有權限進行編輯作業");
+                return;
+            }        
+            
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            
+            if (isEditMode) {
+                btn.innerText = "結束編輯";
+                btn.className = "bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md z-10";
+            } else {
+                btn.innerText = "開啟編輯";
+                btn.className = "bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 z-10";
+            }
+            
+            setInputsState(isEditMode);
+            renderTable(); // 重新渲染表格，解鎖/鎖定 +1, -1 和 Checkbox
+        }
+
+        // 控制參數輸入框與儲存按鈕的啟用/禁用
+        function setInputsState(editable) {
+            document.getElementById('cfg_total').disabled = !editable;
+            document.getElementById('cfg_price').disabled = !editable;
+            document.getElementById('cfg_deadline').disabled = !editable;
+            
+            const btnConfig = document.getElementById('saveConfigBtn');
+            const btnAlloc = document.getElementById('saveAllocationBtn');
+            if (btnConfig) btnConfig.style.display = editable ? 'block' : 'none';
+            if (btnAlloc) btnAlloc.style.display = editable ? 'block' : 'none';
+        }
 
         // 從後端 GAS 取得設定與登記清單 (含埋點除錯)
         async function loadParkingData() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
                 const payload = { type: "get_parking_data" };
-                console.log("📤 準備發送 POST 請求，payload:", payload);
                 
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
@@ -131,7 +206,6 @@
                 });
                 
                 const data = await res.json();
-                console.log("📥 【埋點】後端完整回傳 JSON 資料：", data);
 
                 if (data.error) {
                     throw new Error(data.error);
@@ -139,9 +213,6 @@
 
                 // 檢查 config 物件
                 const configData = data.config || {};
-                console.log("⚙️ 【埋點】解析出的 configData：", configData);
-                console.log("📅 【埋點】configData.deadline 的原始值與型態：", configData.deadline, typeof configData.deadline);
-
                 const listData = data.list || data.applicants || [];
 
                 // 1. 填入參數
@@ -152,17 +223,12 @@
                     // 處理日期填入
                     if (configData.deadline) {
                         let rawDateStr = String(configData.deadline).trim();
-                        console.log("🔄 【埋點】處理前的 deadline 字串：", rawDateStr);
-                        
                         if (rawDateStr.includes('T')) {
                             rawDateStr = rawDateStr.split('T')[0];
                         }
                         rawDateStr = rawDateStr.replace(/\//g, '-');
-                        
-                        console.log("✅ 【埋點】最終塞入 input[type='date'] 的日期字串：", rawDateStr);
                         document.getElementById('cfg_deadline').value = rawDateStr;
                     } else {
-                        console.warn("⚠️ 【埋點】configData.deadline 為空或不存在！");
                         document.getElementById('cfg_deadline').value = "";
                     }
 
@@ -183,7 +249,7 @@
 
                 calculateTickets();
             } catch (err) {
-                console.error("❌ 【埋點】連線或解析錯誤:", err);
+                console.error("❌ 連線或解析錯誤:", err);
                 alert("伺服器連線異常或請求無效，請檢查 F12 主控台。");
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
@@ -222,49 +288,63 @@
             tbody.innerHTML = applicants.map((p, index) => {
                 const totalTickets = baseCount + p.bonus;
                 const fee = totalTickets * pricePerTicket;
+                
+                // 🌟 加入 isEditMode 防呆檢查：若不是編輯模式，按鈕與打勾都反灰禁用
+                const disableMinus = p.bonus <= 0 || !isEditMode;
+                const disablePlus = remainderCount <= 0 || !isEditMode;
+                const disableCheck = !isEditMode;
+                
                 return `
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="p-3 font-bold text-emerald-900">${p.name}</td>
                         <td class="p-3 text-center text-gray-500">${baseCount}</td>
                         <td class="p-3 text-center">
                             <div class="flex items-center justify-center">
-                                <button onclick="updateBonus(${index}, -1)" class="bg-red-100 text-red-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-red-200 active:scale-95 ${p.bonus <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${p.bonus <= 0 ? 'disabled' : ''}>-1</button>
+                                <button onclick="updateBonus(${index}, -1)" class="bg-red-100 text-red-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-red-200 active:scale-95 ${disableMinus ? 'opacity-50 cursor-not-allowed' : ''}" ${disableMinus ? 'disabled' : ''}>-1</button>
                                 <span class="mx-2 font-black text-blue-900 w-4 inline-block text-center">${p.bonus}</span>
-                                <button onclick="updateBonus(${index}, 1)" class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 ${remainderCount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${remainderCount <= 0 ? 'disabled' : ''}>+1</button>
+                                <button onclick="updateBonus(${index}, 1)" class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 ${disablePlus ? 'opacity-50 cursor-not-allowed' : ''}" ${disablePlus ? 'disabled' : ''}>+1</button>
                             </div>
                         </td>
                         <td class="p-3 text-center font-black text-emerald-700 text-lg">${totalTickets}</td>
                         <td class="p-3 text-right font-mono font-bold text-gray-700">$${fee}</td>
                         <td class="p-3 text-center">
-                            <input type="checkbox" ${p.isPaid ? 'checked' : ''} onchange="togglePaid(${index}, this)" class="w-5 h-5 accent-emerald-600 cursor-pointer">
+                            <input type="checkbox" ${p.isPaid ? 'checked' : ''} onchange="togglePaid(${index}, this)" class="w-5 h-5 accent-emerald-600 cursor-pointer ${disableCheck ? 'opacity-50 cursor-not-allowed' : ''}" ${disableCheck ? 'disabled' : ''}>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        // 🌟 修正：合併為雙向增減邏輯 (支援 +1 與 -1)
+        // 合併為雙向增減邏輯 (支援 +1 與 -1)
         function updateBonus(index, change) {
+            if (!isEditMode) return; // 雙重保險
+            
             if (change === 1) {
                 if (remainderCount > 0) {
                     applicants[index].bonus += 1;
-                    calculateTickets(); // 重新計算並渲染
+                    calculateTickets(); 
                 } else {
                     alert("餘數已分配完畢！");
                 }
             } else if (change === -1) {
                 if (applicants[index].bonus > 0) {
                     applicants[index].bonus -= 1;
-                    calculateTickets(); // 重新計算並渲染
+                    calculateTickets(); 
                 }
             }
         }
 
         function togglePaid(index, checkbox) {
+            if (!isEditMode) {
+                checkbox.checked = !checkbox.checked; // 如果強行點擊，反轉回來
+                return;
+            }
             applicants[index].isPaid = checkbox.checked;
         }
 
         async function saveConfigAndAllocations() {
+            if (!isEditMode) return;
+            
             const staffKey = sessionStorage.getItem('staffKey') || localStorage.getItem('築心管理授權') || "";
             
             const payload = {
@@ -291,7 +371,11 @@
                 const result = await res.json();
 
                 if (result.result === "SUCCESS") {
-                    alert("✅ 停車卷參數與分配名單已成功儲存！");
+                    alert("✅ 停車券參數與分配名單已成功儲存！");
+                    
+                    // 儲存完自動關閉編輯模式，確保安全
+                    toggleEditMode();
+                    
                     loadParkingData();
                 } else {
                     alert("❌ 儲存失敗：" + (result.message || "權限不足或系統錯誤"));

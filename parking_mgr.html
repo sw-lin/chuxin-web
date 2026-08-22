@@ -114,31 +114,34 @@
         let applicants = [];
 
         window.onload = function() {
+            console.log("🚀 頁面載入完成，開始呼叫 loadParkingData()");
             loadParkingData();
         };
 
-        // 從後端 GAS 取得設定與登記清單 (改為 POST 請求對應後端)
+        // 從後端 GAS 取得設定與登記清單 (含埋點除錯)
         async function loadParkingData() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                // 🌟 關鍵修正：將 GET 改為 POST，並打包 payload 傳遞
-                const payload = {
-                    type: "get_parking_data"
-                };
+                const payload = { type: "get_parking_data" };
+                console.log("📤 準備發送 POST 請求，payload:", payload);
                 
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify(payload)
                 });
+                
                 const data = await res.json();
-                console.log("🔍 後端完整回傳資料：", data);
+                console.log("📥 【埋點】後端完整回傳 JSON 資料：", data);
 
-                // 避免拿到 error 物件時出錯
                 if (data.error) {
                     throw new Error(data.error);
                 }
 
-                const configData = data.config || data; 
+                // 檢查 config 物件
+                const configData = data.config || {};
+                console.log("⚙️ 【埋點】解析出的 configData：", configData);
+                console.log("📅 【埋點】configData.deadline 的原始值與型態：", configData.deadline, typeof configData.deadline);
+
                 const listData = data.list || data.applicants || [];
 
                 // 1. 填入參數
@@ -146,16 +149,20 @@
                     document.getElementById('cfg_total').value = configData.total || 140;
                     document.getElementById('cfg_price').value = configData.price || 40;
                     
-                    console.log("📅 原始接收到的 deadline 值：", configData.deadline);
+                    // 處理日期填入
                     if (configData.deadline) {
                         let rawDateStr = String(configData.deadline).trim();
+                        console.log("🔄 【埋點】處理前的 deadline 字串：", rawDateStr);
+                        
                         if (rawDateStr.includes('T')) {
                             rawDateStr = rawDateStr.split('T')[0];
                         }
                         rawDateStr = rawDateStr.replace(/\//g, '-');
                         
+                        console.log("✅ 【埋點】最終塞入 input[type='date'] 的日期字串：", rawDateStr);
                         document.getElementById('cfg_deadline').value = rawDateStr;
                     } else {
+                        console.warn("⚠️ 【埋點】configData.deadline 為空或不存在！");
                         document.getElementById('cfg_deadline').value = "";
                     }
 
@@ -176,8 +183,8 @@
 
                 calculateTickets();
             } catch (err) {
-                console.error("連線錯誤:", err);
-                alert("伺服器連線異常或請求無效，請檢查網路或 GAS 狀態。");
+                console.error("❌ 【埋點】連線或解析錯誤:", err);
+                alert("伺服器連線異常或請求無效，請檢查 F12 主控台。");
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
@@ -246,7 +253,6 @@
             applicants[index].isPaid = checkbox.checked;
         }
 
-        // 統一儲存設定與分配結果至 GAS
         async function saveConfigAndAllocations() {
             const staffKey = sessionStorage.getItem('staffKey') || localStorage.getItem('築心管理授權') || "";
             

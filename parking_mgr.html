@@ -227,8 +227,11 @@
                         <td class="p-3 font-bold text-emerald-900">${p.name}</td>
                         <td class="p-3 text-center text-gray-500">${baseCount}</td>
                         <td class="p-3 text-center">
-                            <button onclick="addBonus(${index})" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 ${remainderCount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">+1</button>
-                            <span class="ml-2 font-black text-blue-900 w-4 inline-block">${p.bonus}</span>
+                            <div class="flex items-center justify-center">
+                                <button onclick="updateBonus(${index}, -1)" class="bg-red-100 text-red-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-red-200 active:scale-95 ${p.bonus <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${p.bonus <= 0 ? 'disabled' : ''}>-1</button>
+                                <span class="mx-2 font-black text-blue-900 w-4 inline-block text-center">${p.bonus}</span>
+                                <button onclick="updateBonus(${index}, 1)" class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 ${remainderCount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${remainderCount <= 0 ? 'disabled' : ''}>+1</button>
+                            </div>
                         </td>
                         <td class="p-3 text-center font-black text-emerald-700 text-lg">${totalTickets}</td>
                         <td class="p-3 text-right font-mono font-bold text-gray-700">$${fee}</td>
@@ -240,12 +243,20 @@
             }).join('');
         }
 
-        function addBonus(index) {
-            if (remainderCount > 0) {
-                applicants[index].bonus += 1;
-                calculateTickets();
-            } else {
-                alert("餘數已分配完畢！");
+        // 🌟 修正：合併為雙向增減邏輯 (支援 +1 與 -1)
+        function updateBonus(index, change) {
+            if (change === 1) {
+                if (remainderCount > 0) {
+                    applicants[index].bonus += 1;
+                    calculateTickets(); // 重新計算並渲染
+                } else {
+                    alert("餘數已分配完畢！");
+                }
+            } else if (change === -1) {
+                if (applicants[index].bonus > 0) {
+                    applicants[index].bonus -= 1;
+                    calculateTickets(); // 重新計算並渲染
+                }
             }
         }
 

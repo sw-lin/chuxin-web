@@ -1901,28 +1901,65 @@ async function handleManualRefresh() {
 let parkingConfig = null;
 let isUserParkingRegistered = false; 
 
-// 3. 處理點擊登記
+// 3. 處理點擊登記 (真實連線版)
 async function submitParkingRequest(btnElement) {
-    // 防連點機制
+    console.log("🚗 [送出申請] 開始執行，準備寫入 Parking_List...");
+    
+    // 🌟 防連點機制：按鈕變為載入中狀態
+    const originalHtml = btnElement.innerHTML;
     btnElement.disabled = true;
+    btnElement.classList.remove('active:scale-95');
+    btnElement.classList.add('cursor-not-allowed', 'opacity-80');
     btnElement.innerHTML = `<span class="text-white font-bold w-full text-center tracking-widest"><i class="fas fa-spinner fa-spin mr-2"></i>申請傳送中...</span>`;
     
     try {
+        // 從 Session 取得當前會員資訊
         const userStr = sessionStorage.getItem('userInfo');
+        if (!userStr) throw new Error("找不到用戶資訊，請重新登入");
         const user = JSON.parse(userStr);
 
-        // TODO: 呼叫 GAS 發送登記資料
-        // await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'submit_parking', phone: user.phone }) });
+        // 🌟 打包傳送給後端的 payload (對應 GAS 的 submit_parking)
+        const payload = {
+            type: 'submit_parking',
+            phone: user.phone
+        };
+
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
         
-        // 模擬成功後，狀態直接切換並重新渲染
-        isUserParkingRegistered = true;
-        renderParkingBanner();
-        showToast("✅ 已成功送出停車卷申請！", "success");
+        const result = await response.json();
+        console.log("🚗 [送出申請] GAS 回傳:", result);
+
+        if (result.result === "SUCCESS") {
+            // 寫入成功！狀態直接切換為已登記並重新渲染按鈕
+            isUserParkingRegistered = true;
+            renderParkingBanner();
+            if (typeof showToast === 'function') {
+                showToast("✅ 已成功送出停車劵申請！", "success");
+            } else {
+                alert("✅ 已成功送出停車劵申請！");
+            }
+        } else {
+            // 如果後端擋下來 (例如重複登記)
+            alert("❌ 申請失敗：" + (result.message || "未知錯誤"));
+            restoreButton(btnElement, originalHtml);
+        }
         
     } catch (e) {
-        alert("網路連線異常，請稍後再試。");
-        renderParkingBanner(); // 失敗恢復按鈕狀態
+        console.error("🚗 [送出申請] 網路或系統異常:", e);
+        alert("系統連線異常，請稍後再試。");
+        restoreButton(btnElement, originalHtml);
     }
+}
+
+// 輔助函式：發生錯誤時恢復按鈕狀態
+function restoreButton(btnElement, originalHtml) {
+    btnElement.disabled = false;
+    btnElement.classList.add('active:scale-95');
+    btnElement.classList.remove('cursor-not-allowed', 'opacity-80');
+    btnElement.innerHTML = originalHtml;
 }
     
 // ==========================================
@@ -2030,8 +2067,9 @@ function renderParkingBanner() {
             </button>`;
     } else {
         console.log("🚗 [按鈕樣式] 顯示為『我要登記』(藍色)");
+        // 🌟 修正點：將 onclick 改為 submitParkingRequest(this)
         container.innerHTML = `
-            <button onclick="navTo('parking_request')" class="w-full bg-blue-600 text-white py-4 rounded-[2rem] shadow-md flex justify-between px-6 items-center active:scale-95 transition-all">
+            <button onclick="submitParkingRequest(this)" class="w-full bg-blue-600 text-white py-4 rounded-[2rem] shadow-md flex justify-between px-6 items-center active:scale-95 transition-all">
                 <span class="font-black">學期停車劵登記</span>
                 <i class="fas fa-ticket-alt"></i>
             </button>`;

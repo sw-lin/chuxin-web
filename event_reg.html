@@ -106,15 +106,24 @@
             <p class="text-[10px] text-blue-500/70 mt-2 italic">※ 僅限非遊覽車活動</p>
         </div>
 
-        <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+        <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 flex flex-col h-full">
             <h4 class="text-[11px] text-orange-700 font-bold mb-2">🍱 餐食統計</h4>
-            <div class="flex items-baseline gap-1 mb-1">
-                <span class="text-2xl font-serif text-orange-900" id="vegCount">0</span>
-                <span class="text-gray-400 text-xs">位素食</span>
+            
+            <!-- 動態內容容器：將透過 JS 決定要塞入素食名單還是餐會菜單統計 -->
+            <div id="mealContent" class="flex-1">
+                <div class="flex items-baseline gap-1 mb-1">
+                    <span class="text-2xl font-serif text-orange-900" id="vegCount">0</span>
+                    <span class="text-gray-400 text-xs">位素食</span>
+                </div>
+                <div id="vegNames" class="text-[10px] text-orange-600/80 leading-snug break-words mt-1">
+                    名單載入中...
+                </div>
             </div>
-            <div id="vegNames" class="text-[10px] text-orange-600/80 leading-snug break-words">
-                名單載入中...
-            </div>
+
+            <!-- 🌟 餐會專屬：一鍵複製統計表按鈕 (預設隱藏) -->
+            <button id="copyMealBtn" onclick="copyMealStatsToClipboard()" class="w-full mt-3 py-2 bg-orange-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-orange-600 active:scale-95 transition-all" style="display: none;">
+                <i class="fas fa-clipboard-list mr-1"></i> 複製餐點統計給餐廳
+            </button>
         </div>
     </div>
 </div>        
@@ -1346,49 +1355,54 @@ function exportInsuranceCSV() {
     showToast("📂 CSV 匯出完成");
 }        
 
-// --- 🌟 行政看板數據計算函式 (全新三態交通邏輯) ---
+// --- 🌟 行政看板數據計算函式 (全新三態交通邏輯 + 智慧餐食統計) ---
 function updateAdminStats(list) {
     if (!list) return;
 
-    // --- 第一階段：取得活動的交通模式設定 (包車 / 自駕 / 自理) ---
+    // --- 第一階段：取得活動設定 (交通模式與是否為餐會) ---
     const rawTransMode = currentEventConfig?.["交通方式"] || currentEventConfig?.transportMode || currentEventConfig?.["是遊覽車行"] || "包車";
     let transportMode = String(rawTransMode).trim();
     if (transportMode === "是") transportMode = "包車";
     if (transportMode === "否") transportMode = "自理";
 
+    // 🌟 判斷是否為餐會
+    const isBanquet = (currentEventConfig?.category === "餐會" || currentEventConfig?.["類別"] === "餐會");
+
     // 建立「誰代理誰」的交通對照表
     const transportMap = {};
-    allData.currentDrivers = [];   // 存放司機
-    allData.currentPassengers = []; // 存放乘客
-    allData.carPlateList = [];      // 存放格式化車牌字串的陣列
+    allData.currentDrivers = [];   
+    allData.currentPassengers = []; 
+    allData.carPlateList = [];      
     
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
         const agent = (r["報名代理人"] || "").trim();
         const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
-
-        if (agent === "本人" || agent === "") {
-            transportMap[name] = trans;
-        }
+        if (agent === "本人" || agent === "") transportMap[name] = trans;
     });
 
-    // --- 第二階段：正式統計人數 ---
-    let carCount = 0;      // 總車輛數
-    let totalSeats = 0;    // 總空位數
-    let carpoolCount = 0;  // 總共乘需求 (含攜伴)
-    const vegList = [];    // 素食名單
+    // --- 第二階段：正式統計人數與餐食 ---
+    let carCount = 0;      
+    let totalSeats = 0;    
+    let carpoolCount = 0;  
+    
+    // 餐食相關變數
+    const vegList = [];          // 一般活動：存素食名單
+    const mealCounts = {};       // 餐會模式：存各品項數量 (例如：{"排骨飯": 5, "雞腿飯": 3})
+    let totalMeals = 0;          // 餐會模式：總份數
 
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
         const agent = (r["報名代理人"] || "").trim();
         let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        let diet = (r["餐食"] || r["飲食"] || "").trim();
 
-        // 攜伴者交通空白時，繼承代理人的交通
+        // 交通繼承邏輯
         if (agent !== "本人" && agent !== "" && trans === "") {
             trans = transportMap[agent] || ""; 
         }
 
-        // 開始計數
+        // 交通計數
         if (trans === "自駕" || trans === "開車") {
             if (agent === "本人" || agent === "") {
                 carCount++;
@@ -1396,20 +1410,25 @@ function updateAdminStats(list) {
                 allData.currentDrivers.push(r);
                 
                 const carNum = (r["車號"] || "").trim();
-                if (carNum) {
-                    allData.carPlateList.push(`- 車主：${name} (${carNum})`);
-                } else {
-                    allData.carPlateList.push(`- 車主：${name} (未填寫車牌)`);
-                }
+                allData.carPlateList.push(`- 車主：${name} (${carNum || '未填寫'})`);
             }
         } else if (trans === "共乘" || trans === "搭車") {
             carpoolCount++;
             allData.currentPassengers.push(r);
         }
 
-        // 素食統計
-        if ((r["餐食"] || "").includes("素")) {
-            vegList.push(name);
+        // 🌟 餐食統計分流邏輯
+        if (isBanquet) {
+            // 如果是餐會，且有填寫餐點名稱，則累加該品項數量
+            if (diet && diet !== "無指定餐點" && diet !== "未填") {
+                mealCounts[diet] = (mealCounts[diet] || 0) + 1;
+                totalMeals++;
+            }
+        } else {
+            // 如果是一般活動，只挑出素食者
+            if (diet.includes("素")) {
+                vegList.push(name);
+            }
         }
     });
 
@@ -1425,45 +1444,94 @@ function updateAdminStats(list) {
     setUI('carCount', carCount);
     setUI('seatCount', totalSeats);
     setUI('carpoolCount', carpoolCount);
-    setUI('vegCount', vegList.length);
 
-    const vegNamesElem = document.getElementById('vegNames');
-    if (vegNamesElem) {
-        vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
+    // 🌟 智慧更新餐食區塊
+    const mealContent = document.getElementById('mealContent');
+    const copyMealBtn = document.getElementById('copyMealBtn');
+
+    if (mealContent) {
+        if (isBanquet) {
+            // 【餐會模式】：列出所有菜色與數量
+            let mealHtml = `<div class="text-[12px] font-bold text-orange-900 space-y-1.5 mb-2 mt-1">`;
+            for (const [dish, count] of Object.entries(mealCounts)) {
+                mealHtml += `
+                    <div class="flex justify-between items-center border-b border-orange-100 pb-1">
+                        <span class="truncate pr-2">${dish}</span> 
+                        <span class="text-orange-600 bg-orange-100 px-2 py-0.5 rounded text-[10px] shrink-0">${count} 份</span>
+                    </div>`;
+            }
+            mealHtml += `</div>`;
+            mealHtml += `<div class="text-[11px] text-orange-600 font-black text-right mt-2 border-t border-orange-200 pt-1">總計：${totalMeals} 份</div>`;
+            
+            mealContent.innerHTML = mealHtml;
+            
+            // 顯示給餐廳的複製按鈕，並暫存資料
+            if (copyMealBtn) copyMealBtn.style.display = totalMeals > 0 ? 'block' : 'none';
+            allData.currentMealStats = mealCounts; 
+            allData.currentTotalMeals = totalMeals;
+            
+        } else {
+            // 【一般模式】：傳統的素食人數與名單
+            mealContent.innerHTML = `
+                <div class="flex items-baseline gap-1 mb-1">
+                    <span class="text-2xl font-serif text-orange-900" id="vegCount">${vegList.length}</span>
+                    <span class="text-gray-400 text-xs">位素食</span>
+                </div>
+                <div id="vegNames" class="text-[10px] text-orange-600/80 leading-snug break-words mt-1">
+                    ${vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食"}
+                </div>
+            `;
+            if (copyMealBtn) copyMealBtn.style.display = 'none';
+        }
     }
 
     // --- 第四階段：根據三態交通模式控制顯示/隱藏 ---
-    const needID = (
-        currentEventConfig?.["(需要身分證)"] === "是" || 
-        currentEventConfig?.["需要身分證"] === "是" || 
-        currentEventConfig?.needId === "是" ||
-        currentEventConfig?.needId === "Y"
-    );
-
-    // 1. 處理保險圖示
+    const needID = (currentEventConfig?.["(需要身分證)"] === "是" || currentEventConfig?.["需要身分證"] === "是" || currentEventConfig?.needId === "是" || currentEventConfig?.needId === "Y");
     const insBtn = document.getElementById('exportInsuranceBtn');
     if (insBtn) insBtn.style.display = needID ? 'inline-block' : 'none';
 
-    // 🌟 核心邏輯判定：只有當活動交通模式為「自駕」時，才顯示交通統計與相關按鈕
     const isSelfDriveMode = (transportMode === "自駕");
-
-    // 2. 處理車輛分配按鈕 (僅自駕模式顯示)
     const carBtn = document.getElementById('carpoolBtn');
-    if (carBtn) {
-        carBtn.style.display = isSelfDriveMode ? 'inline-block' : 'none';
+    if (carBtn) carBtn.style.display = isSelfDriveMode ? 'inline-block' : 'none';
+
+    const tStats = document.getElementById('trafficStats');
+    if (tStats) tStats.style.display = isSelfDriveMode ? 'block' : 'none';    
+    
+    const copyCarBtn = document.getElementById('copyCarListBtn');
+    if (copyCarBtn) copyCarBtn.style.display = (isSelfDriveMode && carCount > 0) ? 'block' : 'none';
+}
+
+/**
+ * 🌟 新增功能：一鍵複製餐會餐點統計表 (傳給餐廳用)
+ */
+function copyMealStatsToClipboard() {
+    if (!allData.currentMealStats || allData.currentTotalMeals === 0) {
+        showToast("⚠️ 目前沒有餐點統計資料");
+        return;
     }
 
-    // 3. 處理交通統計區塊 (僅自駕模式顯示)
-    const tStats = document.getElementById('trafficStats');
-    if (tStats) {
-        tStats.style.display = isSelfDriveMode ? 'block' : 'none';    
+    const eventTitle = document.getElementById('currentEventTitle')?.innerText || "本次活動";
+    
+    let text = `【築心讀書會 - 餐點統計單】\n`;
+    text += `📌 餐會名稱：${eventTitle}\n`;
+    text += `====================\n`;
+    
+    for (const [dish, count] of Object.entries(allData.currentMealStats)) {
+        text += `🔹 ${dish}： ${count} 份\n`;
     }
     
-    // 4. 控制「複製車牌名冊」按鈕顯示邏輯 (僅自駕模式且有車輛時顯示)
-    const copyCarBtn = document.getElementById('copyCarListBtn');
-    if (copyCarBtn) {
-        copyCarBtn.style.display = (isSelfDriveMode && carCount > 0) ? 'block' : 'none';
-    }
+    text += `====================\n`;
+    text += `✅ 總計份數：${allData.currentTotalMeals} 份\n`;
+    text += `(產出時間：${new Date().toLocaleString('zh-TW', {hour12: false})})`;
+
+    navigator.clipboard.writeText(text)
+        .then(() => {
+            showToast("📋 餐點統計已複製，可直接貼給餐廳！");
+        })
+        .catch(err => {
+            console.error("複製餐點清單失敗: ", err);
+            showToast("❌ 複製失敗");
+        });
 }
 /**
  * 🌟 新增功能：一鍵複製格式化後的車牌名冊至系統剪貼簿

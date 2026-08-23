@@ -989,18 +989,18 @@ function updateSeatInput(val) {
         
         document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
 
-        // 儲存邏輯 (略，與原版 POST 邏輯相同但確保 Payload 完整)
+// 儲存邏輯 (修正 ev_bus 殘留導致報錯的問題)
 async function saveEvent() {
     const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
     const needIdValue = document.getElementById('ev_needId').value;
-    const isTourBusValue = document.getElementById('ev_bus').value;  
+    // 🌟 已經將 const isTourBusValue = document.getElementById('ev_bus').value; 刪除，避免報錯
     
     const parseFee = (id) => {
         const val = document.getElementById(id).value;
         return parseInt(toHalfWidth(val).replace(/\s/g, "")) || 0;
     };
 
-    // 🌟 1. 收集餐會模式資料
+    // 1. 收集餐會模式資料
     const isBanquet = document.getElementById('isBanquetToggle').checked;
     const menuPhoto = isBanquet ? (document.getElementById('ev_menu_photo')?.value.trim() || "") : "";
     
@@ -1017,7 +1017,7 @@ async function saveEvent() {
     const menuItemsJson = menuItems.length > 0 ? JSON.stringify(menuItems) : "";
             
     const payload = {
-        type: 'add_new_event', // 統一交由後端判斷新增或更新
+        type: 'add_new_event',
         key: sessionStorage.getItem('staffKey'),
         title: document.getElementById('ev_title').value,
         poster_url: document.getElementById('ev_poster').value,
@@ -1026,12 +1026,12 @@ async function saveEvent() {
         deadline: document.getElementById('ev_until').value,   
         eventDate: document.getElementById('ev_date').value,
         needId: needIdValue, 
-        transportMode: document.getElementById('ev_transportMode').value,
+        transportMode: document.getElementById('ev_transportMode').value, // 🌟 使用新的交通方式欄位
         memberFee: parseFee('ev_mFee'),
         guestFee: parseFee('ev_gFee'),
         oldTitle: document.getElementById('old_title').value,
         
-        // 🌟 2. 帶入 E 欄與 N 欄對應的參數
+        // 2. 帶入 E 欄與 N 欄對應的參數
         menu_photo: menuPhoto,
         menu_items: menuItemsJson
     };
@@ -1346,7 +1346,6 @@ function exportInsuranceCSV() {
     showToast("📂 CSV 匯出完成");
 }        
 
-// --- 🌟 新增與優化：行政看板數據計算函式 ---
 // --- 🌟 行政看板數據計算函式 (全新三態交通邏輯) ---
 function updateAdminStats(list) {
     if (!list) return;
@@ -1465,7 +1464,7 @@ function updateAdminStats(list) {
     if (copyCarBtn) {
         copyCarBtn.style.display = (isSelfDriveMode && carCount > 0) ? 'block' : 'none';
     }
-} 
+}
 /**
  * 🌟 新增功能：一鍵複製格式化後的車牌名冊至系統剪貼簿
  */

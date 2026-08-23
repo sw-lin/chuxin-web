@@ -191,6 +191,11 @@
 
 <!-- 餐會專屬設定區塊 (預設隱藏) -->
 <div id="banquetSection" class="hidden p-4 bg-emerald-50/80 rounded-2xl border border-emerald-100 space-y-3 mb-4 transition-all duration-300">
+    <!-- 🌟 新增：餐會專用會員補助款輸入框 (數值同步寫回隱藏的 ev_mFee) -->
+    <div>
+        <label class="text-xs font-bold text-emerald-800 ml-2">會員補助款金額</label>
+        <input type="number" id="ev_banquet_subsidy" class="w-full bg-white border-none rounded-xl px-4 py-3 text-sm font-bold shadow-sm mt-1" placeholder="請輸入會員補助金額 (例如 100)" oninput="document.getElementById('ev_mFee').value = this.value">
+    </div>
     <div>
         <label class="text-xs font-bold text-emerald-800 ml-2">菜單照片連結</label>
         <input type="url" id="ev_menu_photo" class="w-full bg-white border-none rounded-xl px-4 py-3 text-sm font-bold shadow-sm mt-1" placeholder="請貼上菜單圖片 URL">
@@ -682,6 +687,9 @@ function openEditModal() {
     // --- 費用欄位 ---
     document.getElementById('ev_mFee').value = ev.memberFee || ev["會員報名費"] || 0;
     document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員報名費"] || 0;
+
+    // 確保修改活動時補助金額能正確載入
+    document.getElementById('ev_banquet_subsidy').value = ev.memberFee || ev["會員報名費"] || 0;
     
     // --- 選項欄位 ---
     const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim();
@@ -744,7 +752,7 @@ function openAddModal() {
     toggleBanquetMenu();
     document.getElementById('ev_menu_photo').value = "";
     document.getElementById('menuItemsContainer').innerHTML = "";
-
+    document.getElementById('ev_banquet_subsidy').value = "";
     document.getElementById('deleteZone').classList.add('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
     setTimeout(() => titleInput.focus(), 100);

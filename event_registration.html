@@ -273,16 +273,16 @@ window.onload = async function() {
     if (!title) { showToast("無效的活動資訊", "error"); return; }
 
     let allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-    let target = allEvents.find(e => String(e.title).trim() === String(title).trim());
+    let target = allEvents.find(e => String(e.title || e["活動標題"]).trim() === String(title).trim());
 
     if (!target) {
         document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
         try {
-            const response = await fetch(`${GAS_URL}?type=get_events_page`);
+            const response = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
             const remoteData = await response.json();
             if (remoteData) {
                 localStorage.setItem('allEvents', JSON.stringify(remoteData));
-                target = remoteData.find(e => String(e.title).trim() === String(title).trim());
+                target = remoteData.find(e => String(e.title || e["活動標題"]).trim() === String(title).trim());
             }
         } catch (e) {
             console.error("無法從伺服器補載資料", e);
@@ -290,36 +290,39 @@ window.onload = async function() {
     }
 
     if (target) {
-    // 嘗試解析餐會菜單 JSON
-    let parsedMenu = [];
-    try {
-        if (target.banquetMenu) {
-            parsedMenu = typeof target.banquetMenu === 'string' ? JSON.parse(target.banquetMenu) : target.banquetMenu;
+        // 🌟 嘗試解析餐會菜單 JSON (相容 banquetMenu 與 menu_items)
+        let parsedMenu = [];
+        try {
+            const rawMenu = target.banquetMenu || target.menu_items;
+            if (rawMenu) {
+                parsedMenu = typeof rawMenu === 'string' ? JSON.parse(rawMenu) : rawMenu;
+            }
+        } catch(e) {
+            console.error("解析餐會菜單失敗", e);
         }
-    } catch(e) {
-        console.error("解析餐會菜單失敗", e);
-    }
 
-    window.eventConfig = {
-        title: title,
-        memberFee: parseInt(target.memberFee) || 0,
-        guestFee: parseInt(target.guestFee) || 0,
-        needId: isTrue(target.needId),
-        isTourBus: isTrue(target.isTourBus),
-        menuPhotoUrl: target.menuPhotoUrl || target.poster || "", // 對應 E 欄菜單照片連結
-        banquetMenu: parsedMenu // 複雜選單陣列
-    };
+        // 🌟 透過雙向 fallback 確保金額與設定能百分之百讀取
+        window.eventConfig = {
+            title: target.title || target["活動標題"] || title,
+            memberFee: parseInt(target.memberFee || target["會員報名費"]) || 0,
+            guestFee: parseInt(target.guestFee || target["非會員報名費"]) || 0,
+            needId: isTrue(target.needId !== undefined ? target.needId : target["(需要身分證)"]),
+            isTourBus: isTrue(target.isTourBus !== undefined ? target.isTourBus : target["是遊覽車行"]),
+            menuPhotoUrl: target.menuPhotoUrl || target.menu_photo || target.poster_url || "", 
+            banquetMenu: parsedMenu 
+        };
 
-    document.getElementById('displayEventTitle').innerText = eventConfig.title;
-    document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
-    
-    if(currentUser.name) {
-        document.getElementById('mainName').value = currentUser.name;
-    }
+        // 渲染抬頭與金額標籤
+        document.getElementById('displayEventTitle').innerText = eventConfig.title;
+        document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+        
+        if(currentUser.name) {
+            document.getElementById('mainName').value = currentUser.name;
+        }
 
-    initDynamicUI();
-    updateTotal();
-   } else {
+        initDynamicUI();
+        updateTotal();
+    } else {
         document.getElementById('displayEventTitle').innerText = "活動不存在或已下架";
         showToast("找不到此活動資訊", "error");
     }

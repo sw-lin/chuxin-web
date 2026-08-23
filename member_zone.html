@@ -1897,7 +1897,7 @@ async function handleManualRefresh() {
         }
     }, 300);
 }  
-// 全域變數儲存停車卷狀態
+// 全域變數儲存停車劵狀態
 let parkingConfig = null;
 let isUserParkingRegistered = false; 
 
@@ -1933,9 +1933,9 @@ async function submitParkingRequest(btnElement) {
             isUserParkingRegistered = true;
             renderParkingBanner();
             if (typeof showToast === "function") {
-                showToast("✅ 已成功送出停車卷申請！", "success");
+                showToast("✅ 已成功送出停車劵申請！", "success");
             } else {
-                alert("✅ 已成功送出停車卷申請！");
+                alert("✅ 已成功送出停車劵申請！");
             }
         } else {
             // 失敗復原
@@ -1961,11 +1961,11 @@ function restoreButton(btnElement, originalHtml) {
 }
     
 // ==========================================
-// 🚗 停車卷專屬控制邏輯 (真實連線版)
+// 🚗 停車劵專屬控制邏輯 (真實連線版)
 // ==========================================
 
-// 1. 向後端詢問停車卷設定與使用者登記狀態
-// 1. 向後端詢問停車卷設定與使用者登記狀態 (POST 修正版)
+// 1. 向後端詢問停車劵設定與使用者登記狀態
+// 1. 向後端詢問停車劵設定與使用者登記狀態 (POST 修正版)
 function checkParkingStatus() {
     console.log("🚗 [Step 1] 執行 checkParkingStatus() (改用 POST)");
     const userStr = sessionStorage.getItem('userInfo');
@@ -2008,7 +2008,7 @@ function checkParkingStatus() {
             console.error("🚗 [Error] 後端回傳失敗:", res.message);
         }
     })
-    .catch(err => console.error("🚗 [Error] 停車卷狀態讀取失敗 (網路異常):", err));
+    .catch(err => console.error("🚗 [Error] 停車劵狀態讀取失敗 (網路異常):", err));
 }
 
 // 2. 渲染橫幅：精準時間鎖與狀態切換
@@ -2028,7 +2028,20 @@ function renderParkingBanner() {
         return;
     }
 
-    // 將截止日期的時間設為當日 23:59:59
+    // 🌟 新增邏輯：處理「登記開始日」
+    let startDateDate = new Date(0); // 預設 1970 年（防呆：萬一後端沒設開始日，就視為隨時可開始）
+    if (parkingConfig.startDate) {
+        console.log("🚗 [Step 5-1] 原始 startDate 字串:", parkingConfig.startDate);
+        const startStr = parkingConfig.startDate.replace(/-/g, '/');
+        startDateDate = new Date(startStr);
+        if (!isNaN(startDateDate.getTime())) {
+            startDateDate.setHours(0, 0, 0, 0); // 確保從當天 00:00:00 準時開放
+        } else {
+            startDateDate = new Date(0); // 轉換失敗則退回預設
+        }
+    }
+
+    // 處理「登記截止日」
     console.log("🚗 [Step 6] 原始 deadline 字串:", parkingConfig.deadline);
     const deadlineStr = parkingConfig.deadline.replace(/-/g, '/');
     const deadlineDate = new Date(deadlineStr);
@@ -2040,19 +2053,21 @@ function renderParkingBanner() {
         return;
     }
 
-    deadlineDate.setHours(23, 59, 59);
+    deadlineDate.setHours(23, 59, 59); // 截止到當日 23:59:59
     const now = new Date();
     
-    console.log("🚗 [Step 7] 判定時間 -> 截止日:", deadlineDate.toLocaleString(), " | 目前時間:", now.toLocaleString());
+    // 🌟 修改判定時間輸出：同時印出開始日與截止日
+    console.log("🚗 [Step 7] 判定時間 -> 開始日:", startDateDate.toLocaleString(), " | 截止日:", deadlineDate.toLocaleString(), " | 目前時間:", now.toLocaleString());
 
-    if (now > deadlineDate) {
-        console.warn("🚗 [狀態] 隱藏按鈕 (原因：目前時間已超過截止日)");
+    // 🌟 核心防護鎖更新：加入「還沒到開始日」的判斷
+    if (now < startDateDate || now > deadlineDate) {
+        console.warn("🚗 [狀態] 隱藏按鈕 (原因：目前時間「尚未開始」或「已超過截止日」)");
         wrapper.classList.add('hidden');
         wrapper.style.display = 'none';
         return;
     }
 
-    console.log("🚗 [狀態] 條件符合，準備顯示按鈕！");
+    console.log("🚗 [狀態] 條件完全符合，準備顯示按鈕！");
     wrapper.classList.remove('hidden');
     wrapper.style.display = 'block';
 
@@ -2065,7 +2080,7 @@ function renderParkingBanner() {
             </button>`;
     } else {
         console.log("🚗 [按鈕樣式] 顯示為『我要登記』(藍色)");
-        // 🌟 修正點：將 onclick 改為 submitParkingRequest(this)
+        // 確保此處使用 submitParkingRequest
         container.innerHTML = `
             <button onclick="submitParkingRequest(this)" class="w-full bg-blue-600 text-white py-4 rounded-[2rem] shadow-md flex justify-between px-6 items-center active:scale-95 transition-all">
                 <span class="font-black">學期停車劵登記</span>
@@ -2077,7 +2092,7 @@ function renderParkingBanner() {
     if (oldBtn) oldBtn.style.display = 'none';
     
     console.log("🚗 [Step 8] 渲染完成！");
-}    
+}
     
 </script>
 <div id="voteOverlay" class="fixed inset-0 bg-gray-50 z-[9999] hidden flex-col">

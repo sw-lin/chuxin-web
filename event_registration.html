@@ -274,12 +274,9 @@
         if (!currentUser.phone) { location.href = "index.html"; return; }
         if (!title) { showToast("無效的活動資訊", "error"); return; }
 
-        // 🌟 破除快取魔咒：強制清除舊資料，保證向 GAS 要最新欄位
         localStorage.removeItem('allEvents'); 
 
         let target = null;
-        let allEvents = [];
-        
         document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
         try {
             const response = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
@@ -298,10 +295,8 @@
         if (target) {
             let parsedMenu = [];
             try {
-                // 擴充抓取欄位的容錯率
                 let rawMenu = target.banquetMenu || target["餐會菜單設定 (JSON)"] || target["餐會菜單設定(JSON)"] || target["餐會菜單設定"] || "";
                 if (rawMenu) {
-                    // 🌟 防呆：把不小心打成全形的雙引號替換回半形，避免 JSON 解析報錯
                     if(typeof rawMenu === 'string') {
                         rawMenu = rawMenu.replace(/”/g, '"').replace(/“/g, '"');
                         parsedMenu = JSON.parse(rawMenu);
@@ -310,13 +305,13 @@
                     }
                 }
             } catch(e) {
-                console.error("解析餐會菜單失敗 (請檢查試算表 JSON 格式)", e);
+                console.error("解析餐會菜單失敗", e);
             }
 
             eventConfig = {
                 title: target.title || target["活動標題"] || target["標題"] || title,
-                // 🌟 新增抓取 category (對應試算表 M 欄)
                 category: target.category || target["活動類別"] || target["類別"] || "",
+                // 💡 在餐會模式下，memberFee 欄位直接被當作「會員補助金額」使用
                 memberFee: parseInt(target.memberFee !== undefined ? target.memberFee : (target["會員報名費"] || 0)) || 0,
                 guestFee: parseInt(target.guestFee !== undefined ? target.guestFee : (target["非會員報名費"] || 0)) || 0,
                 needId: isTrue(target.needId !== undefined ? target.needId : (target["需要身分證"] || target["(需要身分證)"])),
@@ -326,7 +321,20 @@
             };
 
             document.getElementById('displayEventTitle').innerText = eventConfig.title;
-            document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+            
+            // 💡 根據是否為餐會來動態顯示頂端 Badge
+            const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
+            const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
+            
+            if (isBanquetCategory || hasMenu) {
+                if (eventConfig.memberFee > 0) {
+                    document.getElementById('priceBadge').innerText = `✨ 會員報名補助 $${eventConfig.memberFee} 元`;
+                } else {
+                    document.getElementById('priceBadge').innerText = `🍽️ 餐會模式 (依所選餐點計費)`;
+                }
+            } else {
+                document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+            }
             
             if(currentUser.name) {
                 document.getElementById('mainName').value = currentUser.name;
@@ -358,13 +366,11 @@
         const menuPhotoLink = document.getElementById('menuPhotoLink');
         const transportSection = document.getElementById('transportSection');
 
-        // 🌟 雙重判定：M 欄包含「餐會」兩字，或是成功讀取到菜單 JSON，都會啟動餐會模式！
         const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
         const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
         const isBanquet = isBanquetCategory || hasMenu;
 
         if (isBanquet) {
-            // 🌟 餐會模式：隱藏交通區塊
             if (transportSection) transportSection.classList.add('hidden');
 
             let menuHtml = '<option value="">-- 請選擇餐點 --</option>';
@@ -387,7 +393,6 @@
             dietSelect.addEventListener('change', updateTotal);
 
         } else {
-            // 🌟 一般模式：顯示交通區塊
             if (transportSection) transportSection.classList.remove('hidden');
 
             dietSelect.innerHTML = `
@@ -460,7 +465,6 @@
             `;
         }
 
-        // 🌟 攜伴餐食也遵循同樣的判定
         const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
         const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
         const isBanquet = isBanquetCategory || hasMenu;
@@ -489,7 +493,7 @@
                 <div class="partner-card bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative mb-4">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-1.5 h-4 bg-orange-400 rounded-full"></div>
-                        <div class="text-emerald-700 font-black text-sm">訪客 ${i + 1} 資料</div>
+                        <div class="text-emerald-700 font-black text-sm">訪客 ${i + 1} 資料 (無會員補助)</div>
                     </div>
                     <div class="space-y-4">
                         <input type="text" placeholder="訪客姓名" class="partner-name input-field">
@@ -519,33 +523,43 @@
     function updateTotal(manualCount = null) {
         const count = manualCount !== null ? manualCount : parseInt(document.getElementById('partnerCountSelect').value || 0);
         
-        let baseTotal = eventConfig.memberFee + (count * eventConfig.guestFee);
-
-        let extraMenuCost = 0;
         const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
         const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
-        
-        if (isBanquetCategory || hasMenu) {
+        const isBanquet = isBanquetCategory || hasMenu;
+
+        let finalAmount = 0;
+
+        if (isBanquet) {
+            // 💡 餐會計算：本人餐點價扣除會員補助（最低為 0）
             const mainDietSelect = document.getElementById('mainDiet');
-            if (mainDietSelect.selectedIndex > -1) {
+            let mainDishPrice = 0;
+            if (mainDietSelect && mainDietSelect.selectedIndex > -1) {
                 const mainSelected = mainDietSelect.options[mainDietSelect.selectedIndex];
                 if (mainSelected && mainSelected.dataset.price) {
-                    extraMenuCost += parseInt(mainSelected.dataset.price);
+                    mainDishPrice = parseInt(mainSelected.dataset.price) || 0;
                 }
             }
+            const subsidy = eventConfig.memberFee || 0; // 用 memberFee 欄位當作補助金
+            const mainFinalFee = Math.max(0, mainDishPrice - subsidy);
 
+            // 💡 攜伴（訪客）無補助，全額計算餐點費
+            let partnersTotal = 0;
             const partnerDietSelects = document.querySelectorAll('.partner-diet');
             partnerDietSelects.forEach(select => {
                 if (select.selectedIndex > -1) {
                     const partnerSelected = select.options[select.selectedIndex];
                     if (partnerSelected && partnerSelected.dataset.price) {
-                        extraMenuCost += parseInt(partnerSelected.dataset.price);
+                        partnersTotal += parseInt(partnerSelected.dataset.price) || 0;
                     }
                 }
             });
+
+            finalAmount = mainFinalFee + partnersTotal;
+        } else {
+            // 一般活動計算
+            finalAmount = eventConfig.memberFee + (count * eventConfig.guestFee);
         }
 
-        const finalAmount = baseTotal + extraMenuCost;
         document.getElementById('totalAmount').innerText = finalAmount;
     }
 
@@ -595,6 +609,22 @@
                 }
             }
 
+            // 取得本人選的餐點價格與實付金額
+            const mainDietSelect = document.getElementById('mainDiet');
+            const mainDietVal = mainDietSelect.value;
+            if (isBanquet && !mainDietVal) {
+                showToast("請選擇您的餐點項目", "error");
+                mainDietSelect.focus();
+                return;
+            }
+
+            let mainDishPrice = 0;
+            if (mainDietSelect.selectedIndex > -1 && mainDietSelect.options[mainDietSelect.selectedIndex].dataset.price) {
+                mainDishPrice = parseInt(mainDietSelect.options[mainDietSelect.selectedIndex].dataset.price) || 0;
+            }
+            const subsidy = isBanquet ? (eventConfig.memberFee || 0) : 0;
+            const mainActualFee = isBanquet ? Math.max(0, mainDishPrice - subsidy) : eventConfig.memberFee;
+
             const pNames = document.querySelectorAll('.partner-name');
             const pPhones = document.querySelectorAll('.partner-phone');
             const pIDs = document.querySelectorAll('.partner-id');
@@ -641,18 +671,17 @@
                     return;
                 }
 
+                let pDishPrice = 0;
+                const pOpt = pDiets[i].options[pDiets[i].selectedIndex];
+                if (pOpt && pOpt.dataset.price) {
+                    pDishPrice = parseInt(pOpt.dataset.price) || 0;
+                }
+
                 partnerRegistrations.push({
                     name, phone, idNumber: idNum, birthday: bday,
                     diet: dietVal, transport: isBanquet ? "餐會模式" : "", seats: 0, carNumber: "", 
-                    isMember: false, proxy: currentUser.name, fee: eventConfig.guestFee, note: ""
+                    isMember: false, proxy: currentUser.name, fee: isBanquet ? pDishPrice : eventConfig.guestFee, note: ""
                 });
-            }
-
-            const mainDietVal = document.getElementById('mainDiet').value;
-            if (isBanquet && !mainDietVal) {
-                showToast("請選擇您的餐點項目", "error");
-                document.getElementById('mainDiet').focus();
-                return;
             }
 
             overlay.style.display = 'flex';
@@ -670,7 +699,7 @@
                         transport: transportValue,
                         seats: seatsVal,
                         carNumber: carNumber,
-                        isMember: true, proxy: "本人", fee: eventConfig.memberFee,
+                        isMember: true, proxy: "本人", fee: mainActualFee,
                         note: document.getElementById('regNote').value
                     },
                     ...partnerRegistrations

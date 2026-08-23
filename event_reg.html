@@ -659,90 +659,83 @@ function openEditModal() {
         return;
     }
 
-    // --- 🌟 關鍵修改：鎖定標題 ---
     const titleInput = document.getElementById('ev_title');
     const oldTitleInput = document.getElementById('old_title');
     
-    // 同時設定顯示的值與隱藏的舊標題值
     const currentTitle = ev["標題"] || ev.title || "";
     titleInput.value = currentTitle;
     oldTitleInput.value = currentTitle;
 
-    // 實施鎖定協定
     titleInput.readOnly = true; 
     titleInput.classList.add('bg-gray-100', 'cursor-not-allowed');
     titleInput.title = "若需更名，請刪除活動後重新建立";
 
     document.getElementById('modalTitle').innerText = "修改活動";
-    document.getElementById('old_title').value = ev["標題"] || ev.title || "";
+    document.getElementById('ev_poster').value = ev["海報連結"] || ev.poster_url || "";
+    document.getElementById('ev_desc').value = ev["活動簡介內容"] || ev["活動簡介"] || ev.desc || "";
     
-    // 2. 文字欄位 (🌟 加入精準的表頭名稱匹配)
-    document.getElementById('ev_title').value = ev["活動標題"] || ev["標題"] || ev.title || "";
-    document.getElementById('ev_poster').value = ev["海報連結"] || ev["海報連結 (poster_url)"] || ev.poster_url || "";
-    document.getElementById('ev_desc').value = ev["活動簡介內容"] || ev["活動簡介 (desc)"] || ev.desc || "";
+    document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || 0;
+    document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || 0;
     
-    // 3. 費用欄位
-    document.getElementById('ev_mFee').value = ev["會員報名費"] || ev.memberFee || ev.member_fee || 0;
-    document.getElementById('ev_gFee').value = ev["非會員報名費"] || ev.guestFee || ev.guest_fee || 0;
+    const rawNeedId = String(ev["需要身分證"] || ev.needId || "").trim();
+    const rawBus = String(ev["是遊覽車行"] || ev.isTourBus || "").trim();
+    document.getElementById('ev_needId').value = (rawNeedId === '是') ? '是' : '否';
+    document.getElementById('ev_bus').value = (rawBus === '是') ? '是' : '否';  
     
-    // 4. 選項欄位 (維持您原本的修正邏輯)
-    const rawNeedId = String(
-        ev["(需要身分證)"] || 
-        ev["（需要身分證）"] || 
-        ev["需要身分證"] ||    
-        ev.needId || ""
-    ).trim();
+    document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日"] || ev.startDate);
+    document.getElementById('ev_until').value = formatDateForInput(ev["截止下架日"] || ev.deadline);
+    document.getElementById('ev_date').value = formatDateForInput(ev["活動舉辦日"] || ev.eventDate);
 
-    const rawBus = String(
-        ev["是遊覽車行"] || 
-        ev["遊覽車"] || 
-        ev.isTourBus || ""
-    ).trim();
+    // 🌟 3. 回填餐會模式與菜單資料
+    const menuPhoto = ev["菜單照片連結"] || ev.menu_photo || "";
+    const menuItemsJson = ev["餐會菜單設定 (JSON)"] || ev.menu_items || "";
+    const isBanquet = !!(menuPhoto || menuItemsJson);
 
-    const needIdResult = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
-    const busResult = (rawBus === '是' || rawBus.toUpperCase() === 'Y' || rawBus === 'Ｙ') ? '是' : '否';
+    document.getElementById('isBanquetToggle').checked = isBanquet;
+    toggleBanquetMenu(); // 觸發介面切換
 
-    document.getElementById('ev_needId').value = needIdResult;
-    document.getElementById('ev_bus').value = busResult;  
-    
-    // 5. 日期欄位 (🌟 核心修正：加上正確的 GAS 表頭鍵值)
-    document.getElementById('ev_start').value = formatDateForInput(ev["開始展示日"] || ev["開始展示日 (start_date)"] || ev.startDate);
-    document.getElementById('ev_until').value = formatDateForInput(ev["截止下架日"] || ev["下架日期 (display_until)"] || ev.deadline);
-    document.getElementById('ev_date').value = formatDateForInput(ev["活動舉辦日"] || ev["活動日期 (date)"] || ev.eventDate);
+    document.getElementById('ev_menu_photo').value = menuPhoto;
+    const container = document.getElementById('menuItemsContainer');
+    container.innerHTML = ""; // 清空舊品項
+
+    if (menuItemsJson) {
+        try {
+            const items = JSON.parse(menuItemsJson);
+            if (Array.isArray(items)) {
+                items.forEach(item => addMenuItem(item.name, item.price));
+            }
+        } catch (e) {
+            console.error("解析菜單 JSON 失敗", e);
+        }
+    }
+    if (!container.children.length && isBanquet) {
+        addMenuItem();
+    }
 
     document.getElementById('deleteZone').classList.remove('hidden');
     document.getElementById('eventModal').classList.remove('hidden');
 }
         
-        function openAddModal() {
-    // 1. 設定 Modal 標題
+function openAddModal() {
     document.getElementById('modalTitle').innerText = "發布新活動";
-    
-    // 2. 清除隱藏的舊標題 (確保後端判斷為「新增」而非「更新」)
     document.getElementById('old_title').value = "";
     
-    // 3. 🌟 關鍵修改：恢復標題欄位的「可編輯性」與「樣式」
     const titleInput = document.getElementById('ev_title');
-    titleInput.readOnly = false; // 解除唯讀
-    titleInput.classList.remove('bg-gray-100', 'cursor-not-allowed'); // 移除灰色背景與禁用游標
-    titleInput.title = ""; // 移除懸停提示
+    titleInput.readOnly = false;
+    titleInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+    titleInput.title = "";
     
-    // 4. 清空所有文字輸入框與文字區域
     document.querySelectorAll('#eventModal input, #eventModal textarea').forEach(i => i.value = "");
-    
-    // 5. 🌟 額外優化：重置 Select 選項 (避免殘留上一次修改的狀態)
-    const selects = document.querySelectorAll('#eventModal select');
-    selects.forEach(s => {
-        s.selectedIndex = 0; // 回到第一個預設選項 (通常是「否」)
-    });
+    document.querySelectorAll('#eventModal select').forEach(s => s.selectedIndex = 0);
 
-    // 6. 隱藏刪除按鈕區域 (新增時不應該出現刪除按鈕)
+    // 🌟 4. 重置餐會模式開關與菜單
+    document.getElementById('isBanquetToggle').checked = false;
+    toggleBanquetMenu();
+    document.getElementById('ev_menu_photo').value = "";
+    document.getElementById('menuItemsContainer').innerHTML = "";
+
     document.getElementById('deleteZone').classList.add('hidden');
-    
-    // 7. 顯示 Modal
     document.getElementById('eventModal').classList.remove('hidden');
-    
-    // 8. 自動聚焦到標題欄位，讓管理員可以直接打字，超貼心哈
     setTimeout(() => titleInput.focus(), 100);
 }
 
@@ -977,48 +970,68 @@ function updateSeatInput(val) {
         document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
 
         // 儲存邏輯 (略，與原版 POST 邏輯相同但確保 Payload 完整)
-        async function saveEvent() {
-            // 取得 UI 上的 Y/N 並轉換成 是/否
-            const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
-            const needIdValue = document.getElementById('ev_needId').value; // 取得 select 的 "是" 或 "否"
-            const isTourBusValue = document.getElementById('ev_bus').value;  
-            
-            // 新增費用處理邏輯：轉半形並強制轉整數
+async function saveEvent() {
+    const translateToChinese = (val) => (val === 'Ｙ' || val === 'Y') ? '是' : '否';
+    const needIdValue = document.getElementById('ev_needId').value;
+    const isTourBusValue = document.getElementById('ev_bus').value;  
+    
     const parseFee = (id) => {
         const val = document.getElementById(id).value;
         return parseInt(toHalfWidth(val).replace(/\s/g, "")) || 0;
     };
+
+    // 🌟 1. 收集餐會模式資料
+    const isBanquet = document.getElementById('isBanquetToggle').checked;
+    const menuPhoto = isBanquet ? (document.getElementById('ev_menu_photo')?.value.trim() || "") : "";
+    
+    const menuItems = [];
+    if (isBanquet) {
+        document.querySelectorAll('#menuItemsContainer > div').forEach(row => {
+            const name = row.querySelector('.menu-name')?.value.trim();
+            const price = row.querySelector('.menu-price')?.value.trim();
+            if (name) {
+                menuItems.push({ name: name, price: Number(price) || 0 });
+            }
+        });
+    }
+    const menuItemsJson = menuItems.length > 0 ? JSON.stringify(menuItems) : "";
             
-            const payload = {
-                type: document.getElementById('old_title').value ? 'update_calendar_event' : 'add_new_event',
-                key: sessionStorage.getItem('staffKey'),
-                title: document.getElementById('ev_title').value,
-                poster_url: document.getElementById('ev_poster').value,
-                desc: document.getElementById('ev_desc').value,
-                
-                // 🌟 已對齊 GAS 的日期欄位
-                startDate: document.getElementById('ev_start').value,  
-                deadline: document.getElementById('ev_until').value,   
-                eventDate: document.getElementById('ev_date').value,
-                
-                // 🌟 修正點：確保名稱與 GAS handleAddNewEvent_Registration 接收的一致
-                needId: needIdValue, 
-                isTourBus: isTourBusValue,
-                
-                // 🌟 修正點：確保費用在存入資料庫前是乾淨的半形數字
-                memberFee: parseFee('ev_mFee'),
-                guestFee: parseFee('ev_gFee'),
-                
-                oldTitle: document.getElementById('old_title').value
-            };
-         //   if(!payload.title) return alert("必填未填");
-            showLoading(true);
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-                if ((await res.json()).result === "SUCCESS") { showToast("成功"); closeModal(); loadData(); }
-            } catch (e) { showToast("失敗"); }
-            showLoading(false);
+    const payload = {
+        type: 'add_new_event', // 統一交由後端判斷新增或更新
+        key: sessionStorage.getItem('staffKey'),
+        title: document.getElementById('ev_title').value,
+        poster_url: document.getElementById('ev_poster').value,
+        desc: document.getElementById('ev_desc').value,
+        startDate: document.getElementById('ev_start').value,  
+        deadline: document.getElementById('ev_until').value,   
+        eventDate: document.getElementById('ev_date').value,
+        needId: needIdValue, 
+        isTourBus: isTourBusValue,
+        memberFee: parseFee('ev_mFee'),
+        guestFee: parseFee('ev_gFee'),
+        oldTitle: document.getElementById('old_title').value,
+        
+        // 🌟 2. 帶入 E 欄與 N 欄對應的參數
+        menu_photo: menuPhoto,
+        menu_items: menuItemsJson
+    };
+
+    showLoading(true);
+    try {
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        if (result.result === "SUCCESS") { 
+            showToast("✅ 活動儲存成功"); 
+            closeModal(); 
+            loadData(); 
+        } else {
+            showToast("❌ 儲存失敗：" + (result.message || "未知錯誤"));
         }
+    } catch (e) { 
+        showToast("❌ 網路連線失敗"); 
+    }
+    showLoading(false);
+}
 async function saveSingleReg() {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);

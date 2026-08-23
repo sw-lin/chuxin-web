@@ -196,7 +196,7 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
     
     let currentUser = JSON.parse(sessionStorage.getItem('userInfo')) || {};
-    let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false };
+    let eventConfig = { title: "", memberFee: 0, guestFee: 0, needId: false, isTourBus: false, category: "" };
 
     function isValidTaiwanPhone(phone) {
         phone = toHalfWidth(phone);
@@ -274,44 +274,49 @@
         if (!currentUser.phone) { location.href = "index.html"; return; }
         if (!title) { showToast("無效的活動資訊", "error"); return; }
 
-        let target = null;
-        let allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
-        
-        target = allEvents.find(e => {
-            const tName = String(e.title || e["活動標題"] || e["標題"] || "").trim();
-            return tName === String(title).trim();
-        });
+        // 🌟 破除快取魔咒：強制清除舊資料，保證向 GAS 要最新欄位
+        localStorage.removeItem('allEvents'); 
 
-        if (!target || target.memberFee === undefined) {
-            document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
-            try {
-                const response = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
-                const remoteData = await response.json();
-                if (Array.isArray(remoteData)) {
-                    localStorage.setItem('allEvents', JSON.stringify(remoteData));
-                    target = remoteData.find(e => {
-                        const tName = String(e.title || e["活動標題"] || e["標題"] || "").trim();
-                        return tName === String(title).trim();
-                    });
-                }
-            } catch (e) {
-                console.error("無法從伺服器補載資料", e);
+        let target = null;
+        let allEvents = [];
+        
+        document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
+        try {
+            const response = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
+            const remoteData = await response.json();
+            if (Array.isArray(remoteData)) {
+                localStorage.setItem('allEvents', JSON.stringify(remoteData));
+                target = remoteData.find(e => {
+                    const tName = String(e.title || e["活動標題"] || e["標題"] || "").trim();
+                    return tName === String(title).trim();
+                });
             }
+        } catch (e) {
+            console.error("無法從伺服器取得資料", e);
         }
 
         if (target) {
             let parsedMenu = [];
             try {
-                const rawMenu = target.banquetMenu || target.menu_items || target["餐會菜單設定 (JSON)"];
+                // 擴充抓取欄位的容錯率
+                let rawMenu = target.banquetMenu || target["餐會菜單設定 (JSON)"] || target["餐會菜單設定(JSON)"] || target["餐會菜單設定"] || "";
                 if (rawMenu) {
-                    parsedMenu = typeof rawMenu === 'string' ? JSON.parse(rawMenu) : rawMenu;
+                    // 🌟 防呆：把不小心打成全形的雙引號替換回半形，避免 JSON 解析報錯
+                    if(typeof rawMenu === 'string') {
+                        rawMenu = rawMenu.replace(/”/g, '"').replace(/“/g, '"');
+                        parsedMenu = JSON.parse(rawMenu);
+                    } else {
+                        parsedMenu = rawMenu;
+                    }
                 }
             } catch(e) {
-                console.error("解析餐會菜單失敗", e);
+                console.error("解析餐會菜單失敗 (請檢查試算表 JSON 格式)", e);
             }
 
             eventConfig = {
                 title: target.title || target["活動標題"] || target["標題"] || title,
+                // 🌟 新增抓取 category (對應試算表 M 欄)
+                category: target.category || target["活動類別"] || target["類別"] || "",
                 memberFee: parseInt(target.memberFee !== undefined ? target.memberFee : (target["會員報名費"] || 0)) || 0,
                 guestFee: parseInt(target.guestFee !== undefined ? target.guestFee : (target["非會員報名費"] || 0)) || 0,
                 needId: isTrue(target.needId !== undefined ? target.needId : (target["需要身分證"] || target["(需要身分證)"])),
@@ -353,20 +358,25 @@
         const menuPhotoLink = document.getElementById('menuPhotoLink');
         const transportSection = document.getElementById('transportSection');
 
-        const isBanquet = eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0;
+        // 🌟 雙重判定：M 欄包含「餐會」兩字，或是成功讀取到菜單 JSON，都會啟動餐會模式！
+        const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
+        const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
+        const isBanquet = isBanquetCategory || hasMenu;
 
         if (isBanquet) {
-            // 🌟 隱藏交通、車號、可載人數區塊
+            // 🌟 餐會模式：隱藏交通區塊
             if (transportSection) transportSection.classList.add('hidden');
 
-            // 建立餐會單選選單
             let menuHtml = '<option value="">-- 請選擇餐點 --</option>';
-            eventConfig.banquetMenu.forEach(item => {
-                menuHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
-            });
+            if (hasMenu) {
+                eventConfig.banquetMenu.forEach(item => {
+                    menuHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
+                });
+            } else {
+                menuHtml += `<option value="無指定餐點" data-price="0">無餐點資料，請通知管理員</option>`;
+            }
             dietSelect.innerHTML = menuHtml;
 
-            // 顯示菜單照片連結按鈕
             if (eventConfig.menuPhotoUrl && menuPhotoSection && menuPhotoLink) {
                 menuPhotoLink.href = eventConfig.menuPhotoUrl;
                 menuPhotoSection.classList.remove('hidden');
@@ -377,7 +387,7 @@
             dietSelect.addEventListener('change', updateTotal);
 
         } else {
-            // 🌟 一般活動：顯示交通區塊
+            // 🌟 一般模式：顯示交通區塊
             if (transportSection) transportSection.classList.remove('hidden');
 
             dietSelect.innerHTML = `
@@ -450,12 +460,21 @@
             `;
         }
 
+        // 🌟 攜伴餐食也遵循同樣的判定
+        const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
+        const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
+        const isBanquet = isBanquetCategory || hasMenu;
+
         let partnerDietHtml = "";
-        if (eventConfig && eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0) {
+        if (isBanquet) {
             partnerDietHtml = '<option value="">-- 請選擇餐點 --</option>';
-            eventConfig.banquetMenu.forEach(item => {
-                partnerDietHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
-            });
+            if (hasMenu) {
+                eventConfig.banquetMenu.forEach(item => {
+                    partnerDietHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
+                });
+            } else {
+                 partnerDietHtml += `<option value="無指定餐點" data-price="0">無餐點資料</option>`;
+            }
         } else {
             partnerDietHtml = `
                 <option value="葷食">葷食</option>
@@ -503,18 +522,25 @@
         let baseTotal = eventConfig.memberFee + (count * eventConfig.guestFee);
 
         let extraMenuCost = 0;
-        if (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0) {
+        const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
+        const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
+        
+        if (isBanquetCategory || hasMenu) {
             const mainDietSelect = document.getElementById('mainDiet');
-            const mainSelected = mainDietSelect.options[mainDietSelect.selectedIndex];
-            if (mainSelected && mainSelected.dataset.price) {
-                extraMenuCost += parseInt(mainSelected.dataset.price);
+            if (mainDietSelect.selectedIndex > -1) {
+                const mainSelected = mainDietSelect.options[mainDietSelect.selectedIndex];
+                if (mainSelected && mainSelected.dataset.price) {
+                    extraMenuCost += parseInt(mainSelected.dataset.price);
+                }
             }
 
             const partnerDietSelects = document.querySelectorAll('.partner-diet');
             partnerDietSelects.forEach(select => {
-                const partnerSelected = select.options[select.selectedIndex];
-                if (partnerSelected && partnerSelected.dataset.price) {
-                    extraMenuCost += parseInt(partnerSelected.dataset.price);
+                if (select.selectedIndex > -1) {
+                    const partnerSelected = select.options[select.selectedIndex];
+                    if (partnerSelected && partnerSelected.dataset.price) {
+                        extraMenuCost += parseInt(partnerSelected.dataset.price);
+                    }
                 }
             });
         }
@@ -532,14 +558,16 @@
     async function submitForm(event) {
         if (event && event.preventDefault) event.preventDefault();
         const overlay = document.getElementById('loadingOverlay');
-        const isBanquet = eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0;
+        
+        const isBanquetCategory = (eventConfig.category && eventConfig.category.includes('餐會'));
+        const hasMenu = (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0);
+        const isBanquet = isBanquetCategory || hasMenu;
         
         try {
             const mainIDInput = document.getElementById('mainID');
             const mainID = mainIDInput ? toHalfWidth(mainIDInput.value).toUpperCase() : "";
             const mainBirthday = document.getElementById('mainBirthday')?.value || "";
             
-            // 處理交通與車號 (餐會模式直接給預設值)
             const transportValue = isBanquet ? "餐會模式" : document.getElementById('mainTransport').value;
             const seatsVal = isBanquet ? 0 : (document.getElementById('mainSeats').value || 0);
             
@@ -606,7 +634,6 @@
                     }
                 }
 
-                // 檢查餐會模式下是否有點選餐點
                 const dietVal = pDiets[i].value;
                 if (isBanquet && !dietVal) {
                     showToast(`請為 訪客 ${i+1} 選擇餐點`, "error");
@@ -621,7 +648,6 @@
                 });
             }
 
-            // 檢查主要報名者餐會模式是否有點選餐點
             const mainDietVal = document.getElementById('mainDiet').value;
             if (isBanquet && !mainDietVal) {
                 showToast("請選擇您的餐點項目", "error");

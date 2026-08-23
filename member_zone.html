@@ -427,9 +427,11 @@ async function syncData() {
                     newsContainer.style.display = 'flex';
                 }
                 if (newsElem) {
-                   const linkedNews = newsContent.replace(/(https?:\/\/[^\s\r\n]+)/g, 
-        '<a href="$1" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 underline font-black mx-1 inline-flex items-center"><i class="fas fa-image mr-1 text-xs"></i>點此看相片</a>'
-    );
+                   // 🌟 將原本的「點此看相片」升級為兼顧照片與影片的通用按鈕
+                   const linkedNews = newsContent.replace(
+                         /(https?:\/\/[^\s\r\n]+)/g,
+                         '<a href="$1" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 underline font-black mx-1 inline-flex items-center"><i class="fas fa-photo-video mr-1 text-xs"></i>點此看影音/相片</a>'
+                   );
                    newsElem.innerHTML = linkedNews; 
                 }
             } else {

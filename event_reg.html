@@ -1347,26 +1347,27 @@ function exportInsuranceCSV() {
 }        
 
 // --- 🌟 新增與優化：行政看板數據計算函式 ---
+// --- 🌟 行政看板數據計算函式 (全新三態交通邏輯) ---
 function updateAdminStats(list) {
     if (!list) return;
 
-    // --- 第一階段：建立「誰代理誰」的交通對照表 ---
+    // --- 第一階段：取得活動的交通模式設定 (包車 / 自駕 / 自理) ---
+    const rawTransMode = currentEventConfig?.["交通方式"] || currentEventConfig?.transportMode || currentEventConfig?.["是遊覽車行"] || "包車";
+    let transportMode = String(rawTransMode).trim();
+    if (transportMode === "是") transportMode = "包車";
+    if (transportMode === "否") transportMode = "自理";
+
+    // 建立「誰代理誰」的交通對照表
     const transportMap = {};
     allData.currentDrivers = [];   // 存放司機
     allData.currentPassengers = []; // 存放乘客
-    const transportMode = currentEventConfig?.["交通方式"] || currentEventConfig?.transportMode || "包車";
-    const isBus = (transportMode === "包車");
-
-    
-    // 🌟 新增：準備存放格式化車牌字串的陣列
-    allData.carPlateList = []; 
+    allData.carPlateList = [];      // 存放格式化車牌字串的陣列
     
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
         const agent = (r["報名代理人"] || "").trim();
         const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
 
-        // 如果是本人報名，就把他的交通方式存起來
         if (agent === "本人" || agent === "") {
             transportMap[name] = trans;
         }
@@ -1383,20 +1384,18 @@ function updateAdminStats(list) {
         const agent = (r["報名代理人"] || "").trim();
         let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
 
-        // 🌟 關鍵邏輯：如果是攜伴者且交通空白，強制繼承代理人的交通
+        // 攜伴者交通空白時，繼承代理人的交通
         if (agent !== "本人" && agent !== "" && trans === "") {
             trans = transportMap[agent] || ""; 
         }
 
         // 開始計數
         if (trans === "自駕" || trans === "開車") {
-            // 只有代理人本人算「一台車」
             if (agent === "本人" || agent === "") {
                 carCount++;
                 totalSeats += parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
-                allData.currentDrivers.push(r); // 存入司機名單
+                allData.currentDrivers.push(r);
                 
-                // 🌟 新增：撈取車號，若有填寫車號則塞入統計清單
                 const carNum = (r["車號"] || "").trim();
                 if (carNum) {
                     allData.carPlateList.push(`- 車主：${name} (${carNum})`);
@@ -1406,7 +1405,7 @@ function updateAdminStats(list) {
             }
         } else if (trans === "共乘" || trans === "搭車") {
             carpoolCount++;
-            allData.currentPassengers.push(r); // 存入乘客名單
+            allData.currentPassengers.push(r);
         }
 
         // 素食統計
@@ -1434,13 +1433,7 @@ function updateAdminStats(list) {
         vegNamesElem.innerText = vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食";
     }
 
-    // --- 第四階段：控制按鈕顯示/隱藏 ---
-    const isBus = (
-        currentEventConfig?.["是遊覽車行"] === "是" || 
-        currentEventConfig?.isTourBus === "是" || 
-        currentEventConfig?.isTourBus === "Y"
-    );
-
+    // --- 第四階段：根據三態交通模式控制顯示/隱藏 ---
     const needID = (
         currentEventConfig?.["(需要身分證)"] === "是" || 
         currentEventConfig?.["需要身分證"] === "是" || 
@@ -1452,20 +1445,27 @@ function updateAdminStats(list) {
     const insBtn = document.getElementById('exportInsuranceBtn');
     if (insBtn) insBtn.style.display = needID ? 'inline-block' : 'none';
 
-    // 2. 處理車輛分配按鈕
-    const carBtn = document.getElementById('carpoolBtn');
-    if (carBtn) carBtn.style.display = isBus ? 'none' : 'inline-block';
+    // 🌟 核心邏輯判定：只有當活動交通模式為「自駕」時，才顯示交通統計與相關按鈕
+    const isSelfDriveMode = (transportMode === "自駕");
 
-    // 3. 處理交通統計區塊
+    // 2. 處理車輛分配按鈕 (僅自駕模式顯示)
+    const carBtn = document.getElementById('carpoolBtn');
+    if (carBtn) {
+        carBtn.style.display = isSelfDriveMode ? 'inline-block' : 'none';
+    }
+
+    // 3. 處理交通統計區塊 (僅自駕模式顯示)
     const tStats = document.getElementById('trafficStats');
-    if (tStats) tStats.style.display = isBus ? 'none' : 'block';    
+    if (tStats) {
+        tStats.style.display = isSelfDriveMode ? 'block' : 'none';    
+    }
     
-    // 🌟 4. 新增：控制「複製車牌名冊」按鈕顯示邏輯 (遊覽車活動不顯示，且有自駕車才顯示)
+    // 4. 控制「複製車牌名冊」按鈕顯示邏輯 (僅自駕模式且有車輛時顯示)
     const copyCarBtn = document.getElementById('copyCarListBtn');
     if (copyCarBtn) {
-        copyCarBtn.style.display = (!isBus && carCount > 0) ? 'block' : 'none';
+        copyCarBtn.style.display = (isSelfDriveMode && carCount > 0) ? 'block' : 'none';
     }
-}  
+} 
 /**
  * 🌟 新增功能：一鍵複製格式化後的車牌名冊至系統剪貼簿
  */

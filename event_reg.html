@@ -151,52 +151,56 @@
                     <label class="text-[10px] font-bold text-emerald-600 ml-2 block">活動簡介</label>
                     <textarea id="ev_desc" rows="2" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold"></textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-orange-600 ml-2">需填身分證?</label>
-                        <select id="ev_needId" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
-                            <option value="否">不需要</option>  
-                            <option value="是">需要</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-orange-600 ml-2">提供遊覽車（or 統一安排）</label>
-                        <select id="ev_bus" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
-                            <option value="否">無</option>       
-                            <option value="是">有</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-blue-600 ml-2">會員費用</label>
-                        <input type="number" id="ev_mFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-blue-600 ml-2">非會員費用</label>
-                        <input type="number" id="ev_gFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
-                    </div>
-                </div>
-                <!-- 隱藏的開關控制 -->
-<div class="mb-4">
-    <label class="flex items-center gap-2 text-emerald-900 font-bold">
+<!-- 一般活動專屬選項區塊 (餐會模式下自動隱藏) -->
+<div id="generalOptions" class="space-y-3 transition-all duration-300">
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="text-[10px] font-bold text-orange-600 ml-2">需填身分證?</label>
+            <select id="ev_needId" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                <option value="否">不需要</option>  
+                <option value="是">需要</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-[10px] font-bold text-orange-600 ml-2">提供遊覽車（or 統一安排）</label>
+            <select id="ev_bus" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+                <option value="否">無</option>       
+                <option value="是">有</option>
+            </select>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="text-[10px] font-bold text-blue-600 ml-2">會員費用</label>
+            <input type="number" id="ev_mFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+        </div>
+        <div>
+            <label class="text-[10px] font-bold text-blue-600 ml-2">非會員費用</label>
+            <input type="number" id="ev_gFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+        </div>
+    </div>
+</div>
+
+<!-- 🎈 啟用餐會模式勾選框 -->
+<div class="mb-4 pt-2">
+    <label class="flex items-center gap-2 text-emerald-900 font-bold cursor-pointer bg-emerald-50/60 p-3 rounded-2xl border border-emerald-100">
         <input type="checkbox" id="isBanquetToggle" onchange="toggleBanquetMenu()" class="w-5 h-5 accent-emerald-600">
-        🎈 啟用餐會模式 (複雜選單與照片)
+        🎈 啟用餐會模式 (簡化一般選項，啟用獨立菜單與照片)
     </label>
 </div>
 
 <!-- 餐會專屬設定區塊 (預設隱藏) -->
-<div id="banquetSection" class="hidden p-4 bg-emerald-50 rounded-xl border border-emerald-100 space-y-3 mb-4">
+<div id="banquetSection" class="hidden p-4 bg-emerald-50/80 rounded-2xl border border-emerald-100 space-y-3 mb-4 transition-all duration-300">
     <div>
-        <label class="text-sm font-bold text-emerald-800">菜單照片連結</label>
-        <input type="url" id="ev_menu_photo" class="input-field w-full" placeholder="貼上照片 URL (方便會員看圖選擇)">
+        <label class="text-xs font-bold text-emerald-800 ml-2">菜單照片連結</label>
+        <input type="url" id="ev_menu_photo" class="w-full bg-white border-none rounded-xl px-4 py-3 text-sm font-bold shadow-sm mt-1" placeholder="請貼上菜單圖片 URL">
     </div>
     
     <div id="menuBuilder">
-        <label class="text-sm font-bold text-emerald-800 flex justify-between">
-            <span>菜單選項與價格 (最多12種)</span>
-            <button type="button" onclick="addMenuItem()" class="text-xs bg-emerald-600 text-white px-2 py-1 rounded">＋ 新增菜色</button>
-        </label>
+        <div class="flex justify-between items-center mb-1 px-1">
+            <label class="text-xs font-bold text-emerald-800">菜單品項與價格 (最多12種)</label>
+            <button type="button" onclick="addMenuItem()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold shadow-sm hover:bg-emerald-700 active:scale-95 transition-all">＋ 新增菜色</button>
+        </div>
         <!-- 動態產生的輸入框會放在這裡 -->
         <div id="menuItemsContainer" class="space-y-2 mt-2"></div>
     </div>
@@ -1786,7 +1790,51 @@ function validateStaffIDField(input) {
         errorMsg.classList.remove('hidden');
         return false;
     }
-}        
+}    
+/**
+ * 切換餐會模式：動態隱藏一般活動選項（身分證、遊覽車、費用），並展開餐會菜單設定
+ */
+function toggleBanquetMenu() {
+    const isBanquet = document.getElementById('isBanquetToggle').checked;
+    const banquetSection = document.getElementById('banquetSection');
+    const generalOptions = document.getElementById('generalOptions');
+
+    if (isBanquet) {
+        // 隱藏一般活動選項，讓版面乾淨
+        generalOptions.style.display = 'none';
+        banquetSection.classList.remove('hidden');
+        
+        // 如果目前菜單項目是空的，預設幫管理員長出第一行輸入框
+        const container = document.getElementById('menuItemsContainer');
+        if (container && container.children.length === 0) {
+            addMenuItem();
+        }
+    } else {
+        // 恢復一般活動選項
+        generalOptions.style.display = 'block';
+        banquetSection.classList.add('hidden');
+    }
+}
+
+/**
+ * 動態新增一筆菜單項目與價格輸入框
+ */
+function addMenuItem(name = "", price = "") {
+    const container = document.getElementById('menuItemsContainer');
+    if (container.children.length >= 12) {
+        showToast("⚠️ 最多只能新增 12 種菜色");
+        return;
+    }
+
+    const itemDiv = document.createElement('div');
+    itemDiv.className = "flex gap-2 items-center bg-white p-2 rounded-xl shadow-sm border border-emerald-100";
+    itemDiv.innerHTML = `
+        <input type="text" placeholder="菜色名稱 (例如：招牌套餐)" value="${name}" class="menu-name flex-grow bg-gray-50 border-none rounded-lg px-3 py-2 text-xs font-bold">
+        <input type="number" placeholder="價格" value="${price}" class="menu-price w-24 bg-gray-50 border-none rounded-lg px-3 py-2 text-xs font-bold">
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 px-2 py-1 text-xs font-bold"><i class="fas fa-trash-alt"></i></button>
+    `;
+    container.appendChild(itemDiv);
+}
     </script>
 </body>    
 </html>

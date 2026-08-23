@@ -459,38 +459,37 @@ async function syncData() {
             }
 
             // --- D. 解析 B6 宣傳活動 ---
-            const promoRaw = data.promo || data.registrations_promo || "";
+const promoRaw = data.promo || data.registrations_promo || "";
 
-            if (promoRaw && !promoRaw.includes("目前尚無")) {
-                let itemStrings = [];
-                if (promoRaw.includes('[/ITEM]')) {
-                    itemStrings = promoRaw.split('[/ITEM]').filter(s => s.trim() !== "");
-                } else {
-                    itemStrings = promoRaw.split(/(?=【)/).filter(s => s.trim() !== "");
-                }
+if (promoRaw && !promoRaw.includes("目前尚無")) {
+    let itemStrings = [];
+    if (promoRaw.includes('[/ITEM]')) {
+        itemStrings = promoRaw.split('[/ITEM]').filter(s => s.trim() !== "");
+    } else {
+        itemStrings = promoRaw.split(/(?=【)/).filter(s => s.trim() !== "");
+    }
 
-                window.currentActivePromos = itemStrings.map(itemStr => {
-                    const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-                    const titleMatch = itemStr.match(/【(?:近期)?報名活動\s*[:：]?\s*(.*?)】/) || itemStr.match(/【(.*?)】/);
-                    const dMatch = itemStr.match(/日期\s*[:：]\s*(\d{4}\/\d{2}\/\d{2})/);
-                    const extractedTitle = titleMatch ? titleMatch[1].trim() : "點擊查看詳情";
-                    let cleanedText = itemStr.replace(/\[ITEM\]|\[\/ITEM\]|\[POSTER\].*?\[\/POSTER\]/g, "").trim();
+    window.currentActivePromos = itemStrings.map(itemStr => {
+        const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
+        const titleMatch = itemStr.match(/【(?:近期)?報名活動\s*[:：]?\s*(.*?)】/) || itemStr.match(/【(.*?)】/);
+        
+        // 🌟 核心修正：優先抓取「截止日期：」，若沒有則相容原有的「日期：」
+        const dlMatch = itemStr.match(/(?:截止日期|下架日期|截止)\s*[:：]\s*(\d{4}\/\d{2}\/\d{2})/);
+        const dMatch = itemStr.match(/日期\s*[:：]\s*(\d{4}\/\d{2}\/\d{2})/);
 
-                    cleanedText = cleanedText.replace(
-                        /(https?:\/\/[^\s\r\n]+)/g, 
-                        '<a href="$1" target="_blank" class="text-blue-600 hover:text-blue-800 underline font-semibold break-all inline-flex items-center"><i class="fas fa-external-link-alt mr-1 text-xs"></i>點此查看鏈結/照片</a>'
-                    );
+        const extractedTitle = titleMatch ? titleMatch[1].trim() : "點擊查看詳情";
+        const cleanText = itemStr.replace(/\[ITEM\]|\[\/ITEM\]|\[POSTER\].*?\[\/POSTER\]/g, "").trim();
 
-                    return {
-                        title: extractedTitle,
-                        fullText: cleanedText, 
-                        poster: pMatch ? pMatch[1].trim() : "",
-                        deadline: dMatch ? dMatch[1] : "額滿為止"
-                    };
-                });
-            } else {
-                window.currentActivePromos = [];
-            }
+        return {
+            title: extractedTitle,
+            fullText: cleanText,
+            poster: pMatch ? pMatch[1].trim() : "",
+            deadline: dlMatch ? dlMatch[1] : (dMatch ? dMatch[1] : "額滿為止") // 🌟 優先顯示下架日
+        };
+    });
+} else {
+    window.currentActivePromos = [];
+}
 
             // --- E. 用戶資料合併 ---
             let displayUser = data.user && data.user.name ? data.user : cachedUserInfo;
@@ -1196,21 +1195,18 @@ window.currentActivePromos = [];
 
 function renderRegistrationCards(promoEvents, userRegistrations) {
     const container = document.getElementById('eventSection');
-    const wrapper = document.getElementById('registrationWrapper'); // 🌟 新增：取得整個報名區塊的外框
+    const wrapper = document.getElementById('registrationWrapper');
     
     if (!container) return;
     container.innerHTML = ''; 
 
-    // 🌟 核心修正：判斷是否有報名活動
     if (!promoEvents || promoEvents.length === 0) {
-        // 如果沒有任何活動，隱藏整個包含標題的外框
         if (wrapper) {
             wrapper.classList.add('hidden');
             wrapper.style.display = 'none';
         }
-        return; // 直接結束執行
+        return;
     } else {
-        // 如果有活動，確保外框是顯示狀態
         if (wrapper) {
             wrapper.classList.remove('hidden');
             wrapper.style.display = 'block';
@@ -1218,37 +1214,31 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
     }
     
     promoEvents.forEach(ev => {
-        // 從解析後的物件中取得標題
         const title = ev.title;
 
-        // 偵錯日誌：確保能看到雙方的原始資料
-        console.log(`🔍 正在比對活動: "${title}"`);
-        console.log(`📋 已報名清單:`, userRegistrations);
-
-        // 🌟 核心修正：使用 some 取代 includes，並加入 trim() 消除空格影響
         const isRegistered = (userRegistrations || []).some(reg => 
             String(reg).trim() === String(title).trim()
         );
         
-        const isCheckedIn = false; 
         const finalPoster = (ev.poster && typeof getDirectImageUrl === 'function') 
                             ? getDirectImageUrl(ev.poster) 
                             : ev.poster;
 
+        // 🌟 取得真正的截止/下架日期 (支援 ev.deadline 或 ev.display_until)
+        const displayDeadline = ev.deadline || ev.display_until || "額滿為止";
+
         let actionBtn = "";
         if (isRegistered) {
-            // 狀態轉換成功：顯示已報名
             actionBtn = `
                 <button class="w-full py-3 rounded-xl font-bold bg-gray-100 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2" disabled>
                     <i class="fas fa-check-circle"></i>
                     已報名成功
                 </button>`;
         } else {
-            // 狀態轉換失敗（或尚未報名）：顯示立即報名
             actionBtn = `
               <button onclick="goToRegistration('${encodeURIComponent(title)}')" 
                   class="w-full py-3 bg-emerald-800 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all">
-                   立即報名
+                    立即報名
               </button>`;
         }
 
@@ -1266,7 +1256,7 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
                         <span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold">活動預約</span>
-                        <span class="text-red-500 text-xs font-medium italic">報名截止：${ev.deadline}</span>
+                        <span class="text-red-500 text-xs font-medium italic">報名截止：${displayDeadline}</span>
                     </div>
                     
                     <div class="whitespace-pre-wrap text-emerald-900 text-sm leading-relaxed mb-6 font-medium">${ev.fullText}</div>

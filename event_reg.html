@@ -162,10 +162,11 @@
             </select>
         </div>
         <div>
-            <label class="text-[10px] font-bold text-orange-600 ml-2">提供遊覽車（or 統一安排）</label>
-            <select id="ev_bus" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
-                <option value="否">無</option>       
-                <option value="是">有</option>
+            <label class="text-[10px] font-bold text-orange-600 ml-2">交通方式</label>
+            <select id="ev_transportMode" class="w-full bg-orange-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
+               <option value="包車">包車</option>
+               <option value="自駕">自駕</option>
+               <option value="自理">自理</option>
             </select>
         </div>
     </div>
@@ -692,11 +693,10 @@ function openEditModal() {
     document.getElementById('ev_banquet_subsidy').value = ev.memberFee || ev["會員報名費"] || 0;
     
     // --- 選項欄位 ---
-    const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim();
-    const rawBus = String(ev.isTourBus || ev["是遊覽車行"] || ev["遊覽車"] || "").trim();
+    const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim);
 
     document.getElementById('ev_needId').value = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
-    document.getElementById('ev_bus').value = (rawBus === '是' || rawBus.toUpperCase() === 'Y' || rawBus === 'Ｙ') ? '是' : '否';  
+    document.getElementById('ev_transportMode').value = ev.transportMode || ev["交通方式"] || "包車";
     
     // --- 🌟 修正 2：日期欄位 (精準對接 GAS 轉換後的 startDate, deadline, dateText) ---
     document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["開始展示日 (start_date)"] || ev["開始展示日"]);
@@ -746,6 +746,7 @@ function openAddModal() {
     
     document.querySelectorAll('#eventModal input, #eventModal textarea').forEach(i => i.value = "");
     document.querySelectorAll('#eventModal select').forEach(s => s.selectedIndex = 0);
+    document.getElementById('ev_transportMode').value = "包車"; // 預設
 
     // 🌟 4. 重置餐會模式開關與菜單
     document.getElementById('isBanquetToggle').checked = false;
@@ -1025,7 +1026,7 @@ async function saveEvent() {
         deadline: document.getElementById('ev_until').value,   
         eventDate: document.getElementById('ev_date').value,
         needId: needIdValue, 
-        isTourBus: isTourBusValue,
+        transportMode: document.getElementById('ev_transportMode').value,
         memberFee: parseFee('ev_mFee'),
         guestFee: parseFee('ev_gFee'),
         oldTitle: document.getElementById('old_title').value,
@@ -1353,6 +1354,9 @@ function updateAdminStats(list) {
     const transportMap = {};
     allData.currentDrivers = [];   // 存放司機
     allData.currentPassengers = []; // 存放乘客
+    const transportMode = currentEventConfig?.["交通方式"] || currentEventConfig?.transportMode || "包車";
+    const isBus = (transportMode === "包車");
+
     
     // 🌟 新增：準備存放格式化車牌字串的陣列
     allData.carPlateList = []; 

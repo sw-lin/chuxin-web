@@ -1233,7 +1233,7 @@ function renderRegistrationCards(promoEvents, userRegistrations) {
                             : ev.poster;
 
         // 🌟 取得真正的截止/下架日期 (支援 ev.deadline 或 ev.display_until)
-        const displayDeadline = ev.display_until || "額滿為止";
+        const displayDeadline = ev.deadline || ev.display_until || "額滿為止";
 
         let actionBtn = "";
         if (isRegistered) {

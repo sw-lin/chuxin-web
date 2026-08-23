@@ -105,16 +105,23 @@
                     </div>
                 </div>
                 
-                <div class="form-row">
-                    <label class="label-text">餐食選擇</label>
-                    <div class="flex-1">
-                        <select id="mainDiet" class="input-field">               
-                            <option value="葷食">葷食</option>
-                            <option value="素食">素食</option>
-                            <option value="不拘">不拘</option>
-                        </select>
-                    </div>
-                </div>
+<div class="input-group">
+    <label class="label-text font-bold">餐食選擇</label>
+    
+    <!-- 🖼️ 菜單照片連結預留區塊 (預設隱藏，有網址才顯示) -->
+    <div id="menuPhotoSection" class="hidden my-2">
+        <a id="menuPhotoLink" href="#" target="_blank" class="inline-flex items-center gap-2 text-xs font-black text-blue-600 bg-blue-50 px-3.5 py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 transition-all shadow-sm">
+            <i class="fas fa-image text-sm"></i> 點此查看餐會菜單照片 (看圖選餐)
+        </a>
+    </div>
+
+    <!-- 原本的餐食下拉選單 -->
+    <select id="mainDiet" class="input-field">                                  
+        <option value="葷食">葷食</option>
+        <option value="素食">素食</option>
+        <option value="不拘">不拘</option>
+    </select>
+</div>
 
                 <div class="form-row">
                     <label class="label-text">交通方式</label>
@@ -283,25 +290,36 @@ window.onload = async function() {
     }
 
     if (target) {
-        eventConfig = {
-            title: title,
-            memberFee: parseInt(target.memberFee) || 0,
-            guestFee: parseInt(target.guestFee) || 0,
-            needId: isTrue(target.needId),
-            isTourBus: isTrue(target.isTourBus)
-        };
-        
-        document.getElementById('displayEventTitle').innerText = eventConfig.title;
-        document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
-        
-        // 帶入姓名
-        if(currentUser.name) {
-            document.getElementById('mainName').value = currentUser.name;
+    // 嘗試解析餐會菜單 JSON
+    let parsedMenu = [];
+    try {
+        if (target.banquetMenu) {
+            parsedMenu = typeof target.banquetMenu === 'string' ? JSON.parse(target.banquetMenu) : target.banquetMenu;
         }
+    } catch(e) {
+        console.error("解析餐會菜單失敗", e);
+    }
 
-        initDynamicUI();
-        updateTotal();
-    } else {
+    window.eventConfig = {
+        title: title,
+        memberFee: parseInt(target.memberFee) || 0,
+        guestFee: parseInt(target.guestFee) || 0,
+        needId: isTrue(target.needId),
+        isTourBus: isTrue(target.isTourBus),
+        menuPhotoUrl: target.menuPhotoUrl || target.poster || "", // 對應 E 欄菜單照片連結
+        banquetMenu: parsedMenu // 複雜選單陣列
+    };
+
+    document.getElementById('displayEventTitle').innerText = eventConfig.title;
+    document.getElementById('priceBadge').innerText = `會員 $${eventConfig.memberFee} / 訪客 $${eventConfig.guestFee}`;
+    
+    if(currentUser.name) {
+        document.getElementById('mainName').value = currentUser.name;
+    }
+
+    initDynamicUI();
+    updateTotal();
+   } else {
         document.getElementById('displayEventTitle').innerText = "活動不存在或已下架";
         showToast("找不到此活動資訊", "error");
     }
@@ -314,25 +332,63 @@ function isTrue(val) {
     return s === 'Y' || s === '是' || s === 'TRUE' || s === '1';
 }    
     
-    function initDynamicUI() {
-        if(eventConfig.needId) {
-            document.getElementById('mainIDSection').classList.remove('hidden');
-            document.getElementById('mainBirthdaySection').classList.remove('hidden');
-        }
-        const transportSelect = document.getElementById('mainTransport');
-        if(eventConfig.isTourBus) {
-            transportSelect.innerHTML = `<option value="搭乘遊覽車">統一安排</option>`;
-            transportSelect.disabled = true;
-        } else {
-            transportSelect.innerHTML = `
-                <option value="自駕">自行開車</option>
-                <option value="共乘">共乘不開車</option>
-                <option value="個人自理">個人自理</option>
-            `;
-            transportSelect.value = "自駕";
-        }
-        checkTransportLogic();
+function initDynamicUI() {
+    if(eventConfig.needId) {
+        document.getElementById('mainIDSection').classList.remove('hidden');
+        document.getElementById('mainBirthdaySection').classList.remove('hidden');
     }
+    
+    const dietSelect = document.getElementById('mainDiet');
+    // 確保您的 HTML 中有這個預留區塊，用來顯示照片連結
+    const menuPhotoSection = document.getElementById('menuPhotoSection'); 
+    const menuPhotoLink = document.getElementById('menuPhotoLink');
+
+    // 判斷是否為餐會模式（是否有設定菜單）
+    if (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0) {
+        let menuHtml = '<option value="">-- 請選擇餐點 --</option>';
+        eventConfig.banquetMenu.forEach(item => {
+            // 將價格存在 data-price 屬性中供計算使用
+            menuHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
+        });
+        dietSelect.innerHTML = menuHtml;
+
+        // 若有填寫 E 欄照片連結，則顯示按鈕
+        if (eventConfig.menuPhotoUrl && menuPhotoSection && menuPhotoLink) {
+            menuPhotoLink.href = eventConfig.menuPhotoUrl;
+            menuPhotoSection.classList.remove('hidden');
+        } else if (menuPhotoSection) {
+            menuPhotoSection.classList.add('hidden');
+        }
+
+        // 綁定監聽：選好餐點後即時重算金額
+        dietSelect.addEventListener('change', updateTotal);
+
+    } else {
+        // 一般戶外活動：維持原本的選項
+        dietSelect.innerHTML = `
+            <option value="葷食">葷食</option>
+            <option value="素食">素食</option>
+            <option value="不拘">不拘</option>
+        `;
+        if (menuPhotoSection) menuPhotoSection.classList.add('hidden');
+        dietSelect.removeEventListener('change', updateTotal);
+    }
+
+    // 交通選項邏輯 (維持原有架構)
+    const transportSelect = document.getElementById('mainTransport');
+    if(eventConfig.isTourBus) {
+        transportSelect.innerHTML = `<option value="搭乘遊覽車">統一安排</option>`;
+        transportSelect.disabled = true;
+    } else {
+        transportSelect.innerHTML = `
+            <option value="自駕">自行開車</option>
+            <option value="共乘">共乘不開車</option>
+            <option value="個人自理">個人自理</option>
+        `;
+        transportSelect.value = "自駕";
+    }
+    checkTransportLogic();
+}
     
     function checkTransportLogic() {
         const val = document.getElementById('mainTransport').value;
@@ -355,85 +411,114 @@ function isTrue(val) {
     }
 
 function adjustPartnerFields() {
-        const count = parseInt(document.getElementById('partnerCountSelect').value);
-        const container = document.getElementById('partnerContainer');
-        const currentFields = container.querySelectorAll('.partner-card').length;
+    const count = parseInt(document.getElementById('partnerCountSelect').value);
+    const container = document.getElementById('partnerContainer');
+    const currentFields = container.querySelectorAll('.partner-card').length;
 
-        if (count === currentFields) return;
+    // 1. 人數不變則不動作
+    if (count === currentFields) return;
 
-        if (currentFields > count && currentFields > 0) {
-            if (!confirm("減少人數將會清除資料，確定嗎？")) {
-                document.getElementById('partnerCountSelect').value = currentFields;
-                return;
-            }
+    // 2. 減少人數時的防誤刪確認
+    if (currentFields > count && currentFields > 0) {
+        if (!confirm("減少人數將會清除資料，確定嗎？")) {
+            document.getElementById('partnerCountSelect').value = currentFields;
+            return;
         }
+    }
 
-        let idHtml = "";
-        if (eventConfig.needId) {
-            idHtml = `
-                <div class="form-row !mb-1">
-                    <label class="label-text">身分證</label>
-                    <div class="flex-1">
-                        <input type="text" placeholder="例：A123456789" class="partner-id input-field uppercase" onblur="validateField(this, 'ID')">
-                        <p class="error-hint hidden text-xs text-red-500 mt-1">⚠️ 身分證格式錯誤</p>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <label class="label-text">生日</label>
-                    <div class="flex-1">
-                        <input type="date" class="partner-birthday input-field">
-                    </div>
-                </div>
-            `;
-        }
+    let idHtml = "";
+    if (eventConfig.needId) {
+        idHtml = `
+            <div class="space-y-4 pt-2 border-t border-dashed border-emerald-100">
+                <label class="label-text !mb-1">訪客身分證字號</label>
+                <input type="text" placeholder="例：A123456789" class="partner-id input-field uppercase" onblur="validateField(this, 'ID')">
+                <p class="error-hint hidden">⚠️ 身分證格式錯誤</p>
 
-        let newHtml = "";
-        for (let i = 0; i < count; i++) {
-            newHtml += `
-                <div class="partner-card bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative mb-4">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-1.5 h-4 bg-orange-400 rounded-full"></div>
-                        <div class="text-emerald-700 font-black text-sm">訪客 ${i + 1} 資料</div>
-                    </div>
+                <label class="label-text !mb-1">訪客出生年月日</label>
+                <input type="date" class="partner-birthday input-field">
+            </div>
+        `;
+    }
+
+    // 🌟 3. 動態產生訪客餐食選項（自動判斷是否為複雜餐會選單）
+    let partnerDietHtml = "";
+    if (window.eventConfig && window.eventConfig.banquetMenu && window.eventConfig.banquetMenu.length > 0) {
+        partnerDietHtml = '<option value="">-- 請選擇餐點 --</option>';
+        window.eventConfig.banquetMenu.forEach(item => {
+            partnerDietHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
+        });
+    } else {
+        partnerDietHtml = `
+            <option value="葷食">葷食</option>
+            <option value="素食">素食</option>
+            <option value="不拘">不拘</option>
+        `;
+    }
+
+    // 4. 生成新的訪客欄位
+    let newHtml = "";
+    for (let i = 0; i < count; i++) {
+        newHtml += `
+            <div class="partner-card bg-white p-6 rounded-[2rem] border border-emerald-50 shadow-sm relative mb-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-1.5 h-4 bg-orange-400 rounded-full"></div>
+                    <div class="text-emerald-700 font-black text-sm">訪客 ${i + 1} 資料</div>
+                </div>
+                <div class="space-y-4">
+                    <input type="text" placeholder="訪客姓名" class="partner-name input-field">
                     
-                    <div class="form-row">
-                        <label class="label-text">姓名</label>
-                        <div class="flex-1">
-                            <input type="text" placeholder="訪客姓名" class="partner-name input-field">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row !mb-1">
-                        <label class="label-text">電話</label>
-                        <div class="flex-1">
-                            <input type="tel" placeholder="09xxxxxxxx" class="partner-phone input-field" onblur="validateField(this, 'PHONE')">
-                            <p class="error-hint hidden text-xs text-red-500 mt-1">⚠️ 手機格式錯誤</p>
-                        </div>
+                    <div>
+                        <input type="tel" placeholder="訪客電話 (09xxxxxxxx)" class="partner-phone input-field" onblur="validateField(this, 'PHONE')">
+                        <p class="error-hint hidden"></p>
                     </div>
 
                     ${idHtml}
 
-                    <div class="form-row mt-4">
-                        <label class="label-text">餐食需求</label>
-                        <div class="flex-1">
-                            <select class="partner-diet input-field">
-                                <option value="葷食">葷食</option>
-                                <option value="素食">素食</option>
-                                <option value="不拘">不拘</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="label-text !mb-1">餐食需求</label>
+                        <!-- 🌟 加上 onchange="updateTotal()" 確保點選不同餐點時自動重算金額 -->
+                        <select class="partner-diet input-field" onchange="updateTotal()">
+                            ${partnerDietHtml}
+                        </select>
                     </div>
                 </div>
-            `;
+            </div>
+        `;
+    }
+
+    container.innerHTML = newHtml;
+    updateTotal(count);
+}
+function updateTotal(manualCount = null) {
+    const count = manualCount !== null ? manualCount : parseInt(document.getElementById('partnerCountSelect').value || 0);
+    
+    // 1. 基礎報名費計算
+    let baseTotal = eventConfig.memberFee + (count * eventConfig.guestFee);
+
+    // 2. 餐會選單衍伸費用計算
+    let extraMenuCost = 0;
+    if (eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0) {
+        // 計算本人的餐點加價
+        const mainDietSelect = document.getElementById('mainDiet');
+        const mainSelected = mainDietSelect.options[mainDietSelect.selectedIndex];
+        if (mainSelected && mainSelected.dataset.price) {
+            extraMenuCost += parseInt(mainSelected.dataset.price);
         }
 
-        container.innerHTML = newHtml;
-        updateTotal(count);
+        // 計算所有攜伴的餐點加價
+        const partnerDietSelects = document.querySelectorAll('.partner-diet');
+        partnerDietSelects.forEach(select => {
+            const partnerSelected = select.options[select.selectedIndex];
+            if (partnerSelected && partnerSelected.dataset.price) {
+                extraMenuCost += parseInt(partnerSelected.dataset.price);
+            }
+        });
     }
-    function updateTotal(manualCount = null) {
-        const count = manualCount !== null ? manualCount : parseInt(document.getElementById('partnerCountSelect').value || 0);
-        document.getElementById('totalAmount').innerText = eventConfig.memberFee + (count * eventConfig.guestFee);
-    }
+
+    // 3. 最終總金額
+    const finalAmount = baseTotal + extraMenuCost;
+    document.getElementById('totalAmount').innerText = finalAmount;
+}
 
     function changeSeats(delta) {
         const input = document.getElementById('mainSeats');

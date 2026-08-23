@@ -308,17 +308,16 @@
                 console.error("解析餐會菜單失敗", e);
             }
 
-            eventConfig = {
-                title: target.title || target["活動標題"] || target["標題"] || title,
-                category: target.category || target["活動類別"] || target["類別"] || "",
-                // 💡 在餐會模式下，memberFee 欄位直接被當作「會員補助金額」使用
-                memberFee: parseInt(target.memberFee !== undefined ? target.memberFee : (target["會員報名費"] || 0)) || 0,
-                guestFee: parseInt(target.guestFee !== undefined ? target.guestFee : (target["非會員報名費"] || 0)) || 0,
-                needId: isTrue(target.needId !== undefined ? target.needId : (target["需要身分證"] || target["(需要身分證)"])),
-                isTourBus: isTrue(target.isTourBus !== undefined ? target.isTourBus : (target["是遊覽車行"] || target["遊覽車"])),
-                menuPhotoUrl: target.menuPhotoUrl || target.menu_photo || target["菜單照片連結"] || target.poster_url || target["海報連結"] || "", 
-                banquetMenu: parsedMenu 
-            };
+eventConfig = {
+    title: target.title || target["活動標題"] || target["標題"] || title,
+    category: target.category || target["活動類別"] || target["類別"] || "",
+    transportMode: target.transportMode || target["交通方式"] || "包車", // 🌟 抓取交通模式
+    memberFee: parseInt(target.memberFee !== undefined ? target.memberFee : (target["會員報名費"] || 0)) || 0,
+    guestFee: parseInt(target.guestFee !== undefined ? target.guestFee : (target["非會員報名費"] || 0)) || 0,
+    needId: isTrue(target.needId !== undefined ? target.needId : (target["需要身分證"] || target["(需要身分證)"])),
+    menuPhotoUrl: target.menuPhotoUrl || target.menu_photo || target["菜單照片連結"] || "", 
+    banquetMenu: parsedMenu 
+};
 
             document.getElementById('displayEventTitle').innerText = eventConfig.title;
             
@@ -403,39 +402,49 @@
             if (menuPhotoSection) menuPhotoSection.classList.add('hidden');
             dietSelect.removeEventListener('change', updateTotal);
 
-            const transportSelect = document.getElementById('mainTransport');
-            if(eventConfig.isTourBus) {
-                transportSelect.innerHTML = `<option value="搭乘遊覽車">統一安排</option>`;
-                transportSelect.disabled = true;
-            } else {
-                transportSelect.innerHTML = `
-                    <option value="自駕">自行開車</option>
-                    <option value="共乘">共乘不開車</option>
-                    <option value="個人自理">個人自理</option>
-                `;
-                transportSelect.value = "自駕";
-            }
-            checkTransportLogic();
+const transportSelect = document.getElementById('mainTransport');
+const transportMode = eventConfig.transportMode || "包車";
+
+if (transportMode === '包車') {
+    // 方案 A：包車活動 -> 鎖定為統一安排
+    transportSelect.innerHTML = `<option value="包車">統一安排 (包車)</option>`;
+    transportSelect.disabled = true;
+} else if (transportMode === '自駕') {
+    // 方案 B：純自駕活動 -> 鎖定為自駕，強制填寫車牌與可載人數
+    transportSelect.innerHTML = `<option value="自駕">自行開車 (自駕)</option>`;
+    transportSelect.disabled = true;
+} else {
+    // 方案 C：自理活動 -> 開放會員自由選擇（自駕、共乘、個人自理）
+    transportSelect.innerHTML = `
+        <option value="自駕">自行開車</option>
+        <option value="共乘">共乘不開車</option>
+        <option value="個人自理">個人自理</option>
+    `;
+    transportSelect.disabled = false;
+    transportSelect.value = "個人自理";
+}
+checkTransportLogic();
         }
     }
         
-    function checkTransportLogic() {
-        const val = document.getElementById('mainTransport').value;
-        const isSelfDrive = (!eventConfig.isTourBus && val === '自駕');
-        
-        document.getElementById('seatsWrapper').classList.toggle('hidden', !isSelfDrive);
-        
-        const carWrapper = document.getElementById('carNumberWrapper');
-        const carInput = document.getElementById('mainCarNumber');
-        
-        if (isSelfDrive) {
-            carWrapper.classList.remove('hidden');
-        } else {
-            carWrapper.classList.add('hidden');
-            carInput.value = ''; 
-            carInput.classList.remove('input-error');
-        }
+function checkTransportLogic() {
+    const val = document.getElementById('mainTransport').value;
+    // 只要是活動本身設定為「自駕」，或是會員在「自理」模式下選擇了「自駕」，就要填寫車牌與可載人數
+    const isSelfDrive = (eventConfig.transportMode === '自駕' || val === '自駕');
+
+    document.getElementById('seatsWrapper').classList.toggle('hidden', !isSelfDrive);
+
+    const carWrapper = document.getElementById('carNumberWrapper');
+    const carInput = document.getElementById('mainCarNumber');
+
+    if (isSelfDrive) {
+        carWrapper.classList.remove('hidden');
+    } else {
+        carWrapper.classList.add('hidden');
+        carInput.value = ''; 
+        carInput.classList.remove('input-error');
     }
+}
 
     function adjustPartnerFields() {
         const count = parseInt(document.getElementById('partnerCountSelect').value);

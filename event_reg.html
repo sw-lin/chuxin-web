@@ -177,6 +177,30 @@
                         <input type="number" id="ev_gFee" class="w-full bg-blue-50 rounded-2xl px-4 py-4 text-xs font-bold border-none">
                     </div>
                 </div>
+                <!-- 隱藏的開關控制 -->
+<div class="mb-4">
+    <label class="flex items-center gap-2 text-emerald-900 font-bold">
+        <input type="checkbox" id="isBanquetToggle" onchange="toggleBanquetMenu()" class="w-5 h-5 accent-emerald-600">
+        🎈 啟用餐會模式 (複雜選單與照片)
+    </label>
+</div>
+
+<!-- 餐會專屬設定區塊 (預設隱藏) -->
+<div id="banquetSection" class="hidden p-4 bg-emerald-50 rounded-xl border border-emerald-100 space-y-3 mb-4">
+    <div>
+        <label class="text-sm font-bold text-emerald-800">菜單照片連結</label>
+        <input type="url" id="ev_menu_photo" class="input-field w-full" placeholder="貼上照片 URL (方便會員看圖選擇)">
+    </div>
+    
+    <div id="menuBuilder">
+        <label class="text-sm font-bold text-emerald-800 flex justify-between">
+            <span>菜單選項與價格 (最多12種)</span>
+            <button type="button" onclick="addMenuItem()" class="text-xs bg-emerald-600 text-white px-2 py-1 rounded">＋ 新增菜色</button>
+        </label>
+        <!-- 動態產生的輸入框會放在這裡 -->
+        <div id="menuItemsContainer" class="space-y-2 mt-2"></div>
+    </div>
+</div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[10px] font-bold text-emerald-600 ml-2">開始展示</label>

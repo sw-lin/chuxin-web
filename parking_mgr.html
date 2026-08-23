@@ -13,16 +13,11 @@
     </style>
 </head>
 <body class="pb-20">
-    <!-- 頂部導航 -->
     <nav class="sticky top-0 z-40 bg-[#064e3b] text-white px-4 h-16 shadow-lg flex items-center justify-between">
         <button onclick="location.href='staff_menu.html'" class="text-sm font-bold flex items-center hover:text-emerald-300 transition-colors z-10">
             <i class="fas fa-chevron-left mr-1"></i> 返回
         </button>
-        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">
-            停車劵管理中心
-        </h1>
-        
-        <!-- 🌟 新增：開啟編輯開關按鈕 -->
+        <h1 class="text-lg font-black tracking-widest absolute inset-x-0 text-center pointer-events-none">停車劵管理中心</h1>
         <button id="editToggleBtn" onclick="toggleEditMode()" class="bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 z-10">開啟編輯</button>
     </nav>
 
@@ -32,7 +27,7 @@
             <h2 class="text-blue-900 font-black mb-4 flex items-center gap-2 text-lg">
                 <i class="fas fa-cog text-blue-600"></i> 登記參數設定
             </h2>
-            <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">總發放張數</label>
                     <input type="number" id="cfg_total" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center disabled:opacity-50 disabled:cursor-not-allowed" placeholder="130">
@@ -42,11 +37,14 @@
                     <input type="number" id="cfg_price" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-black text-center disabled:opacity-50 disabled:cursor-not-allowed" placeholder="30">
                 </div>
                 <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">登記開始日</label>
+                    <input type="date" id="cfg_start" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                </div>
+                <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1">登記截止日</label>
                     <input type="date" id="cfg_deadline" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none focus:border-blue-500 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 </div>
             </div>
-            <!-- 🌟 加入 ID 供 JS 控制隱藏/顯示 -->
             <button id="saveConfigBtn" onclick="saveConfigAndAllocations()" class="w-full py-3 bg-blue-800 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-95 transition-all hidden">
                 儲存參數 (會員端即刻生效)
             </button>
@@ -58,12 +56,16 @@
                 <h2 class="text-emerald-900 font-black flex items-center gap-2 text-lg">
                     <i class="fas fa-calculator text-emerald-600"></i> 分配結算名單
                 </h2>
-                <button onclick="exportToCSV()" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-all">
-                    <i class="fas fa-download mr-1"></i>匯出 Excel 表單
-                </button>
+                <div class="flex gap-2">
+                    <button id="clearAllBtn" onclick="clearAllParkingData()" class="bg-red-100 text-red-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-200 transition-all hidden">
+                        <i class="fas fa-trash-alt mr-1"></i>一鍵刪除名冊
+                    </button>
+                    <button onclick="exportToCSV()" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-all">
+                        <i class="fas fa-download mr-1"></i>匯出 Excel
+                    </button>
+                </div>
             </div>
 
-            <!-- 數據儀表板 -->
             <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex justify-between items-center mb-4">
                 <div>
                     <span class="text-emerald-700 font-bold text-xs block mb-1">需求人數：<span id="stat_applicants" class="text-sm font-black">0</span> 人</span>
@@ -75,7 +77,6 @@
                 </div>
             </div>
 
-            <!-- 名單表格 -->
             <div class="overflow-x-auto rounded-xl border border-gray-200">
                 <table class="w-full text-left text-sm whitespace-nowrap bg-white">
                     <thead class="bg-gray-100 text-gray-600 text-xs">
@@ -86,86 +87,57 @@
                             <th class="p-3 font-black text-center">獲得張數</th>
                             <th class="p-3 font-black text-right">應繳費</th>
                             <th class="p-3 font-black text-center">繳費登記</th>
+                            <th class="p-3 font-black text-center" id="actionHeader">操作</th>
                         </tr>
                     </thead>
                     <tbody id="parkingTableBody" class="divide-y divide-gray-100">
-                        <tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">資料載入中...</td></tr>
+                        <tr><td colspan="7" class="text-center p-6 text-gray-400 font-bold">資料載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
             
-            <!-- 🌟 加入 ID 供 JS 控制隱藏/顯示 -->
             <button id="saveAllocationBtn" onclick="saveConfigAndAllocations()" class="w-full mt-4 py-3 bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:bg-emerald-600 active:scale-95 transition-all hidden">
                 儲存分配與繳費狀態
             </button>
         </section>
     </main>
 
-    <!-- 載入中遮罩 -->
     <div id="loadingOverlay">
         <div class="flex flex-col items-center gap-4">
             <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-emerald-900 font-bold">資料與名單同步中...</p>
+            <p class="text-emerald-900 font-bold">資料同步中...</p>
         </div>
     </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
 
-        // ==========================================
-        // 🔐 權限模組與狀態 (仿照行事曆架構)
-        // ==========================================
         const auth = (function() {
             try {
                 const info = JSON.parse(sessionStorage.getItem('userInfo')) || {};
                 const loneKey = sessionStorage.getItem('staffKey'); 
-                return {
-                    key: info.staffKey || loneKey || "",
-                    permissions: info.userPermissions || [],
-                    isValid: !!(info.staffKey || loneKey)
-                };
-            } catch (e) {
-                return { key: "", permissions: [], isValid: false };
-            }
+                return { key: info.staffKey || loneKey || "", permissions: info.userPermissions || [], isValid: !!(info.staffKey || loneKey) };
+            } catch (e) { return { key: "", permissions: [], isValid: false }; }
         })();
 
         var STAFF_KEY = auth.key;
         const userPermissions = auth.permissions;
         let isEditMode = false;
-
-        // 全域變數
-        let baseCount = 0;
-        let remainderCount = 0;
-        let pricePerTicket = 30;
-        let applicants = [];
+        let baseCount = 0, remainderCount = 0, pricePerTicket = 30, applicants = [];
 
         window.onload = function() {
             if (!STAFF_KEY) { location.href="index.html"; return; }
             
-            // 🌟 權限檢查：是否具備 edit_parking 或 all 權限
             const editToggleBtn = document.getElementById('editToggleBtn');
             if (!userPermissions.includes("all") && !userPermissions.includes("edit_parking")) {
-                if (editToggleBtn) {
-                    editToggleBtn.style.visibility = 'hidden'; 
-                }
+                if (editToggleBtn) editToggleBtn.style.visibility = 'hidden'; 
             }
-
-            console.log("🚀 頁面載入完成，開始呼叫 loadParkingData()");
-            
-            // 初始化凍結狀態
             setInputsState(false);
-            
             loadParkingData();
         };
 
-        // ==========================================
-        // ✏️ 編輯模式控制
-        // ==========================================
         function toggleEditMode() {
-            if (!userPermissions.includes("all") && !userPermissions.includes("edit_parking")) {
-                alert("您沒有權限進行編輯作業");
-                return;
-            }        
+            if (!userPermissions.includes("all") && !userPermissions.includes("edit_parking")) return alert("權限不足");
             
             isEditMode = !isEditMode;
             const btn = document.getElementById('editToggleBtn');
@@ -179,233 +151,195 @@
             }
             
             setInputsState(isEditMode);
-            renderTable(); // 重新渲染表格，解鎖/鎖定 +1, -1 和 Checkbox
+            renderTable();
         }
 
-        // 控制參數輸入框與儲存按鈕的啟用/禁用
         function setInputsState(editable) {
             document.getElementById('cfg_total').disabled = !editable;
             document.getElementById('cfg_price').disabled = !editable;
+            document.getElementById('cfg_start').disabled = !editable;
             document.getElementById('cfg_deadline').disabled = !editable;
             
-            const btnConfig = document.getElementById('saveConfigBtn');
-            const btnAlloc = document.getElementById('saveAllocationBtn');
-            if (btnConfig) btnConfig.style.display = editable ? 'block' : 'none';
-            if (btnAlloc) btnAlloc.style.display = editable ? 'block' : 'none';
+            document.getElementById('saveConfigBtn').style.display = editable ? 'block' : 'none';
+            document.getElementById('saveAllocationBtn').style.display = editable ? 'block' : 'none';
+            document.getElementById('clearAllBtn').style.display = editable ? 'block' : 'none';
+            
+            // 隱藏/顯示「操作」標題
+            document.getElementById('actionHeader').style.display = editable ? 'table-cell' : 'none';
         }
 
-        // 從後端 GAS 取得設定與登記清單 (含埋點除錯)
         async function loadParkingData() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const payload = { type: "get_parking_data" };
-                
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-                
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: "get_parking_data" }) });
                 const data = await res.json();
+                if (data.error) throw new Error(data.error);
 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                // 檢查 config 物件
                 const configData = data.config || {};
                 const listData = data.list || data.applicants || [];
 
-                // 1. 填入參數
                 if (configData) {
                     document.getElementById('cfg_total').value = configData.total || 140;
                     document.getElementById('cfg_price').value = configData.price || 40;
                     
-                    // 處理日期填入
-                    if (configData.deadline) {
-                        let rawDateStr = String(configData.deadline).trim();
-                        if (rawDateStr.includes('T')) {
-                            rawDateStr = rawDateStr.split('T')[0];
+                    const setDateStr = (raw, id) => {
+                        if (raw) {
+                            let str = String(raw).trim();
+                            if (str.includes('T')) str = str.split('T')[0];
+                            document.getElementById(id).value = str.replace(/\//g, '-');
+                        } else {
+                            document.getElementById(id).value = "";
                         }
-                        rawDateStr = rawDateStr.replace(/\//g, '-');
-                        document.getElementById('cfg_deadline').value = rawDateStr;
-                    } else {
-                        document.getElementById('cfg_deadline').value = "";
-                    }
-
+                    };
+                    setDateStr(configData.startDate, 'cfg_start');
+                    setDateStr(configData.deadline, 'cfg_deadline');
                     pricePerTicket = Number(configData.price) || 40;
                 }
 
-                // 2. 轉換登記名單結構
-                if (Array.isArray(listData)) {
-                    applicants = listData.map(item => ({
-                        phone: item.phone || "",
-                        name: item.name || "未具名",
-                        bonus: Number(item.bonus) || 0,
-                        isPaid: item.isPaid === true || item.isPaid === "true" || item.isPaid === "已繳"
-                    }));
-                } else {
-                    applicants = [];
-                }
+                applicants = Array.isArray(listData) ? listData.map(item => ({
+                    phone: item.phone || "", name: item.name || "未具名",
+                    bonus: Number(item.bonus) || 0, isPaid: String(item.isPaid).includes("true") || item.isPaid === true || item.isPaid === "已繳"
+                })) : [];
 
                 calculateTickets();
             } catch (err) {
-                console.error("❌ 連線或解析錯誤:", err);
-                alert("伺服器連線異常或請求無效，請檢查 F12 主控台。");
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+                console.error(err); alert("資料載入失敗");
+            } finally { document.getElementById('loadingOverlay').style.display = 'none'; }
         }
 
-        // 核心計算邏輯
         function calculateTickets() {
             const total = parseInt(document.getElementById('cfg_total').value) || 0;
             pricePerTicket = parseInt(document.getElementById('cfg_price').value) || 0;
             const count = applicants.length;
 
             if (count === 0) {
-                baseCount = 0;
-                remainderCount = total;
+                baseCount = 0; remainderCount = total;
             } else {
                 baseCount = Math.floor(total / count);
-                const usedBonus = applicants.reduce((sum, p) => sum + (p.bonus || 0), 0);
-                remainderCount = (total % count) - usedBonus;
+                remainderCount = (total % count) - applicants.reduce((sum, p) => sum + (p.bonus || 0), 0);
             }
-
             document.getElementById('stat_applicants').innerText = count;
             document.getElementById('stat_base').innerText = baseCount;
             document.getElementById('stat_remainder').innerText = remainderCount;
-
             renderTable();
         }
 
         function renderTable() {
             const tbody = document.getElementById('parkingTableBody');
             if (applicants.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">目前尚無會員登記紀錄</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-gray-400 font-bold">目前尚無會員登記紀錄</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = applicants.map((p, index) => {
                 const totalTickets = baseCount + p.bonus;
-                const fee = totalTickets * pricePerTicket;
-                
-                // 🌟 加入 isEditMode 防呆檢查：若不是編輯模式，按鈕與打勾都反灰禁用
                 const disableMinus = p.bonus <= 0 || !isEditMode;
                 const disablePlus = remainderCount <= 0 || !isEditMode;
-                const disableCheck = !isEditMode;
                 
                 return `
-                    <tr class="hover:bg-gray-50 transition-colors">
+                    <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
                         <td class="p-3 font-bold text-emerald-900">${p.name}</td>
                         <td class="p-3 text-center text-gray-500">${baseCount}</td>
                         <td class="p-3 text-center">
                             <div class="flex items-center justify-center">
-                                <button onclick="updateBonus(${index}, -1)" class="bg-red-100 text-red-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-red-200 active:scale-95 ${disableMinus ? 'opacity-50 cursor-not-allowed' : ''}" ${disableMinus ? 'disabled' : ''}>-1</button>
+                                <button onclick="updateBonus(${index}, -1)" class="bg-red-100 text-red-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-red-200 ${disableMinus ? 'opacity-50 cursor-not-allowed' : ''}" ${disableMinus ? 'disabled' : ''}>-1</button>
                                 <span class="mx-2 font-black text-blue-900 w-4 inline-block text-center">${p.bonus}</span>
-                                <button onclick="updateBonus(${index}, 1)" class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 ${disablePlus ? 'opacity-50 cursor-not-allowed' : ''}" ${disablePlus ? 'disabled' : ''}>+1</button>
+                                <button onclick="updateBonus(${index}, 1)" class="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-blue-200 ${disablePlus ? 'opacity-50 cursor-not-allowed' : ''}" ${disablePlus ? 'disabled' : ''}>+1</button>
                             </div>
                         </td>
                         <td class="p-3 text-center font-black text-emerald-700 text-lg">${totalTickets}</td>
-                        <td class="p-3 text-right font-mono font-bold text-gray-700">$${fee}</td>
+                        <td class="p-3 text-right font-mono font-bold text-gray-700">$${totalTickets * pricePerTicket}</td>
                         <td class="p-3 text-center">
-                            <input type="checkbox" ${p.isPaid ? 'checked' : ''} onchange="togglePaid(${index}, this)" class="w-5 h-5 accent-emerald-600 cursor-pointer ${disableCheck ? 'opacity-50 cursor-not-allowed' : ''}" ${disableCheck ? 'disabled' : ''}>
+                            <input type="checkbox" ${p.isPaid ? 'checked' : ''} onchange="togglePaid(${index}, this)" class="w-5 h-5 accent-emerald-600 cursor-pointer ${!isEditMode ? 'opacity-50 cursor-not-allowed' : ''}" ${!isEditMode ? 'disabled' : ''}>
+                        </td>
+                        <td class="p-3 text-center" style="display: ${isEditMode ? 'table-cell' : 'none'}">
+                            <button onclick="deleteSingleRecord('${p.phone}', '${p.name}')" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-100 transition-colors">刪除</button>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        // 合併為雙向增減邏輯 (支援 +1 與 -1)
         function updateBonus(index, change) {
-            if (!isEditMode) return; // 雙重保險
-            
-            if (change === 1) {
-                if (remainderCount > 0) {
-                    applicants[index].bonus += 1;
-                    calculateTickets(); 
-                } else {
-                    alert("餘數已分配完畢！");
-                }
-            } else if (change === -1) {
-                if (applicants[index].bonus > 0) {
-                    applicants[index].bonus -= 1;
-                    calculateTickets(); 
-                }
-            }
+            if (!isEditMode) return;
+            if (change === 1 && remainderCount > 0) applicants[index].bonus += 1;
+            else if (change === -1 && applicants[index].bonus > 0) applicants[index].bonus -= 1;
+            calculateTickets();
         }
 
         function togglePaid(index, checkbox) {
-            if (!isEditMode) {
-                checkbox.checked = !checkbox.checked; // 如果強行點擊，反轉回來
-                return;
-            }
+            if (!isEditMode) return checkbox.checked = !checkbox.checked;
             applicants[index].isPaid = checkbox.checked;
+        }
+
+        // ==========================================
+        // 🌟 單一刪除 & 一鍵清空
+        // ==========================================
+        async function deleteSingleRecord(phone, name) {
+            if (!confirm(`確定要將「${name}」從分配名冊中刪除嗎？`)) return;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: "delete_parking_record", key: STAFF_KEY, phone: phone }) });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    alert(`✅ ${name} 已成功刪除`);
+                    loadParkingData();
+                } else alert("❌ 刪除失敗：" + result.message);
+            } catch (err) { alert("連線異常"); }
+            finally { document.getElementById('loadingOverlay').style.display = 'none'; }
+        }
+
+        async function clearAllParkingData() {
+            if (!confirm("⚠️ 警告：這將清空所有登記資料！\n確定要清空嗎？")) return;
+            if (!confirm("🚨 再次確認：清空後無法復原，真的要刪除整個名冊嗎？")) return;
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: "clear_parking_list", key: STAFF_KEY }) });
+                const result = await res.json();
+                if (result.result === "SUCCESS") {
+                    alert("✅ 名冊已全數清空");
+                    loadParkingData();
+                } else alert("❌ 清空失敗：" + result.message);
+            } catch (err) { alert("連線異常"); }
+            finally { document.getElementById('loadingOverlay').style.display = 'none'; }
         }
 
         async function saveConfigAndAllocations() {
             if (!isEditMode) return;
-            
-            const staffKey = sessionStorage.getItem('staffKey') || localStorage.getItem('築心管理授權') || "";
-            
             const payload = {
-                type: "save_parking_allocation",
-                key: staffKey,
+                type: "save_parking_allocation", key: STAFF_KEY,
                 config: {
                     total: parseInt(document.getElementById('cfg_total').value) || 140,
                     price: parseInt(document.getElementById('cfg_price').value) || 40,
+                    startDate: document.getElementById('cfg_start').value || "",
                     deadline: document.getElementById('cfg_deadline').value || ""
                 },
-                updates: applicants.map(p => ({
-                    phone: p.phone,
-                    bonus: p.bonus,
-                    isPaid: p.isPaid
-                }))
+                updates: applicants.map(p => ({ phone: p.phone, bonus: p.bonus, isPaid: p.isPaid }))
             };
-
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
-
                 if (result.result === "SUCCESS") {
-                    alert("✅ 停車券參數與分配名單已成功儲存！");
-                    
-                    // 儲存完自動關閉編輯模式，確保安全
+                    alert("✅ 儲存成功！");
                     toggleEditMode();
-                    
                     loadParkingData();
-                } else {
-                    alert("❌ 儲存失敗：" + (result.message || "權限不足或系統錯誤"));
-                }
-            } catch (err) {
-                console.error("儲存錯誤:", err);
-                alert("伺服器連線異常，請稍後再試。");
-            } finally {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+                } else alert("❌ 儲存失敗：" + result.message);
+            } catch (err) { alert("連線異常"); }
+            finally { document.getElementById('loadingOverlay').style.display = 'none'; }
         }
 
         function exportToCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-            csvContent += "姓名,基本張數,有功獎勵,總張數,應繳費用,繳費狀態\n";
-            
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF姓名,基本張數,有功獎勵,總張數,應繳費用,繳費狀態\n";
             applicants.forEach(p => {
-                const totalTickets = baseCount + p.bonus;
-                const fee = totalTickets * pricePerTicket;
                 const status = p.isPaid ? "已繳費" : "未繳";
-                csvContent += `${p.name},${baseCount},${p.bonus},${totalTickets},${fee},${status}\n`;
+                csvContent += `${p.name},${baseCount},${p.bonus},${baseCount + p.bonus},${(baseCount + p.bonus) * pricePerTicket},${status}\n`;
             });
-
-            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "停車卷分配名冊.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", "停車劵分配名冊.csv");
+            document.body.appendChild(link); link.click(); link.remove();
         }
     </script>
 </body>

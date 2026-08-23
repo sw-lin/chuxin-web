@@ -693,7 +693,7 @@ function openEditModal() {
     document.getElementById('ev_banquet_subsidy').value = ev.memberFee || ev["會員報名費"] || 0;
     
     // --- 選項欄位 ---
-    const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim);
+    const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim;
 
     document.getElementById('ev_needId').value = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
     document.getElementById('ev_transportMode').value = ev.transportMode || ev["交通方式"] || "包車";

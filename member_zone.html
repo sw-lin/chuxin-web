@@ -458,7 +458,7 @@ async function syncData() {
                 renderCalendarActivity([]);
             }
 
-            // --- D. 解析 B6 宣傳活動 ---
+// --- D. 解析 B6 宣傳活動 ---
 const promoRaw = data.promo || data.registrations_promo || "";
 
 if (promoRaw && !promoRaw.includes("目前尚無")) {
@@ -471,20 +471,28 @@ if (promoRaw && !promoRaw.includes("目前尚無")) {
 
     window.currentActivePromos = itemStrings.map(itemStr => {
         const pMatch = itemStr.match(/\[POSTER\](.*?)\[\/POSTER\]/);
-        const titleMatch = itemStr.match(/【(?:近期)?報名活動\s*[:：]?\s*(.*?)】/) || itemStr.match(/【(.*?)】/);
+        const titleMatch = itemStr.match(/【(?:近期)?報名活動\s*[:：]\s*(.*?)】/) || itemStr.match(/【(.*?)】/);
         
-        // 🌟 核心修正：優先抓取「截止日期：」，若沒有則相容原有的「日期：」
-        const dlMatch = itemStr.match(/(?:截止日期|下架日期|截止)\s*[:：]\s*(\d{4}\/\d{2}\/\d{2})/);
-        const dMatch = itemStr.match(/日期\s*[:：]\s*(\d{4}\/\d{2}\/\d{2})/);
+        // 🌟 1. 抓取截止日專供右上角紅字顯示 (優先讀取隱形標籤)
+        const dlMatch = itemStr.match(/\[DEADLINE\](.*?)\[\/DEADLINE\]/) || 
+                        itemStr.match(/(?:截止日期|下架日期|截止)\s*[:：]\s*(\d{4}\/\d{2}\/\d{2})/);
+        
+        // 🌟 2. 淨化卡片內文 (濾掉內文截止日、濾掉交通提示、替換活動日期字樣)
+        let cleanText = itemStr
+            .replace(/\[DEADLINE\].*?\[\/DEADLINE\]/g, "")
+            .replace(/(?:截止日期|下架日期)\s*[:：].*?(\n|$)/g, "") // 移除內文中的截止日期行
+            .replace(/🚗\s*交通提示：.*?(\n|$)/g, "")               // 移除交通提示行
+            .replace(/\[ITEM\]|\[\/ITEM\]|\[POSTER\].*?\[\/POSTER\]/g, "")
+            .replace(/^日期\s*[:：]/gm, "活動日期：")                // 將「日期：」轉為「活動日期：」
+            .trim();
 
         const extractedTitle = titleMatch ? titleMatch[1].trim() : "點擊查看詳情";
-        const cleanText = itemStr.replace(/\[ITEM\]|\[\/ITEM\]|\[POSTER\].*?\[\/POSTER\]/g, "").trim();
 
         return {
             title: extractedTitle,
             fullText: cleanText,
             poster: pMatch ? pMatch[1].trim() : "",
-            deadline: dlMatch ? dlMatch[1] : (dMatch ? dMatch[1] : "額滿為止") // 🌟 優先顯示下架日
+            deadline: dlMatch ? dlMatch[1].trim() : "額滿為止"
         };
     });
 } else {

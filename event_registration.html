@@ -275,23 +275,18 @@ window.onload = async function() {
     let target = null;
     let allEvents = JSON.parse(localStorage.getItem('allEvents')) || [];
     
-    // 1. 先從 localStorage 尋找 (支援新舊各種標題 Key 比對)
     target = allEvents.find(e => {
         const tName = String(e.title || e["活動標題"] || e["標題"] || "").trim();
         return tName === String(title).trim();
     });
 
-    // 2. 如果快取找不到，或快取資料不完整，強制向伺服器重新抓取最新資料
     if (!target || target.memberFee === undefined) {
         document.getElementById('displayEventTitle').innerText = "同步最新資料中...";
         try {
             const response = await fetch(`${GAS_URL}?type=get_events_page&t=${Date.now()}`);
             const remoteData = await response.json();
             if (Array.isArray(remoteData)) {
-                // 更新瀏覽器快取
                 localStorage.setItem('allEvents', JSON.stringify(remoteData));
-                
-                // 再次從遠端資料中尋找
                 target = remoteData.find(e => {
                     const tName = String(e.title || e["活動標題"] || e["標題"] || "").trim();
                     return tName === String(title).trim();
@@ -303,7 +298,6 @@ window.onload = async function() {
     }
 
     if (target) {
-        // 🌟 解析餐會菜單 JSON (相容各種可能的 Key 名稱)
         let parsedMenu = [];
         try {
             const rawMenu = target.banquetMenu || target.menu_items || target["餐會菜單設定 (JSON)"];
@@ -314,8 +308,8 @@ window.onload = async function() {
             console.error("解析餐會菜單失敗", e);
         }
 
-        // 🌟 採用多重備份 Key (Fallback)，徹底解決讀不到欄位問題
-        window.eventConfig = {
+        // 🌟 核心修正：拔除 window. 前綴，直接覆寫頂部的區域變數！
+        eventConfig = {
             title: target.title || target["活動標題"] || target["標題"] || title,
             memberFee: parseInt(target.memberFee !== undefined ? target.memberFee : (target["會員報名費"] || 0)) || 0,
             guestFee: parseInt(target.guestFee !== undefined ? target.guestFee : (target["非會員報名費"] || 0)) || 0,
@@ -458,9 +452,10 @@ function adjustPartnerFields() {
 
     // 🌟 3. 動態產生訪客餐食選項（自動判斷是否為複雜餐會選單）
     let partnerDietHtml = "";
-    if (window.eventConfig && window.eventConfig.banquetMenu && window.eventConfig.banquetMenu.length > 0) {
+    // 👇 核心修正：將 window.eventConfig 改為 eventConfig
+    if (eventConfig && eventConfig.banquetMenu && eventConfig.banquetMenu.length > 0) {
         partnerDietHtml = '<option value="">-- 請選擇餐點 --</option>';
-        window.eventConfig.banquetMenu.forEach(item => {
+        eventConfig.banquetMenu.forEach(item => {
             partnerDietHtml += `<option value="${item.name}" data-price="${item.price}">${item.name} (+${item.price}元)</option>`;
         });
     } else {

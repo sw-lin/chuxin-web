@@ -661,87 +661,99 @@ function renderRegList(list) {
         }
 
 /**
- * 修改活動彈窗 - 統一「是/否」對接版本
+ * 修改活動彈窗 - 修正版 (已排除型態與報錯問題)
  */
 function openEditModal() {
-    const selector = document.getElementById('eventSelector');
-    const title = selector.value;
-    
-    // 尋找對應的活動資料
-    const ev = allData.events.find(e => (e["標題"] || e.title || e["活動標題"]) === title);
-    
-    if (!ev) {
-        showToast("找不到活動配置，請重新選取");
-        return;
-    }
-
-    // --- 鎖定標題 ---
-    const titleInput = document.getElementById('ev_title');
-    const oldTitleInput = document.getElementById('old_title');
-    
-    const currentTitle = ev["標題"] || ev.title || ev["活動標題"] || "";
-    titleInput.value = currentTitle;
-    oldTitleInput.value = currentTitle;
-
-    titleInput.readOnly = true; 
-    titleInput.classList.add('bg-gray-100', 'cursor-not-allowed');
-    titleInput.title = "若需更名，請刪除活動後重新建立";
-
-    document.getElementById('modalTitle').innerText = "修改活動";
-    
-    // --- 🌟 修正 1：文字欄位 (優先讀取 GAS 轉換後的英文 Key，再 fallback 到中文) ---
-    // 對應 GAS 的 poster_url, description
-    document.getElementById('ev_poster').value = ev.poster_url || ev["海報連結"] || ev["海報連結 (poster_url)"] || "";
-    document.getElementById('ev_desc').value = ev.description || ev.desc || ev["活動簡介"] || ev["活動簡介內容"] || "";
-    
-    // --- 費用欄位 ---
-    document.getElementById('ev_mFee').value = ev.memberFee || ev["會員報名費"] || 0;
-    document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員報名費"] || 0;
-
-    // 確保修改活動時補助金額能正確載入
-    document.getElementById('ev_banquet_subsidy').value = ev.memberFee || ev["會員報名費"] || 0;
-    
-    // --- 選項欄位 ---
-    const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim;
-
-    document.getElementById('ev_needId').value = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
-    document.getElementById('ev_transportMode').value = ev.transportMode || ev["交通方式"] || "包車";
-    
-    // --- 🌟 修正 2：日期欄位 (精準對接 GAS 轉換後的 startDate, deadline, dateText) ---
-    document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["開始展示日 (start_date)"] || ev["開始展示日"]);
-    document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev["下架日期 (display_until)"] || ev["截止下架日"]);
-    document.getElementById('ev_date').value = formatDateForInput(ev.dateText || ev.eventDate || ev["活動日期 (date)"] || ev["活動舉辦日"]);
-
-    // --- 🌟 餐會模式與菜單資料回填 (維持上一版的邏輯) ---
-    const menuPhoto = ev.menu_photo || ev["菜單照片連結"] || "";
-    const menuItemsJson = ev.menu_items || ev["餐會菜單設定 (JSON)"] || "";
-    const isBanquet = !!(menuPhoto || menuItemsJson);
-
-    document.getElementById('isBanquetToggle').checked = isBanquet;
-    toggleBanquetMenu(); // 觸發介面切換
-
-    document.getElementById('ev_menu_photo').value = menuPhoto;
-    const container = document.getElementById('menuItemsContainer');
-    container.innerHTML = ""; // 清空舊品項
-
-    if (menuItemsJson) {
-        try {
-            const items = JSON.parse(menuItemsJson);
-            if (Array.isArray(items)) {
-                items.forEach(item => addMenuItem(item.name, item.price));
-            }
-        } catch (e) {
-            console.error("解析菜單 JSON 失敗", e);
+    try {
+        const selector = document.getElementById('eventSelector');
+        const title = selector ? selector.value : "";
+        
+        if (!title) {
+            showToast("⚠️ 請先選擇要修改的活動");
+            return;
         }
-    }
-    
-    // 如果是餐會模式且沒有半個品項，預設加一欄空的
-    if (!container.children.length && isBanquet) {
-        addMenuItem();
-    }
 
-    document.getElementById('deleteZone').classList.remove('hidden');
-    document.getElementById('eventModal').classList.remove('hidden');
+        // 尋找對應的活動資料 (增加前後空白過濾，確保一定找得到)
+        const ev = allData.events.find(e => {
+            const t = String(e["標題"] || e.title || e["活動標題"] || "").trim();
+            return t === String(title).trim();
+        });
+        
+        if (!ev) {
+            showToast("❌ 找不到活動配置，請重新選取");
+            return;
+        }
+
+        // --- 鎖定標題 ---
+        const titleInput = document.getElementById('ev_title');
+        const oldTitleInput = document.getElementById('old_title');
+        
+        const currentTitle = ev["標題"] || ev.title || ev["活動標題"] || "";
+        titleInput.value = currentTitle;
+        oldTitleInput.value = currentTitle;
+
+        titleInput.readOnly = true; 
+        titleInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        titleInput.title = "若需更名，請刪除活動後重新建立";
+
+        document.getElementById('modalTitle').innerText = "修改活動";
+        
+        // --- 欄位資料回填 ---
+        document.getElementById('ev_poster').value = ev.poster_url || ev["海報連結"] || ev["海報連結 (poster_url)"] || "";
+        document.getElementById('ev_desc').value = ev.description || ev.desc || ev["活動簡介"] || ev["活動簡介內容"] || "";
+        
+        // 費用欄位
+        document.getElementById('ev_mFee').value = ev.memberFee || ev["會員報名費"] || 0;
+        document.getElementById('ev_gFee').value = ev.guestFee || ev["非會員報名費"] || 0;
+        document.getElementById('ev_banquet_subsidy').value = ev.memberFee || ev["會員報名費"] || 0;
+        
+        // 選項欄位 (🌟 修正：補上 .trim() 避免型態錯誤)
+        const rawNeedId = String(ev.needId || ev["需要身分證"] || ev["(需要身分證)"] || "").trim();
+        document.getElementById('ev_needId').value = (rawNeedId === '是' || rawNeedId.toUpperCase() === 'Y' || rawNeedId === 'Ｙ') ? '是' : '否';
+        document.getElementById('ev_transportMode').value = ev.transportMode || ev["交通方式"] || "包車";
+        
+        // 日期欄位
+        document.getElementById('ev_start').value = formatDateForInput(ev.startDate || ev["開始展示日 (start_date)"] || ev["開始展示日"]);
+        document.getElementById('ev_until').value = formatDateForInput(ev.deadline || ev["下架日期 (display_until)"] || ev["截止下架日"]);
+        document.getElementById('ev_date').value = formatDateForInput(ev.dateText || ev.eventDate || ev["活動日期 (date)"] || ev["活動舉辦日"]);
+
+        // 餐會模式與菜單資料回填
+        const menuPhoto = ev.menu_photo || ev["菜單照片連結"] || "";
+        const menuItemsJson = ev.menu_items || ev["餐會菜單設定 (JSON)"] || "";
+        const isBanquet = !!(menuPhoto || menuItemsJson);
+
+        document.getElementById('isBanquetToggle').checked = isBanquet;
+        toggleBanquetMenu(); 
+
+        document.getElementById('ev_menu_photo').value = menuPhoto;
+        const container = document.getElementById('menuItemsContainer');
+        container.innerHTML = ""; 
+
+        if (menuItemsJson) {
+            try {
+                let parsedItems = menuItemsJson;
+                if (typeof menuItemsJson === 'string') {
+                    parsedItems = JSON.parse(menuItemsJson.replace(/”/g, '"').replace(/“/g, '"'));
+                }
+                if (Array.isArray(parsedItems)) {
+                    parsedItems.forEach(item => addMenuItem(item.name, item.price));
+                }
+            } catch (e) {
+                console.error("解析餐會 JSON 失敗", e);
+            }
+        }
+        
+        if (!container.children.length && isBanquet) {
+            addMenuItem();
+        }
+
+        document.getElementById('deleteZone').classList.remove('hidden');
+        document.getElementById('eventModal').classList.remove('hidden');
+
+    } catch (err) {
+        console.error("開啟編輯視窗發生錯誤：", err);
+        showToast("❌ 開啟編輯失敗，請檢查主控台");
+    }
 }
         
 function openAddModal() {

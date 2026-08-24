@@ -1503,7 +1503,7 @@ function updateAdminStats(list) {
 }
 
 /**
- * 🌟 升級版：複製餐點統計與各品項選購人名清單
+ * 🌟 修正版：將分隔線的等號改為減號，避免試算表誤判為公式
  */
 function copyMealStatsToClipboard() {
     if (!allData.currentMealStats || allData.currentTotalMeals === 0) {
@@ -1514,8 +1514,8 @@ function copyMealStatsToClipboard() {
     const eventTitle = document.getElementById('currentEventTitle')?.innerText || "本次活動";
     
     let text = `【築心讀書會 - 餐點分發名冊】\n`;
-    text += `餐會名稱：${eventTitle}\n`;
-    text += `====================\n`;
+    text += `📌 餐會名稱：${eventTitle}\n`;
+    text += `--------------------\n`; // 🌟 改用減號，貼到試算表就不會報錯
     
     for (const [dish, count] of Object.entries(allData.currentMealStats)) {
         const peopleList = allData.currentMealPeopleMap[dish] || [];
@@ -1523,8 +1523,8 @@ function copyMealStatsToClipboard() {
         text += `   ↳ 訂購人：${peopleList.join("、")}\n\n`;
     }
     
-    text += `====================\n`;
-    text += `總計份數：${allData.currentTotalMeals} 份\n`;
+    text += `--------------------\n`; // 🌟 改用減號
+    text += `✅ 總計份數：${allData.currentTotalMeals} 份\n`;
     text += `(產出時間：${new Date().toLocaleString('zh-TW', {hour12: false})})`;
 
     navigator.clipboard.writeText(text)

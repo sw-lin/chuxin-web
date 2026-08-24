@@ -537,7 +537,12 @@ function renderRegList(list) {
         return;
     }
 
-    // 🌟 步驟 1：建立代理人交通地圖 (解決攜伴者顯示未填寫的問題)
+    // 🌟 判定是否為餐會模式
+    const isBanquetCategory = (currentEventConfig?.category && currentEventConfig.category.includes('餐會')) || (currentEventConfig?.["活動類別"] && currentEventConfig["活動類別"].includes('餐會')) || (currentEventConfig?.["類別"] && currentEventConfig["類別"].includes('餐會'));
+    const hasMenu = !!(currentEventConfig?.menu_items || currentEventConfig?.["餐會菜單設定 (JSON)"] || currentEventConfig?.["餐會菜單設定(JSON)"] || currentEventConfig?.["餐會菜單設定"] || currentEventConfig?.menu_photo);
+    const isBanquet = isBanquetCategory || hasMenu;
+
+    // 建立代理人交通地圖
     const transportMap = {};
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
@@ -553,8 +558,9 @@ function renderRegList(list) {
     let html = list.map((r, i) => {
         const name = r["姓名"] || "未提供"; 
         const phone = r["電話"] || "無號碼";
-        const diet = r["餐食"] || "未填";
-        const note = r["備註"] || "無";
+        const diet = r["餐食"] || r["飲食"] || "未填";
+        const note = (r["備註"] || "").trim();
+        const hasNote = note && note !== "無"; // 檢查是否有實質備註
         
         const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
         const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; 
@@ -563,7 +569,6 @@ function renderRegList(list) {
         const rawAgent = String(r["報名代理人"] || "").trim();
         const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
         
-        // 🌟 步驟 2：獲取交通方式，若空白則從地圖繼承
         let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
         if (trans === "" && agentName) {
             trans = transportMap[agentName] || "";
@@ -572,7 +577,7 @@ function renderRegList(list) {
         const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
         const dueAmount = isMember ? mFee : gFee;
 
-        // --- A. 頭像區 ---
+        // 頭像區
         let avatarHTML = "";
         if (agentName) {
             avatarHTML = `<div class="px-2 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-bold text-[10px] min-w-[50px]">${agentName.substring(1,3)}</div>`;
@@ -582,28 +587,50 @@ function renderRegList(list) {
             avatarHTML = `<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-bold text-xs">會員</div>`;
         }
 
-        // --- B. 交通資訊顯示邏輯 ---
-        let transHTML = "";
-        const transText = trans;
-
-        if (transText === "自駕" || transText === "開車") {
-            if (agentName) {
-                transHTML = `<div class="flex items-center gap-1 text-gray-400">🚙 交通：<span>隨車 (自駕)</span></div>`;
-            } else {
-                const capText = capacity > 0 ? ` (可載 ${capacity} 人)` : " (滿座)";
-                transHTML = `<div class="flex items-center gap-1">🚙 交通：<span class="text-blue-600 font-bold">${transText}${capText}</span></div>`;
+        // --- 🌟 根據活動模式決定人名後方顯示的標籤 ---
+        let inlineBadgeHTML = "";
+        if (isBanquet) {
+            // 餐會模式：顯示餐飲訊息
+            if (diet && diet !== "未填") {
+                inlineBadgeHTML += `<span class="text-[11px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-bold">${diet}</span>`;
             }
-        } else if (transText === "共乘" || transText === "搭車") {
-            transHTML = `<div class="flex items-center gap-1">發送：<span class="text-orange-600 font-black">共乘需求</span></div>`;
-        } else if (transText.includes("遊覽車")) {
-            transHTML = `<div class="flex items-center gap-1">🚌 交通：<span class="text-emerald-600 font-bold">搭遊覽車</span></div>`;
-        } else if (transText !== "") {
-            transHTML = `<div class="flex items-center gap-1">📍 交通：<span class="text-gray-600">${transText}</span></div>`;
         } else {
-            transHTML = `<div class="text-gray-300">📍 交通：未填寫</div>`;
+            // 一般活動：顯示交通訊息
+            let transDisplay = trans;
+            if (trans === "自駕" || trans === "開車") {
+                transDisplay = agentName ? "隨車 (自駕)" : `自駕${capacity > 0 ? `(可載${capacity})` : ""}`;
+            } else if (trans === "共乘" || trans === "搭車") {
+                transDisplay = "共乘需求";
+            } else if (trans.includes("遊覽車")) {
+                transDisplay = "搭遊覽車";
+            } else if (!transDisplay) {
+                transDisplay = "交通未填";
+            }
+            inlineBadgeHTML += `<span class="text-[11px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">${transDisplay}</span>`;
         }
 
-        // --- C. 繳費區 ---
+        // 🌟 如果有備註，才加上假的備註按鈕
+        if (hasNote) {
+            inlineBadgeHTML += `<span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm"><i class="fas fa-comment-dots"></i>備註</span>`;
+        }
+
+        // --- 下方彈出區的細節內容 ---
+        let detailExtraHTML = "";
+        if (isBanquet) {
+            let transTextShow = trans || "未填寫";
+            if (trans === "自駕" || trans === "開車") {
+                transTextShow = `自駕 ${capacity > 0 ? `(可載 ${capacity} 人)` : ""}`;
+            }
+            detailExtraHTML = `
+                <div>交通方式：${transTextShow}</div>
+            `;
+        } else {
+            detailExtraHTML = `
+                <div>飲食選擇：${diet}</div>
+            `;
+        }
+
+        // 繳費區
         let paymentActionHTML = isEditMode ? `
             <div class="flex items-center gap-2" onclick="event.stopPropagation()">
                 <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
@@ -621,20 +648,20 @@ function renderRegList(list) {
                 <div class="flex items-center gap-3">
                     ${avatarHTML}
                     <div>
-                        <div class="font-black text-emerald-900 flex items-center gap-2">
-                            ${name}
-                            ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors" onclick="event.stopPropagation(); openRegModal('${phone}', '${name}')" title="修改詳細資料"></i>` : ''}
+                        <div class="font-black text-emerald-900 flex items-center gap-2 flex-wrap">
+                            <span>${name}</span>
+                            ${inlineBadgeHTML}
+                            ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors ml-1" onclick="event.stopPropagation(); openRegModal('${phone}', '${name}')" title="修改詳細資料"></i>` : ''}
                         </div>
-                        <div class="text-[10px] text-gray-400 font-bold">${phone}</div>
+                        <div class="text-[10px] text-gray-400 font-bold mt-0.5">${phone}</div>
                     </div>
                 </div>
                 ${paymentActionHTML}
             </div>
             <div id="regDetail-${i}" class="hidden pt-3 border-t border-dashed border-gray-100 mt-3 space-y-2">
                 <div class="grid grid-cols-2 gap-2 text-[11px] text-emerald-800 font-bold">
-                    <div>飲食：${diet}</div>
-                    ${transHTML}
-                    <div class="col-span-2 text-gray-400 font-normal text-[10px]">備註：${note}</div>
+                    ${detailExtraHTML}
+                    <div class="col-span-2 text-gray-500 font-normal text-[10px]">備註：${note || '無'}</div>
                 </div>
             </div>
         </div>`;

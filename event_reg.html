@@ -1621,9 +1621,9 @@ function copyCarListToClipboard() {
     let textText = `【築心讀書會 - 車牌管制名冊】\n`;
     textText += `活動名稱：${eventTitle}\n`;
     textText += `總計車輛：${allData.carPlateList.length} 台\n`;
-    textText += `=======================\n`;
+    textText += `-----------------------\n`;
     textText += allData.carPlateList.join("\n") + `\n`;
-    textText += `=======================\n`;
+    textText += `-----------------------\n`;
     textText += `產出時間：${new Date().toLocaleString('zh-TW')}`;
 
     // 執行複製到剪貼簿

@@ -76,7 +76,8 @@
                 <i class="fas fa-car-side"></i>
             </button>
             
-            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center">進行中</span>
+            <!-- 🌟 加上 id="eventStatusBadge"，讓程式可以控制它 -->
+            <span id="eventStatusBadge" class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center transition-all">進行中</span>
         </div>
     </div>
 
@@ -1539,6 +1540,35 @@ function updateAdminStats(list) {
     
     const copyCarBtn = document.getElementById('copyCarListBtn');
     if (copyCarBtn) copyCarBtn.style.display = (isSelfDriveMode && carCount > 0) ? 'block' : 'none';
+    
+    // --- 🌟 第五階段：動態更新活動狀態標籤 (進行中 / 已下架) ---
+    const statusBadge = document.getElementById('eventStatusBadge');
+    if (statusBadge) {
+        let isExpired = false;
+        // 抓取目前的下架日期 (相容不同的屬性命名)
+        const deadlineStr = currentEventConfig?.deadline || currentEventConfig?.["下架日期 (display_until)"] || currentEventConfig?.["下架日期"] || currentEventConfig?.["截止下架日"];
+        
+        if (deadlineStr) {
+            const deadlineDate = new Date(deadlineStr);
+            // 💡 貼心設定：將截止時間設定為當天的 23:59:59，確保在下架日「當天」結束前，都還算「進行中」
+            deadlineDate.setHours(23, 59, 59, 999); 
+            
+            // 如果截止時間已經小於現在的時間，代表過期了
+            if (deadlineDate < new Date()) {
+                isExpired = true;
+            }
+        }
+
+        if (isExpired) {
+            statusBadge.innerText = "已下架";
+            // 換成灰色、無陰影的樣式
+            statusBadge.className = "px-3 py-1 bg-gray-100 text-gray-400 text-xs rounded-full font-bold self-center shadow-inner";
+        } else {
+            statusBadge.innerText = "進行中";
+            // 換成原本綠色、有活力的樣式
+            statusBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold self-center shadow-sm";
+        }
+    }
 }
 
 /**

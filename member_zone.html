@@ -103,17 +103,12 @@
 
     <div id="checkInContainer" class="mt-6 p-4 bg-emerald-50 rounded-[2rem] border border-emerald-100 shadow-inner" style="display: none;">
     <p class="text-xs text-center text-emerald-800 font-bold mb-3">📍 今日活動現場簽到專區</p>
-    <div class="flex flex-col sm:flex-row gap-3">
-        <!-- <button onclick="startScanner()" class="flex-1 bg-orange-500 py-4 rounded-[2rem] shadow-md text-white flex items-center justify-center space-x-2 active:scale-95 transition-all hover:bg-orange-600">
-            <i class="fas fa-qrcode text-lg"></i>
-            <span class="text-base font-bold tracking-widest">掃碼報到</span>
-        </button>   -->
-
-        <button onclick="startGpsCheckIn()" class="flex-1 bg-orange-600 py-4 rounded-[2rem] shadow-md text-white flex items-center justify-center space-x-2 active:scale-95 transition-all hover:bg-orange-700">
-            <i class="fas fa-map-marker-alt text-lg"></i>
-            <span class="text-base font-bold tracking-widest">GPS 現場報到</span>
-        </button>
+        
+    <!-- 🌟 修改這裡：加上 id="checkInActionContainer" 並清空內容 -->
+    <div id="checkInActionContainer" class="flex flex-col sm:flex-row gap-3">
+        <!-- 按鈕將由 JS 動態生成 -->
     </div>
+    
     <p class="text-[10px] text-center text-gray-400 mt-2" id="checkInTargetHint">活動報到開放時間：09:00 ~ 13:00</p>
     </div>
 
@@ -596,6 +591,10 @@ function checkTodayCheckInStatus() {
                 hintElem.innerText = `🎯 今日報到項目：【${todayCheckInEventTitle}】(開放至 13:00)`;
             }
             console.log("🎯 [行事曆對齊判定成功] 開放現場報到項目：" + todayCheckInEventTitle);
+            
+            // 🌟 新增：呼叫動態渲染按鈕的函式
+            renderCheckInUI();
+            
         } else {
             container.style.display = 'none';
         }
@@ -604,6 +603,53 @@ function checkTodayCheckInStatus() {
         container.style.display = 'none';
     }
 }
+
+/**
+ * 🌟 新增：根據報到狀態動態渲染按鈕
+ */
+function renderCheckInUI() {
+    const actionContainer = document.getElementById('checkInActionContainer');
+    if (!actionContainer) return;
+
+    // 1. 取得使用者的出席紀錄 (從全域變數或 Session)
+    let logs = [];
+    if (window.currentAttendedData && window.currentAttendedData.length > 0) {
+        logs = window.currentAttendedData;
+    } else if (typeof currentUser !== 'undefined' && currentUser && (currentUser.attendedLogs || currentUser.attendLog)) {
+        logs = currentUser.attendedLogs || currentUser.attendLog || [];
+    } else {
+        const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+        logs = userInfo.attendedLogs || userInfo.attendLog || [];
+    }
+
+    // 2. 檢查今天的活動標題是否已經出現在報到紀錄中
+    const hasCheckedIn = logs.some(log => String(log.title).trim() === todayCheckInEventTitle);
+
+    // 3. 根據狀態渲染不同按鈕
+    if (hasCheckedIn) {
+        // ✅ 已報到：顯示灰色不可點擊按鈕
+        actionContainer.innerHTML = `
+            <button class="w-full bg-gray-300 py-4 rounded-[2rem] text-gray-500 flex justify-center space-x-2 items-center cursor-not-allowed shadow-inner" disabled>
+                <i class="fas fa-check-circle text-lg"></i>
+                <span class="text-base font-black tracking-widest">你已完成報到</span>
+            </button>
+        `;
+    } else {
+        // ⏳ 未報到：顯示原本的報到按鈕 (包含 GPS 與 掃碼)
+        // 備註：若未來要完全移除掃碼，只需把掃碼按鈕的 HTML 刪除即可
+        actionContainer.innerHTML = `
+            <!-- <button onclick="startScanner()" class="flex-1 bg-orange-500 py-4 rounded-[2rem] shadow-md text-white flex items-center justify-center space-x-2 active:scale-95 transition-all hover:bg-orange-600">
+                <i class="fas fa-qrcode text-lg"></i>
+                <span class="text-base font-bold tracking-widest">掃碼報到</span>
+            </button> -->
+
+            <button onclick="startGpsCheckIn()" class="flex-1 bg-orange-600 py-4 rounded-[2rem] shadow-md text-white flex items-center justify-center space-x-2 active:scale-95 transition-all hover:bg-orange-700">
+                <i class="fas fa-map-marker-alt text-lg"></i>
+                <span class="text-base font-bold tracking-widest">GPS 現場報到</span>
+            </button>
+        `;
+    }
+}    
     
 function updateUI(user, totalRequiredFromGAS, events, registrations) {
     console.log("=== updateUI 開始更新 ===");

@@ -78,6 +78,13 @@
                     <button onclick="filterRecords('收入')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="收入">僅收入</button>
                     <button onclick="filterRecords('支出')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="支出">僅支出</button>
                 </div>
+                <!-- 🌟 新增：學期切換器 -->
+                <div class="flex items-center gap-3">
+                   <select id="archiveSelect" onchange="loadRecords()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 outline-none focus:border-emerald-500 cursor-pointer shadow-sm">
+                     <option value="">📂 本期財務紀錄</option>
+                   </select>
+                   <span id="recordCount" class="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">共 0 筆紀錄</span>
+               </div>
                 <span id="recordCount" class="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">共 0 筆紀錄</span>
             </div>
 
@@ -316,6 +323,15 @@
                 </button>
                 <button onclick="closeReportModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold transition">關閉</button>
             </div>
+            <!-- 🌟 新增：危險操作區塊 (僅限幹部) -->
+            <div id="archiveActionContainer" class="px-6 py-4 bg-red-50/50 border-t border-red-100 flex flex-col sm:flex-row justify-between items-center gap-3 hidden">
+             <div class="text-[11px] text-red-600 font-bold leading-tight">
+               <i class="fas fa-exclamation-triangle mr-1 text-red-500"></i> 學期結束時，請先匯出 Excel 備份，再點擊右方按鈕進行結算。
+             </div>
+             <button onclick="triggerArchiveAndClear()" class="w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition text-xs shadow-sm flex items-center justify-center gap-2">
+               <i class="fas fa-box-archive"></i> 執行期末歸檔與清空
+             </button>
+          </div>
         </div>
     </div>
 
@@ -436,6 +452,9 @@
                 const reportBtn = document.getElementById('reportBtnContainer');
                 if (subtabIncome) subtabIncome.classList.remove('hidden');
                 if (reportBtn) reportBtn.classList.remove('hidden');
+                const archiveAction = document.getElementById('archiveActionContainer');
+                if (archiveAction) archiveAction.classList.remove('hidden');
+                loadArchiveList();
             } else {
                 console.log("👤 一般會員登入：開放請款填寫與個人撥款簽收");
             }
@@ -457,10 +476,15 @@
         async function loadRecords(retryCount = 2) {
             showLoading(true, "讀取財務資料中...");
             try {
+                // 🌟 新增：讀取下拉選單的值 (如果是本期，值會是空字串)
+                const selectEl = document.getElementById('archiveSelect');
+                const archiveName = selectEl ? selectEl.value : "";
+
                 const payload = {
-                    type: 'get_finance_records',
-                    key: auth.key
-                };
+                 type: 'get_finance_records',
+                 key: auth.key,
+                 archiveName: archiveName // 把指定的表單名稱送給後端
+               };
 
                 // 設定一個 15 秒的控制器，避免網路無限期卡住
                 const controller = new AbortController();
@@ -1351,6 +1375,67 @@
             }
             showLoading(false);
         }
+// 🌟 載入歷史歸檔選單
+async function loadArchiveList() {
+    try {
+        const payload = { type: 'get_archive_list', key: auth.key };
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        
+        if (result.result === 'SUCCESS') {
+            const select = document.getElementById('archiveSelect');
+            select.innerHTML = '<option value="">📂 本期財務紀錄</option>';
+            
+            result.list.forEach(sheetName => {
+                const displayName = sheetName.replace("Finance_Archive_", "");
+                const opt = document.createElement('option');
+                opt.value = sheetName;
+                opt.innerText = `📁 歷史：${displayName} 學期`;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.warn("無法載入歸檔列表", err);
+    }
+}
+
+// 🌟 執行期末歸檔與清空
+async function triggerArchiveAndClear() {
+    if (auth.role !== '會長' && auth.role !== '財務' && auth.role !== 'Admin') {
+        alert("權限不足！"); return;
+    }
+    
+    const semesterName = prompt("請為這份歷史帳簿命名 (例如：112下)\n⚠️ 注意：此操作會將當前所有紀錄封存，並清空目前的帳簿！");
+    if (!semesterName) return;
+
+    if (!confirm(`確定要將資料歸檔為「${semesterName}」並清空現有紀錄嗎？\n(歸檔後可從上方選單切換查看歷史資料)`)) return;
+
+    showLoading(true, "資料結算歸檔中，請稍候...");
+    try {
+        const payload = {
+            type: 'archive_finance',
+            key: auth.key,
+            semesterName: semesterName
+        };
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await res.json();
+        
+        if (result.result === 'SUCCESS') {
+            showToast("✅ " + result.message);
+            closeReportModal(); // 關閉報表
+            
+            // 重新整理頁面狀態
+            document.getElementById('archiveSelect').value = ""; 
+            await loadArchiveList(); 
+            await loadRecords();
+        } else {
+            showToast("❌ 失敗：" + result.message);
+        }
+    } catch (err) {
+        showToast("❌ 網路異常，無法連線");
+    }
+    showLoading(false);
+}
     </script>
 </body>
 </html>

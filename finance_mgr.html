@@ -78,14 +78,14 @@
                     <button onclick="filterRecords('收入')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="收入">僅收入</button>
                     <button onclick="filterRecords('支出')" class="filter-btn text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200" data-type="支出">僅支出</button>
                 </div>
+                <span id="recordCount" class="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">共 0 筆紀錄</span>
                 <!-- 🌟 新增：學期切換器 -->
                 <div class="flex items-center gap-3">
                    <select id="archiveSelect" onchange="loadRecords()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 outline-none focus:border-emerald-500 cursor-pointer shadow-sm">
                      <option value="">📂 本期財務紀錄</option>
                    </select>
                    <span id="recordCount" class="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">共 0 筆紀錄</span>
-               </div>
-                <span id="recordCount" class="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">共 0 筆紀錄</span>
+               </div>               
             </div>
 
             <!-- 紀錄清單容器 -->

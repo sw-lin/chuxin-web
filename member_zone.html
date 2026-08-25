@@ -561,7 +561,7 @@ function checkTodayCheckInStatus() {
 
     // 2. 判定時間鎖：是否在 09:00 ~ 13:00 之間
     const currentTimeVal = now.getHours() * 60 + now.getMinutes();
-    if (currentTimeVal < (9 * 60) || currentTimeVal > (13 * 60)) {   //  (currentTimeVal < (9 * 60) || currentTimeVal > (13 * 60))
+    if (currentTimeVal < (9 * 60) || currentTimeVal > (13 * 60)) {   //  (currentTimeVal < (21 * 60) || currentTimeVal > (22 * 60))
         container.style.display = 'none';
         return;
     }

@@ -117,28 +117,47 @@
             await initCamera();
         });
 
-        // 開始直播
+        // 開始直播 (優化版)
         startBtn.addEventListener('click', async () => {
-            try {
-                if (!localStream) await initCamera();
+            // 1. 立即提供點擊視覺回饋，證明按鈕有作用
+            startBtn.disabled = true;
+            startBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 啟動中...`;
 
+            try {
+                // 2. 檢查鏡頭，若已存在且運作中就不重複初始化
+                if (!localStream || !localStream.active) {
+                    await initCamera();
+                }
+
+                // 3. 寫入 Firebase 直播狀態
                 const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
                 await set(statusRef, { 
                     isLive: true, 
                     startedAt: Date.now() 
                 });
 
+                // 4. 設定斷線自動清空
                 onDisconnect(statusRef).set({ isLive: false });
 
+                // 5. 更新 UI 狀態
                 startBtn.classList.add('hidden');
+                startBtn.disabled = false;
+                startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`; // 復原按鈕文字
                 stopBtn.classList.remove('hidden');
+
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 直播中`;
                 statusBadge.classList.replace('bg-gray-700', 'bg-red-900/50');
                 statusBadge.classList.replace('text-gray-300', 'text-red-400');
 
+                // 6. 開始監聽會員敲門
                 listenForRequests();
+
             } catch (err) {
-                alert("開啟直播失敗，請檢查網路或 Firebase 設定：\n" + err.message);
+                // 若失敗，還原按鈕並跳出詳細錯誤
+                startBtn.disabled = false;
+                startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`;
+                alert("開啟直播失敗！錯誤訊息：\n" + (err.message || err));
+                console.error("直播啟動錯誤:", err);
             }
         });
 

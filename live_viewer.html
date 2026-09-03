@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>現場直播收看室 - 築心讀書會</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #111827; }
+    </style>
+</head>
+<body class="h-screen flex flex-col text-white">
+
+    <!-- 頂部導覽列 -->
+    <nav class="bg-gray-900 p-4 shadow-lg flex justify-between items-center border-b border-gray-800">
+        <div class="font-bold text-base text-emerald-400 flex items-center">
+            <i class="fas fa-video mr-2"></i> 築心現場直播收看室
+        </div>
+        <div id="connectionStatus" class="bg-amber-900/50 text-amber-400 px-3 py-1 rounded-full text-xs font-bold flex items-center">
+            <span class="w-2 h-2 rounded-full bg-amber-400 mr-2 animate-pulse"></span> 尚未連線
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 flex flex-col p-4 gap-4 items-center justify-center">
+        
+        <!-- 影像播放區 -->
+        <div class="w-full max-w-2xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center">
+            <!-- 遠端影像 -->
+            <video id="remoteVideo" class="w-full h-full object-cover" autoplay playsinline></video>
+            
+            <!-- 尚未連線時的遮罩提示 -->
+            <div id="videoOverlay" class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mb-4 text-emerald-400 text-2xl shadow-inner">
+                    <i class="fas fa-satellite-dish"></i>
+                </div>
+                <h3 class="text-lg font-black mb-2 text-gray-200">準備加入直播</h3>
+                <p id="hintText" class="text-xs text-gray-400 max-w-xs mb-6 leading-relaxed">點擊下方按鈕向幹部發送連線請求，審核通過後即可收看畫面。</p>
+                
+                <button id="requestBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all active:scale-95 flex items-center text-sm">
+                    <i class="fas fa-hand-paper mr-2"></i> 請求加入直播
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- WebRTC 與 Firebase 邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
+            authDomain: "chuxinclub.firebaseapp.com",
+            databaseURL: "https://chuxinclub-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "chuxinclub",
+            storageBucket: "chuxinclub.firebasestorage.app",
+            messagingSenderId: "135254541508",
+            appId: "1:135254541508:web:6fcdfade7bf596dfc13591"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const ROOM_ID = "main_room";
+
+        // 從 Session 取得當前會員名稱與電話作為唯一識別碼
+        const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+        const userName = userInfo.name || "熱心會員";
+        // 將電話轉為安全的 Firebase 節點 Key（去除特殊符號）
+        const userId = userInfo.phone ? userInfo.phone.replace(/[^a-zA-Z0-9]/g, "_") : "user_" + Math.floor(Math.random() * 10000);
+
+        const requestBtn = document.getElementById('requestBtn');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const hintText = document.getElementById('hintText');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const remoteVideo = document.getElementById('remoteVideo');
+
+        // 點擊「請求加入直播」
+        requestBtn.addEventListener('click', async () => {
+            requestBtn.disabled = true;
+            requestBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 正在敲門等待審核...`;
+            hintText.innerText = "已向幹部送出連線請求，請稍候審核...";
+
+            try {
+                // 1. 將自己的身分寫入 Firebase 的 requests 清單中
+                const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
+                await set(requestRef, {
+                    userName: userName,
+                    requestedAt: Date.now()
+                });
+
+                connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 mr-2 animate-pulse"></span> 等待審核中`;
+                
+                // 2. 監聽自己的請求是否被幹部刪除（同意或拒絕）
+                listenForApproval();
+
+            } catch (err) {
+                alert("發送請求失敗：" + err.message);
+                requestBtn.disabled = false;
+                requestBtn.innerHTML = `<i class="fas fa-hand-paper mr-2"></i> 請求加入直播`;
+            }
+        });
+
+        // 監聽審核結果
+        function listenForApproval() {
+            const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
+            
+            onValue(requestRef, (snapshot) => {
+                const data = snapshot.val();
+                // 如果快照不存在，代表請求已被幹部從清單移除
+                if (!data) {
+                    // 這裡後續將接續 WebRTC 建立通道的邏輯
+                    videoOverlay.style.display = 'none'; // 隱藏遮罩，顯示影片播放區
+                    connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 連線中`;
+                    connectionStatus.classList.replace('bg-amber-900/50', 'bg-emerald-900/50');
+                    connectionStatus.classList.replace('text-amber-400', 'text-emerald-400');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

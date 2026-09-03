@@ -122,13 +122,24 @@
         }
 
         async function initWebRTCReceiver() {
+            if (pc) return; // 避免重複初始化
             pc = new RTCPeerConnection(rtcConfig);
 
             // 當收到幹部的影音軌跡時，直接塞給 `<video>` 播放
             pc.ontrack = (event) => {
-                console.log("收到遠端視訊串流！");
+                console.log("✅ 成功收到遠端視訊串流！", event.streams[0]);
                 if (remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
+                }
+            };
+
+            // 監控連線狀態變化
+            pc.onconnectionstatechange = () => {
+                console.log("🔗 WebRTC 連線狀態改變:", pc.connectionState);
+                if (pc.connectionState === 'connected') {
+                    connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 直播連線中`;
+                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                    connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span> 連線中斷`;
                 }
             };
 
@@ -140,20 +151,28 @@
                 }
             };
 
-            // 1. 監聽幹部寫入的 Offer
-            onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`), async (snapshot) => {
+            const offerRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`);
+
+            // 1. 監聽幹部寫入的 Offer（使用 onValue，即使已經寫入也能立刻抓到）
+            onValue(offerRef, async (snapshot) => {
                 const offer = snapshot.val();
                 if (offer && !pc.currentRemoteDescription) {
-                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                    console.log("📥 收到幹部 Offer，正在建立連線描述...");
+                    try {
+                        await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
-                    // 2. 建立 Answer 回覆
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
+                        // 2. 建立 Answer 回覆
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
 
-                    await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
-                        type: answer.type,
-                        sdp: answer.sdp
-                    });
+                        await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
+                            type: answer.type,
+                            sdp: answer.sdp
+                        });
+                        console.log("📤 已成功發送 Answer 回覆給幹部");
+                    } catch (err) {
+                        console.error("❌ 處理 Offer 或建立 Answer 失敗:", err);
+                    }
                 }
             });
 
@@ -163,8 +182,9 @@
                 if (candidate) {
                     try {
                         await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        console.log("🧊 成功加入幹端的 ICE Candidate");
                     } catch (e) {
-                        console.error("加入遠端 ICE Candidate 失敗:", e);
+                        console.error("❌ 加入遠端 ICE Candidate 失敗:", e);
                     }
                 }
             });

@@ -62,7 +62,7 @@
     <!-- JS 邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, set, onChildAdded, onChildRemoved, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, set, onChildAdded, onChildRemoved, onDisconnect, remove, onValue, push } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
@@ -240,15 +240,12 @@
             }
 
             // 3. 收集 ICE Candidate 並寫入 Firebase
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`);
-                    // 用 push 新增多個候選人
-                    import("https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js").then(({ push }) => {
-                        push(candidateRef, event.candidate.toJSON());
-                    });
-                }
-            };
+         pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`);
+                push(candidateRef, event.candidate.toJSON());
+            }
+         };
 
             try {
                 // 4. 建立 Offer

@@ -65,12 +65,14 @@
         import { getDatabase, ref, set, onChildAdded, onChildRemoved, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
-            authDomain: "chuxinclub.firebaseapp.com",
-            projectId: "chuxinclub",
-            storageBucket: "chuxinclub.firebasestorage.app",
-            messagingSenderId: "135254541508",
-            appId: "1:135254541508:web:6fcdfade7bf596dfc13591"
+          apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
+          authDomain: "chuxinclub.firebaseapp.com",
+          // 👇 必須加上這行，指定你們的新加坡資料庫正確網址
+          databaseURL: "https://chuxinclub-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "chuxinclub",
+          storageBucket: "chuxinclub.firebasestorage.app",
+          messagingSenderId: "135254541508",
+          appId: "1:135254541508:web:6fcdfade7bf596dfc13591"
         };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);

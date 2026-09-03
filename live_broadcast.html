@@ -219,8 +219,74 @@
             });
         }
 
+        // 存放所有已連線會員的 PeerConnection
+        const peerConnections = {};
+        // Google 免費的 STUN 伺服器（用來取得對外 IP 穿透 NAT）
+        const rtcConfig = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+
         window.acceptRequest = async (userId) => {
-            alert('已同意連線！');
+            console.log("接受會員連線，建立 WebRTC 連線:", userId);
+            
+            // 1. 建立對應該會員的 RTCPeerConnection
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[userId] = pc;
+
+            // 2. 將幹部的攝影機軌跡 (localStream) 加入連線中送出
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+
+            // 3. 收集 ICE Candidate 並寫入 Firebase
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`);
+                    // 用 push 新增多個候選人
+                    import("https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js").then(({ push }) => {
+                        push(candidateRef, event.candidate.toJSON());
+                    });
+                }
+            };
+
+            try {
+                // 4. 建立 Offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                // 5. 將 Offer 寫入 Firebase
+                await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`), {
+                    type: offer.type,
+                    sdp: offer.sdp
+                });
+
+                // 6. 監聽會員回傳的 Answer
+                onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
+                    const answer = snapshot.val();
+                    if (answer && !pc.currentRemoteDescription) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                    }
+                });
+
+                // 7. 監聽會員傳來的 ICE Candidates
+                onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (snapshot) => {
+                    const candidate = snapshot.val();
+                    if (candidate) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (e) {
+                            console.error("加入 ICE Candidate 失敗:", e);
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("WebRTC Offer 建立失敗:", err);
+            }
+
+            // 8. 移除審核中的排隊卡片
             await remove(ref(db, `rooms/${ROOM_ID}/requests/${userId}`));
         };
 

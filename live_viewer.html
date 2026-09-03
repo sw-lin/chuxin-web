@@ -23,16 +23,17 @@
         </div>
     </nav>
 
-    <!-- 主要內容區 -->
-    <main class="flex-1 flex flex-col p-4 gap-4 items-center justify-center">
+    <!-- 主要內容區（優化：滿版最大化與動態縮放） -->
+    <main class="flex-1 flex flex-col p-2 sm:p-4 items-center justify-center overflow-hidden">
         
-        <!-- 影像播放區 -->
-        <div class="w-full max-w-2xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center">
-            <!-- 遠端影像 -->
-            <video id="remoteVideo" class="w-full h-full object-cover" autoplay playsinline></video>
+        <!-- 影像播放區：寬度/高度自動調至視窗極限 -->
+        <div class="w-full h-full max-w-7xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center max-h-[85vh]">
+            
+            <!-- 遠端影像：改用 object-contain 確保影像完整不被裁剪，也可改 object-cover 強制填滿 -->
+            <video id="remoteVideo" class="w-full h-full object-contain" autoplay playsinline></video>
             
             <!-- 尚未連線時的遮罩提示 -->
-            <div id="videoOverlay" class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center p-6 text-center">
+            <div id="videoOverlay" class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center p-6 text-center z-10">
                 <div class="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mb-4 text-emerald-400 text-2xl shadow-inner">
                     <i class="fas fa-satellite-dish"></i>
                 </div>

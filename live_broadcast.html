@@ -15,53 +15,55 @@
 
     <!-- 頂部導覽列 -->
     <nav class="bg-gray-900 p-4 shadow-lg flex justify-between items-center border-b border-gray-800">
-        <div class="font-bold text-lg text-emerald-400">
-            <i class="fas fa-video mr-2"></i> 現場直播控制台
+        <div class="font-bold text-base text-emerald-400 flex items-center">
+            <i class="fas fa-video mr-2"></i> 直播控制台
         </div>
-        <div id="statusBadge" class="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-sm font-bold flex items-center">
+        <div id="statusBadge" class="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-xs font-bold flex items-center">
             <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> 準備中
         </div>
     </nav>
 
     <!-- 主要內容區 -->
-    <main class="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-hidden">
+    <main class="flex-1 flex flex-col p-4 gap-4 overflow-y-auto">
         
-        <!-- 左側：影像預覽區 -->
-        <div class="flex-1 bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700">
-            <!-- muted 很重要，避免自己聽到自己的回音 -->
+        <!-- 影像預覽區 -->
+        <div class="w-full bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 min-h-[300px]">
             <video id="localVideo" class="w-full h-full object-cover" autoplay muted playsinline></video>
             
-            <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                <button id="startBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105">
+            <!-- 右上角：鏡頭切換按鈕 -->
+            <button id="switchCamBtn" class="absolute top-3 right-3 bg-gray-900/80 hover:bg-gray-800 text-white p-3 rounded-full shadow-lg border border-gray-600 transition-all">
+                <i class="fas fa-sync-alt text-base"></i>
+            </button>
+
+            <!-- 下方：直播控制按鈕 -->
+            <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4">
+                <button id="startBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all flex items-center">
                     <i class="fas fa-play mr-2"></i> 開始直播
                 </button>
-                <button id="stopBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105 hidden">
+                <button id="stopBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all hidden flex items-center">
                     <i class="fas fa-stop mr-2"></i> 結束直播
                 </button>
             </div>
         </div>
 
-        <!-- 右側：連線審核區 -->
-        <div class="w-full md:w-80 bg-gray-800 rounded-xl flex flex-col border border-gray-700 shadow-xl overflow-hidden">
-            <div class="bg-gray-900 p-3 border-b border-gray-700 font-bold text-emerald-300 flex justify-between items-center">
+        <!-- 會員審核區 -->
+        <div class="w-full bg-gray-800 rounded-xl flex flex-col border border-gray-700 shadow-xl overflow-hidden min-h-[150px]">
+            <div class="bg-gray-900 p-3 border-b border-gray-700 font-bold text-emerald-300 flex justify-between items-center text-sm">
                 <span>會員連線請求</span>
                 <span id="requestCount" class="bg-emerald-900 text-emerald-300 text-xs px-2 py-1 rounded-full">0</span>
             </div>
             
-            <!-- 請求列表 -->
-            <div id="requestsContainer" class="flex-1 overflow-y-auto p-2 space-y-2">
-                <div class="text-gray-500 text-sm text-center py-4">等待會員要求加入...</div>
+            <div id="requestsContainer" class="p-3 space-y-2">
+                <div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>
             </div>
         </div>
     </main>
 
-    <!-- Firebase 與 WebRTC 邏輯 -->
+    <!-- JS 邏輯 -->
     <script type="module">
-        // 1. 匯入 Firebase v12 模組 (包含 App 與 Database)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, set, onChildAdded, onChildRemoved, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-        // 2. 初始化 Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
             authDomain: "chuxinclub.firebaseapp.com",
@@ -73,55 +75,75 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 3. 取得 UI 元素
         const localVideo = document.getElementById('localVideo');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const switchCamBtn = document.getElementById('switchCamBtn');
         const statusBadge = document.getElementById('statusBadge');
         const requestsContainer = document.getElementById('requestsContainer');
         const requestCount = document.getElementById('requestCount');
 
         let localStream = null;
-        const ROOM_ID = "main_room"; // 預設讀書會房間 ID
+        let currentFacingMode = "environment"; // 預設使用後置鏡頭 ("environment" 或 "user")
+        const ROOM_ID = "main_room";
 
-        // 4. 取得本機攝影機與麥克風權限
+        // 啟動或切換鏡頭
         async function initCamera() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop()); // 關閉舊鏡頭串流
+            }
+
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode },
+                    audio: true
+                });
                 localVideo.srcObject = localStream;
             } catch (error) {
-                console.error("無法取得攝影機權限:", error);
-                alert("請允許網頁存取攝影機與麥克風，否則無法進行直播！");
+                console.error("相機存取失敗:", error);
+                // 某些手機不支援 exact 模式，退回一般模式試試
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    localVideo.srcObject = localStream;
+                } catch (e) {
+                    alert("無法取得相機權限：" + e.message);
+                }
             }
         }
 
-        // 5. 開始直播：寫入 Firebase 狀態
-        async function startBroadcast() {
-            if (!localStream) await initCamera();
+        // 切換前後鏡頭按鈕
+        switchCamBtn.addEventListener('click', async () => {
+            currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+            await initCamera();
+        });
 
-            const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
-            
-            // 寫入開播狀態
-            await set(statusRef, { 
-                isLive: true, 
-                startedAt: Date.now() 
-            });
+        // 開始直播
+        startBtn.addEventListener('click', async () => {
+            try {
+                if (!localStream) await initCamera();
 
-            // 【斷線防呆】如果幹部直接關閉網頁或斷網，Firebase 會自動把 isLive 設為 false
-            onDisconnect(statusRef).set({ isLive: false });
+                const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
+                await set(statusRef, { 
+                    isLive: true, 
+                    startedAt: Date.now() 
+                });
 
-            // 更新 UI
-            startBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
-            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 直播中`;
-            statusBadge.classList.replace('bg-gray-700', 'bg-red-900/50');
-            statusBadge.classList.replace('text-gray-300', 'text-red-400');
+                onDisconnect(statusRef).set({ isLive: false });
 
-            listenForRequests();
-        }
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 直播中`;
+                statusBadge.classList.replace('bg-gray-700', 'bg-red-900/50');
+                statusBadge.classList.replace('text-gray-300', 'text-red-400');
 
-        // 6. 結束直播：清除 Firebase 狀態
-        async function stopBroadcast() {
+                listenForRequests();
+            } catch (err) {
+                alert("開啟直播失敗，請檢查網路或 Firebase 設定：\n" + err.message);
+            }
+        });
+
+        // 結束直播
+        stopBtn.addEventListener('click', async () => {
             const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
             await set(statusRef, { isLive: false });
 
@@ -131,37 +153,33 @@
             statusBadge.classList.replace('bg-red-900/50', 'bg-gray-700');
             statusBadge.classList.replace('text-red-400', 'text-gray-300');
             
-            requestsContainer.innerHTML = '<div class="text-gray-500 text-sm text-center py-4">等待會員要求加入...</div>';
+            requestsContainer.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>';
             requestCount.textContent = "0";
-        }
+        });
 
-        // 7. 監聽會員「敲門」請求
         function listenForRequests() {
             const requestsRef = ref(db, `rooms/${ROOM_ID}/requests`);
-            
-            // 清空預設文字
             requestsContainer.innerHTML = '';
 
             onChildAdded(requestsRef, (snapshot) => {
                 const request = snapshot.val();
                 const userId = snapshot.key;
 
-                // 建立請求卡片 UI
                 const card = document.createElement('div');
                 card.id = `req-${userId}`;
-                card.className = "bg-gray-700 p-3 rounded-lg flex justify-between items-center animate-fade-in";
+                card.className = "bg-gray-700 p-2.5 rounded-lg flex justify-between items-center text-sm";
                 card.innerHTML = `
                     <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center mr-3 font-bold">
-                            ${request.userName.charAt(0)}
+                        <div class="w-7 h-7 rounded-full bg-emerald-700 flex items-center justify-center mr-2 text-xs font-bold">
+                            ${request.userName ? request.userName.charAt(0) : '會'}
                         </div>
-                        <span class="font-bold text-sm text-gray-200">${request.userName}</span>
+                        <span class="font-bold text-gray-200">${request.userName || '匿名會員'}</span>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="acceptRequest('${userId}')" class="bg-emerald-600 hover:bg-emerald-500 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                        <button onclick="acceptRequest('${userId}')" class="bg-emerald-600 hover:bg-emerald-500 w-7 h-7 rounded-full flex items-center justify-center">
                             <i class="fas fa-check text-xs"></i>
                         </button>
-                        <button onclick="rejectRequest('${userId}')" class="bg-red-600 hover:bg-red-500 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                        <button onclick="rejectRequest('${userId}')" class="bg-red-600 hover:bg-red-500 w-7 h-7 rounded-full flex items-center justify-center">
                             <i class="fas fa-times text-xs"></i>
                         </button>
                     </div>
@@ -180,21 +198,12 @@
             });
         }
 
-        // 綁定按鈕事件
-        startBtn.addEventListener('click', startBroadcast);
-        stopBtn.addEventListener('click', stopBroadcast);
-
-        // 將方法掛載到 window，讓 HTML 的 onclick 可以呼叫
         window.acceptRequest = async (userId) => {
-            console.log("接受連線:", userId);
-            // 這裡未來會加入 WebRTC 建立 Offer 的程式碼
-            alert('已同意連線！(WebRTC 通道建立邏輯將接續於此)');
-            // 移除請求 UI
+            alert('已同意連線！');
             await remove(ref(db, `rooms/${ROOM_ID}/requests/${userId}`));
         };
 
         window.rejectRequest = async (userId) => {
-            console.log("拒絕連線:", userId);
             await remove(ref(db, `rooms/${ROOM_ID}/requests/${userId}`));
         };
 
@@ -202,11 +211,11 @@
             let current = parseInt(requestCount.textContent);
             requestCount.textContent = current + change;
             if (requestsContainer.children.length === 0) {
-                requestsContainer.innerHTML = '<div class="text-gray-500 text-sm text-center py-4">等待會員要求加入...</div>';
+                requestsContainer.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>';
             }
         }
 
-        // 網頁載入時先嘗試取得相機
+        // 預設開啟後置鏡頭
         initCamera();
     </script>
 </body>

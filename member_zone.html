@@ -111,8 +111,20 @@
     
     <p class="text-[10px] text-center text-gray-400 mt-2" id="checkInTargetHint">活動報到開放時間：09:00 ~ 13:00</p>
     </div>
+    
+    <!-- 🌟 新增：動態直播通知橫幅 -->
+    <div id="live-broadcast-container" class="w-full mt-2 hidden" style="display: none;">
+        <!-- 點擊後另開 live_viewer.html 視窗 -->
+        <button onclick="window.open('live_viewer.html', '_blank')" class="w-full bg-red-600 text-white py-4 rounded-[2rem] shadow-md flex justify-between px-6 items-center active:scale-95 transition-all">
+            <span class="font-black flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+                現場直播進行中！點此收看
+            </span>
+            <i class="fas fa-video"></i>
+        </button>
+    </div>
 
-    <div id="vote-notice-container" class="w-full"></div>
+ //   <div id="vote-notice-container" class="w-full"></div>
 
     <div id="vote-notice-container" class="w-full"></div>
     
@@ -2158,5 +2170,45 @@ function renderParkingBanner() {
     <div id="voteContent" class="flex-1 overflow-y-auto bg-gray-50 p-6 pb-24">
         </div>
 </div>
+<!-- 🌟 新增：Firebase 直播狀態監聽 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
+        authDomain: "chuxinclub.firebaseapp.com",
+        databaseURL: "https://chuxinclub-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "chuxinclub",
+        storageBucket: "chuxinclub.firebasestorage.app",
+        messagingSenderId: "135254541508",
+        appId: "1:135254541508:web:6fcdfade7bf596dfc13591"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const ROOM_ID = "main_room";
+
+    // 即時監聽資料庫中的 isLive 狀態
+    const statusRef = ref(db, `rooms/${ROOM_ID}/status/isLive`);
+    
+    onValue(statusRef, (snapshot) => {
+        const isLive = snapshot.val();
+        const container = document.getElementById('live-broadcast-container');
+        
+        if (container) {
+            if (isLive) {
+                // 幹部開播，顯示按鈕
+                container.classList.remove('hidden');
+                container.style.display = 'block';
+            } else {
+                // 幹部關台，隱藏按鈕
+                container.classList.add('hidden');
+                container.style.display = 'none';
+            }
+        }
+    });
+</script>
+    
 </body>
 </html>

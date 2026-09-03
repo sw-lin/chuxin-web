@@ -227,8 +227,7 @@
         };
 
         window.acceptRequest = async (userId) => {
-            console.log("接受會員連線，建立 WebRTC 連線:", userId);
-            
+            console.log("當前操作的 userId:", userId);
             // 1. 建立對應該會員的 RTCPeerConnection
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[userId] = pc;

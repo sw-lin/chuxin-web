@@ -50,7 +50,7 @@
     <!-- WebRTC 與 Firebase 邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, set, remove, onValue, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
@@ -66,10 +66,8 @@
         const db = getDatabase(app);
         const ROOM_ID = "main_room";
 
-        // 從 Session 取得當前會員名稱與電話作為唯一識別碼
         const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
         const userName = userInfo.name || "熱心會員";
-        // 將電話轉為安全的 Firebase 節點 Key（去除特殊符號）
         const userId = userInfo.phone ? userInfo.phone.replace(/[^a-zA-Z0-9]/g, "_") : "user_" + Math.floor(Math.random() * 10000);
 
         const requestBtn = document.getElementById('requestBtn');
@@ -78,14 +76,17 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const remoteVideo = document.getElementById('remoteVideo');
 
-        // 點擊「請求加入直播」
+        const rtcConfig = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+        let pc = null;
+
         requestBtn.addEventListener('click', async () => {
             requestBtn.disabled = true;
             requestBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 正在敲門等待審核...`;
             hintText.innerText = "已向幹部送出連線請求，請稍候審核...";
 
             try {
-                // 1. 將自己的身分寫入 Firebase 的 requests 清單中
                 const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
                 await set(requestRef, {
                     userName: userName,
@@ -93,8 +94,6 @@
                 });
 
                 connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 mr-2 animate-pulse"></span> 等待審核中`;
-                
-                // 2. 監聽自己的請求是否被幹部刪除（同意或拒絕）
                 listenForApproval();
 
             } catch (err) {
@@ -104,19 +103,69 @@
             }
         });
 
-        // 監聽審核結果
         function listenForApproval() {
             const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
             
             onValue(requestRef, (snapshot) => {
                 const data = snapshot.val();
-                // 如果快照不存在，代表請求已被幹部從清單移除
                 if (!data) {
-                    // 這裡後續將接續 WebRTC 建立通道的邏輯
-                    videoOverlay.style.display = 'none'; // 隱藏遮罩，顯示影片播放區
-                    connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 連線中`;
+                    // 請求被幹部移除（代表同意）
+                    videoOverlay.style.display = 'none';
+                    connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 接收視訊中`;
                     connectionStatus.classList.replace('bg-amber-900/50', 'bg-emerald-900/50');
                     connectionStatus.classList.replace('text-amber-400', 'text-emerald-400');
+
+                    // 啟動 WebRTC 接收端
+                    initWebRTCReceiver();
+                }
+            });
+        }
+
+        async function initWebRTCReceiver() {
+            pc = new RTCPeerConnection(rtcConfig);
+
+            // 當收到幹部的影音軌跡時，直接塞給 `<video>` 播放
+            pc.ontrack = (event) => {
+                console.log("收到遠端視訊串流！");
+                if (remoteVideo.srcObject !== event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                }
+            };
+
+            // 收集會員端的 ICE Candidate
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`);
+                    push(candidateRef, event.candidate.toJSON());
+                }
+            };
+
+            // 1. 監聽幹部寫入的 Offer
+            onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`), async (snapshot) => {
+                const offer = snapshot.val();
+                if (offer && !pc.currentRemoteDescription) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+                    // 2. 建立 Answer 回覆
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+
+                    await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
+                        type: answer.type,
+                        sdp: answer.sdp
+                    });
+                }
+            });
+
+            // 3. 監聽幹部傳來的 ICE Candidates
+            onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), async (snapshot) => {
+                const candidate = snapshot.val();
+                if (candidate) {
+                    try {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    } catch (e) {
+                        console.error("加入遠端 ICE Candidate 失敗:", e);
+                    }
                 }
             });
         }

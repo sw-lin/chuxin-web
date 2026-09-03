@@ -228,6 +228,11 @@
 
         window.acceptRequest = async (userId) => {
             console.log("當前操作的 userId:", userId);
+            
+            // 🔥 關鍵修復：在建立新連線前，強制清空上一次殘留的舊連線數據
+            const connectionRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}`);
+            await remove(connectionRef);
+
             // 1. 建立對應該會員的 RTCPeerConnection
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[userId] = pc;

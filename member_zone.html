@@ -2084,22 +2084,24 @@ function renderParkingBanner() {
         return;
     }
 
-    // 🌟 新增邏輯：處理「登記開始日」
-    let startDateDate = new Date(0); // 預設 1970 年（防呆：萬一後端沒設開始日，就視為隨時可開始）
+    // 🌟 處理「登記開始日」
+    let startDateDate = new Date(0); 
     if (parkingConfig.startDate) {
         console.log("🚗 [Step 5-1] 原始 startDate 字串:", parkingConfig.startDate);
-        const startStr = parkingConfig.startDate.replace(/-/g, '/');
+        // 修正：先用 split('T')[0] 去除時間尾巴，再替換斜線
+        const startStr = parkingConfig.startDate.split('T')[0].replace(/-/g, '/');
         startDateDate = new Date(startStr);
         if (!isNaN(startDateDate.getTime())) {
-            startDateDate.setHours(0, 0, 0, 0); // 確保從當天 00:00:00 準時開放
+            startDateDate.setHours(0, 0, 0, 0); 
         } else {
-            startDateDate = new Date(0); // 轉換失敗則退回預設
+            startDateDate = new Date(0); 
         }
     }
 
     // 處理「登記截止日」
     console.log("🚗 [Step 6] 原始 deadline 字串:", parkingConfig.deadline);
-    const deadlineStr = parkingConfig.deadline.replace(/-/g, '/');
+    // 修正：先用 split('T')[0] 去除時間尾巴，再替換斜線
+    const deadlineStr = parkingConfig.deadline.split('T')[0].replace(/-/g, '/');
     const deadlineDate = new Date(deadlineStr);
     
     if (isNaN(deadlineDate.getTime())) {
@@ -2109,7 +2111,8 @@ function renderParkingBanner() {
         return;
     }
 
-    deadlineDate.setHours(23, 59, 59); // 截止到當日 23:59:59
+    // 修正：補上 999 毫秒，確保涵蓋到當天 23:59:59 的最後一瞬間
+    deadlineDate.setHours(23, 59, 59, 999);
     const now = new Date();
     
     // 🌟 修改判定時間輸出：同時印出開始日與截止日

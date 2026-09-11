@@ -386,18 +386,34 @@ async function syncData() {
         console.log("=== 2. 收到後端資料 ===", data);
 
         if (data.result === "SUCCESS") {
-　　　　　　 // --- 🚨 [新增] 權限安全守衛 ---
-            if (data.user && data.user.hasMemberAccess === false) {
-              const overlay = document.getElementById('loadingOverlay');
-              if (overlay) overlay.style.display = 'none'; // 隱藏載入圈圈
-    
-              const payModal = document.getElementById('paymentModal');
-              if(payModal) {
-                  payModal.style.display = 'flex';
-                  payModal.classList.remove('hidden');
-              }
-              return; // 終止後續所有 UI 更新與邏輯執行
-            }　
+            // 判斷條件：沒權限，或者是「未繳費」狀態
+const isUnpaid = data.user.isPaid === false || String(data.user.isPaid).includes('未繳');
+
+if (data.user && (data.user.hasMemberAccess === false || isUnpaid)) {
+    const payModal = document.getElementById('paymentModal');
+    if (payModal) {
+        payModal.style.display = 'flex';
+        payModal.classList.remove('hidden');
+        
+        // 取得「稍後再繳」的按鈕 (稍後會在 HTML 中加上這個 ID)
+        const skipBtn = document.getElementById('skipPaymentBtn');
+        
+        if (data.user.hasMemberAccess === true) {
+            // 【期初大放行期間】：柔性提醒，允許關閉視窗並繼續使用會員功能
+            skipBtn.innerText = "稍後再繳，繼續使用會員功能";
+            skipBtn.onclick = function() { payModal.style.display = 'none'; };
+        } else {
+            // 【嚴格模式】：沒繳費也沒放行，強制只能去訪客區
+            skipBtn.innerText = "稍後再繳，先以訪客身分進入";
+            skipBtn.onclick = function() { window.location.href = 'guest_zone.html'; };
+            
+            // 只有在真正沒權限時，才隱藏載入圈圈並「終止」後續畫面渲染
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
+            return; 
+        }
+    }
+}
             
             // --- A. Config ---
             if (data.config) globalConfig = data.config;
@@ -2244,8 +2260,8 @@ function renderParkingBanner() {
         <button onclick="submitPaymentProof()" class="w-full py-4 bg-emerald-800 text-white rounded-2xl font-black shadow-lg active:scale-95 transition-transform mb-3">
             我已完成轉帳，通知財務
         </button>
-        <button onclick="window.location.href='guest_zone.html'" class="w-full py-3 text-gray-400 font-bold text-xs underline">
-            稍後再繳，先以訪客身分進入
+        <button id="skipPaymentBtn" class="w-full py-3 text-gray-400 font-bold text-xs underline">
+          稍後再繳
         </button>
     </div>
 </div>

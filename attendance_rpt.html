@@ -335,7 +335,7 @@ async function loadFinishedEvents() {
 
     function toggleEditMode() {
         // 安全檢查：防止透過控制台強行觸發
-        if (!userPermissions.includes("all") && !userPermissions.includes("view_attendance")) {
+        if (!userPermissions.includes("all") && !userPermissions.includes("edit_attendance")) {
             showToast("⚠️ 您沒有編輯出席狀況的權限");
             return;
         }        

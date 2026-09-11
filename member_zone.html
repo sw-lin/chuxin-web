@@ -351,11 +351,12 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzh
     const userInfo = JSON.parse(userInfoStr);
     
     // 檢查是否有通行證 (由 member_init 在登入或同步時派發)
-    if (userInfo.hasMemberAccess !== true) {
-        alert("提示：目前已進入會費審查期，系統檢測到您尚未完成本學期會費繳納，將為您引導至訪客專區。");
-        window.location.href = 'guest_zone.html';
-        return;
-    }
+//    if (userInfo.hasMemberAccess !== true) {
+//        alert("提示：目前已進入會費審查期，系統檢測到您尚未完成本學期會費繳納，將為您引導至訪客專區。");
+//        window.location.href = 'guest_zone.html';
+//        return;
+//    }
+    
 })();  
 
 // =========================================
@@ -386,11 +387,16 @@ async function syncData() {
 
         if (data.result === "SUCCESS") {
 　　　　　　 // --- 🚨 [新增] 權限安全守衛 ---
-            // 只要後端判定 hasMemberAccess 為 false，直接導向訪客專區
             if (data.user && data.user.hasMemberAccess === false) {
-                alert("提示：目前已進入會費審查期，您尚未完成繳費，即將導回訪客區。");
-                window.location.href = 'guest_zone.html';
-                return; // 終止後續所有 UI 更新與邏輯執行
+              const overlay = document.getElementById('loadingOverlay');
+              if (overlay) overlay.style.display = 'none'; // 隱藏載入圈圈
+    
+              const payModal = document.getElementById('paymentModal');
+              if(payModal) {
+                  payModal.style.display = 'flex';
+                  payModal.classList.remove('hidden');
+              }
+              return; // 終止後續所有 UI 更新與邏輯執行
             }　
             
             // --- A. Config ---
@@ -2209,6 +2215,77 @@ function renderParkingBanner() {
             }
         }
     });
+</script>
+<div id="paymentModal" class="modal-overlay bg-black/90 z-[9999]" style="display:none;">
+    <div class="bg-white w-[90%] max-w-sm rounded-[2.5rem] p-7 shadow-2xl relative text-center border-4 border-emerald-600">
+        <h3 class="text-xl font-black text-emerald-900 mb-2">繳交本學期社費</h3>
+        <p class="text-xs text-gray-500 mb-6 leading-relaxed">
+            系統檢測到您尚未繳費。<br>請透過以下方式轉帳，以開通完整會員權限。
+        </p>
+        
+        <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-left border border-gray-200 space-y-3">
+            <p class="text-sm font-bold text-emerald-900"><i class="fas fa-info-circle text-emerald-600"></i> 財務收款電話：<span class="text-red-500 text-lg">0933978465</span></p>
+            <div class="flex gap-2">
+                <a href="https://line.me/R/pay/transfer?to=0933978465" target="_blank" class="flex-1 bg-[#06C755] text-white py-3 rounded-xl font-bold flex flex-col items-center active:scale-95 transition-transform shadow-md">
+                    <span class="text-sm">LINE Pay</span>
+                </a>
+                <a href="https://line.me/R/pay/transfer?to=0933978465" target="_blank" class="flex-1 bg-[#00A1E9] text-white py-3 rounded-xl font-bold flex flex-col items-center active:scale-95 transition-transform shadow-md">
+                    <span class="text-sm">iPASS MONEY</span>
+                </a>
+            </div>
+            <p class="text-[10px] text-gray-400">💡 提示：點擊按鈕或直接於 LINE 錢包輸入上方電話進行轉帳。</p>
+        </div>
+        
+        <div class="bg-emerald-50 p-4 rounded-2xl mb-4 text-left border border-emerald-100">
+            <label class="block text-[10px] font-bold text-emerald-800 mb-2">轉帳後，請填寫您的 LINE 註冊電話供對帳：</label>
+            <input type="tel" id="paymentLinePhone" class="w-full px-4 py-3 bg-white rounded-xl outline-none text-sm font-medium border-2 border-transparent focus:border-emerald-500" placeholder="例如：0912345678">
+        </div>
+        
+        <button onclick="submitPaymentProof()" class="w-full py-4 bg-emerald-800 text-white rounded-2xl font-black shadow-lg active:scale-95 transition-transform mb-3">
+            我已完成轉帳，通知財務
+        </button>
+        <button onclick="window.location.href='guest_zone.html'" class="w-full py-3 text-gray-400 font-bold text-xs underline">
+            稍後再繳，先以訪客身分進入
+        </button>
+    </div>
+</div>
+
+<script>
+async function submitPaymentProof() {
+    const linePhone = document.getElementById('paymentLinePhone').value.trim();
+    if (!linePhone || linePhone.length < 9) {
+        alert("請輸入完整的 LINE 註冊電話");
+        return;
+    }
+
+    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'flex';
+
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'notify_payment',
+                phone: userInfo.phone,
+                name: userInfo.name,
+                linePhone: linePhone
+            })
+        });
+        const result = await response.json();
+        
+        if (result.result === "SUCCESS") {
+            alert("已成功通知財務！審核通過後即可開通會員權限。");
+            window.location.href = 'guest_zone.html'; 
+        } else {
+            alert("通知失敗：" + result.message);
+        }
+    } catch (e) {
+        alert("網路連線異常，請稍後再試");
+    } finally {
+        if (overlay) overlay.style.display = 'none';
+    }
+}
 </script>
     
 </body>

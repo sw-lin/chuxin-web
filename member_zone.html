@@ -2242,18 +2242,6 @@ function renderParkingBanner() {
         <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-left border border-gray-200 space-y-3">
             <p class="text-sm font-bold text-emerald-900"><i class="fas fa-info-circle text-emerald-600"></i> 財務收款電話：<span class="text-red-500 text-lg">0933978465</span></p>
             <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-left border border-gray-200 space-y-3">
-            <!-- 方案 A：一鍵複製銀行帳號 
-            <p class="text-sm font-bold text-emerald-900 mb-1"><i class="fas fa-university text-emerald-600"></i> 銀行/網銀轉帳 (推薦)</p>
-            <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                <div>
-                    <p class="text-[10px] text-gray-500 font-bold">中國信託 (822)</p>
-                    <!-- 這裡記得換成財務真實的銀行帳號 -->
-                    <p class="text-lg font-black tracking-wider text-gray-800" id="bankAccount">123456789012</p>
-                </div>
-                <button onclick="copyAccount()" class="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-lg font-bold text-xs active:scale-95 transition-transform">
-                    複製帳號
-                </button>
-            </div>  -->
 
             <!-- 方案 B：LINE 聊天室轉帳 -->
             <p class="text-sm font-bold text-emerald-900 mt-3 mb-1"><i class="fab fa-line text-emerald-600"></i> LINE Pay / iPASS MONEY</p>
@@ -2271,53 +2259,7 @@ function renderParkingBanner() {
             <label class="block text-[10px] font-bold text-emerald-800 mb-2">轉帳後，請填寫您的 LINE 註冊電話供對帳：</label>
             <input type="tel" id="paymentLinePhone" class="w-full px-4 py-3 bg-white rounded-xl outline-none text-sm font-medium border-2 border-transparent focus:border-emerald-500" placeholder="例如：0912345678">
         </div>
-        
-        <button onclick="submitPaymentProof()" class="w-full py-4 bg-emerald-800 text-white rounded-2xl font-black shadow-lg active:scale-95 transition-transform mb-3">
-            我已完成轉帳，通知財務
-        </button>
-        <button id="skipPaymentBtn" class="w-full py-3 text-gray-400 font-bold text-xs underline">
-          稍後再繳
-        </button>
     </div>
-</div>
-
-<script>
-async function submitPaymentProof() {
-    const linePhone = document.getElementById('paymentLinePhone').value.trim();
-    if (!linePhone || linePhone.length < 9) {
-        alert("請輸入完整的 LINE 註冊電話");
-        return;
-    }
-
-    const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.style.display = 'flex';
-
-    try {
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                type: 'notify_payment',
-                phone: userInfo.phone,
-                name: userInfo.name,
-                linePhone: linePhone
-            })
-        });
-        const result = await response.json();
-        
-        if (result.result === "SUCCESS") {
-            alert("已成功通知財務！審核通過後即可開通會員權限。");
-            window.location.href = 'guest_zone.html'; 
-        } else {
-            alert("通知失敗：" + result.message);
-        }
-    } catch (e) {
-        alert("網路連線異常，請稍後再試");
-    } finally {
-        if (overlay) overlay.style.display = 'none';
-    }
-}
-</script>
-    
+</div>    
 </body>
 </html>

@@ -85,7 +85,7 @@
                     <span id="totalCount" class="text-xl font-bold text-gray-400">0 位</span>
                 </div>
             </div>
-            <button onclick="prepareLineMessage()" class="bg-[#06C755] text-white w-20 h-20 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all flex-shrink-0">
+            <button id="lineSendBtn" onclick="prepareLineMessage()" class="hidden bg-[#06C755] text-white w-20 h-20 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all flex-shrink-0">
                 <i class="fab fa-line text-2xl mb-1"></i>
                 <span class="text-[10px]">發送名單</span>
             </button>
@@ -258,30 +258,34 @@
             }).join('');
         }
 
-        function toggleEditMode() {
-            // 安全檢查
-            if (!hasLedgerPermission) {
-               showToast("⚠️ 您沒有編輯繳費紀錄的權限");
-               return;
-            }            
-            isEditMode = !isEditMode;
-            const btn = document.getElementById('editToggleBtn');
-            const adminBox = document.getElementById('adminActions');
-            const manageBtn = document.getElementById('manageItemBtn');
-            
-            if (isEditMode) {
-                btn.innerText = "完成編輯";
-                btn.classList.replace('bg-white/10', 'bg-red-500');
-                adminBox.classList.remove('hidden');
-                manageBtn.classList.remove('hidden');
-            } else {
-                btn.innerText = "開啟編輯";
-                btn.classList.replace('bg-red-500', 'bg-white/10');
-                adminBox.classList.add('hidden');
-                manageBtn.classList.add('hidden');
-            }
-            renderLedger();
-        }
+        // 修改後的 toggleEditMode
+function toggleEditMode() {
+    // 安全檢查
+    if (!hasLedgerPermission) {
+       showToast("⚠️ 您沒有編輯繳費紀錄的權限");
+       return;
+    }            
+    isEditMode = !isEditMode;
+    const btn = document.getElementById('editToggleBtn');
+    const adminBox = document.getElementById('adminActions');
+    const manageBtn = document.getElementById('manageItemBtn');
+    const lineSendBtn = document.getElementById('lineSendBtn'); // 🌟 新增：取得 LINE 按鈕
+    
+    if (isEditMode) {
+        btn.innerText = "完成編輯";
+        btn.classList.replace('bg-white/10', 'bg-red-500');
+        adminBox.classList.remove('hidden');
+        manageBtn.classList.remove('hidden');
+        if(lineSendBtn) lineSendBtn.classList.remove('hidden'); // 🌟 新增：開啟編輯時顯示
+    } else {
+        btn.innerText = "開啟編輯";
+        btn.classList.replace('bg-red-500', 'bg-white/10');
+        adminBox.classList.add('hidden');
+        manageBtn.classList.add('hidden');
+        if(lineSendBtn) lineSendBtn.classList.add('hidden'); // 🌟 新增：關閉編輯時隱藏
+    }
+    renderLedger();
+}
 
         async function toggleStatus(phone) {
             const itemName = document.getElementById('itemSelector').value;

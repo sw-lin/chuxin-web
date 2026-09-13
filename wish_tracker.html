@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>築心健腦小願</title>    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
+        .pink-gradient { background: linear-gradient(135deg, #be185d 0%, #db2777 100%); }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+<!-- 頂部導覽列 -->
+<nav class="sticky top-0 z-40 bg-pink-800 text-white px-6 h-16 shadow-lg flex items-center justify-between">
+    <button onclick="location.href='member_zone.html'" class="flex items-center gap-2 active:scale-95 outline-none">
+        <i class="fas fa-chevron-left text-pink-200"></i>
+        <h1 class="text-lg font-black tracking-widest">築心小願</h1>
+    </button>
+    <div class="flex gap-4">
+        <button id="tab1" onclick="switchTab(1)" class="font-bold text-sm text-pink-200 border-b-2 border-white pb-1">本週目標</button>
+        <button id="tab2" onclick="switchTab(2)" class="font-bold text-sm text-pink-400 pb-1">總列表</button>
+    </div>
+</nav>
+
+<!-- Loading / Opt-In Modal -->
+<div id="loadingOverlay" class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+    <div class="flex flex-col items-center"><i class="fas fa-circle-notch fa-spin text-white text-4xl mb-4"></i></div>
+</div>
+
+<div id="optInModal" class="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center hidden p-6">
+    <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl">
+        <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-600 text-2xl"><i class="fas fa-seedling"></i></div>
+        <h2 class="text-xl font-black text-gray-800 mb-2">歡迎加入築心小願</h2>
+        <p class="text-sm text-gray-500 mb-6 text-left leading-relaxed">藉由每週一點點小目標，讓自己更健康、生活更有活力！(自由參加)</p>
+        <button onclick="joinWish()" class="w-full bg-pink-600 text-white py-4 rounded-full font-bold shadow-lg active:scale-95 transition-all">確認參加</button>
+        <button onclick="location.href='member_zone.html'" class="w-full mt-3 py-3 text-gray-400 font-bold text-sm">暫不參加</button>
+    </div>
+</div>
+
+<main class="max-w-xl mx-auto p-6 space-y-6">
+
+    <!-- Page 1: 個人本週紀錄 -->
+    <div id="page1" class="space-y-6 block">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50">
+            <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-pen-nib text-pink-500"></i> 設定本週目標 (週一歸零)</h3>
+            <select id="catSelect" class="w-full mb-4 p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 font-bold text-gray-700">
+                <option value="運動">🏀 運動 (如：肌力運動)</option>
+                <option value="飲食">🥗 飲食 (如：地中海好油)</option>
+                <option value="學習">📖 學習 (如：禪繞畫/新語言)</option>
+                <option value="社交">☕ 社交</option>
+            </select>
+            <textarea id="goalDesc" rows="2" placeholder="請輸入小願內容 (例：本週有畫禪繞畫3次)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 text-sm mb-4"></textarea>
+            <button onclick="saveGoal()" class="w-full bg-pink-700 text-white py-3 rounded-xl font-bold active:scale-95 transition-all">儲存目標設定</button>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50">
+            <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-star-half-alt text-pink-500"></i> 本週自評 (0~10分)</h3>
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-gray-400 font-bold">未達成</span>
+                <span id="scoreDisplay" class="text-3xl font-black text-pink-600">0</span>
+                <span class="text-xs text-gray-400 font-bold">完全達成</span>
+            </div>
+            <input type="range" id="scoreSlider" min="0" max="10" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-6 accent-pink-600">
+            <button onclick="saveScore()" class="w-full bg-pink-100 text-pink-800 py-3 rounded-xl font-bold active:scale-95 transition-all">送出本週評分</button>
+        </div>
+    </div>
+
+    <!-- Page 2: 總列表 -->
+    <div id="page2" class="space-y-4 hidden">
+        <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-xs text-pink-800 font-bold">
+            <i class="fas fa-info-circle mt-0.5"></i> 達成率 = 迄今總分 / (參與週數 x 10)。滿分可獲一顆星！
+        </div>
+        <div id="leaderboardContainer" class="space-y-4"></div>
+    </div>
+
+</main>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
+let userInfo = {};
+
+window.onload = () => {
+    const infoStr = sessionStorage.getItem('userInfo');
+    if (!infoStr) { location.href = 'index.html'; return; }
+    userInfo = JSON.parse(infoStr);
+    
+    // Slider 連動顯示
+    document.getElementById('scoreSlider').addEventListener('input', (e) => {
+        document.getElementById('scoreDisplay').innerText = e.target.value;
+    });
+
+    loadData();
+};
+
+function switchTab(tabNum) {
+    document.getElementById('page1').style.display = tabNum === 1 ? 'block' : 'none';
+    document.getElementById('page2').style.display = tabNum === 2 ? 'block' : 'none';
+    document.getElementById('tab1').className = tabNum === 1 ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1' : 'font-bold text-sm text-pink-400 pb-1';
+    document.getElementById('tab2').className = tabNum === 2 ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1' : 'font-bold text-sm text-pink-400 pb-1';
+}
+
+async function loadData() {
+    try {
+        const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_init', phone: userInfo.encryptedPhone || userInfo.phone }) }).then(r=>r.json());
+        
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+        if (!res.data.is_joined) {
+            document.getElementById('optInModal').style.display = 'flex';
+        } else {
+            // 填入 Page 1
+            if (res.data.currentRecord) {
+                document.getElementById('catSelect').value = res.data.currentRecord.category;
+                document.getElementById('goalDesc').value = res.data.currentRecord.goal_desc;
+                if(res.data.currentRecord.score !== null) {
+                    document.getElementById('scoreSlider').value = res.data.currentRecord.score;
+                    document.getElementById('scoreDisplay').innerText = res.data.currentRecord.score;
+                }
+            }
+            // 渲染 Page 2
+            renderLeaderboard(res.data.leaderboard);
+        }
+    } catch(e) { alert("連線異常"); }
+}
+
+async function joinWish() {
+    document.getElementById('optInModal').style.display = 'none';
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_opt_in', phone: userInfo.encryptedPhone || userInfo.phone, name: userInfo.name }) });
+    location.reload();
+}
+
+async function saveGoal() {
+    const cat = document.getElementById('catSelect').value;
+    const desc = document.getElementById('goalDesc').value.trim();
+    if(!desc) { alert("請輸入目標內容"); return; }
+    
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_save_goal', phone: userInfo.encryptedPhone || userInfo.phone, category: cat, goal_desc: desc }) });
+    alert("目標已儲存");
+    location.reload();
+}
+
+async function saveScore() {
+    const score = document.getElementById('scoreSlider').value;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_save_score', phone: userInfo.encryptedPhone || userInfo.phone, score: score }) }).then(r=>r.json());
+    if (res.result === "ERROR") { alert(res.message); location.reload(); }
+    else { alert("評分成功"); location.reload(); }
+}
+
+function renderLeaderboard(data) {
+    const container = document.getElementById('leaderboardContainer');
+    container.innerHTML = data.map(user => {
+        const maxScore = user.total_weeks * 10;
+        const percent = maxScore > 0 ? Math.round((user.total_score / maxScore) * 100) : 0;
+        const starsHtml = Array(user.stars).fill('<i class="fas fa-star text-yellow-400 text-[10px]"></i>').join('');
+        
+        return `
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <div class="flex justify-between items-end mb-2">
+                <span class="font-black text-gray-800">${user.name} <span class="ml-1">${starsHtml}</span></span>
+                <span class="text-xs font-bold text-pink-600">${percent}%</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div class="bg-pink-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+            </div>
+        </div>`;
+    }).join('');
+}
+</script>
+</body>
+</html>

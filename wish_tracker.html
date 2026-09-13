@@ -9,13 +9,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #FDFBF7; }
-        .pink-gradient { background: linear-gradient(135deg, #be185d 0%, #db2777 100%); }
     </style>
 </head>
 <body class="min-h-screen pb-20">
 
-<!-- 頂部導覽列 -->
-<nav class="sticky top-0 z-40 bg-pink-800 text-white px-6 h-16 shadow-lg flex items-center justify-between">
+<nav class="sticky top-0 z-40 bg-[#9d174d] text-white px-6 h-16 shadow-lg flex items-center justify-between">
     <button onclick="location.href='member_zone.html'" class="flex items-center gap-2 active:scale-95 outline-none">
         <i class="fas fa-chevron-left text-pink-200"></i>
         <h1 class="text-lg font-black tracking-widest">築心小願</h1>
@@ -26,7 +24,6 @@
     </div>
 </nav>
 
-<!-- Loading / Opt-In Modal -->
 <div id="loadingOverlay" class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center">
     <div class="flex flex-col items-center"><i class="fas fa-circle-notch fa-spin text-white text-4xl mb-4"></i></div>
 </div>
@@ -35,8 +32,8 @@
     <div class="bg-white p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl">
         <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-600 text-2xl"><i class="fas fa-seedling"></i></div>
         <h2 class="text-xl font-black text-gray-800 mb-2">歡迎加入築心小願</h2>
-        <p class="text-sm text-gray-500 mb-6 text-left leading-relaxed">藉由每週一點點小目標，讓自己更健康、生活更有活力！(自由參加)</p>
-        <button onclick="joinWish()" class="w-full bg-pink-600 text-white py-4 rounded-full font-bold shadow-lg active:scale-95 transition-all">確認參加</button>
+        <p class="text-sm text-gray-500 mb-6 text-left leading-relaxed">藉由每週一點點小目標，讓自己更健康、生活更有活力！</p>
+        <button onclick="joinWish()" class="w-full bg-[#9d174d] text-white py-4 rounded-full font-bold shadow-lg active:scale-95 transition-all">確認參加</button>
         <button onclick="location.href='member_zone.html'" class="w-full mt-3 py-3 text-gray-400 font-bold text-sm">暫不參加</button>
     </div>
 </div>
@@ -54,25 +51,35 @@
                 <option value="社交">☕ 社交</option>
             </select>
             <textarea id="goalDesc" rows="2" placeholder="請輸入小願內容 (例：本週有畫禪繞畫3次)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 text-sm mb-4"></textarea>
-            <button onclick="saveGoal()" class="w-full bg-pink-700 text-white py-3 rounded-xl font-bold active:scale-95 transition-all">儲存目標設定</button>
+            <button onclick="saveGoal()" class="w-full bg-[#9d174d] text-white py-3 rounded-xl font-bold active:scale-95 transition-all">儲存目標設定</button>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50">
-            <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-star-half-alt text-pink-500"></i> 本週自評 (0~10分)</h3>
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative">
+            <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-star-half-alt text-pink-500"></i> 每日自評進度</h3>
+            
+            <!-- 7天導覽列 -->
+            <div id="daysContainer" class="flex justify-between items-center mb-6 px-1"></div>
+
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs text-gray-400 font-bold">未達成</span>
-                <span id="scoreDisplay" class="text-3xl font-black text-pink-600">0</span>
+                <span id="scoreDisplay" class="text-4xl font-black text-[#9d174d]">0</span>
                 <span class="text-xs text-gray-400 font-bold">完全達成</span>
             </div>
-            <input type="range" id="scoreSlider" min="0" max="10" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-6 accent-pink-600">
-            <button onclick="saveScore()" class="w-full bg-pink-100 text-pink-800 py-3 rounded-xl font-bold active:scale-95 transition-all">送出本週評分</button>
+            <input type="range" id="scoreSlider" min="0" max="10" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-6 accent-[#9d174d]">
+            <button onclick="saveScore()" class="w-full bg-pink-50 text-[#9d174d] border border-pink-100 py-3 rounded-xl font-bold active:scale-95 transition-all">儲存 <span id="btnDayHint">今日</span> 評分</button>
+            
+            <!-- 遮罩：若尚未設定目標，鎖住評分區 -->
+            <div id="scoreLock" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center rounded-[2rem] hidden">
+                <i class="fas fa-lock text-pink-300 text-3xl mb-2"></i>
+                <p class="text-sm font-bold text-gray-500">請先於上方儲存本週目標</p>
+            </div>
         </div>
     </div>
 
     <!-- Page 2: 總列表 -->
     <div id="page2" class="space-y-4 hidden">
-        <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-xs text-pink-800 font-bold">
-            <i class="fas fa-info-circle mt-0.5"></i> 達成率 = 迄今總分 / (參與週數 x 10)。滿分可獲一顆星！
+        <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-[11px] text-[#9d174d] font-bold leading-relaxed">
+            <i class="fas fa-info-circle mt-0.5"></i> 達成率 = 迄今總分 / (參與週數 x 70)。一週內每日均拿 10 分即可獲一顆星！
         </div>
         <div id="leaderboardContainer" class="space-y-4"></div>
     </div>
@@ -83,12 +90,18 @@
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
 let userInfo = {};
 
+// 評分狀態管理
+let currentScores = Array(7).fill(null);
+let selectedDayIndex = (new Date().getDay() + 6) % 7; // 轉換 JS 的星期日(0) 為陣列的週日(6)
+let hasCurrentGoal = false;
+
+const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
+
 window.onload = () => {
     const infoStr = sessionStorage.getItem('userInfo');
     if (!infoStr) { location.href = 'index.html'; return; }
     userInfo = JSON.parse(infoStr);
     
-    // Slider 連動顯示
     document.getElementById('scoreSlider').addEventListener('input', (e) => {
         document.getElementById('scoreDisplay').innerText = e.target.value;
     });
@@ -103,28 +116,62 @@ function switchTab(tabNum) {
     document.getElementById('tab2').className = tabNum === 2 ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1' : 'font-bold text-sm text-pink-400 pb-1';
 }
 
+function renderDays() {
+    const container = document.getElementById('daysContainer');
+    container.innerHTML = dayNames.map((d, i) => {
+        const score = currentScores[i];
+        const isSelected = i === selectedDayIndex;
+        const hasScore = score !== null;
+        
+        let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all ";
+        if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 ";
+        if (hasScore) classes += "bg-pink-100 text-[#9d174d] ";
+        else classes += "bg-gray-100 text-gray-400";
+        
+        return `<button onclick="selectDay(${i})" class="${classes}">
+            <span>${d}</span>
+            <span class="text-[10px] mt-0.5 opacity-80">${hasScore ? score : '-'}</span>
+        </button>`;
+    }).join('');
+
+    // 更新 Slider 與按鈕提示
+    const val = currentScores[selectedDayIndex] !== null ? currentScores[selectedDayIndex] : 0;
+    document.getElementById('scoreSlider').value = val;
+    document.getElementById('scoreDisplay').innerText = val;
+    document.getElementById('btnDayHint').innerText = `週${dayNames[selectedDayIndex]}`;
+}
+
+function selectDay(index) {
+    selectedDayIndex = index;
+    renderDays();
+}
+
 async function loadData() {
     try {
         const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_init', phone: userInfo.encryptedPhone || userInfo.phone }) }).then(r=>r.json());
-        
         document.getElementById('loadingOverlay').style.display = 'none';
         
         if (!res.data.is_joined) {
             document.getElementById('optInModal').style.display = 'flex';
         } else {
-            // 填入 Page 1
+            // 如果本週有紀錄
             if (res.data.currentRecord) {
+                hasCurrentGoal = true;
                 document.getElementById('catSelect').value = res.data.currentRecord.category;
                 document.getElementById('goalDesc').value = res.data.currentRecord.goal_desc;
-                if(res.data.currentRecord.score !== null) {
-                    document.getElementById('scoreSlider').value = res.data.currentRecord.score;
-                    document.getElementById('scoreDisplay').innerText = res.data.currentRecord.score;
-                }
+                currentScores = res.data.currentRecord.scores;
+            } 
+            // 若本週無紀錄，但有歷史紀錄，則自動帶入作為樣板
+            else if (res.data.lastGoal) {
+                document.getElementById('catSelect').value = res.data.lastGoal.category;
+                document.getElementById('goalDesc').value = res.data.lastGoal.goal_desc;
             }
-            // 渲染 Page 2
+
+            document.getElementById('scoreLock').style.display = hasCurrentGoal ? 'none' : 'flex';
+            renderDays();
             renderLeaderboard(res.data.leaderboard);
         }
-    } catch(e) { alert("連線異常"); }
+    } catch(e) { alert("連線異常，請重新整理"); }
 }
 
 async function joinWish() {
@@ -141,22 +188,38 @@ async function saveGoal() {
     
     document.getElementById('loadingOverlay').style.display = 'flex';
     await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_save_goal', phone: userInfo.encryptedPhone || userInfo.phone, category: cat, goal_desc: desc }) });
-    alert("目標已儲存");
-    location.reload();
+    location.reload(); // 儲存完重刷以解鎖評分區
 }
 
 async function saveScore() {
+    if (!hasCurrentGoal) return; // 防呆
     const score = document.getElementById('scoreSlider').value;
     document.getElementById('loadingOverlay').style.display = 'flex';
-    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_save_score', phone: userInfo.encryptedPhone || userInfo.phone, score: score }) }).then(r=>r.json());
-    if (res.result === "ERROR") { alert(res.message); location.reload(); }
-    else { alert("評分成功"); location.reload(); }
+    
+    const res = await fetch(GAS_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+            type: 'wish_save_score', 
+            phone: userInfo.encryptedPhone || userInfo.phone, 
+            dayIndex: selectedDayIndex,
+            score: score 
+        }) 
+    }).then(r=>r.json());
+    
+    if (res.result === "ERROR") { 
+        alert(res.message); 
+    } else {
+        // 更新本地陣列並重新渲染，不須重整頁面
+        currentScores[selectedDayIndex] = Number(score);
+        renderDays();
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
 }
 
 function renderLeaderboard(data) {
     const container = document.getElementById('leaderboardContainer');
     container.innerHTML = data.map(user => {
-        const maxScore = user.total_weeks * 10;
+        const maxScore = user.total_weeks * 70; // 配合每日 10 分，分母為週數 x 70
         const percent = maxScore > 0 ? Math.round((user.total_score / maxScore) * 100) : 0;
         const starsHtml = Array(user.stars).fill('<i class="fas fa-star text-yellow-400 text-[10px]"></i>').join('');
         
@@ -164,10 +227,10 @@ function renderLeaderboard(data) {
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
             <div class="flex justify-between items-end mb-2">
                 <span class="font-black text-gray-800">${user.name} <span class="ml-1">${starsHtml}</span></span>
-                <span class="text-xs font-bold text-pink-600">${percent}%</span>
+                <span class="text-xs font-bold text-[#9d174d]">${percent}%</span>
             </div>
-            <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div class="bg-pink-500 h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+            <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner">
+                <div class="bg-[#9d174d] h-full rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
             </div>
         </div>`;
     }).join('');

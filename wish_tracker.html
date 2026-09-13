@@ -128,30 +128,43 @@ function switchTab(tabNum) {
 
 function renderDays() {
     const container = document.getElementById('daysContainer');
+    const todayIndex = (new Date().getDay() + 6) % 7; // 取得今天索引 (0=一, 6=日)
     
-    // 🌟 核心修改：移除原先遇到 -1 就強迫跳到今天的限制，允許自由點擊補登
+    // 防呆：如果選到的天數是 -1(略過) 或 尚未到來的未來日子，自動跳回今天
+    if (currentScores[selectedDayIndex] === -1 || selectedDayIndex > todayIndex) {
+        selectedDayIndex = todayIndex;
+    }
 
     container.innerHTML = dayNames.map((d, i) => {
         const score = currentScores[i];
         const isSkip = score === -1; 
-        const isSelected = i === selectedDayIndex;
+        const isFuture = i > todayIndex; // 判斷是否為未來天數
+        const isSelected = i === selectedDayIndex && !isFuture;
         const hasScore = score !== null && score !== -1;
         
-        // 將 div 改為 button，確保所有日子皆可點擊
-        let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer outline-none ";
+        let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all outline-none ";
         
+        // 🚫 處理未來天數：渲染為純文字容器，去除點擊事件與按鈕特性
+        if (isFuture) {
+            classes += "bg-gray-50 text-gray-200 cursor-not-allowed";
+            return `<div class="${classes}">
+                <span>${d}</span>
+                <span class="text-[10px] mt-0.5 opacity-50">-</span>
+            </div>`;
+        }
+
+        // 處理可點擊的天數 (過去與今天)
         if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 shadow-sm z-10 bg-white ";
 
         if (hasScore) {
             classes += "bg-pink-100 text-[#9d174d] ";
         } else if (isSkip) {
-            // 🌟 豁免天數樣式改為虛線框，暗示可點擊補填
             classes += "bg-gray-50 text-gray-400 border border-dashed border-gray-300 ";
         } else {
             classes += "bg-gray-100 text-gray-400 ";
         }
         
-        return `<button onclick="selectDay(${i})" class="${classes}">
+        return `<button onclick="selectDay(${i})" class="${classes} cursor-pointer hover:bg-gray-200">
             <span>${d}</span>
             <span class="text-[10px] mt-0.5 opacity-80">${hasScore ? score : (isSkip ? '免' : '-')}</span>
         </button>`;

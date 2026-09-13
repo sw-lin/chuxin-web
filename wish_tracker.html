@@ -128,10 +128,10 @@ function switchTab(tabNum) {
 
 function renderDays() {
     const container = document.getElementById('daysContainer');
-    const todayIndex = (new Date().getDay() + 6) % 7; // 取得今天索引 (0=一, 6=日)
+    const todayIndex = (new Date().getDay() + 6) % 7; 
     
-    // 🌟 修正：移除遇到 -1 強迫跳回今天的限制，僅防堵點擊「未來天數」
-    if (selectedDayIndex > todayIndex) {
+    // 防呆：如果選到的天數是 -1(豁免) 或 未來日子，自動跳回今天
+    if (currentScores[selectedDayIndex] === -1 || selectedDayIndex > todayIndex) {
         selectedDayIndex = todayIndex;
     }
 
@@ -139,38 +139,35 @@ function renderDays() {
         const score = currentScores[i];
         const isSkip = score === -1; 
         const isFuture = i > todayIndex; 
-        const isSelected = i === selectedDayIndex && !isFuture;
+        const isSelected = i === selectedDayIndex && !isFuture && !isSkip;
         const hasScore = score !== null && score !== -1;
         
         let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all outline-none ";
         
-        // 處理未來天數：渲染為純文字容器，去除點擊事件
-        if (isFuture) {
-            classes += "bg-gray-50 text-gray-200 cursor-not-allowed";
+        // 🚫 嚴格鎖定：未來天數 與 「加入前」的豁免天數，渲染為純文字且不可點擊
+        if (isFuture || isSkip) {
+            classes += "bg-gray-50 text-gray-300 cursor-not-allowed";
             return `<div class="${classes}">
                 <span>${d}</span>
-                <span class="text-[10px] mt-0.5 opacity-50">-</span>
+                <span class="text-[10px] mt-0.5 opacity-60">${isSkip ? '免' : '-'}</span>
             </div>`;
         }
 
-        // 處理可點擊的天數 (過去與今天)
+        // 處理可點擊的天數 (加入後的過去漏填與今天)
         if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 shadow-sm z-10 bg-white ";
 
         if (hasScore) {
             classes += "bg-pink-100 text-[#9d174d] ";
-        } else if (isSkip) {
-            classes += "bg-gray-50 text-gray-400 border border-dashed border-gray-300 ";
         } else {
-            classes += "bg-gray-100 text-gray-400 ";
+            classes += "bg-gray-100 text-gray-400 "; // 漏填的狀態
         }
         
         return `<button onclick="selectDay(${i})" class="${classes} cursor-pointer hover:bg-gray-200">
             <span>${d}</span>
-            <span class="text-[10px] mt-0.5 opacity-80">${hasScore ? score : (isSkip ? '免' : '-')}</span>
+            <span class="text-[10px] mt-0.5 opacity-80">${hasScore ? score : '-'}</span>
         </button>`;
     }).join('');
 
-    // 更新 Slider 與按鈕文字
     const val = (currentScores[selectedDayIndex] !== null && currentScores[selectedDayIndex] !== -1) ? currentScores[selectedDayIndex] : 0;
     document.getElementById('scoreSlider').value = val;
     document.getElementById('scoreDisplay').innerText = val;

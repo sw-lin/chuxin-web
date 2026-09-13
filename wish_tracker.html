@@ -13,14 +13,21 @@
 </head>
 <body class="min-h-screen pb-20">
 
-<nav class="sticky top-0 z-40 bg-[#9d174d] text-white px-6 h-16 shadow-lg flex items-center justify-between">
-    <button onclick="location.href='member_zone.html'" class="flex items-center gap-2 active:scale-95 outline-none">
-        <i class="fas fa-chevron-left text-pink-200"></i>
-        <h1 class="text-lg font-black tracking-widest">築心小願</h1>
+<!-- 優化版：NavBar 置中對齊與返回按鈕 -->
+<nav class="sticky top-0 z-40 bg-[#9d174d] text-white px-4 h-16 shadow-lg flex items-center justify-between relative">
+    <button onclick="location.href='member_zone.html'" class="flex items-center gap-1 active:scale-95 outline-none z-10 text-pink-200 hover:text-white transition-colors">
+        <i class="fas fa-chevron-left text-lg"></i>
+        <span class="font-bold text-sm tracking-widest mt-0.5">返回</span>
     </button>
-    <div class="flex gap-4">
-        <button id="tab1" onclick="switchTab(1)" class="font-bold text-sm text-pink-200 border-b-2 border-white pb-1">本週目標</button>
-        <button id="tab2" onclick="switchTab(2)" class="font-bold text-sm text-pink-400 pb-1">總列表</button>
+    
+    <!-- 絕對置中區塊 -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <h1 class="text-lg font-black tracking-widest text-white">築心小願</h1>
+    </div>
+
+    <div class="flex gap-4 z-10">
+        <button id="tab1" onclick="switchTab(1)" class="font-bold text-sm text-pink-200 border-b-2 border-white pb-1 transition-all">本週目標</button>
+        <button id="tab2" onclick="switchTab(2)" class="font-bold text-sm text-pink-400 border-b-2 border-transparent pb-1 transition-all">總列表</button>
     </div>
 </nav>
 
@@ -42,7 +49,7 @@
 
     <!-- Page 1: 個人本週紀錄 -->
     <div id="page1" class="space-y-6 block">
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative z-20">
             <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-pen-nib text-pink-500"></i> 設定本週目標 (週一歸零)</h3>
             <select id="catSelect" class="w-full mb-4 p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 font-bold text-gray-700">
                 <option value="運動">🏀 運動 (如：肌力運動)</option>
@@ -51,13 +58,14 @@
                 <option value="社交">☕ 社交</option>
             </select>
             <textarea id="goalDesc" rows="2" placeholder="請輸入小願內容 (例：本週有畫禪繞畫3次)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 text-sm mb-4"></textarea>
-            <button onclick="saveGoal()" class="w-full bg-[#9d174d] text-white py-3 rounded-xl font-bold active:scale-95 transition-all">儲存目標設定</button>
+            
+            <!-- 加入呼吸燈動畫，導引使用者點擊 -->
+            <button onclick="saveGoal()" id="saveGoalBtn" class="w-full bg-[#9d174d] text-white py-3 rounded-xl font-bold active:scale-95 transition-all shadow-md">儲存目標設定</button>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative z-10">
             <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-star-half-alt text-pink-500"></i> 每日自評進度</h3>
             
-            <!-- 7天導覽列 -->
             <div id="daysContainer" class="flex justify-between items-center mb-6 px-1"></div>
 
             <div class="flex items-center justify-between mb-2">
@@ -68,18 +76,19 @@
             <input type="range" id="scoreSlider" min="0" max="10" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-6 accent-[#9d174d]">
             <button onclick="saveScore()" class="w-full bg-pink-50 text-[#9d174d] border border-pink-100 py-3 rounded-xl font-bold active:scale-95 transition-all">儲存 <span id="btnDayHint">今日</span> 評分</button>
             
-            <!-- 遮罩：若尚未設定目標，鎖住評分區 -->
+            <!-- 優化版：鎖定提示 -->
             <div id="scoreLock" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center rounded-[2rem] hidden">
-                <i class="fas fa-lock text-pink-300 text-3xl mb-2"></i>
-                <p class="text-sm font-bold text-gray-500">請先於上方儲存本週目標</p>
+                <i class="fas fa-lock text-[#9d174d] text-3xl mb-3 animate-bounce"></i>
+                <p class="text-sm font-black text-gray-700">尚未確認本週目標</p>
+                <p class="text-xs font-bold text-gray-500 mt-1 text-center px-4 leading-relaxed">系統已自動帶入您上次的設定<br>請點擊上方 <span class="text-[#9d174d]">「儲存目標設定」</span> 來解鎖評分</p>
             </div>
         </div>
     </div>
 
     <!-- Page 2: 總列表 -->
     <div id="page2" class="space-y-4 hidden">
-        <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-[11px] text-[#9d174d] font-bold leading-relaxed">
-            <i class="fas fa-info-circle mt-0.5"></i> 達成率 = 迄今總分 / (參與週數 x 70)。一週內每日均拿 10 分即可獲一顆星！
+        <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-[11px] text-[#9d174d] font-bold leading-relaxed shadow-inner">
+            <i class="fas fa-info-circle mt-0.5"></i> 系統採用動態積分制：若於週間加入，過去天數將自動豁免，絕不影響您的達成率，滿分依舊可獲一顆星！
         </div>
         <div id="leaderboardContainer" class="space-y-4"></div>
     </div>
@@ -90,9 +99,8 @@
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
 let userInfo = {};
 
-// 評分狀態管理
 let currentScores = Array(7).fill(null);
-let selectedDayIndex = (new Date().getDay() + 6) % 7; // 轉換 JS 的星期日(0) 為陣列的週日(6)
+let selectedDayIndex = (new Date().getDay() + 6) % 7; 
 let hasCurrentGoal = false;
 
 const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
@@ -112,18 +120,38 @@ window.onload = () => {
 function switchTab(tabNum) {
     document.getElementById('page1').style.display = tabNum === 1 ? 'block' : 'none';
     document.getElementById('page2').style.display = tabNum === 2 ? 'block' : 'none';
-    document.getElementById('tab1').className = tabNum === 1 ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1' : 'font-bold text-sm text-pink-400 pb-1';
-    document.getElementById('tab2').className = tabNum === 2 ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1' : 'font-bold text-sm text-pink-400 pb-1';
+    
+    document.getElementById('tab1').className = tabNum === 1 
+        ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1 transition-all' 
+        : 'font-bold text-sm text-pink-400 border-b-2 border-transparent pb-1 transition-all';
+    
+    document.getElementById('tab2').className = tabNum === 2 
+        ? 'font-bold text-sm text-pink-200 border-b-2 border-white pb-1 transition-all' 
+        : 'font-bold text-sm text-pink-400 border-b-2 border-transparent pb-1 transition-all';
 }
 
 function renderDays() {
     const container = document.getElementById('daysContainer');
+    
+    // 如果選到的那天剛好是略過(-1)，自動幫他切換到今天 (避免卡住)
+    if (currentScores[selectedDayIndex] === -1) {
+        selectedDayIndex = (new Date().getDay() + 6) % 7;
+    }
+
     container.innerHTML = dayNames.map((d, i) => {
         const score = currentScores[i];
-        const isSelected = i === selectedDayIndex;
-        const hasScore = score !== null;
+        const isSkip = score === -1; // 判斷是否為週間加入被略過的天數
+        const isSelected = i === selectedDayIndex && !isSkip;
+        const hasScore = score !== null && score !== -1;
         
         let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all ";
+        
+        if (isSkip) {
+            // 略過天數的樣式：反灰且不可點擊
+            classes += "bg-gray-50 text-gray-300 opacity-50 cursor-not-allowed";
+            return `<div class="${classes}"><span>${d}</span><span class="text-[10px] mt-0.5">-</span></div>`;
+        }
+
         if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 ";
         if (hasScore) classes += "bg-pink-100 text-[#9d174d] ";
         else classes += "bg-gray-100 text-gray-400";
@@ -134,8 +162,7 @@ function renderDays() {
         </button>`;
     }).join('');
 
-    // 更新 Slider 與按鈕提示
-    const val = currentScores[selectedDayIndex] !== null ? currentScores[selectedDayIndex] : 0;
+    const val = (currentScores[selectedDayIndex] !== null && currentScores[selectedDayIndex] !== -1) ? currentScores[selectedDayIndex] : 0;
     document.getElementById('scoreSlider').value = val;
     document.getElementById('scoreDisplay').innerText = val;
     document.getElementById('btnDayHint').innerText = `週${dayNames[selectedDayIndex]}`;
@@ -154,17 +181,17 @@ async function loadData() {
         if (!res.data.is_joined) {
             document.getElementById('optInModal').style.display = 'flex';
         } else {
-            // 如果本週有紀錄
             if (res.data.currentRecord) {
                 hasCurrentGoal = true;
                 document.getElementById('catSelect').value = res.data.currentRecord.category;
                 document.getElementById('goalDesc').value = res.data.currentRecord.goal_desc;
                 currentScores = res.data.currentRecord.scores;
-            } 
-            // 若本週無紀錄，但有歷史紀錄，則自動帶入作為樣板
-            else if (res.data.lastGoal) {
+                document.getElementById('saveGoalBtn').classList.remove('animate-pulse');
+            } else if (res.data.lastGoal) {
                 document.getElementById('catSelect').value = res.data.lastGoal.category;
                 document.getElementById('goalDesc').value = res.data.lastGoal.goal_desc;
+                // 提示使用者點擊儲存
+                document.getElementById('saveGoalBtn').classList.add('animate-pulse');
             }
 
             document.getElementById('scoreLock').style.display = hasCurrentGoal ? 'none' : 'flex';
@@ -188,11 +215,11 @@ async function saveGoal() {
     
     document.getElementById('loadingOverlay').style.display = 'flex';
     await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_save_goal', phone: userInfo.encryptedPhone || userInfo.phone, category: cat, goal_desc: desc }) });
-    location.reload(); // 儲存完重刷以解鎖評分區
+    location.reload(); 
 }
 
 async function saveScore() {
-    if (!hasCurrentGoal) return; // 防呆
+    if (!hasCurrentGoal) return; 
     const score = document.getElementById('scoreSlider').value;
     document.getElementById('loadingOverlay').style.display = 'flex';
     
@@ -209,7 +236,6 @@ async function saveScore() {
     if (res.result === "ERROR") { 
         alert(res.message); 
     } else {
-        // 更新本地陣列並重新渲染，不須重整頁面
         currentScores[selectedDayIndex] = Number(score);
         renderDays();
         document.getElementById('loadingOverlay').style.display = 'none';
@@ -219,7 +245,8 @@ async function saveScore() {
 function renderLeaderboard(data) {
     const container = document.getElementById('leaderboardContainer');
     container.innerHTML = data.map(user => {
-        const maxScore = user.total_weeks * 70; // 配合每日 10 分，分母為週數 x 70
+        // user.total_max_score 是 GAS 自動算好的動態分母 (已扣除 -1 略過的天數)
+        const maxScore = user.total_max_score || 0; 
         const percent = maxScore > 0 ? Math.round((user.total_score / maxScore) * 100) : 0;
         const starsHtml = Array(user.stars).fill('<i class="fas fa-star text-yellow-400 text-[10px]"></i>').join('');
         

@@ -13,14 +13,12 @@
 </head>
 <body class="min-h-screen pb-20">
 
-<!-- 優化版：NavBar 置中對齊與返回按鈕 -->
 <nav class="sticky top-0 z-40 bg-[#9d174d] text-white px-4 h-16 shadow-lg flex items-center justify-between relative">
     <button onclick="location.href='member_zone.html'" class="flex items-center gap-1 active:scale-95 outline-none z-10 text-pink-200 hover:text-white transition-colors">
         <i class="fas fa-chevron-left text-lg"></i>
         <span class="font-bold text-sm tracking-widest mt-0.5">返回</span>
     </button>
     
-    <!-- 絕對置中區塊 -->
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
         <h1 class="text-lg font-black tracking-widest text-white">築心小願</h1>
     </div>
@@ -47,7 +45,6 @@
 
 <main class="max-w-xl mx-auto p-6 space-y-6">
 
-    <!-- Page 1: 個人本週紀錄 -->
     <div id="page1" class="space-y-6 block">
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative z-20">
             <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-pen-nib text-pink-500"></i> 設定本週目標 (週一歸零)</h3>
@@ -59,14 +56,15 @@
             </select>
             <textarea id="goalDesc" rows="2" placeholder="請輸入小願內容 (例：本週有畫禪繞畫3次)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 text-sm mb-4"></textarea>
             
-            <!-- 加入呼吸燈動畫，導引使用者點擊 -->
             <button onclick="saveGoal()" id="saveGoalBtn" class="w-full bg-[#9d174d] text-white py-3 rounded-xl font-bold active:scale-95 transition-all shadow-md">儲存目標設定</button>
         </div>
 
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative z-10">
             <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-star-half-alt text-pink-500"></i> 每日自評進度</h3>
             
-            <div id="daysContainer" class="flex justify-between items-center mb-6 px-1"></div>
+            <div id="daysContainer" class="flex justify-between items-center px-1"></div>
+            <!-- 補登提示語 -->
+            <p class="text-[11px] text-gray-400 text-center mt-3 mb-6 font-bold"><i class="fas fa-hand-pointer"></i> 點擊上方日期，可隨時補填或修改本週成績</p>
 
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs text-gray-400 font-bold">未達成</span>
@@ -76,7 +74,6 @@
             <input type="range" id="scoreSlider" min="0" max="10" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-6 accent-[#9d174d]">
             <button onclick="saveScore()" class="w-full bg-pink-50 text-[#9d174d] border border-pink-100 py-3 rounded-xl font-bold active:scale-95 transition-all">儲存 <span id="btnDayHint">今日</span> 評分</button>
             
-            <!-- 優化版：鎖定提示 -->
             <div id="scoreLock" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center rounded-[2rem] hidden">
                 <i class="fas fa-lock text-[#9d174d] text-3xl mb-3 animate-bounce"></i>
                 <p class="text-sm font-black text-gray-700">尚未確認本週目標</p>
@@ -85,10 +82,9 @@
         </div>
     </div>
 
-    <!-- Page 2: 總列表 -->
     <div id="page2" class="space-y-4 hidden">
         <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-[11px] text-[#9d174d] font-bold leading-relaxed shadow-inner">
-            <i class="fas fa-info-circle mt-0.5"></i> 系統採用動態積分制：若於週間加入，過去天數將自動豁免，絕不影響您的達成率，滿分依舊可獲一顆星！
+            <i class="fas fa-info-circle mt-0.5"></i> 系統採用動態積分制：若於週間加入，過去天數將自動豁免，絕不影響您的達成率，滿分依舊可獲一顆星！(若補登過去成績，系統將自動加回分母)
         </div>
         <div id="leaderboardContainer" class="space-y-4"></div>
     </div>
@@ -133,32 +129,31 @@ function switchTab(tabNum) {
 function renderDays() {
     const container = document.getElementById('daysContainer');
     
-    // 如果選到的那天剛好是略過(-1)，自動幫他切換到今天 (避免卡住)
-    if (currentScores[selectedDayIndex] === -1) {
-        selectedDayIndex = (new Date().getDay() + 6) % 7;
-    }
+    // 🌟 核心修改：移除原先遇到 -1 就強迫跳到今天的限制，允許自由點擊補登
 
     container.innerHTML = dayNames.map((d, i) => {
         const score = currentScores[i];
-        const isSkip = score === -1; // 判斷是否為週間加入被略過的天數
-        const isSelected = i === selectedDayIndex && !isSkip;
+        const isSkip = score === -1; 
+        const isSelected = i === selectedDayIndex;
         const hasScore = score !== null && score !== -1;
         
-        let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all ";
+        // 將 div 改為 button，確保所有日子皆可點擊
+        let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer outline-none ";
         
-        if (isSkip) {
-            // 略過天數的樣式：反灰且不可點擊
-            classes += "bg-gray-50 text-gray-300 opacity-50 cursor-not-allowed";
-            return `<div class="${classes}"><span>${d}</span><span class="text-[10px] mt-0.5">-</span></div>`;
-        }
+        if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 shadow-sm z-10 bg-white ";
 
-        if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 ";
-        if (hasScore) classes += "bg-pink-100 text-[#9d174d] ";
-        else classes += "bg-gray-100 text-gray-400";
+        if (hasScore) {
+            classes += "bg-pink-100 text-[#9d174d] ";
+        } else if (isSkip) {
+            // 🌟 豁免天數樣式改為虛線框，暗示可點擊補填
+            classes += "bg-gray-50 text-gray-400 border border-dashed border-gray-300 ";
+        } else {
+            classes += "bg-gray-100 text-gray-400 ";
+        }
         
         return `<button onclick="selectDay(${i})" class="${classes}">
             <span>${d}</span>
-            <span class="text-[10px] mt-0.5 opacity-80">${hasScore ? score : '-'}</span>
+            <span class="text-[10px] mt-0.5 opacity-80">${hasScore ? score : (isSkip ? '免' : '-')}</span>
         </button>`;
     }).join('');
 
@@ -190,7 +185,6 @@ async function loadData() {
             } else if (res.data.lastGoal) {
                 document.getElementById('catSelect').value = res.data.lastGoal.category;
                 document.getElementById('goalDesc').value = res.data.lastGoal.goal_desc;
-                // 提示使用者點擊儲存
                 document.getElementById('saveGoalBtn').classList.add('animate-pulse');
             }
 
@@ -262,7 +256,6 @@ function renderLeaderboard(data) {
                 </div>
             </div>
             
-            <!-- 顯示對方的本週小願目標，供大家參考激勵 -->
             <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600 font-medium leading-relaxed flex items-start gap-2">
                 <i class="fas fa-bullseye text-pink-400 mt-0.5 shrink-0"></i>
                 <span class="break-all">${user.goal_desc}</span>

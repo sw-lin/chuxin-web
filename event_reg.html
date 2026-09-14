@@ -88,8 +88,9 @@
                 <span class="text-3xl font-serif text-emerald-900" id="paidCount">0</span>
                 <span class="text-gray-400 text-xs">/ <span id="totalReg">0</span> 已繳費</span>
             </div>
-            <!-- 🌟 加上 id 並改呼叫 openReportModal，預設隱藏 -->
-            <button id="sendPaidListBtn" onclick="openReportModal()" class="hidden w-full py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-emerald-600 active:scale-95 transition-all mt-2">
+            <!-- 修改前：<button id="sendPaidListBtn" class="hidden w-full ..."> -->
+            <!-- 修改後：移除 hidden -->
+            <button id="sendPaidListBtn" onclick="openReportModal()" class="w-full py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-emerald-600 active:scale-95 transition-all mt-2">
                 <i class="fab fa-line mr-1"></i> 發送已繳名單
             </button>
         </div>
@@ -421,16 +422,20 @@
             return; 
         }
 
-        // 2. 權限攔截：沒有權限的人，直接把右上角的編輯按鈕隱藏
+        // 2. 權限攔截：沒有權限的人，隱藏編輯按鈕與發送按鈕
         const editToggleBtn = document.getElementById('editToggleBtn');
-        if (!hasEventPermission && editToggleBtn) {
-            editToggleBtn.style.visibility = 'hidden';
+        const sendPaidListBtn = document.getElementById('sendPaidListBtn'); // 🌟 取得發送名單按鈕
+
+        if (!hasEventPermission) {
+            if (editToggleBtn) editToggleBtn.style.visibility = 'hidden';
+            if (sendPaidListBtn) sendPaidListBtn.classList.add('hidden'); // ❌ 無權限者隱藏
+        } else {
+            if (sendPaidListBtn) sendPaidListBtn.classList.remove('hidden'); // ✅ 有權限者直接顯示
         }
 
         // 3. 畫面與權限準備好後，開始載入活動資料
         loadData();
     }
-
         // 核心載入
 // 核心載入
 // --- 修正後的 loadData ---
@@ -713,16 +718,6 @@ function renderRegList(list) {
             document.getElementById('adminActions').classList.toggle('hidden', !isEditMode);
             const title = document.getElementById('eventSelector').value;
             document.getElementById('manageEventBtn').classList.toggle('hidden', !isEditMode || !title);
-            
-            // 🌟 控制發送名單按鈕的顯示 (跟隨編輯模式)
-            const sendListBtn = document.getElementById('sendPaidListBtn');
-            if (sendListBtn) {
-                if (isEditMode && title) {
-                    sendListBtn.classList.remove('hidden');
-                } else {
-                    sendListBtn.classList.add('hidden');
-                }
-            }
             
             loadEventDetails();
         }

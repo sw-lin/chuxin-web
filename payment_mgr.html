@@ -292,36 +292,34 @@
                     </div>
                 `;
             }).join('');
-        }
+         }
 
-        // 修改後的 toggleEditMode
-function toggleEditMode() {
-    // 安全檢查
-    if (!hasLedgerPermission) {
-       showToast("⚠️ 您沒有編輯繳費紀錄的權限");
-       return;
-    }            
-    isEditMode = !isEditMode;
-    const btn = document.getElementById('editToggleBtn');
-    const adminBox = document.getElementById('adminActions');
-    const manageBtn = document.getElementById('manageItemBtn');
-    const lineSendBtn = document.getElementById('lineSendBtn'); // 🌟 新增：取得 LINE 按鈕
-    
-    if (isEditMode) {
-        btn.innerText = "完成編輯";
-        btn.classList.replace('bg-white/10', 'bg-red-500');
-        adminBox.classList.remove('hidden');
-        manageBtn.classList.remove('hidden');
-        if(lineSendBtn) lineSendBtn.classList.remove('hidden'); // 🌟 新增：開啟編輯時顯示
-    } else {
-        btn.innerText = "開啟編輯";
-        btn.classList.replace('bg-red-500', 'bg-white/10');
-        adminBox.classList.add('hidden');
-        manageBtn.classList.add('hidden');
-        if(lineSendBtn) lineSendBtn.classList.add('hidden'); // 🌟 新增：關閉編輯時隱藏
-    }
-    renderLedger();
-}
+         function toggleEditMode() {
+            if (!hasLedgerPermission) {
+               showToast("⚠️ 您沒有編輯繳費紀錄的權限");
+               return;
+            }            
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            const adminBox = document.getElementById('adminActions');
+            const manageBtn = document.getElementById('manageItemBtn');
+            // const lineSendBtn = document.getElementById('lineSendBtn'); // 💡 移除這行，因為它現在常駐顯示
+            
+            if (isEditMode) {
+                btn.innerText = "完成編輯";
+                btn.classList.replace('bg-white/10', 'bg-red-500');
+                adminBox.classList.remove('hidden');
+                manageBtn.classList.remove('hidden');
+                // if(lineSendBtn) lineSendBtn.classList.remove('hidden'); 刪除
+            } else {
+                btn.innerText = "開啟編輯";
+                btn.classList.replace('bg-red-500', 'bg-white/10');
+                adminBox.classList.add('hidden');
+                manageBtn.classList.add('hidden');
+                // if(lineSendBtn) lineSendBtn.classList.add('hidden'); 刪除
+            }
+            renderLedger();
+        }
 
         async function toggleStatus(phone) {
             const itemName = document.getElementById('itemSelector').value;

@@ -85,7 +85,9 @@
                     <span id="totalCount" class="text-xl font-bold text-gray-400">0 位</span>
                 </div>
             </div>
-            <button id="lineSendBtn" onclick="openReportModal()" class="hidden bg-[#06C755] text-white px-3 py-2 rounded-xl font-bold shadow-md flex items-center gap-1.5 active:scale-95 transition-all">
+            <!-- 修改前：<button id="lineSendBtn" class="hidden ..."> -->
+            <!-- 修改後：移除 hidden，讓它預設由 JS 控管顯示 -->
+            <button id="lineSendBtn" onclick="openReportModal()" class="bg-[#06C755] text-white px-3 py-2 rounded-xl font-bold shadow-md flex items-center gap-1.5 active:scale-95 transition-all">
                 <i class="fab fa-line text-base"></i>
                 <span class="text-xs">發送名單</span>
             </button>
@@ -188,11 +190,19 @@
 
         window.onload = () => {
             if (!STAFF_KEY) { location.href = "index.html"; return; }
-            // 如果沒有權限，直接隱藏編輯按鈕
+            
             const editToggleBtn = document.getElementById('editToggleBtn');
-            if (!hasLedgerPermission && editToggleBtn) {
-               editToggleBtn.style.visibility = 'hidden';
+            const lineSendBtn = document.getElementById('lineSendBtn'); // 🌟 取得發送名單按鈕
+
+            if (!hasLedgerPermission) {
+                // ❌ 如果沒有編輯權限，隱藏編輯按鈕與發送名單按鈕
+                if (editToggleBtn) editToggleBtn.style.visibility = 'hidden';
+                if (lineSendBtn) lineSendBtn.classList.add('hidden');
+            } else {
+                // ✅ 如果有權限，直接顯示發送名單按鈕（不需按開啟編輯）
+                if (lineSendBtn) lineSendBtn.classList.remove('hidden');
             }            
+            
             fetchItems();
         };
 

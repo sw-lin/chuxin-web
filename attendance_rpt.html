@@ -81,10 +81,10 @@
                     <span id="totalCount" class="text-xl font-bold text-gray-400">0 位</span>
                 </div>
             </div>
-            <button id="lineBtn" onclick="sendLineReport()" class="bg-[#06C755] text-white px-4 py-3 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
-                <i class="fab fa-line text-2xl mb-1"></i>
-                <span class="text-[10px]">發送名單</span>
-            </button>
+            <button id="lineBtn" onclick="openReportModal()" class="hidden bg-[#06C755] text-white px-4 py-3 rounded-2xl font-black shadow-lg flex flex-col items-center justify-center active:scale-95 transition-all">
+   　　　　　　　 <i class="fab fa-line text-2xl mb-1"></i>
+   　　　　　　　 <span class="text-[10px]">發送名單</span>
+　　　　　　　</button>
         </div>
 
         <div id="reportList" class="space-y-3">
@@ -102,6 +102,33 @@
             </div>
         </div>
     </div>
+　　　<!-- 🌟 新增：發送名單預覽與複製 Modal -->
+    <div id="reportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl flex flex-col">
+            <h3 class="text-xl font-black text-emerald-900 mb-4 text-center">發送名單確認</h3>
+            
+            <!-- 預覽文字框，允許幹部手動微調 -->
+            <textarea id="reportPreviewText" class="w-full p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-sm text-gray-700 outline-none resize-none min-h-[200px]" rows="10"></textarea>
+            
+            <p class="text-[10px] text-gray-400 mt-2 text-center leading-relaxed">
+                💡 若系統 LINE 推播達每月額度上限，<br>請點擊「複製名單」後手動貼至群組。
+            </p>
+
+            <div class="grid grid-cols-2 gap-3 mt-5">
+                <!-- 複製按鈕 -->
+                <button onclick="copyReportText()" class="py-4 bg-amber-500 text-white rounded-2xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition">
+                    <i class="far fa-copy text-lg"></i> 複製名單
+                </button>
+                <!-- 系統發送按鈕 -->
+                <button onclick="confirmSendLineReport()" class="py-4 bg-[#06C755] text-white rounded-2xl font-black shadow-md flex items-center justify-center gap-2 active:scale-95 transition">
+                    <i class="fas fa-paper-plane text-lg"></i> 系統發送
+                </button>
+            </div>
+            
+            <button onclick="closeReportModal()" class="mt-4 py-3 text-gray-400 font-bold text-sm w-full text-center">取消返回</button>
+        </div>
+    </div>
+    
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxplbneiq3qt_4OeahaOkzhHh8meU0qYg9D5cXV8xDxYf1CT3m7y2SaDc7JZSgs6B8/exec";
     // 📦 1. 統一提取資料 (auth 包)
@@ -126,6 +153,8 @@
     let currentReport = [];
     let isEditMode = false;
     let pendingCheckin = { phone: '', name: '' }; 
+    const isUserCanEdit = auth.permissions.includes("all") || auth.permissions.includes("edit_attendance");
+    
     // --- 權限控管初始化 ---
     
     window.onload = async () => {
@@ -237,7 +266,12 @@ async function loadFinishedEvents() {
 
                 document.getElementById('statsLabel').innerText = "目前進度";
                 document.getElementById('statsSubLabel').innerText = "已出席";
-                document.getElementById('lineBtn').classList.remove('hidden');
+                // 🌟 修改：只有具備編輯權限的幹部，才顯示發送名單按鈕
+                if (isUserCanEdit) {
+                    document.getElementById('lineBtn').classList.remove('hidden');
+                } else {
+                    document.getElementById('lineBtn').classList.add('hidden');
+                }
                 
                 renderReport(); // 這裡算出來的畫面就會是 09 開頭了
                 
@@ -391,12 +425,42 @@ async function loadFinishedEvents() {
         `).join('');
     }
 
-    async function sendLineReport() {
+    // 🌟 新增：開啟名單預覽彈窗並生成文字
+    function openReportModal() {
         const selector = document.getElementById('eventSelector');
         const eventText = selector.options[selector.selectedIndex].text;
         const presentList = currentReport.filter(r => r.status === "出席").map(r => `▫️ ${r.name}`);
         const reportMsg = `【築心 - 出席通報】\n活動：${eventText}\n──────\n出席名單 (${presentList.length} 位)：\n${presentList.join('\n')}`;
-        if (!confirm(`確定將出席名單發送至 LINE 群組？`)) return;
+        
+        document.getElementById('reportPreviewText').value = reportMsg;
+        document.getElementById('reportModal').style.display = 'flex';
+    }
+
+    // 🌟 新增：關閉名單預覽彈窗
+    function closeReportModal() {
+        document.getElementById('reportModal').style.display = 'none';
+    }
+
+    // 🌟 新增：複製文字到手機剪貼簿 (備援機制)
+    function copyReportText() {
+        const copyText = document.getElementById('reportPreviewText');
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // 兼容手機版
+        
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            showToast("✅ 名單已複製，可直接貼至 LINE 群組");
+        }).catch(err => {
+            showToast("❌ 複製失敗，請長按文字框手動複製");
+        });
+    }
+
+    // 🌟 修改：確認後實際透過系統發送 LINE
+    async function confirmSendLineReport() {
+        // 從 textarea 抓取文字，這樣如果幹部有手動微調文字也能一起送出
+        const reportMsg = document.getElementById('reportPreviewText').value;
+
+        if (!confirm(`確定將此名單透過系統發送至 LINE 群組？\n(若本月額度用盡將發送失敗)`)) return;
+        
         toggleLoading(true);
         try {
             const res = await fetch(GAS_URL, {
@@ -404,8 +468,17 @@ async function loadFinishedEvents() {
                 body: JSON.stringify({ type: 'send_line', key: STAFF_KEY, message: reportMsg })
             });
             const result = await res.json();
-            showToast(result.result === "SUCCESS" ? "🚀 名單已發送" : "❌ 發送失敗");
-        } catch (e) { showToast("❌ 網路錯誤"); }
+            
+            if (result.result === "SUCCESS") {
+                showToast("🚀 名單已發送至群組");
+                closeReportModal();
+            } else {
+                // 如果失敗(例如 HTTP 429)，提示幹部改用複製功能
+                alert("❌ 發送失敗：\n系統可能已達 LINE 免費額度上限。\n請點選「複製名單」按鈕，手動貼上至群組。");
+            }
+        } catch (e) { 
+            showToast("❌ 網路連線錯誤"); 
+        }
         toggleLoading(false);
     }
 </script>

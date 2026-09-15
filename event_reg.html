@@ -301,18 +301,19 @@
             </div>
 
             <div id="reg_transport_zone" class="p-4 bg-blue-50 rounded-2xl space-y-3">
-                <label class="text-[10px] font-bold text-blue-600">交通安排 (非遊覽車)</label>
-                <div class="flex gap-4">
-                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="自駕"> 自駕</label>
-                    <label class="flex items-center gap-2 text-xs font-bold"><input type="radio" name="trans" value="共乘"> 共乘</label>
-                </div>
+                <label class="text-[10px] font-bold text-blue-600">交通安排</label>
+                <!-- 🌟 改用下拉選單以支援所有交通情境，並綁定 onchange 事件 -->
+                <select id="reg_transport" class="w-full bg-white rounded-2xl px-4 py-3 text-sm font-bold border-none" onchange="updateSeatInput(this.value)">
+                    <!-- 將由 JavaScript 動態載入 -->
+                </select>
+
                 <div id="seat_input_zone" class="mb-4 hidden">
                     <label class="block text-[11px] font-black text-emerald-800 mb-1">可提供共乘座位數 (不含駕駛)</label>
-                    <input type="number" id="reg_seats" min="0" max="6" class="..." value="0">
+                    <input type="number" id="reg_seats" min="0" max="6" class="w-full bg-white rounded-2xl px-4 py-3 text-sm font-bold border-none" value="0">
                 </div>
                 <div id="car_number_zone" class="mb-4 hidden">
                     <label class="block text-[11px] font-black text-emerald-800 mb-1">車牌號碼 (自駕者填寫)</label>
-                    <input type="text" id="reg_car_number" class="w-full border-b-2 border-emerald-100 bg-emerald-50/30 px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 transition-colors" placeholder="例如：ABC-1234">
+                    <input type="text" id="reg_car_number" class="w-full border-b-2 border-emerald-100 bg-emerald-50/30 px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 transition-colors uppercase" placeholder="例如：ABC-1234">
                 </div>
             </div>
 
@@ -855,9 +856,68 @@ function openRegModal(phone, name) {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
     const needId = (ev?.["(需要身分證)"] === '是' || ev?.["needId"] === '是');
-
+    
     const insuranceZone = document.getElementById('reg_insurance_zone');
     if (insuranceZone) insuranceZone.style.display = needId ? 'grid' : 'none';
+
+    // --- 🌟 新增：判定餐會模式與動態產生選項 ---
+    const isBanquetCategory = (ev?.category && ev.category.includes('餐會')) || (ev?.["活動類別"] && ev["活動類別"].includes('餐會')) || (ev?.["類別"] && ev["類別"].includes('餐會'));
+    const hasMenu = !!(ev?.menu_items || ev?.["餐會菜單設定 (JSON)"] || ev?.["餐會菜單設定(JSON)"] || ev?.["餐會菜單設定"] || ev?.menu_photo);
+    const isBanquet = isBanquetCategory || hasMenu;
+
+    // A. 動態處理飲食選單
+    const dietSelect = document.getElementById('reg_diet');
+    if (dietSelect) {
+        if (isBanquet) {
+            let menuHtml = '<option value="">-- 請選擇餐點 --</option>';
+            let parsedMenu = [];
+            let rawMenu = ev?.menu_items || ev?.["餐會菜單設定 (JSON)"] || ev?.["餐會菜單設定(JSON)"] || ev?.["餐會菜單設定"] || "";
+            if (rawMenu) {
+                try {
+                    parsedMenu = typeof rawMenu === 'string' ? JSON.parse(rawMenu.replace(/”/g, '"').replace(/“/g, '"')) : rawMenu;
+                    if (Array.isArray(parsedMenu)) {
+                        parsedMenu.forEach(item => {
+                            menuHtml += `<option value="${item.name}">${item.name} (+${item.price}元)</option>`;
+                        });
+                    }
+                } catch(e) {}
+            }
+            if (parsedMenu.length === 0) menuHtml += `<option value="無指定餐點">無指定餐點</option>`;
+            dietSelect.innerHTML = menuHtml;
+        } else {
+            dietSelect.innerHTML = `
+                <option value="葷食">葷食</option>
+                <option value="素食">素食</option>
+                <option value="不拘">不拘</option>
+            `;
+        }
+    }
+
+    // B. 動態處理交通選單
+    const transZone = document.getElementById('reg_transport_zone');
+    const transSelect = document.getElementById('reg_transport');
+    let rawTransMode = String(ev?.transportMode || ev?.["交通方式"] || "包車").trim();
+    if (rawTransMode === "是") rawTransMode = "包車";
+    if (rawTransMode === "否") rawTransMode = "自理";
+
+    if (isBanquet) {
+        if (transZone) transZone.style.display = 'none'; // 餐會隱藏交通區塊
+    } else {
+        if (transZone) transZone.style.display = 'block';
+        if (transSelect) {
+            if (rawTransMode === '包車') {
+                transSelect.innerHTML = `<option value="搭乘遊覽車">統一安排 (包車)</option>`;
+                transSelect.disabled = true;
+            } else if (rawTransMode === '自駕') {
+                transSelect.innerHTML = `<option value="自駕">自行開車 (自駕)</option><option value="共乘">需要共乘 (搭車)</option>`;
+                transSelect.disabled = false;
+            } else {
+                transSelect.innerHTML = `<option value="個人自理">自行前往 (自理)</option>`;
+                transSelect.disabled = true;
+            }
+        }
+    }
+    // --- 結束：動態選項 ---
 
     // 3. 如果有傳入 phone 和 name，代表是「修改」模式，從 allData 抓資料填入
     if (phone && name) {
@@ -876,11 +936,19 @@ function openRegModal(phone, name) {
             document.getElementById('reg_id').value = r["身分證"] || r["身分證字號"] || "";
             document.getElementById('reg_note').value = r["備註"] || "";
             
-            // 🌟 修正點：擴充飲食/餐食相容性
-            document.getElementById('reg_diet').value = r["餐食"] || r["飲食"] || "葷食";
+            // 🌟 修正點：擴充飲食/餐食相容性，並配合下拉選單回填
+            const dietVal = r["餐食"] || r["飲食"] || "葷食";
+            if (dietSelect) {
+                if(Array.from(dietSelect.options).some(opt => opt.value === dietVal)) {
+                    dietSelect.value = dietVal;
+                } else if (dietSelect.options.length > 0) {
+                    // 如果原本填的選項(例如葷食)不在餐會菜單裡，則預設回歸選單第一項
+                    dietSelect.value = dietSelect.options[0].value;
+                }
+            }
 
-            // 🌟 關鍵修正點：全面防禦「是否為會員」的讀取錯誤 (相容所有可能的欄位名)
-            const memStatus = r["是否為會員"] || r["是否會員"] || r["會員身分"];
+            // 🌟 關鍵修正點：全面防禦「是否為會員」的讀取錯誤
+            const memStatus = r["是否為會員"] || r["是否會員"] || r["會員身分"] || r["會員身份"] || r["會員"] || r["isMember"];
             document.getElementById('reg_is_member').value = (memStatus === '是' || memStatus === 'Y') ? '是' : '否';
 
             // 生日填充
@@ -905,11 +973,15 @@ function openRegModal(phone, name) {
                 bdayField.value = finalDate;
             }
 
-            // 交通方式回填
+            // 🌟 交通方式回填 (改為下拉選單 Select)
             const transVal = (r["交通"] || "").trim();
-            document.getElementsByName('trans').forEach(rd => {
-                if (rd.value === transVal) rd.checked = true;
-            });
+            if (transSelect) {
+                if(Array.from(transSelect.options).some(opt => opt.value === transVal)) {
+                    transSelect.value = transVal;
+                } else if (transSelect.options.length > 0) {
+                    transSelect.value = transSelect.options[0].value;
+                }
+            }
             
             // 車牌號碼回填
             const carInput = document.getElementById('reg_car_number');
@@ -927,7 +999,11 @@ function openRegModal(phone, name) {
             // 如果有記錄可載人數
             if (r["可載人數"] !== undefined) {
                 document.getElementById('reg_seats').value = r["可載人數"];
-                updateSeatInput(transVal); // 同步顯示/隱藏座位框
+            }
+            
+            // 同步顯示/隱藏座位與車牌框
+            if (typeof updateSeatInput === 'function') {
+                updateSeatInput(transVal); 
             }
         }
     } else {
@@ -937,10 +1013,12 @@ function openRegModal(phone, name) {
         const delBtn = document.getElementById('modal_delete_btn');
         if (delBtn) delBtn.classList.add('hidden'); 
         
-        const defaultTrans = document.querySelector('input[name="trans"][value="自駕"]');
-        if (defaultTrans) {
-            defaultTrans.checked = true;
-            updateSeatInput("自駕");
+        // 🌟 新增報名時：交通選單預設選第一項，並更新 UI
+        if (transSelect && transSelect.options.length > 0) {
+            transSelect.selectedIndex = 0;
+            if (typeof updateSeatInput === 'function') {
+                updateSeatInput(transSelect.value);
+            }
         }
     }
 
@@ -960,12 +1038,13 @@ function resetRegForm() {
     document.getElementById('reg_seats').value = 0;
     document.getElementById('reg_is_member').value = "否"; 
     
-    // 🌟 新增：清空車號
     const carInput = document.getElementById('reg_car_number');
     if (carInput) carInput.value = "";
-
-    document.querySelectorAll('input[name="trans"]').forEach(r => r.checked = false);
-    updateSeatInput("共乘"); 
+    
+    // 🌟 修改這裡：重置下拉選單
+    const transSelect = document.getElementById('reg_transport');
+    if(transSelect && transSelect.options.length > 0) transSelect.selectedIndex = 0;
+    updateSeatInput(""); 
 }
 
 /**
@@ -1069,8 +1148,8 @@ function updateSeatInput(val) {
         }
     }
 }
-        
-        document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
+// 🚨 注意：記得將這行舊的監聽器刪除，因為已經綁定在 HTML 的 onchange 裡了
+// 刪除這行 -> document.querySelectorAll('input[name="trans"]').forEach(r => r.onchange = (e) => updateSeatInput(e.target.value));
 
 // 儲存邏輯 (修正 ev_bus 殘留導致報錯的問題)
 async function saveEvent() {
@@ -1138,8 +1217,12 @@ async function saveEvent() {
 async function saveSingleReg() {
     const title = document.getElementById('eventSelector').value;
     const ev = allData.events.find(e => (e.title || e["標題"]) === title);
-    
-    const isTourBus = (ev?.["是遊覽車行"] === '是' || ev?.isTourBus === '是' || ev?.isTourBus === 'Y');
+
+// 🌟 新增判定是否為餐會
+    const isBanquetCategory = (ev?.category && ev.category.includes('餐會')) || (ev?.["活動類別"] && ev["活動類別"].includes('餐會')) || (ev?.["類別"] && ev["類別"].includes('餐會'));
+    const hasMenu = !!(ev?.menu_items || ev?.["餐會菜單設定 (JSON)"] || ev?.["餐會菜單設定(JSON)"] || ev?.["餐會菜單設定"] || ev?.menu_photo);
+    const isBanquet = isBanquetCategory || hasMenu;
+   
     const needId = (ev?.["(需要身分證)"] === '是' || ev?.needId === '是' || ev?.needId === 'Y');
     
     const name = document.getElementById('reg_name').value.trim();
@@ -1172,6 +1255,10 @@ async function saveSingleReg() {
     let seatValue = parseInt(document.getElementById('reg_seats').value) || 0;
     if (seatValue < 0) seatValue = 0;
     
+    // 🌟 核心：交通與座位資料轉換
+    const finalTransport = isBanquet ? "餐會模式" : document.getElementById('reg_transport').value;
+    const finalSeats = isBanquet ? 0 : seatValue;
+    
     // --- 封裝 Payload ---
     const payload = {
         type: 'save_single_registration',
@@ -1185,11 +1272,9 @@ async function saveSingleReg() {
         idCard: idCard,
         birthday: document.getElementById('reg_birthday').value,
         note: document.getElementById('reg_note').value,
-        transport: isTourBus ? "搭乘遊覽車" : (document.querySelector('input[name="trans"]:checked')?.value || "自駕"),
-        seats: isTourBus ? 0 : seatValue,
-        // 🌟 新增：抓取車牌號碼，如果沒有填寫就傳空字串
+        transport: finalTransport, // 🌟 套用新變數
+        seats: finalSeats,         // 🌟 套用新變數
         carNumber: document.getElementById('reg_car_number') ? document.getElementById('reg_car_number').value.trim() : "",
-        
         isPaid: "未繳",
         regTime: new Date().toLocaleString('zh-TW', { hour12: false })
     };

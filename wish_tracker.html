@@ -48,14 +48,27 @@
     <div id="page1" class="space-y-6 block">
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-pink-50 relative z-20">
             <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-pen-nib text-pink-500"></i> 設定本週目標 (週一歸零)</h3>
-            <select id="catSelect" class="w-full mb-4 p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 font-bold text-gray-700">
+            
+            <select id="catSelect" class="w-full mb-3 p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 font-bold text-gray-700 text-sm">
                 <option value="運動">🏀 運動 (如：肌力運動)</option>
                 <option value="飲食">🥗 飲食 (如：地中海好油)</option>
                 <option value="學習">📖 學習 (如：禪繞畫/新語言)</option>
                 <option value="社交">☕ 社交</option>
                 <option value="其他">✨ 其他 (自由發揮)</option>
             </select>
-            <textarea id="goalDesc" rows="2" placeholder="請輸入小願內容 (例：本週有畫禪繞畫3次)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 text-sm mb-4"></textarea>
+            
+            <!-- 新增：目標天數選擇 -->
+            <select id="targetDays" class="w-full mb-3 p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 font-bold text-gray-700 text-sm">
+                <option value="1">🎯 目標：本週完成 1 天即可</option>
+                <option value="2">🎯 目標：本週完成 2 天</option>
+                <option value="3">🎯 目標：本週完成 3 天</option>
+                <option value="4">🎯 目標：本週完成 4 天</option>
+                <option value="5">🎯 目標：本週完成 5 天</option>
+                <option value="6">🎯 目標：本週完成 6 天</option>
+                <option value="7" selected>🎯 目標：本週完成 7 天 (天天做)</option>
+            </select>
+
+            <textarea id="goalDesc" rows="2" placeholder="請輸入小願內容 (例：每週健走一小時)" class="w-full p-4 bg-gray-50 rounded-xl outline-none border focus:border-pink-500 text-sm mb-4"></textarea>
             
             <button onclick="saveGoal()" id="saveGoalBtn" class="w-full bg-[#9d174d] text-white py-3 rounded-xl font-bold active:scale-95 transition-all shadow-md">儲存目標設定</button>
         </div>
@@ -64,7 +77,6 @@
             <h3 class="font-black text-pink-900 mb-4 flex items-center gap-2"><i class="fas fa-star-half-alt text-pink-500"></i> 每日自評進度</h3>
             
             <div id="daysContainer" class="flex justify-between items-center px-1"></div>
-            <!-- 補登提示語 -->
             <p class="text-[11px] text-gray-400 text-center mt-3 mb-6 font-bold"><i class="fas fa-hand-pointer"></i> 點擊上方日期，可隨時補填或修改本週成績</p>
 
             <div class="flex items-center justify-between mb-2">
@@ -85,7 +97,7 @@
 
     <div id="page2" class="space-y-4 hidden">
         <div class="bg-pink-50 p-4 rounded-2xl flex gap-2 text-[11px] text-[#9d174d] font-bold leading-relaxed shadow-inner">
-            <i class="fas fa-info-circle mt-0.5"></i> 系統採用動態積分制：若於週間加入，過去天數將自動豁免，絕不影響您的達成率，滿分依舊可獲一顆星！(若補登過去成績，系統將自動加回分母)
+            <i class="fas fa-info-circle mt-0.5"></i> 系統採用動態積分制：只要達成您設定的「目標天數」且皆為滿分，即可獲得星星！(超過目標天數多做的紀錄不會讓達成率破表，但會讓您更健康喔！)
         </div>
         <div id="leaderboardContainer" class="space-y-4"></div>
     </div>
@@ -131,7 +143,6 @@ function renderDays() {
     const container = document.getElementById('daysContainer');
     const todayIndex = (new Date().getDay() + 6) % 7; 
     
-    // 防呆：如果選到的天數是 -1(豁免) 或 未來日子，自動跳回今天
     if (currentScores[selectedDayIndex] === -1 || selectedDayIndex > todayIndex) {
         selectedDayIndex = todayIndex;
     }
@@ -145,7 +156,6 @@ function renderDays() {
         
         let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all outline-none ";
         
-        // 🚫 嚴格鎖定：未來天數 與 「加入前」的豁免天數，渲染為純文字且不可點擊
         if (isFuture || isSkip) {
             classes += "bg-gray-50 text-gray-300 cursor-not-allowed";
             return `<div class="${classes}">
@@ -154,13 +164,12 @@ function renderDays() {
             </div>`;
         }
 
-        // 處理可點擊的天數 (加入後的過去漏填與今天)
         if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 shadow-sm z-10 bg-white ";
 
         if (hasScore) {
             classes += "bg-pink-100 text-[#9d174d] ";
         } else {
-            classes += "bg-gray-100 text-gray-400 "; // 漏填的狀態
+            classes += "bg-gray-100 text-gray-400 "; 
         }
         
         return `<button onclick="selectDay(${i})" class="${classes} cursor-pointer hover:bg-gray-200">
@@ -191,11 +200,13 @@ async function loadData() {
             if (res.data.currentRecord) {
                 hasCurrentGoal = true;
                 document.getElementById('catSelect').value = res.data.currentRecord.category;
+                document.getElementById('targetDays').value = res.data.currentRecord.target_days || 7;
                 document.getElementById('goalDesc').value = res.data.currentRecord.goal_desc;
                 currentScores = res.data.currentRecord.scores;
                 document.getElementById('saveGoalBtn').classList.remove('animate-pulse');
             } else if (res.data.lastGoal) {
                 document.getElementById('catSelect').value = res.data.lastGoal.category;
+                document.getElementById('targetDays').value = res.data.lastGoal.target_days || 7;
                 document.getElementById('goalDesc').value = res.data.lastGoal.goal_desc;
                 document.getElementById('saveGoalBtn').classList.add('animate-pulse');
             }
@@ -217,10 +228,20 @@ async function joinWish() {
 async function saveGoal() {
     const cat = document.getElementById('catSelect').value;
     const desc = document.getElementById('goalDesc').value.trim();
+    const tDays = document.getElementById('targetDays').value;
     if(!desc) { alert("請輸入目標內容"); return; }
     
     document.getElementById('loadingOverlay').style.display = 'flex';
-    await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ type: 'wish_save_goal', phone: userInfo.encryptedPhone || userInfo.phone, category: cat, goal_desc: desc }) });
+    await fetch(GAS_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+            type: 'wish_save_goal', 
+            phone: userInfo.encryptedPhone || userInfo.phone, 
+            category: cat, 
+            goal_desc: desc,
+            target_days: tDays
+        }) 
+    });
     location.reload(); 
 }
 
@@ -263,8 +284,9 @@ function renderLeaderboard(data) {
                     <span class="flex gap-0.5">${starsHtml}</span>
                 </div>
                 <div class="flex items-center gap-2">
+                    <span class="text-xs px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full font-bold">每週 ${user.target_days} 天</span>
                     <span class="text-xs px-2.5 py-0.5 bg-pink-50 text-[#9d174d] rounded-full font-bold border border-pink-100">${user.category}</span>
-                    <span class="text-sm font-black text-[#9d174d]">${percent}%</span>
+                    <span class="text-sm font-black text-[#9d174d] w-10 text-right">${percent}%</span>
                 </div>
             </div>
             

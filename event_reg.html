@@ -123,9 +123,9 @@
                 </div>
             </div>
 
-            <!-- 🌟 餐會專屬：一鍵複製統計表按鈕 (預設隱藏) -->
-            <button id="copyMealBtn" onclick="copyMealStatsToClipboard()" class="w-full mt-3 py-2 bg-orange-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-orange-600 active:scale-95 transition-all" style="display: none;">
-                <i class="fas fa-clipboard-list mr-1"></i> 複製餐點統計給餐廳
+            <!-- 🌟 將原本的 copyMealBtn 替換為 sendMealListBtn -->
+            <button id="sendMealListBtn" onclick="openMealReportModal()" class="w-full mt-3 py-2 bg-orange-500 text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-orange-600 active:scale-95 transition-all" style="display: none;">
+                <i class="fab fa-line mr-1"></i> 發送餐飲名冊
             </button>
         </div>
     </div>
@@ -354,7 +354,9 @@
 <!-- 🌟 新增：發送名單預覽與複製 Modal -->
     <div id="reportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl flex flex-col">
-            <h3 class="text-xl font-black text-emerald-900 mb-4 text-center">報名繳費名單確認</h3>
+            
+            <!-- 🌟 加上 id="reportModalTitle" 讓 JS 可以動態修改標題 -->
+            <h3 id="reportModalTitle" class="text-xl font-black text-emerald-900 mb-4 text-center">名單確認</h3>
             
             <!-- 預覽文字框，允許幹部手動微調 -->
             <textarea id="reportPreviewText" class="w-full p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-sm text-gray-700 outline-none resize-none min-h-[200px]" rows="10"></textarea>
@@ -1514,8 +1516,7 @@ function exportInsuranceCSV() {
     showToast("📂 CSV 匯出完成");
 }        
 
-// --- 🌟 行政看板數據計算函式 (全新三態交通邏輯 + 智慧餐食統計) ---
-// --- 🌟 行政看板數據計算函式 (支援餐會人名對應記錄) ---
+// --- 🌟 行政看板數據計算函式 (全新三態交通邏輯 + 智慧餐食統計 + 發送餐飲名冊) ---
 function updateAdminStats(list) {
     if (!list) return;
 
@@ -1548,7 +1549,7 @@ function updateAdminStats(list) {
     
     const vegList = [];          
     const mealCounts = {};       // 存各品項數量
-    const mealPeopleMap = {};    // 🌟 新增：存各品項對應的人名清單 (例如 {"雞腿飯": ["林士偉", "林依"]})
+    const mealPeopleMap = {};    // 🌟 存各品項對應的人名清單 (例如 {"雞腿飯": ["林士偉", "林依"]})
     let totalMeals = 0;          
 
     list.forEach(r => {
@@ -1605,7 +1606,8 @@ function updateAdminStats(list) {
     setUI('carpoolCount', carpoolCount);
 
     const mealContent = document.getElementById('mealContent');
-    const copyMealBtn = document.getElementById('copyMealBtn');
+    // 🌟 將原本的 copyMealBtn 替換為抓取新的 sendMealListBtn
+    const sendMealListBtn = document.getElementById('sendMealListBtn');
 
     if (mealContent) {
         if (isBanquet) {
@@ -1623,11 +1625,12 @@ function updateAdminStats(list) {
             
             mealContent.innerHTML = mealHtml;
             
-            if (copyMealBtn) copyMealBtn.style.display = totalMeals > 0 ? 'block' : 'none';
+            // 🌟 餐會模式：只要有餐點資料就顯示發送按鈕
+            if (sendMealListBtn) sendMealListBtn.style.display = totalMeals > 0 ? 'block' : 'none';
             
-            // 暫存資料供複製使用
+            // 暫存資料 (如果後續有其他按鈕需要也能共用)
             allData.currentMealStats = mealCounts; 
-            allData.currentMealPeopleMap = mealPeopleMap; // 🌟 儲存人名對應表
+            allData.currentMealPeopleMap = mealPeopleMap; 
             allData.currentTotalMeals = totalMeals;
             
         } else {
@@ -1641,7 +1644,8 @@ function updateAdminStats(list) {
                     ${vegList.length > 0 ? "名單：" + vegList.join("、") : "無素食"}
                 </div>
             `;
-            if (copyMealBtn) copyMealBtn.style.display = 'none';
+            // 🌟 一般活動模式：只要有名單，就顯示發送按鈕
+            if (sendMealListBtn) sendMealListBtn.style.display = list.length > 0 ? 'block' : 'none';
         }
     }
 
@@ -1755,7 +1759,7 @@ function copyCarListToClipboard() {
             showToast("❌ 複製失敗，瀏覽器不支援此安全操作");
         });
 }        
-// 🌟 新增：開啟名單預覽彈窗並生成文字
+// 🌟 原有的已繳名單彈窗 (加入動態修改標題)
     function openReportModal() {
         const regs = allData.registrations || [];
         const paidList = regs.filter(r => (r["狀態"] || r["繳費狀態"] || "").includes("已繳"));
@@ -1766,6 +1770,8 @@ function copyCarListToClipboard() {
         }
 
         const eventName = document.getElementById('eventSelector')?.value || "活動";
+        document.getElementById('reportModalTitle').innerText = "報名繳費名單確認"; // 🌟 設定標題
+        
         let reportMsg = `【${eventName}】已繳費名單：\n`;
         reportMsg += `---------------\n`;
         paidList.forEach((r, index) => {
@@ -1773,6 +1779,47 @@ function copyCarListToClipboard() {
         });
         reportMsg += `---------------\n`;
         reportMsg += `✅ 總計：${paidList.length} 位\n`;
+        
+        document.getElementById('reportPreviewText').value = reportMsg;
+        document.getElementById('reportModal').style.display = 'flex';
+    }
+
+    // 🌟 新增：餐飲名冊預覽彈窗
+    function openMealReportModal() {
+        const regs = allData.registrations || [];
+        if (regs.length === 0) {
+            showToast("⚠️ 目前沒有報名人員");
+            return;
+        }
+
+        const eventName = document.getElementById('eventSelector')?.value || "活動";
+        document.getElementById('reportModalTitle').innerText = "餐飲名冊確認"; // 🌟 設定標題
+        
+        // 判斷是否為餐會模式
+        const isBanquetCategory = (currentEventConfig?.category && currentEventConfig.category.includes('餐會')) || (currentEventConfig?.["活動類別"] && currentEventConfig["活動類別"].includes('餐會')) || (currentEventConfig?.["類別"] && currentEventConfig["類別"].includes('餐會'));
+        const hasMenu = !!(currentEventConfig?.menu_items || currentEventConfig?.["餐會菜單設定 (JSON)"] || currentEventConfig?.["餐會菜單設定(JSON)"] || currentEventConfig?.["餐會菜單設定"] || currentEventConfig?.menu_photo);
+        const isBanquet = isBanquetCategory || hasMenu;
+
+        let reportMsg = `【${eventName}】餐飲名冊：\n`;
+        reportMsg += `---------------\n`;
+        
+        // 產出「姓名 (飲食/餐點)」 名單
+        regs.forEach((r, index) => {
+            const name = (r["姓名"] || "未知").trim();
+            const diet = (r["餐食"] || r["飲食"] || "未填").trim();
+            reportMsg += `${index + 1}. ${name} (${diet})\n`;
+        });
+
+        reportMsg += `---------------\n`;
+        
+        // 依照活動模式產出不同的總結算
+        if (isBanquet) {
+            reportMsg += `✅ 總計：${regs.length} 份\n`;
+        } else {
+            const vegCount = regs.filter(r => (r["餐食"] || r["飲食"] || "").includes("素")).length;
+            const meatCount = regs.length - vegCount;
+            reportMsg += `✅ 總計：${regs.length} 位 (葷:${meatCount} / 素:${vegCount})\n`;
+        }
         
         document.getElementById('reportPreviewText').value = reportMsg;
         document.getElementById('reportModal').style.display = 'flex';

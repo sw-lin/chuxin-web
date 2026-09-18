@@ -13,7 +13,6 @@
 </head>
 <body class="h-screen flex flex-col text-white">
 
-    <!-- 頂部導覽列 -->
     <nav class="bg-gray-900 p-4 shadow-lg flex justify-between items-center border-b border-gray-800">
         <div class="font-bold text-base text-emerald-400 flex items-center">
             <i class="fas fa-video mr-2"></i> 直播控制台
@@ -23,19 +22,12 @@
         </div>
     </nav>
 
-    <!-- 主要內容區 -->
     <main class="flex-1 flex flex-col p-4 gap-4 overflow-y-auto">
-        
-        <!-- 影像預覽區 -->
         <div class="w-full bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 min-h-[300px]">
             <video id="localVideo" class="w-full h-full object-cover" autoplay muted playsinline></video>
-            
-            <!-- 右上角：鏡頭切換按鈕 -->
             <button id="switchCamBtn" class="absolute top-3 right-3 bg-gray-900/80 hover:bg-gray-800 text-white p-3 rounded-full shadow-lg border border-gray-600 transition-all">
                 <i class="fas fa-sync-alt text-base"></i>
             </button>
-
-            <!-- 下方：直播控制按鈕 -->
             <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4">
                 <button id="startBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all flex items-center">
                     <i class="fas fa-play mr-2"></i> 開始直播
@@ -46,20 +38,17 @@
             </div>
         </div>
 
-        <!-- 會員審核區 -->
         <div class="w-full bg-gray-800 rounded-xl flex flex-col border border-gray-700 shadow-xl overflow-hidden min-h-[150px]">
             <div class="bg-gray-900 p-3 border-b border-gray-700 font-bold text-emerald-300 flex justify-between items-center text-sm">
                 <span>會員連線請求</span>
                 <span id="requestCount" class="bg-emerald-900 text-emerald-300 text-xs px-2 py-1 rounded-full">0</span>
             </div>
-            
             <div id="requestsContainer" class="p-3 space-y-2">
                 <div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>
             </div>
         </div>
     </main>
 
-    <!-- JS 邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, set, onChildAdded, onChildRemoved, onDisconnect, remove, onValue, push } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
@@ -85,10 +74,18 @@
         const requestCount = document.getElementById('requestCount');
 
         let localStream = null;
-        let currentFacingMode = "environment"; // 預設使用後置鏡頭
+        let currentFacingMode = "environment"; 
         const ROOM_ID = "main_room";
+        const peerConnections = {};
+        
+        // 🌟 新增備援 STUN 伺服器，提升網路穿透成功率
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        };
 
-        // 啟動或切換鏡頭
         async function initCamera() {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop()); 
@@ -118,18 +115,10 @@
         startBtn.addEventListener('click', async () => {
             startBtn.disabled = true;
             startBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 啟動中...`;
-
             try {
-                if (!localStream || !localStream.active) {
-                    await initCamera();
-                }
-
+                if (!localStream || !localStream.active) await initCamera();
                 const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
-                await set(statusRef, { 
-                    isLive: true, 
-                    startedAt: Date.now() 
-                });
-
+                await set(statusRef, { isLive: true, startedAt: Date.now() });
                 onDisconnect(statusRef).set({ isLive: false });
 
                 startBtn.classList.add('hidden');
@@ -140,9 +129,7 @@
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 直播中`;
                 statusBadge.classList.replace('bg-gray-700', 'bg-red-900/50');
                 statusBadge.classList.replace('text-gray-300', 'text-red-400');
-
                 listenForRequests();
-
             } catch (err) {
                 startBtn.disabled = false;
                 startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`;
@@ -150,7 +137,6 @@
             }
         });
 
-        // 🌟 1. 修改：結束直播時，中斷並清理所有連線
         stopBtn.addEventListener('click', async () => {
             const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
             await set(statusRef, { isLive: false });
@@ -164,7 +150,6 @@
             requestsContainer.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>';
             requestCount.textContent = "0";
 
-            // 清空所有已建立的連線
             for (let userId in peerConnections) {
                 if (peerConnections[userId]) {
                     peerConnections[userId].close();
@@ -174,7 +159,6 @@
             remove(ref(db, `rooms/${ROOM_ID}/connections`)).catch(()=>{});
         });
 
-        // 🌟 2. 新增：連線清理與手動踢人共用函式
         window.removeConnectedUserCard = (userId) => {
             const card = document.getElementById(`req-${userId}`);
             if (card) {
@@ -189,12 +173,9 @@
         };
 
         window.disconnectUser = (userId) => {
-            if (confirm("確定要中斷這位會員的連線嗎？")) {
-                window.removeConnectedUserCard(userId);
-            }
+            if (confirm("確定要中斷這位會員的連線嗎？")) window.removeConnectedUserCard(userId);
         };
 
-        // 🌟 3. 修改：監聽請求 (加入扣留卡片與防呆機制)
         function listenForRequests() {
             const requestsRef = ref(db, `rooms/${ROOM_ID}/requests`);
             requestsContainer.innerHTML = '';
@@ -203,7 +184,6 @@
                 const request = snapshot.val();
                 const userId = snapshot.key;
 
-                // 若卡片已存在 (例如舊連線未斷乾淨)，先強制清理舊的
                 if (document.getElementById(`req-${userId}`)) {
                     if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
                 }
@@ -234,26 +214,14 @@
             onChildRemoved(requestsRef, (snapshot) => {
                 const userId = snapshot.key;
                 const card = document.getElementById(`req-${userId}`);
-                if (card) {
-                    // 核心修改：如果已經被同意並記錄在 peerConnections 裡，就不從畫面上移除卡片
-                    if (!peerConnections[userId]) {
-                        card.remove();
-                        updateRequestCount(-1);
-                    }
+                if (card && !peerConnections[userId]) {
+                    card.remove();
+                    updateRequestCount(-1);
                 }
             });
         }
 
-        const peerConnections = {};
-        const rtcConfig = {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        };
-
-        // 🌟 4. 修改：同意請求 (動態變更 UI 按鈕，並監測斷線狀態)
         window.acceptRequest = async (userId) => {
-            console.log("當前操作的 userId:", userId);
-            
-            // 立即改變 UI：替換為「連線中」標籤與「紅色強制中斷」按鈕
             const card = document.getElementById(`req-${userId}`);
             if (card) {
                 const actionDiv = card.querySelector('.flex.gap-2');
@@ -275,13 +243,12 @@
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[userId] = pc;
 
-            // 監聽對方網路斷線或關閉網頁，自動移除卡片
             pc.oniceconnectionstatechange = () => {
                 if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
-                    console.log(`[${userId}] 網路連線已中斷`);
                     if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
                 }
             };
+            
             pc.onconnectionstatechange = () => {
                 if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
                     if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
@@ -289,15 +256,12 @@
             };
 
             if (localStream) {
-                localStream.getTracks().forEach(track => {
-                    pc.addTrack(track, localStream);
-                });
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
-                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`);
-                    push(candidateRef, event.candidate.toJSON());
+                    push(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), event.candidate.toJSON());
                 }
             };
 
@@ -310,12 +274,13 @@
                     sdp: offer.sdp
                 });
 
-                onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
+                // 🌟 核心修復：使用 unsubAnswer 防止記憶體洩漏，並保證順序正確
+                const unsubAnswer = onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
                     const answer = snapshot.val();
                     if (answer && !pc.currentRemoteDescription) {
                         await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                        unsubAnswer(); // 接收到 Answer 後立即解除監聽
                         
-                        // 當會員成功回傳 Answer (建立連線)，將閃爍動畫改為穩定的綠底
                         if (card) {
                             const badge = card.querySelector('span.animate-pulse');
                             if (badge) {
@@ -324,17 +289,18 @@
                                 badge.innerHTML = `<i class="fas fa-link mr-1"></i> 已連線`;
                             }
                         }
-                    }
-                });
 
-                onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (snapshot) => {
-                    const candidate = snapshot.val();
-                    if (candidate) {
-                        try {
-                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                        } catch (e) {
-                            console.error("加入 ICE Candidate 失敗:", e);
-                        }
+                        // 🌟 核心修復：確定 Answer (RemoteDescription) 設置完畢後，才開始監聽並加入 Viewer 的 ICE 數據！
+                        onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (candSnap) => {
+                            const candidate = candSnap.val();
+                            if (candidate) {
+                                try {
+                                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                                } catch (e) {
+                                    console.error("加入 ICE Candidate 失敗:", e);
+                                }
+                            }
+                        });
                     }
                 });
 
@@ -342,7 +308,6 @@
                 console.error("WebRTC Offer 建立失敗:", err);
             }
 
-            // 移除 Firebase 上的敲門請求 (因加入了防呆機制，畫面上的卡片此時不會消失)
             await remove(ref(db, `rooms/${ROOM_ID}/requests/${userId}`));
         };
 

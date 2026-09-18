@@ -23,13 +23,11 @@
         </div>
     </nav>
 
-    <!-- 主要內容區（優化：滿版最大化與動態縮放） -->
+    <!-- 主要內容區 -->
     <main class="flex-1 flex flex-col p-2 sm:p-4 items-center justify-center overflow-hidden">
         
-        <!-- 影像播放區：寬度/高度自動調至視窗極限 -->
         <div class="w-full h-full max-w-7xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center max-h-[85vh]">
             
-            <!-- 遠端影像：改用 object-contain 確保影像完整不被裁剪，也可改 object-cover 強制填滿 -->
             <video id="remoteVideo" class="w-full h-full object-contain" autoplay playsinline></video>
             
             <!-- 尚未連線時的遮罩提示 -->
@@ -45,7 +43,6 @@
                 </button>
             </div>
         </div>
-
     </main>
 
     <!-- WebRTC 與 Firebase 邏輯 -->
@@ -71,18 +68,13 @@
         const userName = userInfo.name || "熱心會員";
         const userId = userInfo.phone ? userInfo.phone.replace(/[^a-zA-Z0-9]/g, "_") : "user_" + Math.floor(Math.random() * 10000);
 
-        // 🌟 加上這行，確認會員端產生的 ID 是什麼
-        console.log("【會員端】當前登入使用者的 userId:", userId);
-        
         const requestBtn = document.getElementById('requestBtn');
         const videoOverlay = document.getElementById('videoOverlay');
         const hintText = document.getElementById('hintText');
         const connectionStatus = document.getElementById('connectionStatus');
         const remoteVideo = document.getElementById('remoteVideo');
 
-        const rtcConfig = {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        };
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         let pc = null;
 
         requestBtn.addEventListener('click', async () => {
@@ -91,6 +83,9 @@
             hintText.innerText = "已向幹部送出連線請求，請稍候審核...";
 
             try {
+                // 🌟 發送請求前，強制清空該用戶所有舊連線資料，避免狀態互相干擾
+                await remove(ref(db, `rooms/${ROOM_ID}/connections/${userId}`));
+
                 const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
                 await set(requestRef, {
                     userName: userName,
@@ -109,89 +104,100 @@
 
         function listenForApproval() {
             const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
+            const offerRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`);
             
-            onValue(requestRef, (snapshot) => {
-                const data = snapshot.val();
-                if (!data) {
-                    // 請求被幹部移除（代表同意）
+            let isApproved = false;
+
+            // 🌟 修復 1：直接監聽「是否收到 Offer」，這才是真正的幹部同意建立連線
+            onValue(offerRef, (snapshot) => {
+                const offer = snapshot.val();
+                if (offer && !isApproved) {
+                    isApproved = true;
                     videoOverlay.style.display = 'none';
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 接收視訊中`;
                     connectionStatus.classList.replace('bg-amber-900/50', 'bg-emerald-900/50');
                     connectionStatus.classList.replace('text-amber-400', 'text-emerald-400');
 
-                    // 啟動 WebRTC 接收端
-                    initWebRTCReceiver();
+                    initWebRTCReceiver(offer);
+                }
+            });
+
+            // 🌟 修復 2：監聽敲門單消失。若消失卻沒有收到 Offer，代表幹部按下拒絕或直播已關閉
+            onValue(requestRef, (snapshot) => {
+                if (!snapshot.exists() && !isApproved) {
+                    setTimeout(() => {
+                        if (!isApproved) {
+                            alert("您的連線請求未通過，或幹部已關閉直播。");
+                            location.reload();
+                        }
+                    }, 1500); // 緩衝時間，避免 Firebase 寫入先後順序時間差
                 }
             });
         }
 
-        async function initWebRTCReceiver() {
-            if (pc) return; // 避免重複初始化
+        async function initWebRTCReceiver(offer) {
+            if (pc) pc.close(); // 清除舊連線
             pc = new RTCPeerConnection(rtcConfig);
 
-            // 當收到幹部的影音軌跡時，直接塞給 `<video>` 播放
             pc.ontrack = (event) => {
-                console.log("✅ 成功收到遠端視訊串流！", event.streams[0]);
+                console.log("✅ 成功收到遠端視訊串流！");
                 if (remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
                 }
             };
 
-            // 監控連線狀態變化
             pc.onconnectionstatechange = () => {
                 console.log("🔗 WebRTC 連線狀態改變:", pc.connectionState);
                 if (pc.connectionState === 'connected') {
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 直播連線中`;
-                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span> 連線中斷`;
+                    connectionStatus.classList.replace('bg-emerald-900/50', 'bg-red-900/50');
+                    connectionStatus.classList.replace('text-emerald-400', 'text-red-400');
+                    
+                    // 🌟 修復 3：斷線時自動還原介面，允許會員再次點擊重連
+                    videoOverlay.style.display = 'flex';
+                    hintText.innerText = "連線已中斷，請確認網路狀態或重新請求。";
+                    requestBtn.disabled = false;
+                    requestBtn.innerHTML = `<i class="fas fa-redo mr-2"></i> 重新連線`;
                 }
             };
 
             // 收集會員端的 ICE Candidate
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
-                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`);
-                    push(candidateRef, event.candidate.toJSON());
+                    push(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), event.candidate.toJSON());
                 }
             };
 
-            const offerRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`);
+            try {
+                // 🌟 關鍵修復 4：必須先完整設定好幹部的遠端描述 (Offer)
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                
+                // 建立 Answer 並寫入 Firebase
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
+                    type: answer.type,
+                    sdp: answer.sdp
+                });
 
-            // 1. 監聽幹部寫入的 Offer（使用 onValue，即使已經寫入也能立刻抓到）
-            onValue(offerRef, async (snapshot) => {
-                const offer = snapshot.val();
-                if (offer && !pc.currentRemoteDescription) {
-                    console.log("📥 收到幹部 Offer，正在建立連線描述...");
-                    try {
-                        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
-                        // 2. 建立 Answer 回覆
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-
-                        await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
-                            type: answer.type,
-                            sdp: answer.sdp
-                        });
-                        console.log("📤 已成功發送 Answer 回覆給幹部");
-                    } catch (err) {
-                        console.error("❌ 處理 Offer 或建立 Answer 失敗:", err);
+                // 🌟 關鍵修復 5：在此之後，才開始接收並加入幹部傳來的 ICE 數據！
+                // (移除了原本放太外面的監聽器，解決 Race Condition 搶拍報錯的問題)
+                onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), async (snapshot) => {
+                    const candidate = snapshot.val();
+                    if (candidate) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (e) {
+                            console.error("❌ 加入遠端 ICE 失敗:", e);
+                        }
                     }
-                }
-            });
+                });
 
-            // 3. 監聽幹部傳來的 ICE Candidates
-            onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), async (snapshot) => {
-                const candidate = snapshot.val();
-                if (candidate) {
-                    try {
-                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                        console.log("🧊 成功加入幹端的 ICE Candidate");
-                    } catch (e) {
-                        console.error("❌ 加入遠端 ICE Candidate 失敗:", e);
-                    }
-                }
-            });
+            } catch (err) {
+                console.error("❌ 建立 WebRTC 連線失敗:", err);
+            }
         }
     </script>
 </body>

@@ -13,7 +13,6 @@
 </head>
 <body class="h-screen flex flex-col text-white">
 
-    <!-- 頂部導覽列 -->
     <nav class="bg-gray-900 p-4 shadow-lg flex justify-between items-center border-b border-gray-800">
         <div class="font-bold text-base text-emerald-400 flex items-center">
             <i class="fas fa-video mr-2"></i> 築心現場直播收看室
@@ -23,14 +22,11 @@
         </div>
     </nav>
 
-    <!-- 主要內容區 -->
     <main class="flex-1 flex flex-col p-2 sm:p-4 items-center justify-center overflow-hidden">
-        
         <div class="w-full h-full max-w-7xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center max-h-[85vh]">
             
             <video id="remoteVideo" class="w-full h-full object-contain" autoplay playsinline></video>
             
-            <!-- 尚未連線時的遮罩提示 -->
             <div id="videoOverlay" class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center p-6 text-center z-10">
                 <div class="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mb-4 text-emerald-400 text-2xl shadow-inner">
                     <i class="fas fa-satellite-dish"></i>
@@ -45,7 +41,6 @@
         </div>
     </main>
 
-    <!-- WebRTC 與 Firebase 邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, set, remove, onValue, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
@@ -74,29 +69,38 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const remoteVideo = document.getElementById('remoteVideo');
 
-        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        // 🌟 新增備援 STUN 伺服器
+        const rtcConfig = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ] 
+        };
         let pc = null;
+        let isConnecting = false;
 
         requestBtn.addEventListener('click', async () => {
+            // 🌟 修復核心：若會員點擊重新連線，強制重整網頁以清除所有殘留的 Firebase 監聽器，避免衝突
+            if (isConnecting) {
+                location.reload();
+                return;
+            }
+            
+            isConnecting = true;
             requestBtn.disabled = true;
             requestBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 正在敲門等待審核...`;
             hintText.innerText = "已向幹部送出連線請求，請稍候審核...";
 
             try {
-                // 🌟 發送請求前，強制清空該用戶所有舊連線資料，避免狀態互相干擾
                 await remove(ref(db, `rooms/${ROOM_ID}/connections/${userId}`));
-
                 const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
-                await set(requestRef, {
-                    userName: userName,
-                    requestedAt: Date.now()
-                });
+                await set(requestRef, { userName: userName, requestedAt: Date.now() });
 
                 connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 mr-2 animate-pulse"></span> 等待審核中`;
                 listenForApproval();
-
             } catch (err) {
                 alert("發送請求失敗：" + err.message);
+                isConnecting = false;
                 requestBtn.disabled = false;
                 requestBtn.innerHTML = `<i class="fas fa-hand-paper mr-2"></i> 請求加入直播`;
             }
@@ -105,10 +109,8 @@
         function listenForApproval() {
             const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
             const offerRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`);
-            
             let isApproved = false;
 
-            // 🌟 修復 1：直接監聽「是否收到 Offer」，這才是真正的幹部同意建立連線
             onValue(offerRef, (snapshot) => {
                 const offer = snapshot.val();
                 if (offer && !isApproved) {
@@ -117,12 +119,10 @@
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 接收視訊中`;
                     connectionStatus.classList.replace('bg-amber-900/50', 'bg-emerald-900/50');
                     connectionStatus.classList.replace('text-amber-400', 'text-emerald-400');
-
                     initWebRTCReceiver(offer);
                 }
             });
 
-            // 🌟 修復 2：監聽敲門單消失。若消失卻沒有收到 Offer，代表幹部按下拒絕或直播已關閉
             onValue(requestRef, (snapshot) => {
                 if (!snapshot.exists() && !isApproved) {
                     setTimeout(() => {
@@ -130,19 +130,25 @@
                             alert("您的連線請求未通過，或幹部已關閉直播。");
                             location.reload();
                         }
-                    }, 1500); // 緩衝時間，避免 Firebase 寫入先後順序時間差
+                    }, 1500); 
                 }
             });
         }
 
         async function initWebRTCReceiver(offer) {
-            if (pc) pc.close(); // 清除舊連線
+            if (pc) pc.close();
             pc = new RTCPeerConnection(rtcConfig);
 
             pc.ontrack = (event) => {
                 console.log("✅ 成功收到遠端視訊串流！");
                 if (remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
+                    // 🌟 防禦蘋果 iOS 與行動版瀏覽器的嚴格「自動播放阻擋」政策
+                    remoteVideo.play().catch(e => {
+                        console.warn("自動播放被阻擋，切換為靜音播放避免黑屏:", e);
+                        remoteVideo.muted = true;
+                        remoteVideo.play();
+                    });
                 }
             };
 
@@ -155,15 +161,14 @@
                     connectionStatus.classList.replace('bg-emerald-900/50', 'bg-red-900/50');
                     connectionStatus.classList.replace('text-emerald-400', 'text-red-400');
                     
-                    // 🌟 修復 3：斷線時自動還原介面，允許會員再次點擊重連
                     videoOverlay.style.display = 'flex';
                     hintText.innerText = "連線已中斷，請確認網路狀態或重新請求。";
                     requestBtn.disabled = false;
-                    requestBtn.innerHTML = `<i class="fas fa-redo mr-2"></i> 重新連線`;
+                    // 🌟 改變按鈕文字，告知使用者將會重新整理
+                    requestBtn.innerHTML = `<i class="fas fa-redo mr-2"></i> 重新整理並連線`;
                 }
             };
 
-            // 收集會員端的 ICE Candidate
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
                     push(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), event.candidate.toJSON());
@@ -171,10 +176,8 @@
             };
 
             try {
-                // 🌟 關鍵修復 4：必須先完整設定好幹部的遠端描述 (Offer)
                 await pc.setRemoteDescription(new RTCSessionDescription(offer));
                 
-                // 建立 Answer 並寫入 Firebase
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
@@ -182,8 +185,6 @@
                     sdp: answer.sdp
                 });
 
-                // 🌟 關鍵修復 5：在此之後，才開始接收並加入幹部傳來的 ICE 數據！
-                // (移除了原本放太外面的監聽器，解決 Race Condition 搶拍報錯的問題)
                 onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), async (snapshot) => {
                     const candidate = snapshot.val();
                     if (candidate) {
@@ -194,7 +195,6 @@
                         }
                     }
                 });
-
             } catch (err) {
                 console.error("❌ 建立 WebRTC 連線失敗:", err);
             }
@@ -202,3 +202,4 @@
     </script>
 </body>
 </html>
+```這兩份程式碼已經為您做好了所有防呆與時序保護，請直接覆蓋您的原始檔案。更新後再進行直播測試，應該就能看到順暢且穩定的畫面了！

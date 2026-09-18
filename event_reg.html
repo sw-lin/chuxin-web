@@ -670,20 +670,11 @@ function renderRegList(list) {
             `;
         }
 
-        // 繳費區
+// 繳費區
         let paymentActionHTML = isEditMode ? `
             <div class="flex items-center gap-2" onclick="event.stopPropagation()">
                 <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
-          // 1. 顯示區域改用 phoneDisplay
-          <div class="text-[10px] text-gray-400 font-bold mt-0.5">${phoneDisplay}</div>
-
-          // 2. 修改詳細資料的扳手圖示，改傳遞 rawPhone
-          ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors ml-1" onclick="event.stopPropagation(); openRegModal('${rawPhone}', '${name}')" title="修改詳細資料"></i>` : ''}
-
-          // 3. 繳費狀態下拉選單，改傳遞 rawPhone
-          <select onchange="quickUpdatePayment('${rawPhone}', '${name}', this.value, this)" 
-            class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">      
-        
+                <select onchange="quickUpdatePayment('${rawPhone}', '${name}', this.value, this)" 
                         class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">
                     <option value="未繳費" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
                     <option value="已繳費" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
@@ -700,9 +691,9 @@ function renderRegList(list) {
                         <div class="font-black text-emerald-900 flex items-center gap-2 flex-wrap">
                             <span>${name}</span>
                             ${inlineBadgeHTML}
-                            ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors ml-1" onclick="event.stopPropagation(); openRegModal('${phone}', '${name}')" title="修改詳細資料"></i>` : ''}
+                            ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors ml-1" onclick="event.stopPropagation(); openRegModal('${rawPhone}', '${name}')" title="修改詳細資料"></i>` : ''}
                         </div>
-                        <div class="text-[10px] text-gray-400 font-bold mt-0.5">${phone}</div>
+                        <div class="text-[10px] text-gray-400 font-bold mt-0.5">${phoneDisplay}</div>
                     </div>
                 </div>
                 ${paymentActionHTML}

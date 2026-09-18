@@ -81,7 +81,6 @@
         const ROOM_ID = "main_room";
         const peerConnections = {};
 
-        // 🌟 核心修復：退回穩定的 Google STUN，移除造成超時的 TURN 伺服器
         const rtcConfig = {
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
@@ -161,6 +160,7 @@
             }
         });
 
+        // 🌟 新增：徹底斷線與清除 UI 功能
         window.removeConnectedUserCard = (userId) => {
             const card = document.getElementById(`req-${userId}`);
             if (card) {
@@ -242,6 +242,13 @@
 
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[userId] = pc;
+            
+            // 🌟 核心修復：幹部端偵測到斷線時自動清除卡片，不再死卡在已連線
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
+                }
+            };
 
             if (localStream) {
                 localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
@@ -252,6 +259,10 @@
                     push(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), event.candidate.toJSON());
                 }
             };
+
+            // 🌟 核心修復：設立通行證佇列，防止 ICE Candidate 過早到達被拋棄
+            pc.remoteDescSet = false;
+            pc.candidateQueue = [];
 
             try {
                 const offer = await pc.createOffer();
@@ -266,16 +277,30 @@
                     const answer = snapshot.val();
                     if (answer && !pc.currentRemoteDescription) {
                         await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                        pc.remoteDescSet = true;
+                        
+                        // 處理排隊等待的 candidates
+                        if (pc.candidateQueue) {
+                            for (let c of pc.candidateQueue) {
+                                await pc.addIceCandidate(new RTCIceCandidate(c));
+                            }
+                            pc.candidateQueue = [];
+                        }
                     }
                 });
 
                 onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (snapshot) => {
                     const candidate = snapshot.val();
                     if (candidate) {
-                        try {
-                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                        } catch (e) {
-                            console.error("加入 ICE Candidate 失敗:", e);
+                        if (pc.remoteDescSet) {
+                            try {
+                                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                            } catch (e) {
+                                console.error("加入 ICE Candidate 失敗:", e);
+                            }
+                        } else {
+                            // 遠端描述尚未就緒，先存入佇列保護
+                            pc.candidateQueue.push(candidate);
                         }
                     }
                 });

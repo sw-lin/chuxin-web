@@ -67,7 +67,6 @@
         const firebaseConfig = {
           apiKey: "AIzaSyBXyX-rBLxWvPAJaYWabv4skVEQQWftQ0A",
           authDomain: "chuxinclub.firebaseapp.com",
-          // 👇 必須加上這行，指定你們的新加坡資料庫正確網址
           databaseURL: "https://chuxinclub-default-rtdb.asia-southeast1.firebasedatabase.app",
           projectId: "chuxinclub",
           storageBucket: "chuxinclub.firebasestorage.app",
@@ -86,15 +85,14 @@
         const requestCount = document.getElementById('requestCount');
 
         let localStream = null;
-        let currentFacingMode = "environment"; // 預設使用後置鏡頭 ("environment" 或 "user")
+        let currentFacingMode = "environment"; // 預設使用後置鏡頭
         const ROOM_ID = "main_room";
 
         // 啟動或切換鏡頭
         async function initCamera() {
             if (localStream) {
-                localStream.getTracks().forEach(track => track.stop()); // 關閉舊鏡頭串流
+                localStream.getTracks().forEach(track => track.stop()); 
             }
-
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: currentFacingMode },
@@ -103,7 +101,6 @@
                 localVideo.srcObject = localStream;
             } catch (error) {
                 console.error("相機存取失敗:", error);
-                // 某些手機不支援 exact 模式，退回一般模式試試
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                     localVideo.srcObject = localStream;
@@ -113,57 +110,47 @@
             }
         }
 
-        // 切換前後鏡頭按鈕
         switchCamBtn.addEventListener('click', async () => {
             currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
             await initCamera();
         });
 
-        // 開始直播 (優化版)
         startBtn.addEventListener('click', async () => {
-            // 1. 立即提供點擊視覺回饋，證明按鈕有作用
             startBtn.disabled = true;
             startBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 啟動中...`;
 
             try {
-                // 2. 檢查鏡頭，若已存在且運作中就不重複初始化
                 if (!localStream || !localStream.active) {
                     await initCamera();
                 }
 
-                // 3. 寫入 Firebase 直播狀態
                 const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
                 await set(statusRef, { 
                     isLive: true, 
                     startedAt: Date.now() 
                 });
 
-                // 4. 設定斷線自動清空
                 onDisconnect(statusRef).set({ isLive: false });
 
-                // 5. 更新 UI 狀態
                 startBtn.classList.add('hidden');
                 startBtn.disabled = false;
-                startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`; // 復原按鈕文字
+                startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`;
                 stopBtn.classList.remove('hidden');
 
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 直播中`;
                 statusBadge.classList.replace('bg-gray-700', 'bg-red-900/50');
                 statusBadge.classList.replace('text-gray-300', 'text-red-400');
 
-                // 6. 開始監聽會員敲門
                 listenForRequests();
 
             } catch (err) {
-                // 若失敗，還原按鈕並跳出詳細錯誤
                 startBtn.disabled = false;
                 startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`;
                 alert("開啟直播失敗！錯誤訊息：\n" + (err.message || err));
-                console.error("直播啟動錯誤:", err);
             }
         });
 
-        // 結束直播
+        // 🌟 1. 修改：結束直播時，中斷並清理所有連線
         stopBtn.addEventListener('click', async () => {
             const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
             await set(statusRef, { isLive: false });
@@ -176,8 +163,38 @@
             
             requestsContainer.innerHTML = '<div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>';
             requestCount.textContent = "0";
+
+            // 清空所有已建立的連線
+            for (let userId in peerConnections) {
+                if (peerConnections[userId]) {
+                    peerConnections[userId].close();
+                    delete peerConnections[userId];
+                }
+            }
+            remove(ref(db, `rooms/${ROOM_ID}/connections`)).catch(()=>{});
         });
 
+        // 🌟 2. 新增：連線清理與手動踢人共用函式
+        window.removeConnectedUserCard = (userId) => {
+            const card = document.getElementById(`req-${userId}`);
+            if (card) {
+                card.remove();
+                updateRequestCount(-1);
+            }
+            if (peerConnections[userId]) {
+                peerConnections[userId].close();
+                delete peerConnections[userId];
+            }
+            remove(ref(db, `rooms/${ROOM_ID}/connections/${userId}`)).catch(()=>{});
+        };
+
+        window.disconnectUser = (userId) => {
+            if (confirm("確定要中斷這位會員的連線嗎？")) {
+                window.removeConnectedUserCard(userId);
+            }
+        };
+
+        // 🌟 3. 修改：監聽請求 (加入扣留卡片與防呆機制)
         function listenForRequests() {
             const requestsRef = ref(db, `rooms/${ROOM_ID}/requests`);
             requestsContainer.innerHTML = '';
@@ -186,9 +203,14 @@
                 const request = snapshot.val();
                 const userId = snapshot.key;
 
+                // 若卡片已存在 (例如舊連線未斷乾淨)，先強制清理舊的
+                if (document.getElementById(`req-${userId}`)) {
+                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
+                }
+
                 const card = document.createElement('div');
                 card.id = `req-${userId}`;
-                card.className = "bg-gray-700 p-2.5 rounded-lg flex justify-between items-center text-sm";
+                card.className = "bg-gray-700 p-2.5 rounded-lg flex justify-between items-center text-sm transition-all";
                 card.innerHTML = `
                     <div class="flex items-center">
                         <div class="w-7 h-7 rounded-full bg-emerald-700 flex items-center justify-center mr-2 text-xs font-bold">
@@ -213,65 +235,98 @@
                 const userId = snapshot.key;
                 const card = document.getElementById(`req-${userId}`);
                 if (card) {
-                    card.remove();
-                    updateRequestCount(-1);
+                    // 核心修改：如果已經被同意並記錄在 peerConnections 裡，就不從畫面上移除卡片
+                    if (!peerConnections[userId]) {
+                        card.remove();
+                        updateRequestCount(-1);
+                    }
                 }
             });
         }
 
-        // 存放所有已連線會員的 PeerConnection
         const peerConnections = {};
-        // Google 免費的 STUN 伺服器（用來取得對外 IP 穿透 NAT）
         const rtcConfig = {
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
 
+        // 🌟 4. 修改：同意請求 (動態變更 UI 按鈕，並監測斷線狀態)
         window.acceptRequest = async (userId) => {
             console.log("當前操作的 userId:", userId);
             
-            // 🔥 關鍵修復：在建立新連線前，強制清空上一次殘留的舊連線數據
+            // 立即改變 UI：替換為「連線中」標籤與「紅色強制中斷」按鈕
+            const card = document.getElementById(`req-${userId}`);
+            if (card) {
+                const actionDiv = card.querySelector('.flex.gap-2');
+                if (actionDiv) {
+                    actionDiv.innerHTML = `
+                        <span class="text-[10px] bg-emerald-900/80 text-emerald-300 px-2 py-1 rounded-full animate-pulse flex items-center border border-emerald-700">
+                            <i class="fas fa-satellite-dish mr-1"></i> 連線中
+                        </span>
+                        <button onclick="disconnectUser('${userId}')" class="bg-red-600 hover:bg-red-500 w-7 h-7 rounded-full flex items-center justify-center text-white shadow-md ml-1" title="強制斷線">
+                            <i class="fas fa-phone-slash text-xs"></i>
+                        </button>
+                    `;
+                }
+            }
+            
             const connectionRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}`);
             await remove(connectionRef);
 
-            // 1. 建立對應該會員的 RTCPeerConnection
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[userId] = pc;
 
-            // 2. 將幹部的攝影機軌跡 (localStream) 加入連線中送出
+            // 監聽對方網路斷線或關閉網頁，自動移除卡片
+            pc.oniceconnectionstatechange = () => {
+                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+                    console.log(`[${userId}] 網路連線已中斷`);
+                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
+                }
+            };
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
+                }
+            };
+
             if (localStream) {
                 localStream.getTracks().forEach(track => {
                     pc.addTrack(track, localStream);
                 });
             }
 
-            // 3. 收集 ICE Candidate 並寫入 Firebase
-         pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`);
-                push(candidateRef, event.candidate.toJSON());
-            }
-         };
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`);
+                    push(candidateRef, event.candidate.toJSON());
+                }
+            };
 
             try {
-                // 4. 建立 Offer
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                // 5. 將 Offer 寫入 Firebase
                 await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`), {
                     type: offer.type,
                     sdp: offer.sdp
                 });
 
-                // 6. 監聽會員回傳的 Answer
                 onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
                     const answer = snapshot.val();
                     if (answer && !pc.currentRemoteDescription) {
                         await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                        
+                        // 當會員成功回傳 Answer (建立連線)，將閃爍動畫改為穩定的綠底
+                        if (card) {
+                            const badge = card.querySelector('span.animate-pulse');
+                            if (badge) {
+                                badge.classList.remove('animate-pulse', 'bg-emerald-900/80', 'border-emerald-700');
+                                badge.classList.add('bg-emerald-600', 'text-white');
+                                badge.innerHTML = `<i class="fas fa-link mr-1"></i> 已連線`;
+                            }
+                        }
                     }
                 });
 
-                // 7. 監聽會員傳來的 ICE Candidates
                 onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (snapshot) => {
                     const candidate = snapshot.val();
                     if (candidate) {
@@ -287,7 +342,7 @@
                 console.error("WebRTC Offer 建立失敗:", err);
             }
 
-            // 8. 移除審核中的排隊卡片
+            // 移除 Firebase 上的敲門請求 (因加入了防呆機制，畫面上的卡片此時不會消失)
             await remove(ref(db, `rooms/${ROOM_ID}/requests/${userId}`));
         };
 
@@ -303,7 +358,6 @@
             }
         }
 
-        // 預設開啟後置鏡頭
         initCamera();
     </script>
 </body>

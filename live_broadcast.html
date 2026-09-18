@@ -25,9 +25,11 @@
     <main class="flex-1 flex flex-col p-4 gap-4 overflow-y-auto">
         <div class="w-full bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 min-h-[300px]">
             <video id="localVideo" class="w-full h-full object-cover" autoplay muted playsinline></video>
+            
             <button id="switchCamBtn" class="absolute top-3 right-3 bg-gray-900/80 hover:bg-gray-800 text-white p-3 rounded-full shadow-lg border border-gray-600 transition-all">
                 <i class="fas fa-sync-alt text-base"></i>
             </button>
+
             <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4">
                 <button id="startBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all flex items-center">
                     <i class="fas fa-play mr-2"></i> 開始直播
@@ -43,6 +45,7 @@
                 <span>會員連線請求</span>
                 <span id="requestCount" class="bg-emerald-900 text-emerald-300 text-xs px-2 py-1 rounded-full">0</span>
             </div>
+            
             <div id="requestsContainer" class="p-3 space-y-2">
                 <div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>
             </div>
@@ -77,16 +80,10 @@
         let currentFacingMode = "environment"; 
         const ROOM_ID = "main_room";
         const peerConnections = {};
-        
-        // 🌟 核心升級：加入強制穿透防火牆的 TURN 中繼伺服器
+
+        // 🌟 核心修復：退回穩定的 Google STUN，移除造成超時的 TURN 伺服器
         const rtcConfig = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-            ]
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
 
         async function initCamera() {
@@ -118,8 +115,10 @@
         startBtn.addEventListener('click', async () => {
             startBtn.disabled = true;
             startBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 啟動中...`;
+
             try {
                 if (!localStream || !localStream.active) await initCamera();
+
                 const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
                 await set(statusRef, { isLive: true, startedAt: Date.now() });
                 onDisconnect(statusRef).set({ isLive: false });
@@ -132,6 +131,7 @@
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 直播中`;
                 statusBadge.classList.replace('bg-gray-700', 'bg-red-900/50');
                 statusBadge.classList.replace('text-gray-300', 'text-red-400');
+
                 listenForRequests();
             } catch (err) {
                 startBtn.disabled = false;
@@ -159,7 +159,6 @@
                     delete peerConnections[userId];
                 }
             }
-            remove(ref(db, `rooms/${ROOM_ID}/connections`)).catch(()=>{});
         });
 
         window.removeConnectedUserCard = (userId) => {
@@ -176,7 +175,7 @@
         };
 
         window.disconnectUser = (userId) => {
-            if (confirm("確定要中斷這位會員的連線嗎？")) window.removeConnectedUserCard(userId);
+            if (confirm("確定要強制中斷這位會員的連線嗎？")) window.removeConnectedUserCard(userId);
         };
 
         function listenForRequests() {
@@ -187,13 +186,11 @@
                 const request = snapshot.val();
                 const userId = snapshot.key;
 
-                if (document.getElementById(`req-${userId}`)) {
-                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
-                }
+                if (document.getElementById(`req-${userId}`)) return;
 
                 const card = document.createElement('div');
                 card.id = `req-${userId}`;
-                card.className = "bg-gray-700 p-2.5 rounded-lg flex justify-between items-center text-sm transition-all";
+                card.className = "bg-gray-700 p-2.5 rounded-lg flex justify-between items-center text-sm";
                 card.innerHTML = `
                     <div class="flex items-center">
                         <div class="w-7 h-7 rounded-full bg-emerald-700 flex items-center justify-center mr-2 text-xs font-bold">
@@ -230,8 +227,8 @@
                 const actionDiv = card.querySelector('.flex.gap-2');
                 if (actionDiv) {
                     actionDiv.innerHTML = `
-                        <span class="text-[10px] bg-emerald-900/80 text-emerald-300 px-2 py-1 rounded-full animate-pulse flex items-center border border-emerald-700">
-                            <i class="fas fa-satellite-dish mr-1"></i> 連線中
+                        <span class="text-[10px] bg-emerald-600 text-white px-2 py-1 rounded-full flex items-center shadow-md">
+                            <i class="fas fa-link mr-1"></i> 已連線
                         </span>
                         <button onclick="disconnectUser('${userId}')" class="bg-red-600 hover:bg-red-500 w-7 h-7 rounded-full flex items-center justify-center text-white shadow-md ml-1" title="強制斷線">
                             <i class="fas fa-phone-slash text-xs"></i>
@@ -239,25 +236,12 @@
                     `;
                 }
             }
-            
+
             const connectionRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}`);
             await remove(connectionRef);
 
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[userId] = pc;
-
-            pc.oniceconnectionstatechange = () => {
-                // 🌟 優化：忽略暫時性的 disconnected，只在徹底 failed 時才移除卡片
-                if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
-                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
-                }
-            };
-            
-            pc.onconnectionstatechange = () => {
-                if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-                    if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
-                }
-            };
 
             if (localStream) {
                 localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
@@ -278,31 +262,21 @@
                     sdp: offer.sdp
                 });
 
-                const unsubAnswer = onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
+                onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
                     const answer = snapshot.val();
                     if (answer && !pc.currentRemoteDescription) {
                         await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                        unsubAnswer(); 
-                        
-                        if (card) {
-                            const badge = card.querySelector('span.animate-pulse');
-                            if (badge) {
-                                badge.classList.remove('animate-pulse', 'bg-emerald-900/80', 'border-emerald-700');
-                                badge.classList.add('bg-emerald-600', 'text-white');
-                                badge.innerHTML = `<i class="fas fa-link mr-1"></i> 已連線`;
-                            }
-                        }
+                    }
+                });
 
-                        onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (candSnap) => {
-                            const candidate = candSnap.val();
-                            if (candidate) {
-                                try {
-                                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                                } catch (e) {
-                                    console.error("加入 ICE Candidate 失敗:", e);
-                                }
-                            }
-                        });
+                onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (snapshot) => {
+                    const candidate = snapshot.val();
+                    if (candidate) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (e) {
+                            console.error("加入 ICE Candidate 失敗:", e);
+                        }
                     }
                 });
 

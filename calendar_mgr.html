@@ -252,12 +252,13 @@
         }).join('');
     }
 
-    function openAddModal() {
+function openAddModal() {
         currentEditData = null;
         document.getElementById('modalTitle').innerText = "新增活動項目";
         document.getElementById('eventDate').value = "";
         document.getElementById('eventTitle').value = "";
-        document.getElementById('eventPoster').value = "";
+        // 🌟 修正：將 eventPoster 改為 ev_poster
+        document.getElementById('ev_poster').value = "";
         document.getElementById('eventDesc').value = "";
         document.getElementById('needQR').checked = true;
         document.getElementById('deleteBtn').classList.add('hidden');
@@ -270,7 +271,8 @@
         document.getElementById('modalTitle').innerText = "維修活動資料";
         document.getElementById('eventDate').value = currentEditData.dateText;
         document.getElementById('eventTitle').value = currentEditData.title;
-        document.getElementById('eventPoster').value = currentEditData.poster_url || "";
+        // 🌟 修正：將 eventPoster 改為 ev_poster
+        document.getElementById('ev_poster').value = currentEditData.poster_url || "";
         document.getElementById('eventDesc').value = currentEditData.description || "";
         document.getElementById('needQR').checked = (currentEditData.needQR === true || currentEditData.needQR === "TRUE");
         document.getElementById('deleteBtn').classList.remove('hidden');
@@ -281,7 +283,8 @@
     async function submitData() {
         const date = document.getElementById('eventDate').value;
         const title = document.getElementById('eventTitle').value.trim();
-        const poster = document.getElementById('eventPoster').value.trim();
+        // 🌟 修正：將 eventPoster 改為 ev_poster
+        const poster = document.getElementById('ev_poster').value.trim();
         const desc = document.getElementById('eventDesc').value.trim();
         const qr = document.getElementById('needQR').checked;
 
@@ -292,10 +295,9 @@
 
         const payload = {
             key: STAFF_KEY,
-            // 根據是否為編輯模式，決定呼叫更新或新增
             type: currentEditData ? 'update_calendar_event' : 'add_event',
             oldTitle: currentEditData ? currentEditData.title : null,
-            eventId: currentEditData ? currentEditData.eventId : null, // 🌟 關鍵寫入：夾帶 eventId
+            eventId: currentEditData ? currentEditData.eventId : null,
             dateText: date,
             title: title,
             poster_url: poster,
@@ -305,11 +307,9 @@
 
         try {
             const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const result = await response.json(); // 解析後端回傳結果
+            const result = await response.json();
             
             if (result.result === "SUCCESS") {
-                // 🌟 關鍵優化：無論新增或修改，一律重新載入雲端資料
-                // 這樣才能確保「新增」的活動，能在本地端立刻拿到最新的 eventId
                 await loadCalendar(); 
             } else {
                 alert("處理失敗：" + (result.message || "未知錯誤"));

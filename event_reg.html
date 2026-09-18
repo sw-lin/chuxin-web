@@ -594,7 +594,10 @@ function renderRegList(list) {
 
     let html = list.map((r, i) => {
         const name = r["姓名"] || "未提供"; 
-        const phone = r["電話"] || "無號碼";
+        // 🌟 核心修正：將資料用的原始電話與畫面顯示用的電話分開
+        const rawPhone = String(r["電話"] || "").trim(); 
+        const phoneDisplay = rawPhone === "" ? "無號碼" : rawPhone;
+        
         const diet = r["餐食"] || r["飲食"] || "未填";
         const note = (r["備註"] || "").trim();
         const hasNote = note && note !== "無"; // 檢查是否有實質備註
@@ -671,7 +674,16 @@ function renderRegList(list) {
         let paymentActionHTML = isEditMode ? `
             <div class="flex items-center gap-2" onclick="event.stopPropagation()">
                 <span class="text-[11px] font-bold text-emerald-600">$${dueAmount}</span>
-                <select onchange="quickUpdatePayment('${phone}', '${name}', this.value, this)" 
+          // 1. 顯示區域改用 phoneDisplay
+          <div class="text-[10px] text-gray-400 font-bold mt-0.5">${phoneDisplay}</div>
+
+          // 2. 修改詳細資料的扳手圖示，改傳遞 rawPhone
+          ${isEditMode ? `<i class="fas fa-tools text-emerald-400 text-[10px] cursor-pointer hover:text-emerald-700 transition-colors ml-1" onclick="event.stopPropagation(); openRegModal('${rawPhone}', '${name}')" title="修改詳細資料"></i>` : ''}
+
+          // 3. 繳費狀態下拉選單，改傳遞 rawPhone
+          <select onchange="quickUpdatePayment('${rawPhone}', '${name}', this.value, this)" 
+            class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">      
+        
                         class="text-[10px] border-none bg-emerald-50 text-emerald-700 rounded-lg px-2 py-1 font-bold cursor-pointer">
                     <option value="未繳費" ${isPaid === '未繳' ? 'selected' : ''}>未繳</option>
                     <option value="已繳費" ${isPaid === '已繳' ? 'selected' : ''}>已繳</option>
@@ -1331,7 +1343,7 @@ async function deleteSingleReg(phone, name) {
         if (statCountEl) {
             // 從全域變數 allData 中移除該筆資料並重新計算
             allData.registrations = allData.registrations.filter(r => 
-                !(r["電話"] === phone && r["姓名"] === name)
+              !(String(r["電話"] || "").trim() === phone && String(r["姓名"] || "").trim() === name)
             );
             
             // 更新看板與名單
@@ -1384,8 +1396,9 @@ async function quickUpdatePayment(phone, name, newStatus, selectElement) {
 
         if (result.result === "success") {
             showToast(`✅ ${name} 已更新為 ${newStatus}`);
-            // 更新本地資料狀態，確保 UI 一致
-            const reg = allData.registrations.find(r => r["電話"] === phone && r["姓名"] === name);
+          
+            // 確保原本是 undefined 或 null 的欄位轉為空字串，以正確配對攜伴者
+            const reg = allData.registrations.find(r => String(r["電話"] || "").trim() === phone && String(r["姓名"] || "").trim() === name);
             if (reg) reg["狀態"] = newStatus;
         } else {
             throw new Error(result.message || "更新失敗");

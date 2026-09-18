@@ -25,7 +25,6 @@
     <main class="flex-1 flex flex-col p-2 sm:p-4 items-center justify-center overflow-hidden">
         <div class="w-full h-full max-w-7xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center max-h-[85vh]">
             
-            <!-- 🌟 還原：只要有使用者點擊按鈕的動作，瀏覽器就允許帶聲音播放 -->
             <video id="remoteVideo" class="w-full h-full object-contain" autoplay playsinline></video>
             
             <div id="videoOverlay" class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center p-6 text-center z-10">
@@ -70,34 +69,28 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const remoteVideo = document.getElementById('remoteVideo');
 
-        // 🌟 核心修復：退回穩定的 Google STUN，移除造成超時的 TURN 伺服器
         const rtcConfig = {
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
         let pc = null;
-        let isConnecting = false;
 
         requestBtn.addEventListener('click', async () => {
-            if (isConnecting) {
-                location.reload();
-                return;
-            }
-            
-            isConnecting = true;
             requestBtn.disabled = true;
             requestBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> 正在敲門等待審核...`;
             hintText.innerText = "已向幹部送出連線請求，請稍候審核...";
 
             try {
-                await remove(ref(db, `rooms/${ROOM_ID}/connections/${userId}`));
                 const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
-                await set(requestRef, { userName: userName, requestedAt: Date.now() });
+                await set(requestRef, {
+                    userName: userName,
+                    requestedAt: Date.now()
+                });
 
                 connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400 mr-2 animate-pulse"></span> 等待審核中`;
                 listenForApproval();
+
             } catch (err) {
                 alert("發送請求失敗：" + err.message);
-                isConnecting = false;
                 requestBtn.disabled = false;
                 requestBtn.innerHTML = `<i class="fas fa-hand-paper mr-2"></i> 請求加入直播`;
             }
@@ -105,83 +98,95 @@
 
         function listenForApproval() {
             const requestRef = ref(db, `rooms/${ROOM_ID}/requests/${userId}`);
-            const offerRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`);
-            let isApproved = false;
-
-            onValue(offerRef, (snapshot) => {
-                const offer = snapshot.val();
-                if (offer && !isApproved) {
-                    isApproved = true;
+            
+            onValue(requestRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
                     videoOverlay.style.display = 'none';
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 接收視訊中`;
                     connectionStatus.classList.replace('bg-amber-900/50', 'bg-emerald-900/50');
                     connectionStatus.classList.replace('text-amber-400', 'text-emerald-400');
-                    initWebRTCReceiver(offer);
-                }
-            });
 
-            onValue(requestRef, (snapshot) => {
-                if (!snapshot.exists() && !isApproved) {
-                    setTimeout(() => {
-                        if (!isApproved) {
-                            alert("您的連線請求未通過，或幹部已關閉直播。");
-                            location.reload();
-                        }
-                    }, 1500); 
+                    initWebRTCReceiver();
                 }
             });
         }
 
-        async function initWebRTCReceiver(offer) {
-            if (pc) pc.close();
+        async function initWebRTCReceiver() {
+            if (pc) return; 
             pc = new RTCPeerConnection(rtcConfig);
 
             pc.ontrack = (event) => {
-                console.log("✅ 成功收到遠端視訊串流！");
+                console.log("✅ 成功收到遠端視訊串流！", event.streams[0]);
                 if (remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
                 }
             };
 
             pc.onconnectionstatechange = () => {
+                console.log("🔗 WebRTC 連線狀態改變:", pc.connectionState);
                 if (pc.connectionState === 'connected') {
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 直播連線中`;
                 } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span> 連線中斷`;
-                    connectionStatus.classList.replace('bg-emerald-900/50', 'bg-red-900/50');
-                    connectionStatus.classList.replace('text-emerald-400', 'text-red-400');
                 }
             };
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
-                    push(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), event.candidate.toJSON());
+                    const candidateRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`);
+                    push(candidateRef, event.candidate.toJSON());
                 }
             };
 
-            try {
-                await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
-                    type: answer.type,
-                    sdp: answer.sdp
-                });
+            let remoteDescSet = false;
+            let candidateQueue = [];
+            const offerRef = ref(db, `rooms/${ROOM_ID}/connections/${userId}/offer`);
 
-                onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), async (snapshot) => {
-                    const candidate = snapshot.val();
-                    if (candidate) {
+            onValue(offerRef, async (snapshot) => {
+                const offer = snapshot.val();
+                if (offer && !pc.currentRemoteDescription) {
+                    console.log("📥 收到幹部 Offer，正在建立連線描述...");
+                    try {
+                        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                        remoteDescSet = true;
+
+                        // 🌟 核心修復：消化之前因為提早到達而被排隊的 ICE Candidates
+                        for (let c of candidateQueue) {
+                            await pc.addIceCandidate(new RTCIceCandidate(c));
+                        }
+                        candidateQueue = [];
+
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+
+                        await set(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), {
+                            type: answer.type,
+                            sdp: answer.sdp
+                        });
+                        console.log("📤 已成功發送 Answer 回覆給幹部");
+                    } catch (err) {
+                        console.error("❌ 處理 Offer 或建立 Answer 失敗:", err);
+                    }
+                }
+            });
+
+            onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateToViewer`), async (snapshot) => {
+                const candidate = snapshot.val();
+                if (candidate) {
+                    if (remoteDescSet) {
                         try {
                             await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                            console.log("🧊 成功加入幹端的 ICE Candidate");
                         } catch (e) {
-                            console.error("❌ 加入遠端 ICE 失敗:", e);
+                            console.error("❌ 加入遠端 ICE Candidate 失敗:", e);
                         }
+                    } else {
+                        // 🌟 核心修復：遠端描述還沒準備好時先排隊，絕不能直接拋棄
+                        candidateQueue.push(candidate);
                     }
-                });
-            } catch (err) {
-                console.error("❌ 建立 WebRTC 連線失敗:", err);
-            }
+                }
+            });
         }
     </script>
 </body>

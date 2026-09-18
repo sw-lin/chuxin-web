@@ -72,10 +72,30 @@
                     <label class="block text-xs font-black text-emerald-800 mb-1 ml-1">活動名稱</label>
                     <input type="text" id="eventTitle" placeholder="輸入活動名稱" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
                 </div>
-                <div>
-                    <label class="block text-xs font-black text-emerald-800 mb-1 ml-1">海報網址</label>
-                    <input type="text" id="eventPoster" placeholder="https://..." class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold">
-                </div>
+<div>
+<!-- 修改標籤與輸入框提示 -->
+<label class="block text-xs font-bold text-emerald-800 mb-1">
+    <i class="fas fa-image text-emerald-600 mr-1"></i>活動海報網址 (可直接輸入網址或點擊上傳圖片)
+</label>
+
+<div class="flex gap-2 items-center">
+    <input type="url" id="ev_poster" placeholder="https://... 或點擊右側按鈕上傳圖片" 
+           class="flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+    
+    <input type="file" id="ev_poster_file" accept="image/gif, image/png, image/jpeg" class="hidden" onchange="handlePosterUpload(this)">
+    
+    <button type="button" onclick="document.getElementById('ev_poster_file').click()" 
+            class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-sm active:scale-95">
+        <i class="fas fa-file-upload"></i> 上傳圖片
+    </button>
+</div>
+<p class="text-[10px] text-gray-400 mt-1">選取圖片檔後將自動上傳至雲端，並自動寫入圖片網址。</p>
+    
+    <div id="posterPreviewBox" class="mt-2 hidden border border-dashed border-emerald-200 rounded-xl p-2 bg-emerald-50/50 text-center">
+        <span class="text-[10px] font-bold text-emerald-700 block mb-1">🖼️ 當前海報預覽：</span>
+        <img id="posterPreviewImg" src="" class="max-h-40 mx-auto rounded-lg shadow-sm object-contain bg-white">
+    </div>
+</div>
                 <div>
                     <label class="block text-xs font-black text-emerald-800 mb-1 ml-1">活動描述 (對應 E 欄位)</label>
                     <textarea id="eventDesc" rows="3" placeholder="請輸入活動簡介內容..." class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold resize-none"></textarea>
@@ -242,6 +262,7 @@
         document.getElementById('needQR').checked = true;
         document.getElementById('deleteBtn').classList.add('hidden');
         document.getElementById('eventModal').style.display = 'flex';
+        updatePosterPreview('');
     }
 
     function openEditModal(i) {
@@ -254,6 +275,7 @@
         document.getElementById('needQR').checked = (currentEditData.needQR === true || currentEditData.needQR === "TRUE");
         document.getElementById('deleteBtn').classList.remove('hidden');
         document.getElementById('eventModal').style.display = 'flex';
+        updatePosterPreview(currentEditData.poster_url || '');
     }
 
     async function submitData() {
@@ -339,6 +361,83 @@ async function confirmDelete() {
     }
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // 🌟 處理 GIF / 圖片海報上傳至雲端資料夾
+async function handlePosterUpload(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    // 檢查檔案大小（建議 15MB 內避免 GAS 傳輸超時）
+    if (file.size > 15 * 1024 * 1024) {
+        alert("⚠️ 檔案過大！請選擇 15MB 以下的 GIF 或圖片檔案。");
+        input.value = "";
+        return;
+    }
+
+    toggleLoading(true, "海報圖片上傳至雲端中...");
+
+    try {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const base64Data = e.target.result;
+            
+            const payload = {
+                type: 'upload_calendar_poster',
+                key: STAFF_KEY,
+                fileName: file.name,
+                fileData: base64Data
+            };
+
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            // 修改成功提示文字
+            if (result.result === "SUCCESS") {
+               document.getElementById('ev_poster').value = result.url;
+               updatePosterPreview(result.url);
+               alert("✅ " + (result.message || "海報已成功上傳並自動填入！"));
+            } else {
+                alert("❌ 上傳失敗：" + (result.message || "未知錯誤"));
+            }
+            toggleLoading(false);
+            input.value = ""; // 清空選擇器以利重複選擇
+        };
+        reader.readAsDataURL(file);
+
+    } catch (err) {
+        console.error("海報上傳錯誤:", err);
+        alert("❌ 網路或上傳過程發生錯誤，請稍後重試。");
+        toggleLoading(false);
+        input.value = "";
+    }
+}
+
+// 🌟 更新海報/GIF 即時預覽圖
+function updatePosterPreview(url) {
+    const box = document.getElementById('posterPreviewBox');
+    const img = document.getElementById('posterPreviewImg');
+    if (url && url.trim() !== '') {
+        img.src = url;
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+        img.src = '';
+    }
+}
+
+// 🌟 監聽輸入框：手動貼上網址時也能即時預覽
+document.addEventListener("DOMContentLoaded", function() {
+    const posterInput = document.getElementById('ev_poster');
+    if (posterInput) {
+        posterInput.addEventListener('input', function(e) {
+            updatePosterPreview(e.target.value);
+        });
+    }
+});
 </script>
 </body>
 </html>

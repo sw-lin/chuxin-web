@@ -25,8 +25,8 @@
     <main class="flex-1 flex flex-col p-2 sm:p-4 items-center justify-center overflow-hidden">
         <div class="w-full h-full max-w-7xl aspect-video bg-black rounded-xl overflow-hidden relative shadow-2xl border border-gray-700 flex items-center justify-center max-h-[85vh]">
             
-            <!-- 🌟 關鍵修復：必須預設 muted，手機瀏覽器才允許載入影片畫面 -->
-            <video id="remoteVideo" class="w-full h-full object-contain" autoplay playsinline muted></video>
+            <!-- 🌟 還原：只要有使用者點擊按鈕的動作，瀏覽器就允許帶聲音播放 -->
+            <video id="remoteVideo" class="w-full h-full object-contain" autoplay playsinline></video>
             
             <div id="videoOverlay" class="absolute inset-0 bg-gray-900/90 flex flex-col items-center justify-center p-6 text-center z-10">
                 <div class="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mb-4 text-emerald-400 text-2xl shadow-inner">
@@ -37,17 +37,6 @@
                 
                 <button id="requestBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all active:scale-95 flex items-center text-sm">
                     <i class="fas fa-hand-paper mr-2"></i> 請求加入直播
-                </button>
-            </div>
-
-            <!-- 🌟 關鍵修復：音量解除遮罩 (畫面載入成功後才會顯示) -->
-            <div id="unmuteOverlay" class="absolute inset-0 bg-black/70 hidden flex-col items-center justify-center p-6 text-center z-20 backdrop-blur-sm">
-                <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mb-4 text-white text-2xl shadow-lg animate-pulse">
-                    <i class="fas fa-volume-mute"></i>
-                </div>
-                <h3 class="text-xl font-black mb-6 text-white tracking-widest">已成功連線現場</h3>
-                <button id="unmuteBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-10 rounded-full shadow-2xl transition-all active:scale-95 flex items-center text-lg">
-                    <i class="fas fa-volume-up mr-2"></i> 點擊此處播放聲音
                 </button>
             </div>
         </div>
@@ -80,28 +69,11 @@
         const hintText = document.getElementById('hintText');
         const connectionStatus = document.getElementById('connectionStatus');
         const remoteVideo = document.getElementById('remoteVideo');
-        
-        const unmuteOverlay = document.getElementById('unmuteOverlay');
-        const unmuteBtn = document.getElementById('unmuteBtn');
 
-        // 解除靜音機制
-        unmuteBtn.addEventListener('click', () => {
-            remoteVideo.muted = false;
-            unmuteOverlay.classList.add('hidden');
-            unmuteOverlay.style.display = 'none';
-        });
-
-        // 🌟 核心升級：同樣加入 TURN 伺服器
-        const rtcConfig = { 
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-            ] 
+        // 🌟 核心修復：退回穩定的 Google STUN，移除造成超時的 TURN 伺服器
+        const rtcConfig = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
-        
         let pc = null;
         let isConnecting = false;
 
@@ -160,20 +132,6 @@
             });
         }
 
-        function showDisconnectUI() {
-            connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span> 連線中斷`;
-            connectionStatus.classList.replace('bg-emerald-900/50', 'bg-red-900/50');
-            connectionStatus.classList.replace('text-emerald-400', 'text-red-400');
-            
-            videoOverlay.style.display = 'flex';
-            hintText.innerText = "連線已徹底中斷，請確認網路狀態或重新請求。";
-            requestBtn.disabled = false;
-            requestBtn.innerHTML = `<i class="fas fa-redo mr-2"></i> 重新整理並連線`;
-            
-            unmuteOverlay.classList.add('hidden');
-            unmuteOverlay.style.display = 'none';
-        }
-
         async function initWebRTCReceiver(offer) {
             if (pc) pc.close();
             pc = new RTCPeerConnection(rtcConfig);
@@ -182,31 +140,16 @@
                 console.log("✅ 成功收到遠端視訊串流！");
                 if (remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
-                    
-                    // 🌟 核心防禦：強制靜音播放來繞過阻擋，成功載入畫面後，顯示解除靜音按鈕
-                    remoteVideo.muted = true;
-                    remoteVideo.play().then(() => {
-                        unmuteOverlay.classList.remove('hidden');
-                        unmuteOverlay.style.display = 'flex';
-                    }).catch(e => {
-                        console.error("播放被阻擋:", e);
-                    });
                 }
             };
 
             pc.onconnectionstatechange = () => {
-                console.log("🔗 WebRTC 連線狀態改變:", pc.connectionState);
                 if (pc.connectionState === 'connected') {
                     connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> 直播連線中`;
-                } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-                    // 🌟 優化：忽略暫時性的 disconnected，只在徹底 failed 時才拋出斷線介面
-                    showDisconnectUI();
-                }
-            };
-            
-            pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
-                    showDisconnectUI();
+                } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                    connectionStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span> 連線中斷`;
+                    connectionStatus.classList.replace('bg-emerald-900/50', 'bg-red-900/50');
+                    connectionStatus.classList.replace('text-emerald-400', 'text-red-400');
                 }
             };
 

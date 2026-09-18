@@ -78,11 +78,14 @@
         const ROOM_ID = "main_room";
         const peerConnections = {};
         
-        // 🌟 新增備援 STUN 伺服器，提升網路穿透成功率
+        // 🌟 核心升級：加入強制穿透防火牆的 TURN 中繼伺服器
         const rtcConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' }
+                { urls: 'stun:global.stun.twilio.com:3478' },
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
             ]
         };
 
@@ -244,13 +247,14 @@
             peerConnections[userId] = pc;
 
             pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+                // 🌟 優化：忽略暫時性的 disconnected，只在徹底 failed 時才移除卡片
+                if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
                     if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
                 }
             };
             
             pc.onconnectionstatechange = () => {
-                if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
                     if (window.removeConnectedUserCard) window.removeConnectedUserCard(userId);
                 }
             };
@@ -274,12 +278,11 @@
                     sdp: offer.sdp
                 });
 
-                // 🌟 核心修復：使用 unsubAnswer 防止記憶體洩漏，並保證順序正確
                 const unsubAnswer = onValue(ref(db, `rooms/${ROOM_ID}/connections/${userId}/answer`), async (snapshot) => {
                     const answer = snapshot.val();
                     if (answer && !pc.currentRemoteDescription) {
                         await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                        unsubAnswer(); // 接收到 Answer 後立即解除監聽
+                        unsubAnswer(); 
                         
                         if (card) {
                             const badge = card.querySelector('span.animate-pulse');
@@ -290,7 +293,6 @@
                             }
                         }
 
-                        // 🌟 核心修復：確定 Answer (RemoteDescription) 設置完畢後，才開始監聽並加入 Viewer 的 ICE 數據！
                         onChildAdded(ref(db, `rooms/${ROOM_ID}/connections/${userId}/candidateFromViewer`), async (candSnap) => {
                             const candidate = candSnap.val();
                             if (candidate) {

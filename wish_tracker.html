@@ -143,7 +143,8 @@ function renderDays() {
     const container = document.getElementById('daysContainer');
     const todayIndex = (new Date().getDay() + 6) % 7; 
     
-    if (currentScores[selectedDayIndex] === -1 || selectedDayIndex > todayIndex) {
+    // 🌟 修正防呆邏輯：只防堵「選到未來日子」，不干涉過去日子的點擊與補登
+    if (selectedDayIndex > todayIndex) {
         selectedDayIndex = todayIndex;
     }
 
@@ -156,6 +157,7 @@ function renderDays() {
         
         let classes = "w-10 h-11 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all outline-none ";
         
+        // 🚫 未來日子 或 剛加入前的豁免天數 (-1)：反灰不可點擊
         if (isFuture || isSkip) {
             classes += "bg-gray-50 text-gray-300 cursor-not-allowed";
             return `<div class="${classes}">
@@ -164,12 +166,13 @@ function renderDays() {
             </div>`;
         }
 
+        // 處理可點擊的日子
         if (isSelected) classes += "ring-2 ring-[#9d174d] ring-offset-2 scale-110 shadow-sm z-10 bg-white ";
 
         if (hasScore) {
-            classes += "bg-pink-100 text-[#9d174d] ";
+            classes += "bg-pink-100 text-[#9d174d] "; // 已填分數
         } else {
-            classes += "bg-gray-100 text-gray-400 "; 
+            classes += "bg-gray-100 text-gray-400 "; // 漏填
         }
         
         return `<button onclick="selectDay(${i})" class="${classes} cursor-pointer hover:bg-gray-200">

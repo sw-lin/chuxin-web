@@ -158,7 +158,8 @@
                 .then(r => r.json())
                 .then(data => {
                     var list = document.getElementById('memberList');
-                    var users = data.users || [];
+                    // 修改為 (在陣列後方加上 sort 排序)：
+                    var users = (data.users || []).sort((a, b) => (a.name || "").localeCompare(b.name || "", 'zh-TW-u-co-stroke'));
                     document.getElementById('memberCount').innerText = users.length + ' 位成員';
                     
                     var html = '';

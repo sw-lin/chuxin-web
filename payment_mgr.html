@@ -280,7 +280,7 @@
             );
 
             // 移除排序邏輯，直接使用原始順序
-            list.innerHTML = currentLedger.map((m, idx) => {
+            list.innerHTML = sortedLedger.map((m, idx) => {
                 const isPaid = m.status === '已繳';
                 return `
                     <div onclick="${isEditMode ? `toggleStatus('${m.phone}')` : ''}" 

@@ -340,10 +340,15 @@ async function loadFinishedEvents() {
         document.getElementById('totalCount').innerText = currentReport.length + " 位";
 
         const sortedReport = [...currentReport].sort((a, b) => {
-            if (a.status === "出席" && b.status !== "出席") return -1;
-            if (a.status !== "出席" && b.status === "出席") return 1;
-            return 0;
-        });
+        // 第一層排序：依出席狀態 (已出席優先)
+        const isAAttended = a.status === "出席";
+        const isBAttended = b.status === "出席";
+        if (isAAttended && !isBAttended) return -1;
+        if (!isAAttended && isBAttended) return 1;
+
+        // 第二層排序：狀態相同時，依姓名筆畫排序
+        return (a.name || "").localeCompare(b.name || "", 'zh-TW-u-co-stroke');
+    });
 
         list.innerHTML = sortedReport.map(r => {
             const isAttended = r.status === "出席";

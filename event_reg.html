@@ -592,6 +592,30 @@ function renderRegList(list) {
     const mFee = currentEventConfig?.["會員報名費"] || currentEventConfig?.memberFee || 0;
     const gFee = currentEventConfig?.["非會員報名費"] || currentEventConfig?.guestFee || 0;
 
+    // 在 renderRegList 函式內部，處理 list 渲染之前加入：
+list.sort((a, b) => {
+    // 1. 定義 A 與 B 的「群組依據」(若為本人則為自己的名字，若為攜伴者則為代理人名字)
+    const agentA = (a["報名代理人"] || "").trim();
+    const groupA = (agentA === "本人" || agentA === "") ? (a["姓名"] || "").trim() : agentA;
+    
+    const agentB = (b["報名代理人"] || "").trim();
+    const groupB = (agentB === "本人" || agentB === "") ? (b["姓名"] || "").trim() : agentB;
+    
+    // 2. 第一層排序：依據「主要報名者」的姓名繁體筆畫由少到多排序
+    if (groupA !== groupB) {
+        return groupA.localeCompare(groupB, 'zh-TW-u-co-stroke');
+    }
+    
+    // 3. 第二層排序：若屬於同一個家庭/群組，強制把「本人」排在第一位
+    const isMainA = (agentA === "本人" || agentA === "");
+    const isMainB = (agentB === "本人" || agentB === "");
+    if (isMainA && !isMainB) return -1;
+    if (!isMainA && isMainB) return 1;
+    
+    // 4. 第三層排序：如果有多位攜伴者，則依攜伴者自身筆畫排序
+    return (a["姓名"] || "").trim().localeCompare((b["姓名"] || "").trim(), 'zh-TW-u-co-stroke');
+});
+
     let html = list.map((r, i) => {
         const name = r["姓名"] || "未提供"; 
         // 🌟 核心修正：將資料用的原始電話與畫面顯示用的電話分開

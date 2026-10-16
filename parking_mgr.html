@@ -197,9 +197,9 @@
                 }
 
                 applicants = Array.isArray(listData) ? listData.map(item => ({
-                    phone: item.phone || "", name: item.name || "未具名",
-                    bonus: Number(item.bonus) || 0, isPaid: String(item.isPaid).includes("true") || item.isPaid === true || item.isPaid === "已繳"
-                })) : [];
+                   phone: item.phone || "", name: item.name || "未具名",
+                   bonus: Number(item.bonus) || 0, isPaid: String(item.isPaid).includes("true") || item.isPaid === true || item.isPaid === "已繳"
+                })).sort((a, b) => a.name.localeCompare(b.name, 'zh-TW-u-co-stroke')) : [];
 
                 calculateTickets();
             } catch (err) {

@@ -274,6 +274,11 @@
             document.getElementById('paidCount').innerText = paid.length;
             document.getElementById('totalCount').innerText = currentLedger.length;
 
+            // 🌟 依姓名繁體中文筆畫由少到多排序
+            const sortedLedger = [...currentLedger].sort((a, b) => 
+              (a.name || "").localeCompare(b.name || "", 'zh-TW-u-co-stroke')
+            );
+
             // 移除排序邏輯，直接使用原始順序
             list.innerHTML = currentLedger.map((m, idx) => {
                 const isPaid = m.status === '已繳';

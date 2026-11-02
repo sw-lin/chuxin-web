@@ -83,6 +83,21 @@
         // 存放所有已連線的 PeerConnection
         const peerConnections = {};
 
+        // 🌟 1. 新增：用來記錄目前是否正在進行直播的全域變數
+        let isBroadcasting = false;
+
+        // 🌟 2. 新增：監聽幹部端與 Firebase 的底層連線狀態 (斷線重連防護機制)
+        const connectedRef = ref(db, ".info/connected");
+        onValue(connectedRef, (snap) => {
+            // 如果網路重新連線，且幹部並未按下「結束直播」，則自動將狀態補回 true
+            if (snap.val() === true && isBroadcasting) {
+                const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
+                set(statusRef, { isLive: true, startedAt: Date.now() });
+                onDisconnect(statusRef).set({ isLive: false });
+                console.log("🔄 網路重新連線，已自動恢復直播狀態，確保晚進來的會員能看到按鈕！");
+            }
+        });
+
         const rtcConfig = {
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
@@ -124,6 +139,9 @@
                 await set(statusRef, { isLive: true, startedAt: Date.now() });
                 onDisconnect(statusRef).set({ isLive: false });
 
+                // 🌟 3. 標記為直播進行中
+                isBroadcasting = true;
+
                 startBtn.classList.add('hidden');
                 startBtn.disabled = false;
                 startBtn.innerHTML = `<i class="fas fa-play mr-2"></i> 開始直播`;
@@ -142,6 +160,9 @@
         });
 
         stopBtn.addEventListener('click', async () => {
+            // 🌟 4. 標記直播已結束，避免觸發自動重連廣播
+            isBroadcasting = false;
+            
             const statusRef = ref(db, `rooms/${ROOM_ID}/status`);
             await set(statusRef, { isLive: false });
 

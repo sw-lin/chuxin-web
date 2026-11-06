@@ -161,7 +161,7 @@
       <div class="grid grid-cols-2 gap-4">
         
         <!-- 1. 課程資料庫 -->
-        <button onclick="openService('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+        <button onclick="('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
             <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
                 <i class="fas fa-book-reader text-emerald-700 text-xl"></i>
             </div>
@@ -169,7 +169,7 @@
         </button>            
 
         <!-- 2. 活動剪影 -->
-        <button onclick="openService('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+        <button onclick="('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
             <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
                 <i class="fas fa-camera-retro text-amber-700 text-xl"></i>
             </div>
@@ -1074,19 +1074,26 @@ let globalConfig = {};
 
 
 function openService(key) {
-    // 當 key 傳入 'reading_folder_url' 時，
-    // 它會去 globalConfig 裡找對應的網址
-    const url = globalConfig[key];
+    // 當 key 傳入 'reading_folder_url' 時，它會去 globalConfig 裡找對應的網址
+    let url = globalConfig[key];
     console.log("嘗試開啟服務:", key, "取得網址:", url);
+    
     if (url && url.startsWith('http')) {
         showToast("正在前往專屬連結...", "success");
+        
+        // 🌟 關鍵修正：如果是 Google Drive 雲端硬碟連結，強制要求 LINE 跳出至外部瀏覽器 (Safari/Chrome)
+        if (url.includes('drive.google.com')) {
+            url += (url.includes('?') ? '&' : '?') + 'openExternalBrowser=1';
+        }
+        
         setTimeout(() => {
             window.open(url, '_blank');
         }, 800);
     } else {
         console.error(`找不到 Key: ${key} 的有效網址`);
         showToast("服務連結尚未設定", "info");
-        console.error(`請檢查 Config 試算表 A 欄是否為: ${key}`);    }
+        console.error(`請檢查 Config 試算表 A 欄是否為: ${key}`);    
+    }
 }
        
 

@@ -9,6 +9,21 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Serif TC', serif; background-color: #111827; }
+        
+        /* 🌟 新增：自訂美化卷軸，確保深色模式下的視覺精緻度 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151; /* gray-700 */
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #059669; /* emerald-600 */
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col text-white">
@@ -40,13 +55,16 @@
             </div>
         </div>
 
-        <div class="w-full bg-gray-800 rounded-xl flex flex-col border border-gray-700 shadow-xl overflow-hidden min-h-[150px]">
-            <div class="bg-gray-900 p-3 border-b border-gray-700 font-bold text-emerald-300 flex justify-between items-center text-sm">
+        <!-- 會員審核區 -->
+        <div class="w-full bg-gray-800 rounded-xl flex flex-col border border-gray-700 shadow-xl overflow-hidden min-h-[150px] max-h-[250px]">
+            <!-- 🌟 加入 shrink-0 確保標題列不會被捲動或壓縮 -->
+            <div class="bg-gray-900 p-3 border-b border-gray-700 font-bold text-emerald-300 flex justify-between items-center text-sm shrink-0">
                 <span>會員連線請求</span>
                 <span id="requestCount" class="bg-emerald-900 text-emerald-300 text-xs px-2 py-1 rounded-full">0</span>
             </div>
             
-            <div id="requestsContainer" class="p-3 space-y-2">
+            <!-- 🌟 加入 overflow-y-auto, flex-1 與 custom-scrollbar 讓超出名單可滾動 -->
+            <div id="requestsContainer" class="p-3 space-y-2 overflow-y-auto flex-1 custom-scrollbar">
                 <div class="text-gray-500 text-xs text-center py-4">等待會員要求加入...</div>
             </div>
         </div>

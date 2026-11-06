@@ -161,20 +161,20 @@
       <div class="grid grid-cols-2 gap-4">
         
         <!-- 1. 課程資料庫 -->
-        <button onclick="('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
-            <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-book-reader text-emerald-700 text-xl"></i>
-            </div>
-            <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
-        </button>            
+<button onclick="openService('reading_folder_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+    <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+        <i class="fas fa-book-reader text-emerald-700 text-xl"></i>
+    </div>
+    <span class="font-black text-emerald-900 text-sm">課程資料庫</span>
+</button>            
 
         <!-- 2. 活動剪影 -->
-        <button onclick="('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
-            <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-camera-retro text-amber-700 text-xl"></i>
-            </div>
-            <span class="font-black text-emerald-900 text-sm">活動剪影</span>
-        </button> 
+<button onclick="openService('photo_gallery_url')" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
+    <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+        <i class="fas fa-camera-retro text-amber-700 text-xl"></i>
+    </div>
+    <span class="font-black text-emerald-900 text-sm">活動剪影</span>
+</button>
 
         <!-- 🌟 3. 新增：CD 視聽館 (獨立跳轉頁面) -->
         <button onclick="location.href='cd_player.html'" class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-50 flex flex-col items-center gap-3 active:scale-95 transition-all">
@@ -1074,21 +1074,22 @@ let globalConfig = {};
 
 
 function openService(key) {
-    // 🌟 修正 1：必須使用 let 宣告，才能在下方動態加上 LINE 的強制跳轉參數
     let url = globalConfig[key];
     console.log("嘗試開啟服務:", key, "取得網址:", url);
     
     if (url && url.startsWith('http')) {
         showToast("正在前往專屬連結...", "success");
         
-        // 處理 Google Drive 的 LINE 內部瀏覽器卡死問題
-        if (url.includes('drive.google.com')) {
+        // 判斷是否為 LINE 內建瀏覽器 (WebView)
+        const isLineApp = navigator.userAgent.includes("Line");
+        
+        // 針對 LINE 且是 Google Drive 的連結，加入強制外部開啟的參數
+        if (isLineApp && url.includes('drive.google.com')) {
             url += (url.includes('?') ? '&' : '?') + 'openExternalBrowser=1';
         }
         
-        // 🌟 修正 2：移除 setTimeout 延遲！
-        // 直接執行 window.open 才能避開電腦版瀏覽器的「彈出廣告攔截器」
-        // 因為是另開新分頁 ('_blank')，原畫面依然會顯示 Toast 提示，無需刻意等待
+        // 🌟 關鍵修正：完全移除 setTimeout，直接執行另開新分頁！
+        // 這能徹底避開 PC Chrome / Android 瀏覽器的「彈出廣告攔截」機制
         window.open(url, '_blank');
         
     } else {

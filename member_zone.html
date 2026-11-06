@@ -696,11 +696,11 @@ function updateUI(user, totalRequiredFromGAS, events, registrations) {
 
     // 1. 顯示姓名
     const nameElem = document.getElementById('userName');
-    if (nameElem && user?.name) nameElem.innerText = user.name;
+    if (nameElem && user && user.name) nameElem.innerText = user.name;
 
     // 2. 參與率計算：優先使用後端算好的 attendedCount，備援方案是計算 Log 長度
     // 註：這部分數據來自後端的「會員名單」工作表
-    const attendCount = (user?.attendedCount !== undefined) ? Number(user.attendedCount) : (user?.attendedLogs?.length || 0);
+    const attendCount = (user && user.attendedCount !== undefined) ? Number(user.attendedCount) : ((user && user.attendedLogs) ? user.attendedLogs.length : 0);
     const totalEvents = Number(totalRequiredFromGAS) || 0;
     const rate = totalEvents > 0 ? Math.round((attendCount / totalEvents) * 100) : 0;
 

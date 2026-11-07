@@ -331,6 +331,52 @@ async function loadFinishedEvents() {
         }
         toggleLoading(false);
     }
+
+    // 🌟 新增：取消誤登的報到紀錄
+    async function deleteAttendance(phone, name) {
+        if (!confirm(`確定要取消「${name}」的報到紀錄嗎？`)) return;
+
+        const selector = document.getElementById('eventSelector');
+        const title = selector.value;
+        const date = selector.options[selector.selectedIndex].getAttribute('data-date');
+
+        if (!title) {
+            showToast("❌ 請先選擇活動項目");
+            return;
+        }
+
+        // 強制清洗電話格式 (與補登邏輯一致)
+        let finalPhone = String(phone).trim();
+        if (finalPhone.startsWith("8869")) {
+            finalPhone = "09" + finalPhone.substring(4);
+        } else if (finalPhone.length === 9 && finalPhone.startsWith("9")) {
+            finalPhone = "0" + finalPhone;
+        }
+
+        toggleLoading(true);
+        try {
+            const res = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    type: 'delete_attendance', 
+                    key: STAFF_KEY, 
+                    phone: finalPhone, 
+                    eventTitle: title 
+                })
+            });
+            const result = await res.json();
+            
+            if (result.result === "SUCCESS") {
+                showToast("✅ 已取消該筆報到");
+                fetchReport(); // 刷新清單
+            } else {
+                showToast("❌ 取消失敗：" + (result.message || "未知錯誤"));
+            }
+        } catch(e) { 
+            showToast("❌ 網路連線錯誤"); 
+        }
+        toggleLoading(false);
+    }
     
     // 其他輔助函數
     function renderReport() {
@@ -360,7 +406,10 @@ async function loadFinishedEvents() {
                     </div>
                     <div>
                         ${isAttended 
-                            ? '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>' 
+                            ? (isEditMode
+                                ? `<button onclick="deleteAttendance('${r.phone}', '${r.name}')" class="bg-red-500 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-md active:scale-95">取消</button>`
+                                : '<i class="fas fa-check-circle text-emerald-500 text-2xl"></i>'
+                              )
                             : (isEditMode 
                                 ? `<button onclick="openManualModal('${r.phone}', '${r.name}')" class="bg-orange-500 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-md active:scale-95">補登</button>`
                                 : '<i class="far fa-circle text-gray-200 text-2xl"></i>'

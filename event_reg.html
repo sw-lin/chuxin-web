@@ -595,11 +595,12 @@ function renderRegList(list) {
     // 在 renderRegList 函式內部，處理 list 渲染之前加入：
 list.sort((a, b) => {
     // 1. 定義 A 與 B 的「群組依據」(若為本人則為自己的名字，若為攜伴者則為代理人名字)
-    const agentA = (a["報名代理人"] || "").trim();
-    const groupA = (agentA === "本人" || agentA === "") ? (a["姓名"] || "").trim() : agentA;
+    // 🟢 替換為字串安全寫法
+    const agentA = String(a["報名代理人"] || "").trim();
+    const groupA = (agentA === "本人" || agentA === "") ? String(a["姓名"] || "").trim() : agentA;
     
-    const agentB = (b["報名代理人"] || "").trim();
-    const groupB = (agentB === "本人" || agentB === "") ? (b["姓名"] || "").trim() : agentB;
+    const agentB = String(b["報名代理人"] || "").trim();
+    const groupB = (agentB === "本人" || agentB === "") ? String(b["姓名"] || "").trim() : agentB;
     
     // 2. 第一層排序：依據「主要報名者」的姓名繁體筆畫由少到多排序
     if (groupA !== groupB) {
@@ -622,20 +623,20 @@ list.sort((a, b) => {
         const rawPhone = String(r["電話"] || "").trim(); 
         const phoneDisplay = rawPhone === "" ? "無號碼" : rawPhone;
         
-        const diet = r["餐食"] || r["飲食"] || "未填";
-        const note = (r["備註"] || "").trim();
-        const hasNote = note && note !== "無"; // 檢查是否有實質備註
+        const diet = String(r["餐食"] || r["飲食"] || "未填").trim();
+        const note = String(r["備註"] || "").trim();
+       // const hasNote = note && note !== "無"; // 檢查是否有實質備註
         
-        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
-        const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; 
+        const rawStatus = String(r["狀態"] || r["繳費狀態"] || "未繳").trim();
         const isMember = String(r["是否為會員"] || r["會員身分"]).trim() === "是";
-        
         const rawAgent = String(r["報名代理人"] || "").trim();
-        const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
         
-        let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
-        if (trans === "" && agentName) {
-            trans = transportMap[agentName] || "";
+        // const rawAgent = String(r["報名代理人"] || "").trim();
+        // const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
+        
+        let trans = String(r["交通"] || r["交通(僅本人)"] || "").trim();
+        if (trans === "" && rawAgent !== "本人" && rawAgent !== "") {
+           trans = transportMap[rawAgent] || "";
         }
         
         const capacity = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
@@ -1472,14 +1473,14 @@ function generateLineStats() {
 
     regs.forEach(r => {
         // 🌟 修正：對接您在 renderRegList 用的中文 Key
-        const rawStatus = (r["狀態"] || r["繳費狀態"] || "未繳").trim();
+        const rawStatus = String(r["狀態"] || r["繳費狀態"] || "未繳").trim();
         if (rawStatus.includes("已繳")) stats.paid++;
 
         const meal = r["餐食"] || "";
         meal === '素食' ? stats.veg++ : stats.meat++;
         
         // 🌟 修正：對接交通方式與可載人數的正確 Key
-        const trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
+        const trans = String(r["交通"] || r["交通(僅本人)"] || "").trim();
         const cap = parseInt(r["可載人(僅本人)"] || r["可載人數"] || 0);
 
         if (trans === '搭乘遊覽車' || trans === '共乘') {
@@ -1583,8 +1584,9 @@ function updateAdminStats(list) {
     list.forEach(r => {
         const name = (r["姓名"] || "").trim();
         const agent = (r["報名代理人"] || "").trim();
-        let trans = (r["交通"] || r["交通(僅本人)"] || "").trim();
-        let diet = (r["餐食"] || r["飲食"] || "").trim();
+        // 🟢 替換為強制字串轉型：
+        let trans = String(r["交通"] || r["交通(僅本人)"] || "").trim();
+        let diet = String(r["餐食"] || r["飲食"] || "").trim();
 
         if (agent !== "本人" && agent !== "" && trans === "") {
             trans = transportMap[agent] || ""; 

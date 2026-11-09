@@ -625,14 +625,14 @@ list.sort((a, b) => {
         
         const diet = String(r["餐食"] || r["飲食"] || "未填").trim();
         const note = String(r["備註"] || "").trim();
-       // const hasNote = note && note !== "無"; // 檢查是否有實質備註
+        const hasNote = note && note !== "無"; // ✅ 修正 1：解開註解
         
         const rawStatus = String(r["狀態"] || r["繳費狀態"] || "未繳").trim();
+        const isPaid = rawStatus.includes("已繳") ? "已繳" : "未繳"; // ✅ 修正 2：補上 isPaid 變數宣告
+        
         const isMember = String(r["是否為會員"] || r["會員身分"]).trim() === "是";
         const rawAgent = String(r["報名代理人"] || "").trim();
-        
-        // const rawAgent = String(r["報名代理人"] || "").trim();
-        // const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent;
+        const agentName = (rawAgent === "本人" || rawAgent === "") ? null : rawAgent; // ✅ 修正 3：解開註解
         
         let trans = String(r["交通"] || r["交通(僅本人)"] || "").trim();
         if (trans === "" && rawAgent !== "本人" && rawAgent !== "") {
